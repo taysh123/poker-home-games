@@ -33,13 +33,21 @@ public class ExceptionHandlingMiddleware(
                 HttpStatusCode.NotFound,
                 new ErrorResponse(nfe.Message, null)),
 
-            UnauthorizedAccessException => (
+            ConflictException ce => (
+                HttpStatusCode.Conflict,
+                new ErrorResponse(ce.Message, null)),
+
+            UnauthorizedException ue => (
                 HttpStatusCode.Unauthorized,
-                new ErrorResponse("Unauthorized", null)),
+                new ErrorResponse(ue.Message, null)),
+
+            UnauthorizedAccessException => (
+                HttpStatusCode.Forbidden,
+                new ErrorResponse("Access denied.", null)),
 
             _ => (
                 HttpStatusCode.InternalServerError,
-                new ErrorResponse("An unexpected error occurred", null))
+                new ErrorResponse("An unexpected error occurred.", null))
         };
 
         context.Response.ContentType = "application/json";

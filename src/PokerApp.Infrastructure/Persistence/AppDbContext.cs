@@ -1,9 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using PokerApp.Application.Common.Interfaces;
 using PokerApp.Domain.Entities;
 
 namespace PokerApp.Infrastructure.Persistence;
 
-public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+public class AppDbContext(DbContextOptions<AppDbContext> options)
+    : DbContext(options), IApplicationDbContext
 {
     public DbSet<User> Users => Set<User>();
     public DbSet<Group> Groups => Set<Group>();
@@ -12,6 +14,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<BuyIn> BuyIns => Set<BuyIn>();
     public DbSet<CashOut> CashOuts => Set<CashOut>();
     public DbSet<Settlement> Settlements => Set<Settlement>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

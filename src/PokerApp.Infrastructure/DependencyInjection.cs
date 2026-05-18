@@ -17,12 +17,19 @@ public static class DependencyInjection
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
 
+        // Register AppDbContext as IApplicationDbContext so handlers never import
+        // Infrastructure — the DI container resolves the same scoped instance.
+        services.AddScoped<IApplicationDbContext>(sp =>
+            sp.GetRequiredService<AppDbContext>());
+
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         var jwtSettings = configuration.GetSection(nameof(JwtSettings)).Get<JwtSettings>()
             ?? throw new InvalidOperationException("JwtSettings configuration is missing.");
         services.AddSingleton(jwtSettings);
         services.AddScoped<IJwtService, JwtService>();
+
+        services.AddScoped<IPasswordHasher, PasswordHasher>();
 
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUserService, CurrentUserService>();

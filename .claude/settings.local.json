@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($pgPaths = @\\(\"C:\\\\Program Files\\\\PostgreSQL\", \"C:\\\\PostgreSQL\", \"C:\\\\Program Files\\\\Postgres\", \"$env:LOCALAPPDATA\\\\Programs\\\\PostgreSQL\"\\); foreach \\($p in $pgPaths\\) { if \\(Test-Path $p\\) { Get-ChildItem $p | Select-Object Name; break } }; \\(Get-Command psql -ErrorAction SilentlyContinue\\).Source)"
+    ]
+  }
+}
