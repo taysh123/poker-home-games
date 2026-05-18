@@ -14,4 +14,22 @@ public class Settlement : BaseEntity
     public SettlementStatus Status { get; private set; }
 
     private Settlement() { }
+
+    public static Settlement Create(Guid sessionId, Guid payerUserId, Guid receiverUserId, decimal amount)
+    {
+        return new Settlement
+        {
+            SessionId = sessionId,
+            PayerUserId = payerUserId,
+            ReceiverUserId = receiverUserId,
+            Amount = amount,
+            Status = SettlementStatus.Pending,
+        };
+    }
+
+    public void MarkAsPaid()
+    {
+        Status = SettlementStatus.Confirmed;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

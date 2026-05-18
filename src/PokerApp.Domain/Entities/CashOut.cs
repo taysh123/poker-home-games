@@ -10,4 +10,13 @@ public class CashOut : BaseEntity
     public DateTime Timestamp { get; private set; }
 
     private CashOut() { }
+
+    public static CashOut Create(Guid sessionId, Guid userId, decimal amount)
+        => new()
+        {
+            SessionId = sessionId,
+            UserId = userId,
+            Amount = amount,
+            Timestamp = DateTime.UtcNow
+        };
 }

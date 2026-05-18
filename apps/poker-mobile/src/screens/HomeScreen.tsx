@@ -17,6 +17,13 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 
 type HomeNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
 export default function HomeScreen() {
   const { user, logout } = useAuth();
   const navigation = useNavigation<HomeNav>();
@@ -54,7 +61,7 @@ export default function HomeScreen() {
     <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
       <View style={styles.topBar}>
         <View>
-          <Text style={styles.greeting}>Good evening</Text>
+          <Text style={styles.greeting}>{getGreeting()}</Text>
           <Text style={styles.username}>{user?.username ?? 'Player'}</Text>
         </View>
         <TouchableOpacity

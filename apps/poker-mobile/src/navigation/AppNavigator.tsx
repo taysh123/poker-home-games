@@ -10,6 +10,10 @@ import HomeScreen from '../screens/HomeScreen';
 import GroupsListScreen from '../screens/GroupsListScreen';
 import CreateGroupScreen from '../screens/CreateGroupScreen';
 import GroupDetailScreen from '../screens/GroupDetailScreen';
+import SessionsListScreen from '../screens/SessionsListScreen';
+import CreateSessionScreen from '../screens/CreateSessionScreen';
+import SessionDetailScreen from '../screens/SessionDetailScreen';
+import SettlementScreen from '../screens/SettlementScreen';
 
 // All possible route names and their params
 export type RootStackParamList = {
@@ -19,6 +23,10 @@ export type RootStackParamList = {
   GroupsList: undefined;
   CreateGroup: undefined;
   GroupDetail: { groupId: string; groupName: string };
+  SessionsList: { groupId: string; groupName: string; userRole: string };
+  CreateSession: { groupId: string; groupName: string };
+  SessionDetail: { sessionId: string; sessionName: string; userRole: string };
+  Settlement: { sessionId: string; sessionName: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -64,6 +72,18 @@ export default function AppNavigator() {
               options={{ presentation: 'modal' }}
             />
             <Stack.Screen name="GroupDetail" component={GroupDetailScreen} />
+            <Stack.Screen name="SessionsList" component={SessionsListScreen} />
+            <Stack.Screen
+              name="CreateSession"
+              component={CreateSessionScreen}
+              options={{ presentation: 'modal' }}
+            />
+            <Stack.Screen name="SessionDetail" component={SessionDetailScreen} />
+            <Stack.Screen
+              name="Settlement"
+              component={SettlementScreen}
+              options={{ headerShown: true, title: 'Settle Up', headerBackTitle: 'Back' }}
+            />
           </>
         )}
       </Stack.Navigator>

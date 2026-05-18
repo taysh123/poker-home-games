@@ -17,6 +17,7 @@ public interface IApplicationDbContext
     DbSet<Settlement> Settlements { get; }
     DbSet<RefreshToken> RefreshTokens { get; }
     DbSet<GroupInvitation> GroupInvitations { get; }
+    DbSet<SessionPlayer> SessionPlayers { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

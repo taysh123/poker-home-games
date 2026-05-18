@@ -16,6 +16,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Settlement> Settlements => Set<Settlement>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<GroupInvitation> GroupInvitations => Set<GroupInvitation>();
+    public DbSet<SessionPlayer> SessionPlayers => Set<SessionPlayer>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

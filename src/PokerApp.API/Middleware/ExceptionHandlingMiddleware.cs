@@ -25,6 +25,10 @@ public class ExceptionHandlingMiddleware(
     {
         var (statusCode, error) = exception switch
         {
+            BadRequestException bre => (
+                HttpStatusCode.BadRequest,
+                new ErrorResponse(bre.Message, null)),
+
             ValidationException ve => (
                 HttpStatusCode.BadRequest,
                 new ErrorResponse("Validation failure", ve.Errors)),

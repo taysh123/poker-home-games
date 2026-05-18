@@ -93,6 +93,19 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
               <RoleBadge role={group.myRole} />
             </View>
           </View>
+          <TouchableOpacity
+            style={styles.sessionsButton}
+            onPress={() =>
+              navigation.navigate('SessionsList', {
+                groupId,
+                groupName,
+                userRole: group.myRole,
+              })
+            }
+          >
+            <Text style={styles.sessionsButtonText}>Sessions</Text>
+            <Text style={styles.sessionsChevron}>›</Text>
+          </TouchableOpacity>
           <Text style={styles.sectionTitle}>Members</Text>
         </View>
       }
@@ -184,6 +197,27 @@ const styles = StyleSheet.create({
     height: 3,
     borderRadius: 1.5,
     backgroundColor: colors.textDim,
+  },
+  sessionsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  sessionsButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  sessionsChevron: {
+    fontSize: 22,
+    color: colors.gold,
+    lineHeight: 24,
   },
   sectionTitle: {
     fontSize: 12,

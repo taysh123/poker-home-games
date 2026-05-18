@@ -22,5 +22,32 @@ public class Session : BaseEntity
     private readonly List<Settlement> _settlements = [];
     public IReadOnlyCollection<Settlement> Settlements => _settlements.AsReadOnly();
 
+    private readonly List<SessionPlayer> _sessionPlayers = [];
+    public IReadOnlyCollection<SessionPlayer> SessionPlayers => _sessionPlayers.AsReadOnly();
+
     private Session() { }
+
+    public static Session Create(string name, Guid groupId, decimal smallBlind, decimal bigBlind)
+        => new()
+        {
+            Name = name,
+            GroupId = groupId,
+            SmallBlind = smallBlind,
+            BigBlind = bigBlind,
+            Status = SessionStatus.Draft
+        };
+
+    public void Start()
+    {
+        Status = SessionStatus.Active;
+        StartedAt = DateTime.UtcNow;
+        SetUpdatedAt();
+    }
+
+    public void End()
+    {
+        Status = SessionStatus.Finished;
+        EndedAt = DateTime.UtcNow;
+        SetUpdatedAt();
+    }
 }

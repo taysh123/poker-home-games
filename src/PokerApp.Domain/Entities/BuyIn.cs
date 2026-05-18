@@ -10,4 +10,13 @@ public class BuyIn : BaseEntity
     public DateTime Timestamp { get; private set; }
 
     private BuyIn() { }
+
+    public static BuyIn Create(Guid sessionId, Guid userId, decimal amount)
+        => new()
+        {
+            SessionId = sessionId,
+            UserId = userId,
+            Amount = amount,
+            Timestamp = DateTime.UtcNow
+        };
 }
