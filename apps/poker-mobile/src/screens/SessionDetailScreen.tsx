@@ -351,9 +351,15 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
         <View style={styles.actionBar}>
           <TouchableOpacity
             style={styles.startButton}
+            onPress={() => navigation.navigate('SessionSummary', { sessionId, sessionName })}
+          >
+            <Text style={styles.startButtonText}>View Summary</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.secondaryLink}
             onPress={() => navigation.navigate('Settlement', { sessionId, sessionName })}
           >
-            <Text style={styles.startButtonText}>Settle Up</Text>
+            <Text style={styles.secondaryLinkText}>Manage Settlements</Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -737,6 +743,8 @@ const styles = StyleSheet.create({
     borderColor: colors.error,
   },
   endButtonText: { fontSize: 16, fontWeight: '700', color: colors.error },
+  secondaryLink: { paddingVertical: 8, alignItems: 'center' },
+  secondaryLinkText: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   badgeActive: {
     backgroundColor: 'rgba(201,168,76,0.15)',

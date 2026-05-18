@@ -14,6 +14,7 @@ import SessionsListScreen from '../screens/SessionsListScreen';
 import CreateSessionScreen from '../screens/CreateSessionScreen';
 import SessionDetailScreen from '../screens/SessionDetailScreen';
 import SettlementScreen from '../screens/SettlementScreen';
+import SessionSummaryScreen from '../screens/SessionSummaryScreen';
 
 // All possible route names and their params
 export type RootStackParamList = {
@@ -27,6 +28,7 @@ export type RootStackParamList = {
   CreateSession: { groupId: string; groupName: string };
   SessionDetail: { sessionId: string; sessionName: string; userRole: string };
   Settlement: { sessionId: string; sessionName: string };
+  SessionSummary: { sessionId: string; sessionName: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -83,6 +85,11 @@ export default function AppNavigator() {
               name="Settlement"
               component={SettlementScreen}
               options={{ headerShown: true, title: 'Settle Up', headerBackTitle: 'Back' }}
+            />
+            <Stack.Screen
+              name="SessionSummary"
+              component={SessionSummaryScreen}
+              options={{ headerShown: true, title: 'Session Summary', headerBackTitle: 'Back' }}
             />
           </>
         )}

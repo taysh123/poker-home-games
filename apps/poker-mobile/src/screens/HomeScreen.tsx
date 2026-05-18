@@ -13,6 +13,7 @@ import * as SecureStore from 'expo-secure-store';
 import { colors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import { getMyGroups, MyGroupDto } from '../api/groupsApi';
+import { getMyStats, MyStatsDto, RecentSessionDto } from '../api/statsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
 type HomeNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -24,14 +25,27 @@ function getGreeting(): string {
   return 'Good evening';
 }
 
+function formatProfitLoss(value: number): string {
+  const abs = Math.abs(Math.round(value));
+  return `${value >= 0 ? '+' : '-'}₪${abs.toLocaleString()}`;
+}
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 export default function HomeScreen() {
   const { user, logout } = useAuth();
   const navigation = useNavigation<HomeNav>();
-  const [loggingOut, setLoggingOut] = useState(false);
-  const [groups, setGroups] = useState<MyGroupDto[]>([]);
+
+  const [loggingOut, setLoggingOut]   = useState(false);
+  const [groups, setGroups]           = useState<MyGroupDto[]>([]);
+  const [stats, setStats]             = useState<MyStatsDto | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
     loadGroups();
+    loadStats();
   }, []);
 
   async function loadGroups() {
@@ -45,6 +59,19 @@ export default function HomeScreen() {
     }
   }
 
+  async function loadStats() {
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!token) return;
+      const data = await getMyStats(token);
+      setStats(data);
+    } catch {
+      // silently ignore
+    } finally {
+      setStatsLoading(false);
+    }
+  }
+
   async function handleLogout() {
     setLoggingOut(true);
     try {
@@ -54,11 +81,33 @@ export default function HomeScreen() {
     }
   }
 
+  function handleSessionPress(session: RecentSessionDto) {
+    if (session.status === 'Finished') {
+      navigation.navigate('SessionSummary', {
+        sessionId: session.sessionId,
+        sessionName: session.sessionName,
+      });
+    } else {
+      navigation.navigate('SessionDetail', {
+        sessionId: session.sessionId,
+        sessionName: session.sessionName,
+        userRole: session.userRole,
+      });
+    }
+  }
+
   const initial = user?.username?.[0]?.toUpperCase() ?? '?';
   const previewGroups = groups.slice(0, 3);
 
+  const activeSessions = stats?.recentSessions.filter(s => s.status === 'Active') ?? [];
+  const recentSessions = stats?.recentSessions ?? [];
+
+  const plValue = stats?.totalProfitLoss ?? 0;
+  const plColor = plValue > 0 ? colors.success : plValue < 0 ? colors.error : colors.gold;
+
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
+      {/* ── Top bar ── */}
       <View style={styles.topBar}>
         <View>
           <Text style={styles.greeting}>{getGreeting()}</Text>
@@ -70,11 +119,9 @@ export default function HomeScreen() {
           disabled={loggingOut}
           activeOpacity={0.7}
         >
-          {loggingOut ? (
-            <ActivityIndicator color={colors.gold} size="small" />
-          ) : (
-            <Text style={styles.avatarText}>{initial}</Text>
-          )}
+          {loggingOut
+            ? <ActivityIndicator color={colors.gold} size="small" />
+            : <Text style={styles.avatarText}>{initial}</Text>}
         </TouchableOpacity>
       </View>
 
@@ -84,14 +131,71 @@ export default function HomeScreen() {
         disabled={loggingOut}
         activeOpacity={0.8}
       >
-        {loggingOut ? (
-          <ActivityIndicator color={colors.textMuted} size="small" />
-        ) : (
-          <Text style={styles.logoutText}>Sign Out</Text>
-        )}
+        {loggingOut
+          ? <ActivityIndicator color={colors.textMuted} size="small" />
+          : <Text style={styles.logoutText}>Sign Out</Text>}
       </TouchableOpacity>
 
-      {/* My Groups */}
+      {/* ── Quick Stats ── */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>My Stats</Text>
+        <View style={styles.statsRow}>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>
+              {statsLoading ? '—' : String(stats?.totalSessionsPlayed ?? 0)}
+            </Text>
+            <Text style={styles.statLabel}>Sessions</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={[styles.statValue, { color: plColor }]}>
+              {statsLoading ? '—' : `${plValue >= 0 ? '+' : ''}₪${Math.round(Math.abs(plValue)).toLocaleString()}`}
+            </Text>
+            <Text style={styles.statLabel}>Total P&L</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={[styles.statValue, { color: colors.success }]}>
+              {statsLoading
+                ? '—'
+                : stats?.biggestWin != null
+                  ? `+₪${Math.round(stats.biggestWin).toLocaleString()}`
+                  : '—'}
+            </Text>
+            <Text style={styles.statLabel}>Best Win</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{groups.length}</Text>
+            <Text style={styles.statLabel}>Groups</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* ── Active Sessions (only if any) ── */}
+      {activeSessions.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Active Now</Text>
+          <View style={styles.activeCard}>
+            {activeSessions.map((s, i) => (
+              <React.Fragment key={s.sessionId}>
+                {i > 0 && <View style={styles.divider} />}
+                <TouchableOpacity
+                  style={styles.activeRow}
+                  onPress={() => handleSessionPress(s)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.activeDot} />
+                  <View style={styles.activeRowLeft}>
+                    <Text style={styles.activeSessionName}>{s.sessionName}</Text>
+                    <Text style={styles.activeGroupName}>{s.groupName}</Text>
+                  </View>
+                  <Text style={styles.rowChevron}>›</Text>
+                </TouchableOpacity>
+              </React.Fragment>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* ── My Groups ── */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>My Groups</Text>
@@ -127,9 +231,11 @@ export default function HomeScreen() {
                 >
                   <View style={styles.groupRowLeft}>
                     <Text style={styles.groupRowName}>{g.name}</Text>
-                    <Text style={styles.groupRowMeta}>{g.memberCount} member{g.memberCount !== 1 ? 's' : ''}</Text>
+                    <Text style={styles.groupRowMeta}>
+                      {g.memberCount} member{g.memberCount !== 1 ? 's' : ''}
+                    </Text>
                   </View>
-                  <Text style={styles.groupRowChevron}>›</Text>
+                  <Text style={styles.rowChevron}>›</Text>
                 </TouchableOpacity>
               </React.Fragment>
             ))}
@@ -142,7 +248,7 @@ export default function HomeScreen() {
                   activeOpacity={0.7}
                 >
                   <Text style={styles.moreGroupsText}>+{groups.length - 3} more groups</Text>
-                  <Text style={styles.groupRowChevron}>›</Text>
+                  <Text style={styles.rowChevron}>›</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -150,45 +256,77 @@ export default function HomeScreen() {
         )}
       </View>
 
-      {/* Quick Stats */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Stats</Text>
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>0</Text>
-            <Text style={styles.statLabel}>Sessions</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>₪0</Text>
-            <Text style={styles.statLabel}>Total Won</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{groups.length}</Text>
-            <Text style={styles.statLabel}>Groups</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Recent Sessions */}
+      {/* ── Recent Sessions ── */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Recent Sessions</Text>
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptySubtitle}>No sessions played yet</Text>
-        </View>
+        {statsLoading ? (
+          <View style={styles.emptyCard}>
+            <ActivityIndicator color={colors.gold} size="small" />
+          </View>
+        ) : recentSessions.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptySubtitle}>No sessions played yet</Text>
+          </View>
+        ) : (
+          <View style={styles.groupsCard}>
+            {recentSessions.map((s, i) => {
+              const isActive   = s.status === 'Active';
+              const isFinished = s.status === 'Finished';
+              const plVal      = s.profitLoss;
+              const plClr      = plVal != null && plVal > 0
+                ? colors.success
+                : plVal != null && plVal < 0
+                  ? colors.error
+                  : colors.textMuted;
+              return (
+                <React.Fragment key={s.sessionId}>
+                  {i > 0 && <View style={styles.divider} />}
+                  <TouchableOpacity
+                    style={styles.groupRow}
+                    onPress={() => handleSessionPress(s)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.groupRowLeft}>
+                      <View style={styles.sessionNameRow}>
+                        <Text style={styles.groupRowName}>{s.sessionName}</Text>
+                        <View style={[
+                          styles.statusBadge,
+                          isActive ? styles.badgeActive : styles.badgeNeutral,
+                        ]}>
+                          <Text style={[
+                            styles.statusBadgeText,
+                            isActive ? styles.badgeActiveText : styles.badgeNeutralText,
+                          ]}>
+                            {s.status.toUpperCase()}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.groupRowMeta}>
+                        {s.groupName}  ·  {formatDate(s.createdAt)}
+                      </Text>
+                    </View>
+                    {isFinished && plVal != null ? (
+                      <Text style={[styles.sessionPl, { color: plClr }]}>
+                        {formatProfitLoss(plVal)}
+                      </Text>
+                    ) : (
+                      <Text style={styles.rowChevron}>›</Text>
+                    )}
+                  </TouchableOpacity>
+                </React.Fragment>
+              );
+            })}
+          </View>
+        )}
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    padding: 24,
-    paddingBottom: 48,
-  },
+  scroll: { flex: 1, backgroundColor: colors.background },
+  container: { padding: 24, paddingBottom: 48 },
+
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -202,12 +340,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
-  username: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.text,
-    marginTop: 2,
-  },
+  username: { fontSize: 24, fontWeight: '700', color: colors.text, marginTop: 2 },
   avatar: {
     width: 44,
     height: 44,
@@ -218,11 +351,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.gold,
-  },
+  avatarText: { fontSize: 18, fontWeight: '700', color: colors.gold },
+
   logoutButton: {
     alignSelf: 'flex-start',
     paddingVertical: 6,
@@ -232,17 +362,10 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     marginBottom: 28,
   },
-  logoutButtonDisabled: {
-    opacity: 0.5,
-  },
-  logoutText: {
-    fontSize: 13,
-    color: colors.textMuted,
-    fontWeight: '600',
-  },
-  section: {
-    marginBottom: 28,
-  },
+  logoutButtonDisabled: { opacity: 0.5 },
+  logoutText: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
+
+  section: { marginBottom: 28 },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -255,48 +378,57 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
+    marginBottom: 12,
   },
-  seeAll: {
-    fontSize: 13,
-    color: colors.gold,
-    fontWeight: '600',
-  },
-  emptyCard: {
+  seeAll: { fontSize: 13, color: colors.gold, fontWeight: '600' },
+
+  // Stats row
+  statsRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
+  statCard: {
+    flex: 1,
+    minWidth: '40%',
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 16,
-    padding: 28,
+    borderRadius: 14,
+    padding: 14,
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
   },
-  emptyIcon: {
-    fontSize: 36,
-    color: colors.gold,
-    marginBottom: 4,
-  },
-  emptyTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  emptySubtitle: {
-    fontSize: 14,
+  statValue: { fontSize: 20, fontWeight: '700', color: colors.gold },
+  statLabel: {
+    fontSize: 10,
     color: colors.textMuted,
-    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
   },
-  createButton: {
-    marginTop: 16,
+
+  // Active sessions
+  activeCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.gold,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  activeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  activeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: colors.gold,
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
   },
-  createButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.background,
-  },
+  activeRowLeft: { flex: 1, gap: 2 },
+  activeSessionName: { fontSize: 14, fontWeight: '600', color: colors.text },
+  activeGroupName: { fontSize: 12, color: colors.textMuted },
+
+  // Groups + sessions shared card style
   groupsCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -310,57 +442,53 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
-  groupRowLeft: {
-    flex: 1,
-    gap: 2,
+  groupRowLeft: { flex: 1, gap: 2 },
+  groupRowName: { fontSize: 15, fontWeight: '600', color: colors.text },
+  groupRowMeta: { fontSize: 12, color: colors.textMuted },
+  rowChevron: { fontSize: 20, color: colors.textDim, fontWeight: '300' },
+  moreGroupsText: { flex: 1, fontSize: 14, color: colors.textMuted },
+  divider: { height: 1, backgroundColor: colors.border, marginHorizontal: 16 },
+
+  // Session row extras
+  sessionNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  sessionPl: { fontSize: 14, fontWeight: '700' },
+  statusBadge: {
+    borderRadius: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderWidth: 1,
   },
-  groupRowName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.text,
+  badgeActive: {
+    backgroundColor: 'rgba(201,168,76,0.12)',
+    borderColor: colors.gold,
   },
-  groupRowMeta: {
-    fontSize: 12,
-    color: colors.textMuted,
+  badgeNeutral: {
+    backgroundColor: 'rgba(58,74,90,0.5)',
+    borderColor: colors.border,
   },
-  groupRowChevron: {
-    fontSize: 20,
-    color: colors.textDim,
-    fontWeight: '300',
-  },
-  moreGroupsText: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.textMuted,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginHorizontal: 16,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  statCard: {
-    flex: 1,
+  statusBadgeText: { fontSize: 9, fontWeight: '700', letterSpacing: 0.4 },
+  badgeActiveText: { color: colors.gold },
+  badgeNeutralText: { color: colors.textMuted },
+
+  // Empty states
+  emptyCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 14,
-    padding: 16,
+    borderRadius: 16,
+    padding: 28,
     alignItems: 'center',
-    gap: 4,
+    gap: 8,
   },
-  statValue: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.gold,
+  emptyIcon: { fontSize: 36, color: colors.gold, marginBottom: 4 },
+  emptyTitle: { fontSize: 17, fontWeight: '600', color: colors.text },
+  emptySubtitle: { fontSize: 14, color: colors.textMuted, textAlign: 'center' },
+  createButton: {
+    marginTop: 16,
+    backgroundColor: colors.gold,
+    borderRadius: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
   },
-  statLabel: {
-    fontSize: 11,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
+  createButtonText: { fontSize: 14, fontWeight: '700', color: colors.background },
 });
