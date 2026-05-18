@@ -50,9 +50,11 @@ export default function AppNavigator() {
     <NavigationContainer>
       <Stack.Navigator
         screenOptions={{
-          headerShown: false,
           contentStyle: { backgroundColor: colors.background },
           animation: 'fade',
+          headerStyle: { backgroundColor: colors.background },
+          headerTintColor: colors.text,
+          headerTitleStyle: { fontWeight: '700' },
         }}
       >
         {user === null ? (
@@ -60,13 +62,13 @@ export default function AppNavigator() {
           // When login/register succeeds, user becomes non-null and these screens
           // are replaced by the app screens automatically — no navigation.replace() needed.
           <>
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="Register" component={RegisterScreen} />
+            <Stack.Screen name="Login"    component={LoginScreen}    options={{ headerShown: false }} />
+            <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
           </>
         ) : (
           // Logged in → show app screens
           <>
-            <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
             <Stack.Screen name="GroupsList" component={GroupsListScreen} />
             <Stack.Screen
               name="CreateGroup"

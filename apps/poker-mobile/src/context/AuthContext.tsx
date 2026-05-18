@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from '../utils/storage';
 import { loginApi, registerApi, logoutApi, googleLoginApi, AuthUser, AuthResponse } from '../api/authApi';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -49,12 +49,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Persist tokens + user info to encrypted storage and update state
   async function saveSession(response: AuthResponse) {
     const { accessToken, refreshToken, ...userData } = response;
-    await Promise.all([
-      SecureStore.setItemAsync(KEY_ACCESS, accessToken),
-      SecureStore.setItemAsync(KEY_REFRESH, refreshToken),
-      SecureStore.setItemAsync(KEY_USER, JSON.stringify(userData)),
-    ]);
-    setUser(userData);
+    setUser(userData); // update state immediately — drives navigation to Home
+    try {
+      await Promise.all([
+        SecureStore.setItemAsync(KEY_ACCESS, accessToken),
+        SecureStore.setItemAsync(KEY_REFRESH, refreshToken),
+        SecureStore.setItemAsync(KEY_USER, JSON.stringify(userData)),
+      ]);
+    } catch {
+      // Persistence failed — user is logged in for this session but will need
+      // to sign in again after a page refresh.
+    }
   }
 
   // Wipe all stored auth data and clear state

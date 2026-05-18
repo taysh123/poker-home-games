@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
 import { getMyGroups, MyGroupDto } from '../api/groupsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';

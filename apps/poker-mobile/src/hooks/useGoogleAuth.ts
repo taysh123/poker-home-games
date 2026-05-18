@@ -28,7 +28,7 @@ function useGoogleAuthNative(onResult: (result: GoogleAuthResult) => void) {
   useEffect(() => { onResultRef.current = onResult; });
 
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    expoClientId: EXPO_CLIENT_ID,
+    clientId: EXPO_CLIENT_ID,
     iosClientId: IOS_CLIENT_ID,
   });
 
