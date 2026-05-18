@@ -82,3 +82,93 @@ export async function getGroupMembers(
   });
   return data;
 }
+
+export type PendingInvitationDto = {
+  invitationId: string;
+  groupId: string;
+  groupName: string;
+  invitedByUsername: string;
+  expiresAt: string;
+  createdAt: string;
+};
+
+export type AcceptInvitationResponse = {
+  groupId: string;
+  groupName: string;
+  role: string;
+};
+
+export type UpdateGroupResponse = {
+  id: string;
+  name: string;
+  description?: string;
+};
+
+export async function getMyInvitations(token: string): Promise<PendingInvitationDto[]> {
+  const { data } = await api.get<PendingInvitationDto[]>('/api/invitations', {
+    headers: authHeader(token),
+  });
+  return data;
+}
+
+export async function sendGroupInvitation(
+  token: string,
+  groupId: string,
+  username: string,
+): Promise<void> {
+  await api.post(
+    `/api/groups/${groupId}/invitations`,
+    { username },
+    { headers: authHeader(token) },
+  );
+}
+
+export async function acceptInvitation(
+  token: string,
+  invitationId: string,
+): Promise<AcceptInvitationResponse> {
+  const { data } = await api.post<AcceptInvitationResponse>(
+    `/api/invitations/${invitationId}/accept`,
+    {},
+    { headers: authHeader(token) },
+  );
+  return data;
+}
+
+export async function declineInvitation(token: string, invitationId: string): Promise<void> {
+  await api.post(
+    `/api/invitations/${invitationId}/decline`,
+    {},
+    { headers: authHeader(token) },
+  );
+}
+
+export async function removeGroupMember(
+  token: string,
+  groupId: string,
+  userId: string,
+): Promise<void> {
+  await api.delete(`/api/groups/${groupId}/members/${userId}`, {
+    headers: authHeader(token),
+  });
+}
+
+export async function leaveGroup(token: string, groupId: string): Promise<void> {
+  await api.delete(`/api/groups/${groupId}/members/me`, {
+    headers: authHeader(token),
+  });
+}
+
+export async function updateGroup(
+  token: string,
+  groupId: string,
+  name: string,
+  description?: string,
+): Promise<UpdateGroupResponse> {
+  const { data } = await api.put<UpdateGroupResponse>(
+    `/api/groups/${groupId}`,
+    { name, description },
+    { headers: authHeader(token) },
+  );
+  return data;
+}

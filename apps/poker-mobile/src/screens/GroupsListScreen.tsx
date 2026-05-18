@@ -11,7 +11,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
-import { getMyGroups, MyGroupDto } from '../api/groupsApi';
+import { getMyGroups, getMyInvitations, MyGroupDto } from '../api/groupsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupsList'>;
@@ -20,6 +20,7 @@ export default function GroupsListScreen({ navigation }: Props) {
   const [groups, setGroups] = useState<MyGroupDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [invitationCount, setInvitationCount] = useState(0);
 
   const loadGroups = useCallback(async () => {
     setLoading(true);
@@ -36,7 +37,23 @@ export default function GroupsListScreen({ navigation }: Props) {
     }
   }, []);
 
-  useFocusEffect(useCallback(() => { void loadGroups(); }, [loadGroups]));
+  const loadInvitationCount = useCallback(async () => {
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!token) return;
+      const data = await getMyInvitations(token);
+      setInvitationCount(data.length);
+    } catch {
+      // silently ignore — badge is non-critical
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadGroups();
+      void loadInvitationCount();
+    }, [loadGroups, loadInvitationCount]),
+  );
 
   React.useLayoutEffect(() => {
     navigation.setOptions({
@@ -45,12 +62,28 @@ export default function GroupsListScreen({ navigation }: Props) {
       headerTintColor: colors.text,
       headerTitleStyle: { fontWeight: '700' },
       headerRight: () => (
-        <TouchableOpacity onPress={() => navigation.navigate('CreateGroup')} hitSlop={8}>
-          <Text style={styles.headerPlus}>+</Text>
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Invitations')}
+            hitSlop={8}
+            style={styles.bellButton}
+          >
+            <Text style={styles.bellIcon}>✉</Text>
+            {invitationCount > 0 && (
+              <View style={styles.notifBadge}>
+                <Text style={styles.notifBadgeText}>
+                  {invitationCount > 9 ? '9+' : String(invitationCount)}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('CreateGroup')} hitSlop={8}>
+            <Text style={styles.headerPlus}>+</Text>
+          </TouchableOpacity>
+        </View>
       ),
     });
-  }, [navigation]);
+  }, [navigation, invitationCount]);
 
   if (loading) {
     return (
@@ -209,6 +242,39 @@ const styles = StyleSheet.create({
   },
   badgeTextMuted: {
     color: colors.textMuted,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  bellButton: {
+    position: 'relative',
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bellIcon: {
+    fontSize: 18,
+    color: colors.textMuted,
+  },
+  notifBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -6,
+    backgroundColor: colors.error,
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  notifBadgeText: {
+    color: colors.text,
+    fontSize: 9,
+    fontWeight: '700',
   },
   headerPlus: {
     fontSize: 26,

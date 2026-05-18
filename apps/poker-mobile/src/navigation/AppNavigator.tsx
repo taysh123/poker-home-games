@@ -10,6 +10,8 @@ import HomeScreen from '../screens/HomeScreen';
 import GroupsListScreen from '../screens/GroupsListScreen';
 import CreateGroupScreen from '../screens/CreateGroupScreen';
 import GroupDetailScreen from '../screens/GroupDetailScreen';
+import InvitationsScreen from '../screens/InvitationsScreen';
+import EditGroupScreen from '../screens/EditGroupScreen';
 import SessionsListScreen from '../screens/SessionsListScreen';
 import CreateSessionScreen from '../screens/CreateSessionScreen';
 import SessionDetailScreen from '../screens/SessionDetailScreen';
@@ -24,6 +26,8 @@ export type RootStackParamList = {
   GroupsList: undefined;
   CreateGroup: undefined;
   GroupDetail: { groupId: string; groupName: string };
+  Invitations: undefined;
+  EditGroup: { groupId: string; groupName: string; description?: string };
   SessionsList: { groupId: string; groupName: string; userRole: string };
   CreateSession: { groupId: string; groupName: string };
   SessionDetail: { sessionId: string; sessionName: string; userRole: string };
@@ -76,6 +80,16 @@ export default function AppNavigator() {
               options={{ presentation: 'modal' }}
             />
             <Stack.Screen name="GroupDetail" component={GroupDetailScreen} />
+            <Stack.Screen
+              name="Invitations"
+              component={InvitationsScreen}
+              options={{ title: 'Invitations' }}
+            />
+            <Stack.Screen
+              name="EditGroup"
+              component={EditGroupScreen}
+              options={{ presentation: 'modal', title: 'Edit Group' }}
+            />
             <Stack.Screen name="SessionsList" component={SessionsListScreen} />
             <Stack.Screen
               name="CreateSession"

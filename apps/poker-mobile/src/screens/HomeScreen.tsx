@@ -12,7 +12,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
-import { getMyGroups, MyGroupDto } from '../api/groupsApi';
+import { getMyGroups, getMyInvitations, MyGroupDto, PendingInvitationDto } from '../api/groupsApi';
 import { getMyStats, MyStatsDto, RecentSessionDto } from '../api/statsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
@@ -38,14 +38,16 @@ export default function HomeScreen() {
   const { user, logout } = useAuth();
   const navigation = useNavigation<HomeNav>();
 
-  const [loggingOut, setLoggingOut]   = useState(false);
-  const [groups, setGroups]           = useState<MyGroupDto[]>([]);
-  const [stats, setStats]             = useState<MyStatsDto | null>(null);
+  const [loggingOut, setLoggingOut]     = useState(false);
+  const [groups, setGroups]             = useState<MyGroupDto[]>([]);
+  const [stats, setStats]               = useState<MyStatsDto | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
+  const [invitations, setInvitations]   = useState<PendingInvitationDto[]>([]);
 
   useEffect(() => {
     loadGroups();
     loadStats();
+    loadInvitations();
   }, []);
 
   async function loadGroups() {
@@ -56,6 +58,17 @@ export default function HomeScreen() {
       setGroups(data);
     } catch {
       // silently ignore — home screen is non-critical
+    }
+  }
+
+  async function loadInvitations() {
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!token) return;
+      const data = await getMyInvitations(token);
+      setInvitations(data);
+    } catch {
+      // silently ignore
     }
   }
 
@@ -189,6 +202,39 @@ export default function HomeScreen() {
                   </View>
                   <Text style={styles.rowChevron}>›</Text>
                 </TouchableOpacity>
+              </React.Fragment>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* ── Pending Invitations (only if any) ── */}
+      {invitations.length > 0 && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Invitations</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Invitations')}>
+              <Text style={styles.seeAll}>See all →</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.groupsCard}>
+            {invitations.slice(0, 3).map((inv, i) => (
+              <React.Fragment key={inv.invitationId}>
+                {i > 0 && <View style={styles.divider} />}
+                <View style={styles.inviteRow}>
+                  <View style={styles.groupRowLeft}>
+                    <Text style={styles.groupRowName}>{inv.groupName}</Text>
+                    <Text style={styles.groupRowMeta}>
+                      Invited by {inv.invitedByUsername}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.viewInviteBtn}
+                    onPress={() => navigation.navigate('Invitations')}
+                  >
+                    <Text style={styles.viewInviteBtnText}>View</Text>
+                  </TouchableOpacity>
+                </View>
               </React.Fragment>
             ))}
           </View>
@@ -447,6 +493,20 @@ const styles = StyleSheet.create({
   groupRowMeta: { fontSize: 12, color: colors.textMuted },
   rowChevron: { fontSize: 20, color: colors.textDim, fontWeight: '300' },
   moreGroupsText: { flex: 1, fontSize: 14, color: colors.textMuted },
+  inviteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  viewInviteBtn: {
+    borderWidth: 1,
+    borderColor: colors.gold,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  viewInviteBtnText: { fontSize: 12, color: colors.gold, fontWeight: '700' },
   divider: { height: 1, backgroundColor: colors.border, marginHorizontal: 16 },
 
   // Session row extras
