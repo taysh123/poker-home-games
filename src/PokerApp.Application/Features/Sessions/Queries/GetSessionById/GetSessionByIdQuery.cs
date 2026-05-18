@@ -11,6 +11,8 @@ public sealed record SessionDetailDto(
     string Status,
     decimal SmallBlind,
     decimal BigBlind,
+    decimal? ChipRatio,
+    decimal? DefaultBuyIn,
     IReadOnlyList<SessionPlayerDto> Players,
     DateTime? StartedAt,
     DateTime? EndedAt,

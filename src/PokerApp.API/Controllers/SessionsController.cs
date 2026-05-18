@@ -30,7 +30,7 @@ public class SessionsController(IMediator mediator) : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await mediator.Send(
-            new CreateSessionCommand(groupId, body.Name, body.SmallBlind, body.BigBlind),
+            new CreateSessionCommand(groupId, body.Name, body.SmallBlind, body.BigBlind, body.ChipRatio, body.DefaultBuyIn),
             cancellationToken);
 
         return CreatedAtAction(nameof(GetSessionById), new { id = response.Id }, response);
@@ -151,7 +151,7 @@ public class SessionsController(IMediator mediator) : ControllerBase
     }
 }
 
-public sealed record CreateSessionRequest(string Name, decimal SmallBlind, decimal BigBlind);
+public sealed record CreateSessionRequest(string Name, decimal SmallBlind, decimal BigBlind, decimal? ChipRatio, decimal? DefaultBuyIn);
 public sealed record AddPlayerRequest(Guid UserId);
 public sealed record AddBuyInRequest(Guid UserId, decimal Amount);
 public sealed record AddCashOutRequest(Guid UserId, decimal Amount);

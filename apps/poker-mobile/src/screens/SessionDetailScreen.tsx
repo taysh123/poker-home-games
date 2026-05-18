@@ -127,10 +127,9 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
             const token = await SecureStore.getItemAsync('accessToken');
             if (!token) throw new Error('Not authenticated');
             await endSession(token, sessionId);
-            await load();
+            navigation.navigate('SessionSummary', { sessionId, sessionName });
           } catch (err: any) {
             Alert.alert('Error', err?.response?.data?.message ?? 'Failed to end session.');
-          } finally {
             setActionLoading(false);
           }
         },
@@ -179,6 +178,11 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
   function openTransaction(type: 'buyin' | 'cashout', player: { userId: string; username: string }) {
     setAmount('');
     setTxModal({ visible: true, type, player });
+  }
+
+  function openRebuy(player: { userId: string; username: string }) {
+    setAmount(session?.defaultBuyIn ? String(session.defaultBuyIn) : '');
+    setTxModal({ visible: true, type: 'buyin', player });
   }
 
   async function handleConfirmTransaction() {
@@ -257,6 +261,16 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
             <InfoChip label="Small Blind" value={`₪${session.smallBlind}`} />
             <InfoChip label="Big Blind" value={`₪${session.bigBlind}`} />
           </View>
+          {(session.chipRatio != null || session.defaultBuyIn != null) && (
+            <View style={styles.infoRow}>
+              {session.chipRatio != null && (
+                <InfoChip label="Chip Ratio" value={`1:${session.chipRatio} chips/₪`} />
+              )}
+              {session.defaultBuyIn != null && (
+                <InfoChip label="Default Buy-In" value={`₪${session.defaultBuyIn}`} />
+              )}
+            </View>
+          )}
           {session.startedAt && (
             <Text style={styles.dateText}>
               Started {new Date(session.startedAt).toLocaleString()}
@@ -321,6 +335,7 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
                   balance={balanceMap.get(player.userId) ?? null}
                   isActive={isActive}
                   onBuyIn={() => openTransaction('buyin', player)}
+                  onRebuy={session.defaultBuyIn != null ? () => openRebuy(player) : undefined}
                   onCashOut={() => openTransaction('cashout', player)}
                 />
                 {index < session.players.length - 1 && <View style={styles.separator} />}
@@ -502,12 +517,14 @@ function PlayerBalanceCard({
   balance,
   isActive,
   onBuyIn,
+  onRebuy,
   onCashOut,
 }: {
   player: SessionPlayerDto;
   balance: PlayerBalanceDto | null;
   isActive: boolean;
   onBuyIn: () => void;
+  onRebuy?: () => void;
   onCashOut: () => void;
 }) {
   const totalBuyIn = balance?.totalBuyIn ?? 0;
@@ -534,6 +551,11 @@ function PlayerBalanceCard({
           <TouchableOpacity style={styles.buyInBtn} onPress={onBuyIn}>
             <Text style={styles.buyInBtnText}>+ Buy In</Text>
           </TouchableOpacity>
+          {onRebuy && (
+            <TouchableOpacity style={styles.rebuyBtn} onPress={onRebuy}>
+              <Text style={styles.rebuyBtnText}>Rebuy</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={styles.cashOutBtn} onPress={onCashOut}>
             <Text style={styles.cashOutBtnText}>Cash Out</Text>
           </TouchableOpacity>
@@ -713,6 +735,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buyInBtnText: { fontSize: 13, fontWeight: '700', color: colors.gold },
+  rebuyBtn: {
+    flex: 1,
+    backgroundColor: 'rgba(201,168,76,0.08)',
+    borderWidth: 1,
+    borderColor: colors.gold,
+    borderRadius: 8,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  rebuyBtnText: { fontSize: 13, fontWeight: '700', color: colors.gold },
   cashOutBtn: {
     flex: 1,
     backgroundColor: colors.surfaceHigh,

@@ -6,7 +6,9 @@ public sealed record CreateSessionCommand(
     Guid GroupId,
     string Name,
     decimal SmallBlind,
-    decimal BigBlind) : IRequest<CreateSessionResponse>;
+    decimal BigBlind,
+    decimal? ChipRatio,
+    decimal? DefaultBuyIn) : IRequest<CreateSessionResponse>;
 
 public sealed record CreateSessionResponse(
     Guid Id,
@@ -15,4 +17,6 @@ public sealed record CreateSessionResponse(
     string Status,
     decimal SmallBlind,
     decimal BigBlind,
+    decimal? ChipRatio,
+    decimal? DefaultBuyIn,
     DateTime CreatedAt);

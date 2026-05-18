@@ -24,6 +24,8 @@ export default function CreateSessionScreen({ route, navigation }: Props) {
   const [name, setName] = useState('');
   const [smallBlind, setSmallBlind] = useState('');
   const [bigBlind, setBigBlind] = useState('');
+  const [chipRatio, setChipRatio] = useState('');
+  const [defaultBuyIn, setDefaultBuyIn] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,13 +53,23 @@ export default function CreateSessionScreen({ route, navigation }: Props) {
       setError('Big blind must be greater than or equal to small blind.');
       return;
     }
+    const cr = chipRatio ? parseFloat(chipRatio) : undefined;
+    const dbi = defaultBuyIn ? parseFloat(defaultBuyIn) : undefined;
+    if (cr !== undefined && (isNaN(cr) || cr <= 0)) {
+      setError('Chip ratio must be greater than 0.');
+      return;
+    }
+    if (dbi !== undefined && (isNaN(dbi) || dbi <= 0)) {
+      setError('Default buy-in must be greater than 0.');
+      return;
+    }
 
     setLoading(true);
     setError(null);
     try {
       const token = await SecureStore.getItemAsync('accessToken');
       if (!token) throw new Error('Not authenticated');
-      const session = await createSession(token, groupId, name.trim(), sb, bb);
+      const session = await createSession(token, groupId, name.trim(), sb, bb, cr, dbi);
       navigation.goBack();
       navigation.navigate('SessionDetail', {
         sessionId: session.id,
@@ -117,6 +129,32 @@ export default function CreateSessionScreen({ route, navigation }: Props) {
           </View>
         </View>
 
+        <View style={styles.row}>
+          <View style={styles.half}>
+            <Text style={styles.label}>Chip Ratio (optional)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. 100"
+              placeholderTextColor={colors.textDim}
+              value={chipRatio}
+              onChangeText={setChipRatio}
+              keyboardType="decimal-pad"
+            />
+            <Text style={styles.hint}>chips per ₪</Text>
+          </View>
+          <View style={styles.half}>
+            <Text style={styles.label}>Default Buy-In ₪ (optional)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. 50"
+              placeholderTextColor={colors.textDim}
+              value={defaultBuyIn}
+              onChangeText={setDefaultBuyIn}
+              keyboardType="decimal-pad"
+            />
+          </View>
+        </View>
+
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
         <TouchableOpacity
@@ -161,6 +199,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textDim,
     textAlign: 'right',
+    marginTop: 4,
+  },
+  hint: {
+    fontSize: 11,
+    color: colors.textDim,
     marginTop: 4,
   },
   row: { flexDirection: 'row', gap: 12 },

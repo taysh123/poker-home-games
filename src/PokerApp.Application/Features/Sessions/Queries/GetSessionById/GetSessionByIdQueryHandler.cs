@@ -39,6 +39,8 @@ public sealed class GetSessionByIdQueryHandler(
             session.Status.ToString(),
             session.SmallBlind,
             session.BigBlind,
+            session.ChipRatio,
+            session.DefaultBuyIn,
             players,
             session.StartedAt,
             session.EndedAt,

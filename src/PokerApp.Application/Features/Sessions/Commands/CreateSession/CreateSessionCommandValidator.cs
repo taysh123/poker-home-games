@@ -19,5 +19,15 @@ public sealed class CreateSessionCommandValidator : AbstractValidator<CreateSess
             .WithMessage("Big blind must be greater than zero.")
             .GreaterThanOrEqualTo(x => x.SmallBlind)
             .WithMessage("Big blind must be greater than or equal to small blind.");
+
+        When(x => x.ChipRatio.HasValue, () =>
+            RuleFor(x => x.ChipRatio!.Value)
+                .GreaterThan(0)
+                .WithMessage("Chip ratio must be greater than zero."));
+
+        When(x => x.DefaultBuyIn.HasValue, () =>
+            RuleFor(x => x.DefaultBuyIn!.Value)
+                .GreaterThan(0)
+                .WithMessage("Default buy-in must be greater than zero."));
     }
 }

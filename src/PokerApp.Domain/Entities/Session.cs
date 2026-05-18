@@ -9,6 +9,8 @@ public class Session : BaseEntity
     public Group Group { get; private set; } = null!;
     public decimal SmallBlind { get; private set; }
     public decimal BigBlind { get; private set; }
+    public decimal? ChipRatio { get; private set; }
+    public decimal? DefaultBuyIn { get; private set; }
     public SessionStatus Status { get; private set; }
     public DateTime? StartedAt { get; private set; }
     public DateTime? EndedAt { get; private set; }
@@ -27,13 +29,17 @@ public class Session : BaseEntity
 
     private Session() { }
 
-    public static Session Create(string name, Guid groupId, decimal smallBlind, decimal bigBlind)
+    public static Session Create(
+        string name, Guid groupId, decimal smallBlind, decimal bigBlind,
+        decimal? chipRatio = null, decimal? defaultBuyIn = null)
         => new()
         {
             Name = name,
             GroupId = groupId,
             SmallBlind = smallBlind,
             BigBlind = bigBlind,
+            ChipRatio = chipRatio,
+            DefaultBuyIn = defaultBuyIn,
             Status = SessionStatus.Draft
         };
 

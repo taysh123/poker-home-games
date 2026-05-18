@@ -29,6 +29,8 @@ export type SessionDetailDto = {
   status: string;
   smallBlind: number;
   bigBlind: number;
+  chipRatio?: number;
+  defaultBuyIn?: number;
   players: SessionPlayerDto[];
   startedAt: string | null;
   endedAt: string | null;
@@ -42,6 +44,8 @@ export type CreateSessionResponse = {
   status: string;
   smallBlind: number;
   bigBlind: number;
+  chipRatio?: number;
+  defaultBuyIn?: number;
   createdAt: string;
 };
 
@@ -96,10 +100,12 @@ export async function createSession(
   name: string,
   smallBlind: number,
   bigBlind: number,
+  chipRatio?: number,
+  defaultBuyIn?: number,
 ): Promise<CreateSessionResponse> {
   const { data } = await api.post<CreateSessionResponse>(
     `/api/groups/${groupId}/sessions`,
-    { name, smallBlind, bigBlind },
+    { name, smallBlind, bigBlind, chipRatio, defaultBuyIn },
     { headers: authHeader(token) },
   );
   return data;
