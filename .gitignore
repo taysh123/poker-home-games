@@ -1,0 +1,25 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.vscode/
+*.swp
+
+## Rider
+.idea/
+
+## NuGet
+*.nupkg
+packages/
+*.lock.json
+!packages.lock.json
+
+## Environment / secrets
+appsettings.*.local.json
+*.env
+.env
+
+## Build outputs
+publish/
