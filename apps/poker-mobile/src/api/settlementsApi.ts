@@ -23,6 +23,18 @@ export type SessionSettlementsDto = {
   settlements: SettlementDto[];
 };
 
+export type MyPendingSettlementDto = {
+  id: string;
+  sessionId: string;
+  sessionName: string;
+  groupName: string;
+  payerUserId: string;
+  payerName: string;
+  receiverUserId: string;
+  receiverName: string;
+  amount: number;
+};
+
 function authHeader(token: string) {
   return { Authorization: `Bearer ${token}` };
 }
@@ -59,4 +71,12 @@ export async function markSettlementPaid(
     {},
     { headers: authHeader(token) },
   );
+}
+
+export async function getMyPendingSettlements(token: string): Promise<MyPendingSettlementDto[]> {
+  const { data } = await api.get<MyPendingSettlementDto[]>(
+    '/api/settlements/pending',
+    { headers: authHeader(token) },
+  );
+  return data;
 }

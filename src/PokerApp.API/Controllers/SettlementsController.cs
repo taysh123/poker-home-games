@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using PokerApp.Application.Features.Settlements;
 using PokerApp.Application.Features.Settlements.Commands.CalculateSettlements;
 using PokerApp.Application.Features.Settlements.Commands.MarkSettlementPaid;
+using PokerApp.Application.Features.Settlements.Queries.GetMyPendingSettlements;
 using PokerApp.Application.Features.Settlements.Queries.GetSessionSettlements;
 
 namespace PokerApp.API.Controllers;
@@ -36,6 +37,16 @@ public class SettlementsController(IMediator mediator) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await mediator.Send(new GetSessionSettlementsQuery(sessionId), cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>Returns all pending settlements where the caller is payer or receiver, across all sessions.</summary>
+    [HttpGet("api/settlements/pending")]
+    [ProducesResponseType(typeof(List<MyPendingSettlementDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetMyPendingSettlements(CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GetMyPendingSettlementsQuery(), cancellationToken);
         return Ok(result);
     }
 

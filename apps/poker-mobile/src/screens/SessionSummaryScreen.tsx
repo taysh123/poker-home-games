@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -14,7 +15,8 @@ import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { getSessionById, getSessionBalances, SessionDetailDto, SessionBalancesDto } from '../api/sessionsApi';
-import { getSessionSettlements, SessionSettlementsDto } from '../api/settlementsApi';
+import { getSessionSettlements, calculateSettlements, markSettlementPaid, SessionSettlementsDto } from '../api/settlementsApi';
+import { useAuth } from '../context/AuthContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SessionSummary'>;
 
@@ -52,21 +54,34 @@ function rankLabel(rank: number): string {
 
 export default function SessionSummaryScreen({ route, navigation }: Props) {
   const { sessionId, sessionName } = route.params;
+  const { user } = useAuth();
 
   const [data, setData] = useState<SummaryData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [markingPaidId, setMarkingPaidId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
       setError(null);
       const token = await SecureStore.getItemAsync('accessToken');
       if (!token) return;
-      const [session, balances, settlements] = await Promise.all([
+      const [session, balances, settlementsRaw] = await Promise.all([
         getSessionById(token, sessionId),
         getSessionBalances(token, sessionId),
         getSessionSettlements(token, sessionId),
       ]);
+
+      let settlements = settlementsRaw;
+      if (settlementsRaw.settlements.length === 0 && session.status === 'Finished') {
+        try {
+          const calculated = await calculateSettlements(token, sessionId);
+          settlements = { sessionId, totalPot: balances.totalPot, settlements: calculated };
+        } catch {
+          // silently ignore — user can still tap Calculate manually on SettlementScreen
+        }
+      }
+
       setData({ session, balances, settlements });
     } catch {
       setError('Failed to load session summary.');
@@ -81,6 +96,21 @@ export default function SessionSummaryScreen({ route, navigation }: Props) {
       load();
     }, [load]),
   );
+
+  async function handleMarkPaid(settlementId: string) {
+    setMarkingPaidId(settlementId);
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!token) return;
+      await markSettlementPaid(token, settlementId);
+      setLoading(true);
+      load();
+    } catch {
+      Alert.alert('Error', 'Failed to mark settlement as paid.');
+    } finally {
+      setMarkingPaidId(null);
+    }
+  }
 
   if (loading) {
     return (
@@ -185,6 +215,8 @@ export default function SessionSummaryScreen({ route, navigation }: Props) {
           <View style={styles.settlementsCard}>
             {settlements.settlements.map((s, index) => {
               const isPaid = s.status === 'Confirmed';
+              const isInvolved = user?.userId === s.payerUserId || user?.userId === s.receiverUserId;
+              const isMarking = markingPaidId === s.id;
               return (
                 <React.Fragment key={s.id}>
                   {index > 0 && <View style={styles.divider} />}
@@ -197,11 +229,24 @@ export default function SessionSummaryScreen({ route, navigation }: Props) {
                       </Text>
                       <Text style={styles.settlementAmount}>₪{s.amount.toFixed(2)}</Text>
                     </View>
-                    <View style={[styles.statusBadge, isPaid ? styles.badgePaid : styles.badgePending]}>
-                      <Text style={[styles.statusText, isPaid ? styles.statusPaid : styles.statusPending]}>
-                        {isPaid ? 'PAID' : 'PENDING'}
-                      </Text>
-                    </View>
+                    {!isPaid && isInvolved ? (
+                      <TouchableOpacity
+                        style={styles.markPaidBtn}
+                        onPress={() => handleMarkPaid(s.id)}
+                        disabled={markingPaidId !== null}
+                      >
+                        {isMarking
+                          ? <ActivityIndicator size="small" color={colors.success} />
+                          : <Text style={styles.markPaidText}>Mark Paid</Text>
+                        }
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={[styles.statusBadge, isPaid ? styles.badgePaid : styles.badgePending]}>
+                        <Text style={[styles.statusText, isPaid ? styles.statusPaid : styles.statusPending]}>
+                          {isPaid ? 'PAID' : 'PENDING'}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 </React.Fragment>
               );
@@ -398,6 +443,18 @@ const styles = StyleSheet.create({
   statusText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
   statusPending: { color: colors.gold },
   statusPaid: { color: colors.success },
+
+  markPaidBtn: {
+    backgroundColor: 'rgba(39,174,96,0.10)',
+    borderWidth: 1,
+    borderColor: colors.success,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  markPaidText: { fontSize: 12, fontWeight: '700', color: colors.success },
 
   // Manage button
   manageBtn: {

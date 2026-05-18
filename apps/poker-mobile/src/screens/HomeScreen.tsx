@@ -14,6 +14,7 @@ import { colors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import { getMyGroups, getMyInvitations, MyGroupDto, PendingInvitationDto } from '../api/groupsApi';
 import { getMyStats, MyStatsDto, RecentSessionDto } from '../api/statsApi';
+import { getMyPendingSettlements, MyPendingSettlementDto } from '../api/settlementsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
 type HomeNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -38,16 +39,18 @@ export default function HomeScreen() {
   const { user, logout } = useAuth();
   const navigation = useNavigation<HomeNav>();
 
-  const [loggingOut, setLoggingOut]     = useState(false);
-  const [groups, setGroups]             = useState<MyGroupDto[]>([]);
-  const [stats, setStats]               = useState<MyStatsDto | null>(null);
-  const [statsLoading, setStatsLoading] = useState(true);
-  const [invitations, setInvitations]   = useState<PendingInvitationDto[]>([]);
+  const [loggingOut, setLoggingOut]               = useState(false);
+  const [groups, setGroups]                       = useState<MyGroupDto[]>([]);
+  const [stats, setStats]                         = useState<MyStatsDto | null>(null);
+  const [statsLoading, setStatsLoading]           = useState(true);
+  const [invitations, setInvitations]             = useState<PendingInvitationDto[]>([]);
+  const [pendingSettlements, setPendingSettlements] = useState<MyPendingSettlementDto[]>([]);
 
   useEffect(() => {
     loadGroups();
     loadStats();
     loadInvitations();
+    loadPendingSettlements();
   }, []);
 
   async function loadGroups() {
@@ -67,6 +70,17 @@ export default function HomeScreen() {
       if (!token) return;
       const data = await getMyInvitations(token);
       setInvitations(data);
+    } catch {
+      // silently ignore
+    }
+  }
+
+  async function loadPendingSettlements() {
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!token) return;
+      const data = await getMyPendingSettlements(token);
+      setPendingSettlements(data);
     } catch {
       // silently ignore
     }
@@ -181,6 +195,42 @@ export default function HomeScreen() {
           </View>
         </View>
       </View>
+
+      {/* ── Pending Settlements (only if any) ── */}
+      {pendingSettlements.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Pending Settlements</Text>
+          <View style={styles.groupsCard}>
+            {pendingSettlements.map((s, i) => {
+              const iOwe = s.payerUserId === user?.userId;
+              const amountStr = `₪${s.amount.toFixed(2)}`;
+              return (
+                <React.Fragment key={s.id}>
+                  {i > 0 && <View style={styles.divider} />}
+                  <TouchableOpacity
+                    style={styles.groupRow}
+                    onPress={() => navigation.navigate('SessionSummary', {
+                      sessionId: s.sessionId,
+                      sessionName: s.sessionName,
+                    })}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.groupRowLeft}>
+                      <Text style={[styles.debtLabel, iOwe ? styles.debtOwed : styles.debtReceivable]}>
+                        {iOwe
+                          ? `You owe ${amountStr} to ${s.receiverName}`
+                          : `${s.payerName} owes you ${amountStr}`}
+                      </Text>
+                      <Text style={styles.groupRowMeta}>{s.sessionName} · {s.groupName}</Text>
+                    </View>
+                    <Text style={styles.rowChevron}>›</Text>
+                  </TouchableOpacity>
+                </React.Fragment>
+              );
+            })}
+          </View>
+        </View>
+      )}
 
       {/* ── Active Sessions (only if any) ── */}
       {activeSessions.length > 0 && (
@@ -493,6 +543,9 @@ const styles = StyleSheet.create({
   groupRowMeta: { fontSize: 12, color: colors.textMuted },
   rowChevron: { fontSize: 20, color: colors.textDim, fontWeight: '300' },
   moreGroupsText: { flex: 1, fontSize: 14, color: colors.textMuted },
+  debtLabel: { fontSize: 14, fontWeight: '600', marginBottom: 2 },
+  debtOwed: { color: colors.error },
+  debtReceivable: { color: colors.success },
   inviteRow: {
     flexDirection: 'row',
     alignItems: 'center',
