@@ -129,13 +129,16 @@ export default function RegisterScreen({ navigation }: Props) {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.dividerRow}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        <GoogleAuthButton onPress={promptGoogle} disabled={!googleReady || loading} />
+        {Platform.OS !== 'web' && (
+          <>
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
+            </View>
+            <GoogleAuthButton onPress={promptGoogle} disabled={!googleReady || loading} />
+          </>
+        )}
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Already have an account? </Text>
