@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "T Poker",
+    "slug": "t-poker",
+    "scheme": "tpoker",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0F1923"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tpoker.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0F1923"
+      },
+      "package": "com.tpoker.app",
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-web-browser"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "8380f2f3-8dbb-478e-b92f-c39e3ebb3d8b"
+      }
+    },
+    "owner": "taysh"
+  }
+}

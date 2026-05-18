@@ -15,14 +15,25 @@ public class User : BaseEntity
     private readonly List<RefreshToken> _refreshTokens = [];
     public IReadOnlyCollection<RefreshToken> RefreshTokens => _refreshTokens.AsReadOnly();
 
+    public string? GoogleId { get; private set; }
+
     private User() { }
 
     public static User Create(string username, string email, string passwordHash) =>
         new() { Username = username, Email = email, PasswordHash = passwordHash };
 
+    public static User CreateWithGoogle(string username, string email, string googleId) =>
+        new() { Username = username, Email = email, PasswordHash = string.Empty, GoogleId = googleId };
+
     public void UpdatePassword(string passwordHash)
     {
         PasswordHash = passwordHash;
+        SetUpdatedAt();
+    }
+
+    public void LinkGoogle(string googleId)
+    {
+        GoogleId = googleId;
         SetUpdatedAt();
     }
 }

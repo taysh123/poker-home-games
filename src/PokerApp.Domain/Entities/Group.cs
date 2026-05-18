@@ -14,4 +14,18 @@ public class Group : BaseEntity
     public IReadOnlyCollection<Session> Sessions => _sessions.AsReadOnly();
 
     private Group() { }
+
+    public static Group Create(string name, string? description, Guid ownerId)
+        => new()
+        {
+            Name = name,
+            Description = description,
+            OwnerId = ownerId
+        };
+
+    public void Update(string name, string? description)
+    {
+        Name = name;
+        Description = description;
+    }
 }

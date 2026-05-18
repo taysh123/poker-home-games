@@ -34,6 +34,8 @@ public static class DependencyInjection
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
 
+        services.AddScoped<IGoogleAuthService, GoogleAuthService>();
+
         return services;
     }
 }

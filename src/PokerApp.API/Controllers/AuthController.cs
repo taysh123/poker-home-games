@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PokerApp.Application.Features.Auth.Commands.GoogleLogin;
 using PokerApp.Application.Features.Auth.Commands.Login;
 using PokerApp.Application.Features.Auth.Commands.Logout;
 using PokerApp.Application.Features.Auth.Commands.RefreshToken;
@@ -13,6 +14,21 @@ namespace PokerApp.API.Controllers;
 [Route("api/auth")]
 public class AuthController(IMediator mediator) : ControllerBase
 {
+    /// <summary>
+    /// Signs in (or registers) a user using a Google ID token obtained on the mobile client.
+    /// If the email already exists as a password account, it links the Google identity to it.
+    /// </summary>
+    [HttpPost("google")]
+    [ProducesResponseType(typeof(GoogleLoginResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GoogleLogin(
+        [FromBody] GoogleLoginCommand command,
+        CancellationToken cancellationToken)
+    {
+        var response = await mediator.Send(command, cancellationToken);
+        return Ok(response);
+    }
+
     /// <summary>Creates a new user account and returns an initial token pair.</summary>
     [HttpPost("register")]
     [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status201Created)]

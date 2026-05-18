@@ -1,0 +1,120 @@
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using PokerApp.Application.Features.Groups.Commands.CreateGroup;
+using PokerApp.Application.Features.Groups.Commands.InviteUser;
+using PokerApp.Application.Features.Groups.Commands.LeaveGroup;
+using PokerApp.Application.Features.Groups.Commands.RemoveMember;
+using PokerApp.Application.Features.Groups.Commands.UpdateGroup;
+using PokerApp.Application.Features.Groups.Queries.GetGroupById;
+using PokerApp.Application.Features.Groups.Queries.GetGroupMembers;
+using PokerApp.Application.Features.Groups.Queries.GetMyGroups;
+
+namespace PokerApp.API.Controllers;
+
+[Authorize]
+[ApiController]
+[Route("api/groups")]
+public class GroupsController(IMediator mediator) : ControllerBase
+{
+    /// <summary>Creates a new private group. The caller becomes the owner.</summary>
+    [HttpPost]
+    [ProducesResponseType(typeof(CreateGroupResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> CreateGroup(
+        [FromBody] CreateGroupCommand command,
+        CancellationToken cancellationToken)
+    {
+        var response = await mediator.Send(command, cancellationToken);
+        return CreatedAtAction(nameof(GetGroupById), new { id = response.Id }, response);
+    }
+
+    /// <summary>Returns all groups the authenticated user belongs to.</summary>
+    [HttpGet]
+    [ProducesResponseType(typeof(IReadOnlyList<MyGroupDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetMyGroups(CancellationToken cancellationToken)
+    {
+        var response = await mediator.Send(new GetMyGroupsQuery(), cancellationToken);
+        return Ok(response);
+    }
+
+    /// <summary>Returns group details. Only members can view.</summary>
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(GetGroupByIdResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetGroupById(Guid id, CancellationToken cancellationToken)
+    {
+        var response = await mediator.Send(new GetGroupByIdQuery(id), cancellationToken);
+        return Ok(response);
+    }
+
+    /// <summary>Updates group name/description. Requires Admin or Owner role.</summary>
+    [HttpPut("{id:guid}")]
+    [ProducesResponseType(typeof(UpdateGroupResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateGroup(
+        Guid id,
+        [FromBody] UpdateGroupRequest body,
+        CancellationToken cancellationToken)
+    {
+        var response = await mediator.Send(new UpdateGroupCommand(id, body.Name, body.Description), cancellationToken);
+        return Ok(response);
+    }
+
+    /// <summary>Returns all members of the group. Only members can view.</summary>
+    [HttpGet("{id:guid}/members")]
+    [ProducesResponseType(typeof(IReadOnlyList<GroupMemberDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetGroupMembers(Guid id, CancellationToken cancellationToken)
+    {
+        var response = await mediator.Send(new GetGroupMembersQuery(id), cancellationToken);
+        return Ok(response);
+    }
+
+    /// <summary>Invites a user to the group by username. Requires Admin or Owner role.</summary>
+    [HttpPost("{id:guid}/invitations")]
+    [ProducesResponseType(typeof(InviteUserToGroupResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> InviteUser(
+        Guid id,
+        [FromBody] InviteUserRequest body,
+        CancellationToken cancellationToken)
+    {
+        var response = await mediator.Send(new InviteUserToGroupCommand(id, body.Username), cancellationToken);
+        return StatusCode(StatusCodes.Status201Created, response);
+    }
+
+    /// <summary>Removes a member from the group. Requires Admin or Owner role.</summary>
+    [HttpDelete("{id:guid}/members/{userId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RemoveMember(Guid id, Guid userId, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new RemoveMemberCommand(id, userId), cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>Leaves the group. The group owner cannot leave.</summary>
+    [HttpDelete("{id:guid}/members/me")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> LeaveGroup(Guid id, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new LeaveGroupCommand(id), cancellationToken);
+        return NoContent();
+    }
+}
+
+public sealed record UpdateGroupRequest(string Name, string? Description);
+public sealed record InviteUserRequest(string Username);
