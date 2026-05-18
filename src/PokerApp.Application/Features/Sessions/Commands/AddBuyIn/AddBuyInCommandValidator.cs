@@ -6,6 +6,7 @@ public sealed class AddBuyInCommandValidator : AbstractValidator<AddBuyInCommand
 {
     public AddBuyInCommandValidator()
     {
+        RuleFor(x => x.SessionId).NotEmpty();
         RuleFor(x => x.UserId).NotEmpty();
         RuleFor(x => x.Amount)
             .GreaterThan(0).WithMessage("Amount must be greater than 0.")

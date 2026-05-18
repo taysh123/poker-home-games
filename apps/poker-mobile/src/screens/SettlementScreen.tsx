@@ -31,6 +31,7 @@ export default function SettlementScreen({ route }: Props) {
 
   const [data, setData] = useState<SessionSettlementsDto | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,8 +46,14 @@ export default function SettlementScreen({ route }: Props) {
       setError('Failed to load settlements.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [sessionId]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    load();
+  }, [load]);
 
   useFocusEffect(
     useCallback(() => {
@@ -169,7 +176,7 @@ export default function SettlementScreen({ route }: Props) {
           renderItem={renderSettlement}
           contentContainerStyle={styles.list}
           refreshControl={
-            <RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.gold} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />
           }
           ListHeaderComponent={
             <Text style={styles.sectionHeader}>Payment Instructions</Text>

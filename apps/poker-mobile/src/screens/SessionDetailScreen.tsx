@@ -233,7 +233,7 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
   const isAdminOrOwner = myRole === 'Owner' || myRole === 'Admin';
 
   const addablePlayers = groupMembers.filter(
-    (m) => !session.players.some((p) => p.userId === m.userId),
+    (m) => !(session.players?.some((p) => p.userId === m.userId) ?? false),
   );
 
   const balanceMap = new Map<string, PlayerBalanceDto>(
@@ -391,7 +391,7 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
                     onPress={() => handleAddPlayer(item.userId)}
                   >
                     <View style={styles.memberAvatar}>
-                      <Text style={styles.memberAvatarText}>{item.username[0].toUpperCase()}</Text>
+                      <Text style={styles.memberAvatarText}>{(item.username?.[0] ?? '?').toUpperCase()}</Text>
                     </View>
                     <Text style={styles.memberPickerName}>{item.username}</Text>
                   </TouchableOpacity>
@@ -477,7 +477,7 @@ function PlayerRow({
   return (
     <View style={styles.playerRow}>
       <View style={styles.playerAvatar}>
-        <Text style={styles.playerAvatarText}>{player.username[0].toUpperCase()}</Text>
+        <Text style={styles.playerAvatarText}>{(player.username?.[0] ?? '?').toUpperCase()}</Text>
       </View>
       <Text style={styles.playerName}>{player.username}</Text>
       {canRemove && (
@@ -510,7 +510,7 @@ function PlayerBalanceCard({
     <View style={styles.balanceCard}>
       <View style={styles.balanceCardTop}>
         <View style={styles.playerAvatar}>
-          <Text style={styles.playerAvatarText}>{player.username[0].toUpperCase()}</Text>
+          <Text style={styles.playerAvatarText}>{(player.username?.[0] ?? '?').toUpperCase()}</Text>
         </View>
         <View style={styles.balanceInfo}>
           <Text style={styles.playerName}>{player.username}</Text>

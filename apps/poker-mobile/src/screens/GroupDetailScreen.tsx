@@ -111,12 +111,17 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
       }
       renderItem={({ item }) => <MemberRow member={item} />}
       ItemSeparatorComponent={() => <View style={styles.separator} />}
+      ListEmptyComponent={
+        <View style={styles.emptyMembers}>
+          <Text style={styles.emptyMembersText}>No members yet.</Text>
+        </View>
+      }
     />
   );
 }
 
 function MemberRow({ member }: { member: GroupMemberDto }) {
-  const initial = member.username[0].toUpperCase();
+  const initial = (member.username?.[0] ?? '?').toUpperCase();
   return (
     <View style={styles.memberRow}>
       <View style={styles.avatar}>
@@ -316,5 +321,17 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 14,
     fontWeight: '600',
+  },
+  emptyMembers: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 24,
+    alignItems: 'center',
+  },
+  emptyMembersText: {
+    fontSize: 14,
+    color: colors.textMuted,
   },
 });

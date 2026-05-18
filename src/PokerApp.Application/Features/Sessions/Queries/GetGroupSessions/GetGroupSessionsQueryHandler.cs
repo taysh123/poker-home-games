@@ -15,18 +15,21 @@ public sealed class GetGroupSessionsQueryHandler(
         var userId = currentUserService.UserId;
 
         var groupExists = await context.Groups
+            .AsNoTracking()
             .AnyAsync(g => g.Id == request.GroupId, cancellationToken);
 
         if (!groupExists)
             throw new NotFoundException(nameof(Group), request.GroupId);
 
         var isMember = await context.GroupMembers
+            .AsNoTracking()
             .AnyAsync(m => m.GroupId == request.GroupId && m.UserId == userId, cancellationToken);
 
         if (!isMember)
             throw new UnauthorizedException("You are not a member of this group.");
 
         var sessions = await context.Sessions
+            .AsNoTracking()
             .Where(s => s.GroupId == request.GroupId)
             .OrderByDescending(s => s.CreatedAt)
             .Select(s => new SessionSummaryDto(

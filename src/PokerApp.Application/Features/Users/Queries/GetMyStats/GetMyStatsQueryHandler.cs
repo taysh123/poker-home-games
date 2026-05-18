@@ -14,6 +14,7 @@ public sealed class GetMyStatsQueryHandler(
         var userId = currentUserService.UserId;
 
         var sessionIds = await context.SessionPlayers
+            .AsNoTracking()
             .Where(sp => sp.UserId == userId)
             .Select(sp => sp.SessionId)
             .ToListAsync(cancellationToken);
@@ -21,19 +22,25 @@ public sealed class GetMyStatsQueryHandler(
         if (sessionIds.Count == 0)
             return new MyStatsDto(0, 0m, null, null, []);
 
-        var buyInSums = await context.BuyIns
+        var buyInSumsRaw = await context.BuyIns
+            .AsNoTracking()
             .Where(b => b.UserId == userId && sessionIds.Contains(b.SessionId))
             .GroupBy(b => b.SessionId)
             .Select(g => new { SessionId = g.Key, Total = g.Sum(b => b.Amount) })
             .ToListAsync(cancellationToken);
 
-        var cashOutSums = await context.CashOuts
+        var cashOutSumsRaw = await context.CashOuts
+            .AsNoTracking()
             .Where(c => c.UserId == userId && sessionIds.Contains(c.SessionId))
             .GroupBy(c => c.SessionId)
             .Select(g => new { SessionId = g.Key, Total = g.Sum(c => c.Amount) })
             .ToListAsync(cancellationToken);
 
+        var buyInBySession  = buyInSumsRaw.ToDictionary(x => x.SessionId, x => x.Total);
+        var cashOutBySession = cashOutSumsRaw.ToDictionary(x => x.SessionId, x => x.Total);
+
         var sessions = await context.Sessions
+            .AsNoTracking()
             .Where(s => sessionIds.Contains(s.Id))
             .OrderByDescending(s => s.CreatedAt)
             .ToListAsync(cancellationToken);
@@ -41,20 +48,21 @@ public sealed class GetMyStatsQueryHandler(
         var groupIds = sessions.Select(s => s.GroupId).Distinct().ToList();
 
         var groups = await context.Groups
+            .AsNoTracking()
             .Where(g => groupIds.Contains(g.Id))
             .Select(g => new { g.Id, g.Name })
             .ToDictionaryAsync(g => g.Id, g => g.Name, cancellationToken);
 
         var groupRoles = await context.GroupMembers
+            .AsNoTracking()
             .Where(gm => gm.UserId == userId && groupIds.Contains(gm.GroupId))
             .Select(gm => new { gm.GroupId, RoleName = gm.Role.ToString() })
             .ToDictionaryAsync(x => x.GroupId, x => x.RoleName, cancellationToken);
 
-        // Profit/loss = cashOut - buyIn per session
         decimal GetProfit(Guid sessionId)
         {
-            var totalIn  = buyInSums.FirstOrDefault(b => b.SessionId == sessionId)?.Total ?? 0m;
-            var totalOut = cashOutSums.FirstOrDefault(c => c.SessionId == sessionId)?.Total ?? 0m;
+            var totalIn  = buyInBySession.GetValueOrDefault(sessionId, 0m);
+            var totalOut = cashOutBySession.GetValueOrDefault(sessionId, 0m);
             return totalOut - totalIn;
         }
 

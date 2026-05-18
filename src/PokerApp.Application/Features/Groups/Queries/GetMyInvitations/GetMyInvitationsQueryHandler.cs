@@ -25,9 +25,9 @@ public sealed class GetMyInvitationsQueryHandler(
             .Select(i => new PendingInvitationDto(
                 i.Id,
                 i.GroupId,
-                i.Group.Name,
-                i.InvitedByUser.Username,
-                i.ExpiresAt!.Value,
+                i.Group != null ? i.Group.Name : "Unknown",
+                i.InvitedByUser != null ? i.InvitedByUser.Username : "Unknown",
+                i.ExpiresAt.HasValue ? i.ExpiresAt.Value : DateTime.MaxValue,
                 i.CreatedAt))
             .ToListAsync(cancellationToken);
     }

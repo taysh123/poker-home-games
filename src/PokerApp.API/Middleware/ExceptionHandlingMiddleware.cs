@@ -16,13 +16,15 @@ public class ExceptionHandlingMiddleware(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Unhandled exception: {Message}", ex.Message);
+            logger.LogError(ex, "Unhandled exception. TraceId: {TraceId}. Message: {Message}. InnerException: {InnerMessage}",
+                context.TraceIdentifier, ex.Message, ex.InnerException?.Message);
             await HandleExceptionAsync(context, ex);
         }
     }
 
     private static Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
+        var traceId = context.TraceIdentifier;
         var (statusCode, error) = exception switch
         {
             BadRequestException bre => (
@@ -51,7 +53,7 @@ public class ExceptionHandlingMiddleware(
 
             _ => (
                 HttpStatusCode.InternalServerError,
-                new ErrorResponse("An unexpected error occurred.", null))
+                new ErrorResponse($"An unexpected error occurred. TraceId: {traceId}", null))
         };
 
         context.Response.ContentType = "application/json";

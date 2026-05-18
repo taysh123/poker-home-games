@@ -15,25 +15,30 @@ public sealed class GetSessionBalancesQueryHandler(
         var callerId = currentUserService.UserId;
 
         var session = await context.Sessions
+            .AsNoTracking()
             .FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken)
             ?? throw new NotFoundException(nameof(Session), request.SessionId);
 
         var isMember = await context.GroupMembers
+            .AsNoTracking()
             .AnyAsync(m => m.GroupId == session.GroupId && m.UserId == callerId, cancellationToken);
 
         if (!isMember)
             throw new UnauthorizedException("You are not a member of this group.");
 
         var players = await context.SessionPlayers
+            .AsNoTracking()
             .Where(sp => sp.SessionId == request.SessionId)
             .Include(sp => sp.User)
             .ToListAsync(cancellationToken);
 
         var buyIns = await context.BuyIns
+            .AsNoTracking()
             .Where(b => b.SessionId == request.SessionId)
             .ToListAsync(cancellationToken);
 
         var cashOuts = await context.CashOuts
+            .AsNoTracking()
             .Where(c => c.SessionId == request.SessionId)
             .ToListAsync(cancellationToken);
 
@@ -41,7 +46,7 @@ public sealed class GetSessionBalancesQueryHandler(
         {
             var totalBuyIn = buyIns.Where(b => b.UserId == p.UserId).Sum(b => b.Amount);
             var totalCashOut = cashOuts.Where(c => c.UserId == p.UserId).Sum(c => c.Amount);
-            return new PlayerBalanceDto(p.UserId, p.User.Username, totalBuyIn, totalCashOut, totalCashOut - totalBuyIn);
+            return new PlayerBalanceDto(p.UserId, p.User?.Username ?? "Unknown", totalBuyIn, totalCashOut, totalCashOut - totalBuyIn);
         }).ToList();
 
         var totalPot = buyIns.Sum(b => b.Amount);

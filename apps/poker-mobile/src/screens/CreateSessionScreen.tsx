@@ -41,10 +41,14 @@ export default function CreateSessionScreen({ route, navigation }: Props) {
       setError('Session name is required.');
       return;
     }
-    const sb = parseFloat(smallBlind) || 0;
-    const bb = parseFloat(bigBlind) || 0;
-    if (bb < sb) {
-      setError('Big blind must be at least equal to small blind.');
+    const sb = parseFloat(smallBlind);
+    const bb = parseFloat(bigBlind);
+    if (isNaN(sb) || sb <= 0) {
+      setError('Small blind must be greater than 0.');
+      return;
+    }
+    if (isNaN(bb) || bb < sb) {
+      setError('Big blind must be greater than or equal to small blind.');
       return;
     }
 
