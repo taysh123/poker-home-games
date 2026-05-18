@@ -30,6 +30,7 @@ public class GroupInvitationConfiguration : IEntityTypeConfiguration<GroupInvita
             .OnDelete(DeleteBehavior.Cascade);
 
         // Prevent duplicate pending invitations for the same user to the same group
-        builder.HasIndex(i => new { i.GroupId, i.InvitedUserId, i.Status });
+        builder.HasIndex(i => new { i.GroupId, i.InvitedUserId, i.Status })
+            .HasDatabaseName("IX_GroupInvitations_GroupId_InvitedUserId_Status");
     }
 }

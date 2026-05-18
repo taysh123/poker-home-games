@@ -449,9 +449,17 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
                   disabled={submitting}
                 >
                   {submitting ? (
-                    <ActivityIndicator color={colors.background} size="small" />
+                    <ActivityIndicator
+                      color={txModal.type === 'cashout' ? colors.success : colors.background}
+                      size="small"
+                    />
                   ) : (
-                    <Text style={styles.txConfirmText}>
+                    <Text
+                      style={[
+                        styles.txConfirmText,
+                        txModal.type === 'cashout' && styles.txConfirmTextCashout,
+                      ]}
+                    >
                       {txModal.type === 'buyin' ? 'Buy In' : 'Cash Out'}
                     </Text>
                   )}
@@ -834,8 +842,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gold,
     alignItems: 'center',
   },
-  txConfirmBtnCashout: { backgroundColor: colors.surfaceHigh, borderWidth: 1, borderColor: colors.text },
+  txConfirmBtnCashout: {
+    backgroundColor: 'rgba(39,174,96,0.12)',
+    borderWidth: 1,
+    borderColor: colors.success,
+  },
   txConfirmText: { fontSize: 15, fontWeight: '700', color: colors.background },
+  txConfirmTextCashout: { color: colors.success },
   memberPickerRow: {
     flexDirection: 'row',
     alignItems: 'center',

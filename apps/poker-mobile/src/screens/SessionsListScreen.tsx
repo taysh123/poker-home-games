@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   StyleSheet,
+  RefreshControl,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as SecureStore from '../utils/storage';
@@ -21,6 +22,7 @@ export default function SessionsListScreen({ route, navigation }: Props) {
 
   const [sessions, setSessions] = useState<SessionSummaryDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   React.useLayoutEffect(() => {
@@ -40,8 +42,8 @@ export default function SessionsListScreen({ route, navigation }: Props) {
     });
   }, [navigation, groupId, groupName]);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (isRefresh = false) => {
+    if (!isRefresh) setLoading(true);
     setError(null);
     try {
       const token = await SecureStore.getItemAsync('accessToken');
@@ -52,8 +54,14 @@ export default function SessionsListScreen({ route, navigation }: Props) {
       setError('Failed to load sessions.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [groupId]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    load(true);
+  }, [load]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -69,7 +77,7 @@ export default function SessionsListScreen({ route, navigation }: Props) {
     return (
       <View style={styles.center}>
         <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={load}>
+        <TouchableOpacity style={styles.retryButton} onPress={() => load()}>
           <Text style={styles.retryText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -98,6 +106,9 @@ export default function SessionsListScreen({ route, navigation }: Props) {
       contentContainerStyle={styles.listContent}
       data={sessions}
       keyExtractor={(item) => item.id}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />
+      }
       renderItem={({ item }) => (
         <SessionCard
           session={item}

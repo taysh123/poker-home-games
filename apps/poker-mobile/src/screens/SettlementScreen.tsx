@@ -152,7 +152,7 @@ export default function SettlementScreen({ route }: Props) {
       <View style={styles.summaryCard}>
         <Text style={styles.summaryTitle}>♠  {sessionName}</Text>
         <Text style={styles.summaryLabel}>Total Pot</Text>
-        <Text style={styles.summaryPot}>${data?.totalPot.toFixed(2) ?? '0.00'}</Text>
+        <Text style={styles.summaryPot}>₪{data?.totalPot.toFixed(2) ?? '0.00'}</Text>
       </View>
 
       {/* Calculate / Recalculate button */}
