@@ -180,8 +180,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 14,
-    padding: 16,
+    borderRadius: 16,
+    padding: 18,
     gap: 8,
   },
   cardTop: {
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  plText: { fontSize: 14, fontWeight: '700' },
+  plText: { fontSize: 15, fontWeight: '800' },
   plPositive: { color: colors.success },
   plNegative: { color: colors.error },
   sessionName: {

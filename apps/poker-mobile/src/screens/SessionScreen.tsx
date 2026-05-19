@@ -1109,12 +1109,12 @@ const styles = StyleSheet.create({
   metaChipTextGold: { color: colors.gold },
 
   // Sections
-  section: { marginTop: 8, paddingHorizontal: 16 },
+  section: { marginTop: 20, paddingHorizontal: 16 },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 13,
@@ -1145,9 +1145,9 @@ const styles = StyleSheet.create({
   playerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 14,
+    padding: 16,
     gap: 12,
-    minHeight: 64,
+    minHeight: 68,
   },
   playerRowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
   playerRowFirst: { backgroundColor: 'rgba(201,168,76,0.06)' },
@@ -1163,12 +1163,12 @@ const styles = StyleSheet.create({
   playerAvatarText: { fontSize: 16, fontWeight: '700', color: colors.textMuted },
   playerInfo: { flex: 1, gap: 2 },
   playerNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  playerName: { fontSize: 15, fontWeight: '600', color: colors.text },
+  playerName: { fontSize: 16, fontWeight: '700', color: colors.text },
   playerNameFirst: { color: colors.gold },
   playerMeta: { fontSize: 12, color: colors.textMuted },
   rankLabel: { fontSize: 14 },
   playerRight: { alignItems: 'flex-end', gap: 6 },
-  plValue: { fontSize: 16, fontWeight: '700' },
+  plValue: { fontSize: 18, fontWeight: '700' },
   plPos: { color: colors.success },
   plNeg: { color: colors.error },
   plZero: { color: colors.textMuted },
@@ -1223,7 +1223,7 @@ const styles = StyleSheet.create({
   settlementText: { fontSize: 14, color: colors.text },
   settlementName: { fontWeight: '600' },
   settlementArrow: { color: colors.textMuted },
-  settlementAmount: { fontSize: 16, fontWeight: '700', color: colors.gold },
+  settlementAmount: { fontSize: 18, fontWeight: '700', color: colors.gold },
   markPaidBtn: {
     paddingHorizontal: 12,
     paddingVertical: 6,

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -6,8 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
@@ -39,52 +41,40 @@ export default function HomeScreen() {
   const { user, logout } = useAuth();
   const navigation = useNavigation<HomeNav>();
 
-  const [loggingOut, setLoggingOut]               = useState(false);
-  const [groups, setGroups]                       = useState<MyGroupDto[]>([]);
-  const [stats, setStats]                         = useState<MyStatsDto | null>(null);
-  const [statsLoading, setStatsLoading]           = useState(true);
-  const [invitations, setInvitations]             = useState<PendingInvitationDto[]>([]);
+  const [loggingOut, setLoggingOut]     = useState(false);
+  const [groups, setGroups]             = useState<MyGroupDto[]>([]);
+  const [stats, setStats]               = useState<MyStatsDto | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [invitations, setInvitations]   = useState<PendingInvitationDto[]>([]);
+  const [refreshing, setRefreshing]     = useState(false);
 
-  useEffect(() => {
-    loadGroups();
-    loadStats();
-    loadInvitations();
-  }, []);
-
-  async function loadGroups() {
+  const loadAll = useCallback(async (isRefresh = false) => {
+    if (!isRefresh) setStatsLoading(true);
     try {
       const token = await SecureStore.getItemAsync('accessToken');
       if (!token) return;
-      const data = await getMyGroups(token);
-      setGroups(data);
+      const [groupsData, statsData, invData] = await Promise.all([
+        getMyGroups(token),
+        getMyStats(token),
+        getMyInvitations(token),
+      ]);
+      setGroups(groupsData);
+      setStats(statsData);
+      setInvitations(invData);
     } catch {
       // silently ignore — home screen is non-critical
-    }
-  }
-
-  async function loadInvitations() {
-    try {
-      const token = await SecureStore.getItemAsync('accessToken');
-      if (!token) return;
-      const data = await getMyInvitations(token);
-      setInvitations(data);
-    } catch {
-      // silently ignore
-    }
-  }
-
-  async function loadStats() {
-    try {
-      const token = await SecureStore.getItemAsync('accessToken');
-      if (!token) return;
-      const data = await getMyStats(token);
-      setStats(data);
-    } catch {
-      // silently ignore
     } finally {
       setStatsLoading(false);
+      setRefreshing(false);
     }
-  }
+  }, []);
+
+  useFocusEffect(useCallback(() => { loadAll(); }, [loadAll]));
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadAll(true);
+  }, [loadAll]);
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -112,7 +102,13 @@ export default function HomeScreen() {
   const plColor = plValue > 0 ? colors.success : plValue < 0 ? colors.error : colors.gold;
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />
+      }
+    >
       {/* ── Top bar ── */}
       <View style={styles.topBar}>
         <View>
@@ -138,6 +134,32 @@ export default function HomeScreen() {
           ? <ActivityIndicator color={colors.textMuted} size="small" />
           : <Text style={styles.logoutText}>Sign Out</Text>}
       </TouchableOpacity>
+
+      {/* ── Active Sessions — dominant, shown first ── */}
+      {activeSessions.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Active Now</Text>
+          <View style={styles.activeCard}>
+            {activeSessions.map((s, i) => (
+              <React.Fragment key={s.sessionId}>
+                {i > 0 && <View style={styles.divider} />}
+                <TouchableOpacity
+                  style={styles.activeRow}
+                  onPress={() => handleSessionPress(s)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.activePulse} />
+                  <View style={styles.activeRowLeft}>
+                    <Text style={styles.activeSessionName}>{s.sessionName}</Text>
+                    <Text style={styles.activeGroupName}>{s.groupName}</Text>
+                  </View>
+                  <Text style={styles.rowChevron}>›</Text>
+                </TouchableOpacity>
+              </React.Fragment>
+            ))}
+          </View>
+        </View>
+      )}
 
       {/* ── Quick Stats ── */}
       <View style={styles.section}>
@@ -185,32 +207,6 @@ export default function HomeScreen() {
         </View>
         )}
       </View>
-
-      {/* ── Active Sessions (only if any) ── */}
-      {activeSessions.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Active Now</Text>
-          <View style={styles.activeCard}>
-            {activeSessions.map((s, i) => (
-              <React.Fragment key={s.sessionId}>
-                {i > 0 && <View style={styles.divider} />}
-                <TouchableOpacity
-                  style={styles.activeRow}
-                  onPress={() => handleSessionPress(s)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.activeDot} />
-                  <View style={styles.activeRowLeft}>
-                    <Text style={styles.activeSessionName}>{s.sessionName}</Text>
-                    <Text style={styles.activeGroupName}>{s.groupName}</Text>
-                  </View>
-                  <Text style={styles.rowChevron}>›</Text>
-                </TouchableOpacity>
-              </React.Fragment>
-            ))}
-          </View>
-        </View>
-      )}
 
       {/* ── Pending Invitations (only if any) ── */}
       {invitations.length > 0 && (
@@ -452,7 +448,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  statValue: { fontSize: 20, fontWeight: '700', color: colors.gold },
+  statValue: { fontSize: 22, fontWeight: '800', color: colors.gold },
   statLabel: {
     fontSize: 10,
     color: colors.textMuted,
@@ -475,14 +471,19 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 10,
   },
-  activeDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  activePulse: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: colors.gold,
+    shadowColor: colors.gold,
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 4,
   },
   activeRowLeft: { flex: 1, gap: 2 },
-  activeSessionName: { fontSize: 14, fontWeight: '600', color: colors.text },
+  activeSessionName: { fontSize: 15, fontWeight: '700', color: colors.text },
   activeGroupName: { fontSize: 12, color: colors.textMuted },
 
   // Groups + sessions shared card style
@@ -500,26 +501,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   groupRowLeft: { flex: 1, gap: 2 },
-  groupRowName: { fontSize: 15, fontWeight: '600', color: colors.text },
+  groupRowName: { fontSize: 15, fontWeight: '700', color: colors.text },
   groupRowMeta: { fontSize: 12, color: colors.textMuted },
   rowChevron: { fontSize: 20, color: colors.textDim, fontWeight: '300' },
   moreGroupsText: { flex: 1, fontSize: 14, color: colors.textMuted },
-  balancesLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 6,
-  },
-  balancesLinkText: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.text },
-  balancesLinkSub: { fontSize: 12, color: colors.textMuted },
-  debtLabel: { fontSize: 14, fontWeight: '600', marginBottom: 2 },
-  debtOwed: { color: colors.error },
-  debtReceivable: { color: colors.success },
   inviteRow: {
     flexDirection: 'row',
     alignItems: 'center',
