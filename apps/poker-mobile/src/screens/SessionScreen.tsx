@@ -28,6 +28,7 @@ import {
   addPlayer,
   removePlayer,
   endSession,
+  deleteSession,
   SessionDetailDto,
   SessionPlayerDto,
   PlayerBalanceDto,
@@ -131,6 +132,9 @@ export default function SessionScreen({ route, navigation }: Props) {
 
   // Export
   const [exporting, setExporting] = useState(false);
+
+  // Delete session
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Timer ticker for active sessions
   const [tick, setTick] = useState(0);
@@ -434,6 +438,34 @@ export default function SessionScreen({ route, navigation }: Props) {
     }
   }
 
+  // ── Delete Session ──
+
+  function handleDeleteSession() {
+    Alert.alert(
+      'Delete Session',
+      'This permanently removes all buy-ins, cash-outs, hand records, and settlements. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete', style: 'destructive',
+          onPress: async () => {
+            setDeleteLoading(true);
+            try {
+              const token = await SecureStore.getItemAsync('accessToken');
+              if (!token) return;
+              await deleteSession(token, sessionId);
+              navigation.goBack();
+            } catch {
+              Alert.alert('Error', 'Failed to delete session.');
+            } finally {
+              setDeleteLoading(false);
+            }
+          },
+        },
+      ],
+    );
+  }
+
   // ── Helpers ──
 
   const alreadyInSession = new Set(
@@ -521,6 +553,13 @@ export default function SessionScreen({ route, navigation }: Props) {
           {isFinished && (
             <TouchableOpacity onPress={handleExport} style={styles.exportBtn} disabled={exporting}>
               {exporting ? <ActivityIndicator color={colors.gold} size="small" /> : <Text style={styles.exportText}>Export</Text>}
+            </TouchableOpacity>
+          )}
+          {isAdminOrOwner && (
+            <TouchableOpacity onPress={handleDeleteSession} style={styles.deleteBtn} disabled={deleteLoading} hitSlop={8}>
+              {deleteLoading
+                ? <ActivityIndicator color={colors.error} size="small" />
+                : <Text style={styles.deleteBtnText}>🗑</Text>}
             </TouchableOpacity>
           )}
         </View>
@@ -1141,6 +1180,8 @@ const styles = StyleSheet.create({
   chipToggleTextOn: { color: colors.gold },
   exportBtn: { padding: 8 },
   exportText: { color: colors.gold, fontSize: 14, fontWeight: '600' },
+  deleteBtn: { padding: 8 },
+  deleteBtnText: { fontSize: 18 },
 
   // Meta chips
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingVertical: 12 },

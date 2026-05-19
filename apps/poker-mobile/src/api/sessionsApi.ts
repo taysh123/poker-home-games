@@ -204,3 +204,7 @@ export async function getSessionBalances(
   );
   return data;
 }
+
+export async function deleteSession(token: string, sessionId: string): Promise<void> {
+  await api.delete(`/api/sessions/${sessionId}`, { headers: authHeader(token) });
+}

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PokerApp.Application.Features.Sessions.Commands.AddPlayer;
 using PokerApp.Application.Features.Sessions.Commands.CreateSession;
+using PokerApp.Application.Features.Sessions.Commands.DeleteSession;
 using PokerApp.Application.Features.Sessions.Commands.EndSession;
 using PokerApp.Application.Features.Sessions.Commands.RemovePlayer;
 using PokerApp.Application.Features.Sessions.Commands.StartSession;
@@ -50,6 +51,17 @@ public class SessionsController(IMediator mediator) : ControllerBase
     {
         var response = await mediator.Send(new GetGroupSessionsQuery(groupId), cancellationToken);
         return Ok(response);
+    }
+
+    /// <summary>Permanently deletes a session and all associated data. Requires Owner or Admin role.</summary>
+    [HttpDelete("api/sessions/{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteSession(Guid id, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new DeleteSessionCommand(id), cancellationToken);
+        return NoContent();
     }
 
     /// <summary>Returns full session details including player list. Only group members can view.</summary>
