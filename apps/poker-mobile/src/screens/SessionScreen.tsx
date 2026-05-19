@@ -61,7 +61,7 @@ function formatMoney(value: number): string {
   return `₪${Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 }
 
-function formatDuration(start: string, end?: string | null): string {
+function formatDuration(start: string, end?: string | null, _tick?: number): string {
   const ms = (end ? new Date(end) : new Date()).getTime() - new Date(start).getTime();
   const totalMin = Math.floor(ms / 60000);
   const h = Math.floor(totalMin / 60);
@@ -174,10 +174,6 @@ export default function SessionScreen({ route, navigation }: Props) {
         if (settData) {
           setSettlements(settData.settlements);
           setSettlementsLoaded(true);
-          if (settData.settlements.length === 0 && !settlementsLoaded) {
-            const calcd = await calculateSettlements(token, sessionId).catch(() => []);
-            setSettlements(calcd);
-          }
         }
       }
     } catch {
@@ -195,7 +191,7 @@ export default function SessionScreen({ route, navigation }: Props) {
   // Timer for active sessions
   useEffect(() => {
     if (isActive) {
-      timerRef.current = setInterval(() => setTick(t => t + 1), 60000);
+      timerRef.current = setInterval(() => setTick(t => t + 1), 30000);
     }
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [isActive]);
@@ -319,6 +315,9 @@ export default function SessionScreen({ route, navigation }: Props) {
         }));
 
       await endSession(token, sessionId, finalStackItems);
+      const settled = await calculateSettlements(token, sessionId).catch(() => []);
+      setSettlements(settled);
+      setSettlementsLoaded(true);
       successNotification();
       setEndModal(false);
       await load(true);
@@ -502,7 +501,10 @@ export default function SessionScreen({ route, navigation }: Props) {
             <View style={styles.headerMeta}>
               <StatusBadge status={session.status} />
               {isActive && session.startedAt && (
-                <Text style={styles.timer}>{formatDuration(session.startedAt)}</Text>
+                <>
+                  <View style={styles.liveDot} />
+                  <Text style={styles.timer}>{formatDuration(session.startedAt, null, tick)}</Text>
+                </>
               )}
               {session.chipRatio && (
                 <TouchableOpacity
@@ -567,13 +569,18 @@ export default function SessionScreen({ route, navigation }: Props) {
                 const invested = bal?.totalBuyIn ?? 0;
                 const cashed = bal?.totalCashOut ?? 0;
                 const rank = isFinished ? index + 1 : 0;
-                const isFirst = rank === 1;
+                const isFirst = rank === 1 && isFinished;
+                const plTint = bal
+                  ? pl > 0 ? 'rgba(39,174,96,0.07)' : pl < 0 ? 'rgba(231,76,60,0.07)' : undefined
+                  : undefined;
 
                 return (
                   <View key={player.sessionPlayerId} style={[
                     styles.playerRow,
                     index > 0 && styles.playerRowBorder,
                     isFirst && styles.playerRowFirst,
+                    plTint ? { backgroundColor: plTint } : undefined,
+                    isFirst && { borderLeftWidth: 3, borderLeftColor: colors.gold },
                   ]}>
                     {/* Avatar + name */}
                     <View style={[styles.playerAvatar, isFirst && styles.playerAvatarFirst]}>
@@ -603,7 +610,11 @@ export default function SessionScreen({ route, navigation }: Props) {
                     {(isActive || isFinished) && bal ? (
                       <View style={styles.playerRight}>
                         {(isActive || isFinished) && (
-                          <Text style={[styles.plValue, pl > 0 ? styles.plPos : pl < 0 ? styles.plNeg : styles.plZero]}>
+                          <Text style={[
+                            styles.plValue,
+                            pl > 0 ? styles.plPos : pl < 0 ? styles.plNeg : styles.plZero,
+                            isFirst && styles.plValueFirst,
+                          ]}>
                             {pl > 0 ? '+' : ''}{formatMoney(pl)}
                           </Text>
                         )}
@@ -660,12 +671,14 @@ export default function SessionScreen({ route, navigation }: Props) {
             </View>
 
             {settlements.length === 0 ? (
-              <View style={styles.emptyCard}>
-                <Text style={styles.emptySubtitle}>No settlements yet</Text>
-                <TouchableOpacity style={styles.calcBtn} onPress={handleCalculateSettlements} disabled={calcLoading}>
+              <View style={styles.evenCard}>
+                <Text style={styles.evenIcon}>✓</Text>
+                <Text style={styles.evenTitle}>Everyone is even</Text>
+                <Text style={styles.evenSub}>No transfers needed — the math works out perfectly.</Text>
+                <TouchableOpacity onPress={handleCalculateSettlements} disabled={calcLoading}>
                   {calcLoading
-                    ? <ActivityIndicator color={colors.background} size="small" />
-                    : <Text style={styles.calcBtnText}>Calculate Settlements</Text>}
+                    ? <ActivityIndicator color={colors.gold} size="small" />
+                    : <Text style={styles.recalcLink}>Recalculate</Text>}
                 </TouchableOpacity>
               </View>
             ) : (
@@ -673,31 +686,55 @@ export default function SessionScreen({ route, navigation }: Props) {
                 {settlements.map(s => {
                   const isInvolved = s.payerUserId === user?.userId || s.receiverUserId === user?.userId;
                   const isPaid = s.status === 'Confirmed';
+                  const payerInitial = s.payerName[0]?.toUpperCase() ?? '?';
+                  const receiverInitial = s.receiverName[0]?.toUpperCase() ?? '?';
                   return (
-                    <View key={s.id} style={styles.settlementRow}>
-                      <View style={styles.settlementInfo}>
-                        <Text style={styles.settlementText}>
-                          <Text style={styles.settlementName}>{s.payerName}</Text>
-                          <Text style={styles.settlementArrow}> → </Text>
-                          <Text style={styles.settlementName}>{s.receiverName}</Text>
-                        </Text>
-                        <Text style={styles.settlementAmount}>{formatMoney(s.amount)}</Text>
-                      </View>
-                      {isInvolved && !isPaid ? (
-                        <TouchableOpacity
-                          style={styles.markPaidBtn}
-                          onPress={() => handleMarkPaid(s.id)}
-                          disabled={markingPaidId === s.id}
-                        >
-                          {markingPaidId === s.id
-                            ? <ActivityIndicator color={colors.background} size="small" />
-                            : <Text style={styles.markPaidText}>Mark Paid</Text>}
-                        </TouchableOpacity>
-                      ) : (
-                        <View style={[styles.settlementBadge, isPaid ? styles.badgePaid : styles.badgePending]}>
-                          <Text style={styles.settlementBadgeText}>{isPaid ? 'PAID' : 'PENDING'}</Text>
+                    <View key={s.id} style={[styles.settlementCard, isPaid && styles.settlementCardPaid]}>
+                      {/* Left border accent */}
+                      <View style={[styles.settlementAccent, isPaid && styles.settlementAccentPaid]} />
+                      <View style={styles.settlementCardInner}>
+                        {/* Players row */}
+                        <View style={styles.settlementFlow}>
+                          <View style={styles.settlementParty}>
+                            <View style={styles.settlementAvatar}>
+                              <Text style={styles.settlementAvatarText}>{payerInitial}</Text>
+                            </View>
+                            <Text style={styles.settlementPartyName} numberOfLines={1}>{s.payerName}</Text>
+                          </View>
+                          <View style={styles.settlementMiddle}>
+                            <Text style={styles.settlementArrowIcon}>→</Text>
+                            <Text style={styles.settlementAmount}>{formatMoney(s.amount)}</Text>
+                          </View>
+                          <View style={styles.settlementParty}>
+                            <View style={[styles.settlementAvatar, styles.settlementAvatarReceiver]}>
+                              <Text style={styles.settlementAvatarText}>{receiverInitial}</Text>
+                            </View>
+                            <Text style={styles.settlementPartyName} numberOfLines={1}>{s.receiverName}</Text>
+                          </View>
                         </View>
-                      )}
+                        {/* Action row */}
+                        <View style={styles.settlementActionRow}>
+                          {isPaid ? (
+                            <View style={styles.badgePaidRow}>
+                              <Text style={styles.settlementBadgeText}>PAID</Text>
+                            </View>
+                          ) : isInvolved ? (
+                            <TouchableOpacity
+                              style={styles.markPaidBtn}
+                              onPress={() => handleMarkPaid(s.id)}
+                              disabled={markingPaidId === s.id}
+                            >
+                              {markingPaidId === s.id
+                                ? <ActivityIndicator color={colors.background} size="small" />
+                                : <Text style={styles.markPaidText}>Mark Paid</Text>}
+                            </TouchableOpacity>
+                          ) : (
+                            <View style={styles.badgePendingRow}>
+                              <Text style={styles.settlementBadgeText}>PENDING</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
                     </View>
                   );
                 })}
@@ -917,7 +954,7 @@ export default function SessionScreen({ route, navigation }: Props) {
               </TouchableOpacity>
             </View>
             <Text style={styles.endSubtitle}>
-              Enter final {session.chipRatio && useChips ? 'chip counts' : 'cash amounts'} for players who haven't cashed out yet. Leave blank to skip.
+              Enter final {session.chipRatio && useChips ? 'chip counts' : 'cash amounts'} for players still at the table. Leave blank to skip.
             </Text>
 
             <ScrollView style={styles.endPlayerList} keyboardShouldPersistTaps="handled">
@@ -953,7 +990,7 @@ export default function SessionScreen({ route, navigation }: Props) {
             >
               {endLoading
                 ? <ActivityIndicator color={colors.background} />
-                : <Text style={styles.endConfirmBtnText}>End Session & Calculate</Text>}
+                : <Text style={styles.endConfirmBtnText}>End Session & Calculate →</Text>}
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -1080,6 +1117,17 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
   headerMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   timer: { fontSize: 12, color: colors.textMuted, fontWeight: '600' },
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.gold,
+    shadowColor: colors.gold,
+    shadowOpacity: 0.9,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 4,
+  },
   chipToggle: {
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -1168,7 +1216,8 @@ const styles = StyleSheet.create({
   playerMeta: { fontSize: 12, color: colors.textMuted },
   rankLabel: { fontSize: 14 },
   playerRight: { alignItems: 'flex-end', gap: 6 },
-  plValue: { fontSize: 18, fontWeight: '700' },
+  plValue: { fontSize: 18, fontWeight: '800' },
+  plValueFirst: { fontSize: 22 },
   plPos: { color: colors.success },
   plNeg: { color: colors.error },
   plZero: { color: colors.textMuted },
@@ -1202,42 +1251,84 @@ const styles = StyleSheet.create({
   },
   endSessionBtnText: { fontSize: 15, fontWeight: '700', color: colors.error },
 
-  // Settlements
-  settlementList: {
+  // "Everyone is even" empty state
+  evenCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: 'rgba(39,174,96,0.3)',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    gap: 6,
+  },
+  evenIcon: { fontSize: 32, color: colors.success, fontWeight: '700' },
+  evenTitle: { fontSize: 17, fontWeight: '700', color: colors.success },
+  evenSub: { fontSize: 13, color: colors.textMuted, textAlign: 'center' },
+  recalcLink: { fontSize: 13, color: colors.gold, fontWeight: '600', marginTop: 4 },
+
+  // Settlements — card design
+  settlementList: { gap: 10 },
+  settlementCard: {
+    flexDirection: 'row',
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 16,
+    borderRadius: 14,
     overflow: 'hidden',
   },
-  settlementRow: {
+  settlementCardPaid: { opacity: 0.55 },
+  settlementAccent: { width: 4, backgroundColor: colors.gold },
+  settlementAccentPaid: { backgroundColor: colors.success },
+  settlementCardInner: { flex: 1, padding: 14, gap: 10 },
+  settlementFlow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 14,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    gap: 12,
   },
-  settlementInfo: { flex: 1, gap: 4 },
-  settlementText: { fontSize: 14, color: colors.text },
-  settlementName: { fontWeight: '600' },
-  settlementArrow: { color: colors.textMuted },
-  settlementAmount: { fontSize: 18, fontWeight: '700', color: colors.gold },
+  settlementParty: { alignItems: 'center', gap: 4, flex: 1 },
+  settlementPartyName: { fontSize: 13, fontWeight: '600', color: colors.text, textAlign: 'center' },
+  settlementAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(231,76,60,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(231,76,60,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  settlementAvatarReceiver: {
+    backgroundColor: 'rgba(39,174,96,0.15)',
+    borderColor: 'rgba(39,174,96,0.4)',
+  },
+  settlementAvatarText: { fontSize: 15, fontWeight: '700', color: colors.text },
+  settlementMiddle: { alignItems: 'center', gap: 2, paddingHorizontal: 8 },
+  settlementArrowIcon: { fontSize: 20, color: colors.textDim },
+  settlementAmount: { fontSize: 20, fontWeight: '800', color: colors.gold },
+  settlementActionRow: { flexDirection: 'row', justifyContent: 'flex-end' },
   markPaidBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
     borderRadius: 8,
     backgroundColor: colors.gold,
   },
-  markPaidText: { fontSize: 12, fontWeight: '700', color: colors.background },
-  settlementBadge: {
+  markPaidText: { fontSize: 13, fontWeight: '700', color: colors.background },
+  badgePaidRow: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
+    backgroundColor: 'rgba(39,174,96,0.15)',
+    borderWidth: 1,
+    borderColor: colors.success,
   },
-  badgePaid: { backgroundColor: 'rgba(39,174,96,0.15)', borderWidth: 1, borderColor: colors.success },
-  badgePending: { backgroundColor: colors.surfaceHigh, borderWidth: 1, borderColor: colors.border },
+  badgePendingRow: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   settlementBadgeText: { fontSize: 10, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
 
   // Notes
@@ -1499,8 +1590,6 @@ const styles = StyleSheet.create({
   // Misc
   emptyCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 24, alignItems: 'center', gap: 12 },
   emptySubtitle: { color: colors.textMuted, fontSize: 13, textAlign: 'center' },
-  calcBtn: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.gold, borderRadius: 10 },
-  calcBtnText: { fontSize: 14, fontWeight: '700', color: colors.background },
   errorText: { fontSize: 15, color: colors.error, textAlign: 'center' },
   retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: colors.border },
   retryText: { color: colors.textMuted, fontSize: 14, fontWeight: '600' },
