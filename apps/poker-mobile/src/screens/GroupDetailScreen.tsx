@@ -16,8 +16,10 @@ import { colors } from '../theme/colors';
 import {
   getGroupById,
   getGroupMembers,
+  getGroupLeaderboard,
   GroupDetailResponse,
   GroupMemberDto,
+  PlayerLeaderboardEntryDto,
   sendGroupInvitation,
   removeGroupMember,
   leaveGroup,
@@ -33,6 +35,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
 
   const [group, setGroup] = useState<GroupDetailResponse | null>(null);
   const [members, setMembers] = useState<GroupMemberDto[]>([]);
+  const [leaderboard, setLeaderboard] = useState<PlayerLeaderboardEntryDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [inviteUsername, setInviteUsername] = useState('');
@@ -47,12 +50,14 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
     try {
       const token = await SecureStore.getItemAsync('accessToken');
       if (!token) throw new Error('Not authenticated');
-      const [groupData, membersData] = await Promise.all([
+      const [groupData, membersData, leaderboardData] = await Promise.all([
         getGroupById(token, groupId),
         getGroupMembers(token, groupId),
+        getGroupLeaderboard(token, groupId).catch(() => [] as PlayerLeaderboardEntryDto[]),
       ]);
       setGroup(groupData);
       setMembers(membersData);
+      setLeaderboard(leaderboardData);
     } catch {
       setError('Failed to load group details.');
     } finally {
@@ -201,6 +206,21 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
             </View>
           </View>
 
+          {/* Leaderboard */}
+          {leaderboard.length > 0 && (
+            <View style={styles.leaderboardSection}>
+              <Text style={styles.sectionTitle}>Leaderboard</Text>
+              <View style={styles.leaderboardCard}>
+                {leaderboard.map((entry, index) => (
+                  <React.Fragment key={entry.userId}>
+                    {index > 0 && <View style={styles.separator} />}
+                    <LeaderboardRow entry={entry} rank={index + 1} />
+                  </React.Fragment>
+                ))}
+              </View>
+            </View>
+          )}
+
           {/* Sessions nav */}
           <TouchableOpacity
             style={styles.navButton}
@@ -317,6 +337,28 @@ function MemberRow({ member, canRemove, isRemoving, onRemove }: MemberRowProps) 
           )}
         </TouchableOpacity>
       )}
+    </View>
+  );
+}
+
+function LeaderboardRow({ entry, rank }: { entry: PlayerLeaderboardEntryDto; rank: number }) {
+  const isPositive = entry.totalProfitLoss > 0;
+  const isNegative = entry.totalProfitLoss < 0;
+  const plColor = isPositive ? colors.success : isNegative ? colors.error : colors.textMuted;
+  const plPrefix = isPositive ? '+' : '';
+  return (
+    <View style={styles.leaderboardRow}>
+      <Text style={[styles.lbRank, rank === 1 && styles.lbRankFirst]}>{rank}</Text>
+      <View style={styles.avatar}>
+        <Text style={styles.avatarText}>{(entry.username?.[0] ?? '?').toUpperCase()}</Text>
+      </View>
+      <View style={styles.lbInfo}>
+        <Text style={styles.lbUsername}>{entry.username}</Text>
+        <Text style={styles.lbSessions}>{entry.sessionsPlayed} session{entry.sessionsPlayed !== 1 ? 's' : ''}</Text>
+      </View>
+      <Text style={[styles.lbPL, { color: plColor }]}>
+        {plPrefix}₪{Math.abs(entry.totalProfitLoss).toLocaleString()}
+      </Text>
     </View>
   );
 }
@@ -483,6 +525,33 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   retryText: { color: colors.textMuted, fontSize: 14, fontWeight: '600' },
+  leaderboardSection: { marginBottom: 16 },
+  leaderboardCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  leaderboardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    gap: 10,
+  },
+  lbRank: {
+    width: 22,
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textMuted,
+    textAlign: 'center',
+  },
+  lbRankFirst: { color: colors.gold },
+  lbInfo: { flex: 1, gap: 2 },
+  lbUsername: { fontSize: 14, fontWeight: '600', color: colors.text },
+  lbSessions: { fontSize: 11, color: colors.textMuted },
+  lbPL: { fontSize: 15, fontWeight: '700' },
+
   emptyMembers: {
     backgroundColor: colors.surface,
     borderWidth: 1,

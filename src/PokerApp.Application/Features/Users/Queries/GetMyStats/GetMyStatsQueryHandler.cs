@@ -13,31 +13,42 @@ public sealed class GetMyStatsQueryHandler(
     {
         var userId = currentUserService.UserId;
 
-        var sessionIds = await context.SessionPlayers
+        var sessionPlayers = await context.SessionPlayers
             .AsNoTracking()
             .Where(sp => sp.UserId == userId)
-            .Select(sp => sp.SessionId)
+            .Select(sp => new { sp.Id, sp.SessionId })
             .ToListAsync(cancellationToken);
+
+        var sessionIds = sessionPlayers.Select(x => x.SessionId).ToList();
 
         if (sessionIds.Count == 0)
             return new MyStatsDto(0, 0m, null, null, []);
 
-        var buyInSumsRaw = await context.BuyIns
+        var spIdBySession = sessionPlayers.ToDictionary(x => x.SessionId, x => x.Id);
+
+        var allBuyIns = await context.BuyIns
             .AsNoTracking()
-            .Where(b => b.UserId == userId && sessionIds.Contains(b.SessionId))
+            .Where(b => sessionIds.Contains(b.SessionId))
+            .Select(b => new { b.SessionId, b.SessionPlayerId, b.UserId, b.Amount })
+            .ToListAsync(cancellationToken);
+
+        var allCashOuts = await context.CashOuts
+            .AsNoTracking()
+            .Where(c => sessionIds.Contains(c.SessionId))
+            .Select(c => new { c.SessionId, c.SessionPlayerId, c.UserId, c.Amount })
+            .ToListAsync(cancellationToken);
+
+        var buyInBySession = allBuyIns
+            .Where(b => spIdBySession.TryGetValue(b.SessionId, out var spId) &&
+                        (b.SessionPlayerId == spId || (b.SessionPlayerId == null && b.UserId == userId)))
             .GroupBy(b => b.SessionId)
-            .Select(g => new { SessionId = g.Key, Total = g.Sum(b => b.Amount) })
-            .ToListAsync(cancellationToken);
+            .ToDictionary(g => g.Key, g => g.Sum(b => b.Amount));
 
-        var cashOutSumsRaw = await context.CashOuts
-            .AsNoTracking()
-            .Where(c => c.UserId == userId && sessionIds.Contains(c.SessionId))
+        var cashOutBySession = allCashOuts
+            .Where(c => spIdBySession.TryGetValue(c.SessionId, out var spId) &&
+                        (c.SessionPlayerId == spId || (c.SessionPlayerId == null && c.UserId == userId)))
             .GroupBy(c => c.SessionId)
-            .Select(g => new { SessionId = g.Key, Total = g.Sum(c => c.Amount) })
-            .ToListAsync(cancellationToken);
-
-        var buyInBySession  = buyInSumsRaw.ToDictionary(x => x.SessionId, x => x.Total);
-        var cashOutBySession = cashOutSumsRaw.ToDictionary(x => x.SessionId, x => x.Total);
+            .ToDictionary(g => g.Key, g => g.Sum(c => c.Amount));
 
         var sessions = await context.Sessions
             .AsNoTracking()

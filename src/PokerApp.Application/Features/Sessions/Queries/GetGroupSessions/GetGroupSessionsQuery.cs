@@ -11,4 +11,5 @@ public sealed record SessionSummaryDto(
     int PlayerCount,
     DateTime? StartedAt,
     DateTime? EndedAt,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    decimal? MyProfitLoss);

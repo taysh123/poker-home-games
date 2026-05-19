@@ -172,3 +172,23 @@ export async function updateGroup(
   );
   return data;
 }
+
+export type PlayerLeaderboardEntryDto = {
+  userId: string;
+  username: string;
+  sessionsPlayed: number;
+  totalProfitLoss: number;
+  biggestWin: number | null;
+  biggestLoss: number | null;
+};
+
+export async function getGroupLeaderboard(
+  token: string,
+  groupId: string,
+): Promise<PlayerLeaderboardEntryDto[]> {
+  const { data } = await api.get<PlayerLeaderboardEntryDto[]>(
+    `/api/groups/${groupId}/leaderboard`,
+    { headers: authHeader(token) },
+  );
+  return data;
+}

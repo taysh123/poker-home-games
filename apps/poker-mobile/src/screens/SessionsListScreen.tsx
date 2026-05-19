@@ -129,12 +129,21 @@ export default function SessionsListScreen({ route, navigation }: Props) {
 function SessionCard({ session, onPress }: { session: SessionSummaryDto; onPress: () => void }) {
   const date = session.startedAt ?? session.createdAt;
   const dateStr = new Date(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  const pl = session.myProfitLoss;
+  const showPL = session.status === 'Finished' && pl != null;
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.cardTop}>
         <Text style={styles.sessionName} numberOfLines={1}>{session.name}</Text>
-        <StatusBadge status={session.status} />
+        <View style={styles.cardTopRight}>
+          {showPL && (
+            <Text style={[styles.plText, pl >= 0 ? styles.plPositive : styles.plNegative]}>
+              {pl >= 0 ? '+' : ''}₪{Math.abs(pl).toLocaleString()}
+            </Text>
+          )}
+          <StatusBadge status={session.status} />
+        </View>
       </View>
       <View style={styles.cardMeta}>
         <Text style={styles.metaText}>
@@ -185,6 +194,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 8,
   },
+  cardTopRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  plText: { fontSize: 14, fontWeight: '700' },
+  plPositive: { color: colors.success },
+  plNegative: { color: colors.error },
   sessionName: {
     flex: 1,
     fontSize: 16,

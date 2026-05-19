@@ -15,6 +15,7 @@ export type SessionSummaryDto = {
   startedAt: string | null;
   endedAt: string | null;
   createdAt: string;
+  myProfitLoss?: number | null;
 };
 
 export type SessionPlayerDto = {
