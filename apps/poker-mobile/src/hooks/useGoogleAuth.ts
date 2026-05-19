@@ -10,7 +10,9 @@ if (Platform.OS !== 'web') {
 
 const EXPO_CLIENT_ID = '12435044751-jdh0dldfhkn2h8hqs3ssegbjflhvcmfi.apps.googleusercontent.com';
 const IOS_CLIENT_ID  = '12435044751-jap7j5prc6vm0eh0mj517nv0phrlu8mr.apps.googleusercontent.com';
-// TODO: add WEB_CLIENT_ID here and pass webClientId when enabling Google auth on web
+// Web client ID: create at Google Cloud Console → APIs & Services → Credentials → Web application
+// Add authorized redirect URI: http://localhost:8081 (dev) + your production domain
+const WEB_CLIENT_ID  = 'REPLACE_WITH_WEB_CLIENT_ID.apps.googleusercontent.com';
 
 type GoogleAuthResult =
   | { type: 'success'; idToken: string }
@@ -30,6 +32,7 @@ function useGoogleAuthNative(onResult: (result: GoogleAuthResult) => void) {
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: EXPO_CLIENT_ID,
     iosClientId: IOS_CLIENT_ID,
+    webClientId: WEB_CLIENT_ID,
   });
 
   useEffect(() => {
@@ -52,4 +55,8 @@ function useGoogleAuthNative(onResult: (result: GoogleAuthResult) => void) {
   return { prompt: () => promptAsync(), ready: !!request };
 }
 
-export const useGoogleAuth = Platform.OS === 'web' ? useGoogleAuthDisabled : useGoogleAuthNative;
+// Use the same implementation on all platforms — webClientId is now configured.
+// Replace WEB_CLIENT_ID above with the actual value from Google Cloud Console.
+export const useGoogleAuth = WEB_CLIENT_ID.startsWith('REPLACE')
+  ? (Platform.OS === 'web' ? useGoogleAuthDisabled : useGoogleAuthNative)
+  : useGoogleAuthNative;

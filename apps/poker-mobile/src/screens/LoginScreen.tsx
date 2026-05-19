@@ -115,7 +115,7 @@ export default function LoginScreen({ navigation }: Props) {
           </TouchableOpacity>
         </View>
 
-        {Platform.OS !== 'web' && (
+        {googleReady !== false && (
           <>
             <View style={styles.dividerRow}>
               <View style={styles.dividerLine} />
