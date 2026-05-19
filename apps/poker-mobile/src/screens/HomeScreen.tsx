@@ -14,7 +14,6 @@ import { colors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import { getMyGroups, getMyInvitations, MyGroupDto, PendingInvitationDto } from '../api/groupsApi';
 import { getMyStats, MyStatsDto, RecentSessionDto } from '../api/statsApi';
-import { getMyPendingSettlements, MyPendingSettlementDto } from '../api/settlementsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import SkeletonCard from '../components/SkeletonCard';
 
@@ -45,13 +44,11 @@ export default function HomeScreen() {
   const [stats, setStats]                         = useState<MyStatsDto | null>(null);
   const [statsLoading, setStatsLoading]           = useState(true);
   const [invitations, setInvitations]             = useState<PendingInvitationDto[]>([]);
-  const [pendingSettlements, setPendingSettlements] = useState<MyPendingSettlementDto[]>([]);
 
   useEffect(() => {
     loadGroups();
     loadStats();
     loadInvitations();
-    loadPendingSettlements();
   }, []);
 
   async function loadGroups() {
@@ -71,17 +68,6 @@ export default function HomeScreen() {
       if (!token) return;
       const data = await getMyInvitations(token);
       setInvitations(data);
-    } catch {
-      // silently ignore
-    }
-  }
-
-  async function loadPendingSettlements() {
-    try {
-      const token = await SecureStore.getItemAsync('accessToken');
-      if (!token) return;
-      const data = await getMyPendingSettlements(token);
-      setPendingSettlements(data);
     } catch {
       // silently ignore
     }
@@ -110,18 +96,10 @@ export default function HomeScreen() {
   }
 
   function handleSessionPress(session: RecentSessionDto) {
-    if (session.status === 'Finished') {
-      navigation.navigate('SessionSummary', {
-        sessionId: session.sessionId,
-        sessionName: session.sessionName,
-      });
-    } else {
-      navigation.navigate('SessionDetail', {
-        sessionId: session.sessionId,
-        sessionName: session.sessionName,
-        userRole: session.userRole,
-      });
-    }
+    navigation.navigate('Session', {
+      sessionId: session.sessionId,
+      groupId: session.groupId,
+    });
   }
 
   const initial = user?.username?.[0]?.toUpperCase() ?? '?';
@@ -207,60 +185,6 @@ export default function HomeScreen() {
         </View>
         )}
       </View>
-
-      {/* ── Balances quick-link ── */}
-      <View style={styles.section}>
-        <TouchableOpacity
-          style={styles.balancesLink}
-          onPress={() => navigation.navigate('Balances')}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.balancesLinkText}>My Balances</Text>
-          <Text style={styles.balancesLinkSub}>Session debts + manual IOUs</Text>
-          <Text style={styles.rowChevron}>›</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* ── Pending Settlements (only if any) ── */}
-      {pendingSettlements.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Pending Settlements</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Balances')}>
-              <Text style={styles.seeAll}>See all →</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.groupsCard}>
-            {pendingSettlements.map((s, i) => {
-              const iOwe = s.payerUserId === user?.userId;
-              const amountStr = `₪${s.amount.toFixed(2)}`;
-              return (
-                <React.Fragment key={s.id}>
-                  {i > 0 && <View style={styles.divider} />}
-                  <TouchableOpacity
-                    style={styles.groupRow}
-                    onPress={() => navigation.navigate('SessionSummary', {
-                      sessionId: s.sessionId,
-                      sessionName: s.sessionName,
-                    })}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.groupRowLeft}>
-                      <Text style={[styles.debtLabel, iOwe ? styles.debtOwed : styles.debtReceivable]}>
-                        {iOwe
-                          ? `You owe ${amountStr} to ${s.receiverName}`
-                          : `${s.payerName} owes you ${amountStr}`}
-                      </Text>
-                      <Text style={styles.groupRowMeta}>{s.sessionName} · {s.groupName}</Text>
-                    </View>
-                    <Text style={styles.rowChevron}>›</Text>
-                  </TouchableOpacity>
-                </React.Fragment>
-              );
-            })}
-          </View>
-        </View>
-      )}
 
       {/* ── Active Sessions (only if any) ── */}
       {activeSessions.length > 0 && (

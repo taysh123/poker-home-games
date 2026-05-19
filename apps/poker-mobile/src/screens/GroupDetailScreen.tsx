@@ -240,12 +240,6 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
               <Text style={styles.navButtonText}>Sessions</Text>
               <Text style={styles.navChevron}>›</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.navButton, styles.navButtonDebt]}
-              onPress={() => navigation.navigate('CreateDebt', { groupId, groupName })}
-            >
-              <Text style={styles.navButtonDebtText}>+ Record Debt</Text>
-            </TouchableOpacity>
           </View>
 
           {/* Invite — Admin/Owner only */}
@@ -482,14 +476,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
   },
-  navButtonDebt: {
-    flex: 0,
-    borderColor: colors.gold,
-    backgroundColor: 'rgba(201,168,76,0.08)',
-    justifyContent: 'center',
-  },
   navButtonText: { fontSize: 15, fontWeight: '600', color: colors.text },
-  navButtonDebtText: { fontSize: 13, fontWeight: '700', color: colors.gold },
   navChevron: { fontSize: 22, color: colors.gold, lineHeight: 24 },
 
   inviteSection: { marginBottom: 16 },

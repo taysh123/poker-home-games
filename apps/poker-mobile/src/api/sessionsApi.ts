@@ -18,6 +18,7 @@ export type SessionPlayerDto = {
   userId?: string;
   username: string;
   isGuest: boolean;
+  linkedUserId?: string;
 };
 
 export type SessionDetailDto = {
@@ -25,8 +26,6 @@ export type SessionDetailDto = {
   name: string;
   groupId: string;
   status: string;
-  smallBlind: number;
-  bigBlind: number;
   chipRatio?: number;
   defaultBuyIn?: number;
   players: SessionPlayerDto[];
@@ -41,8 +40,6 @@ export type CreateSessionResponse = {
   name: string;
   groupId: string;
   status: string;
-  smallBlind: number;
-  bigBlind: number;
   chipRatio?: number;
   defaultBuyIn?: number;
   createdAt: string;
@@ -54,6 +51,7 @@ export type AddPlayerResponse = {
   userId?: string;
   guestName?: string;
   isGuest: boolean;
+  linkedUserId?: string;
 };
 
 export type AddTransactionResponse = {
@@ -81,6 +79,11 @@ export type SessionBalancesDto = {
   players: PlayerBalanceDto[];
 };
 
+export type FinalStackItem = {
+  sessionPlayerId: string;
+  amount: number;
+};
+
 function authHeader(token: string) {
   return { Authorization: `Bearer ${token}` };
 }
@@ -100,14 +103,12 @@ export async function createSession(
   token: string,
   groupId: string,
   name: string,
-  smallBlind: number,
-  bigBlind: number,
   chipRatio?: number,
   defaultBuyIn?: number,
 ): Promise<CreateSessionResponse> {
   const { data } = await api.post<CreateSessionResponse>(
     `/api/groups/${groupId}/sessions`,
-    { name, smallBlind, bigBlind, chipRatio, defaultBuyIn },
+    { name, chipRatio, defaultBuyIn },
     { headers: authHeader(token) },
   );
   return data;
@@ -128,8 +129,16 @@ export async function startSession(token: string, sessionId: string): Promise<vo
   await api.post(`/api/sessions/${sessionId}/start`, {}, { headers: authHeader(token) });
 }
 
-export async function endSession(token: string, sessionId: string): Promise<void> {
-  await api.post(`/api/sessions/${sessionId}/end`, {}, { headers: authHeader(token) });
+export async function endSession(
+  token: string,
+  sessionId: string,
+  finalStacks?: FinalStackItem[],
+): Promise<void> {
+  await api.post(
+    `/api/sessions/${sessionId}/end`,
+    finalStacks && finalStacks.length > 0 ? { finalStacks } : {},
+    { headers: authHeader(token) },
+  );
 }
 
 export async function addPlayer(
@@ -137,10 +146,11 @@ export async function addPlayer(
   sessionId: string,
   userId?: string,
   guestName?: string,
+  linkedUserId?: string,
 ): Promise<AddPlayerResponse> {
   const { data } = await api.post<AddPlayerResponse>(
     `/api/sessions/${sessionId}/players`,
-    { userId, guestName },
+    { userId, guestName, linkedUserId },
     { headers: authHeader(token) },
   );
   return data;

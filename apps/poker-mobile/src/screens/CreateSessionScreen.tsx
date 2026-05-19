@@ -22,8 +22,6 @@ export default function CreateSessionScreen({ route, navigation }: Props) {
   const { groupId } = route.params;
 
   const [name, setName] = useState('');
-  const [smallBlind, setSmallBlind] = useState('');
-  const [bigBlind, setBigBlind] = useState('');
   const [chipRatio, setChipRatio] = useState('');
   const [defaultBuyIn, setDefaultBuyIn] = useState('');
   const [loading, setLoading] = useState(false);
@@ -43,16 +41,6 @@ export default function CreateSessionScreen({ route, navigation }: Props) {
       setError('Session name is required.');
       return;
     }
-    const sb = parseFloat(smallBlind);
-    const bb = parseFloat(bigBlind);
-    if (isNaN(sb) || sb <= 0) {
-      setError('Small blind must be greater than 0.');
-      return;
-    }
-    if (isNaN(bb) || bb < sb) {
-      setError('Big blind must be greater than or equal to small blind.');
-      return;
-    }
     const cr = chipRatio ? parseFloat(chipRatio) : undefined;
     const dbi = defaultBuyIn ? parseFloat(defaultBuyIn) : undefined;
     if (cr !== undefined && (isNaN(cr) || cr <= 0)) {
@@ -69,13 +57,9 @@ export default function CreateSessionScreen({ route, navigation }: Props) {
     try {
       const token = await SecureStore.getItemAsync('accessToken');
       if (!token) throw new Error('Not authenticated');
-      const session = await createSession(token, groupId, name.trim(), sb, bb, cr, dbi);
+      const session = await createSession(token, groupId, name.trim(), cr, dbi);
       navigation.goBack();
-      navigation.navigate('SessionDetail', {
-        sessionId: session.id,
-        sessionName: session.name,
-        userRole: 'Owner',
-      });
+      navigation.navigate('Session', { sessionId: session.id, groupId });
     } catch (err: any) {
       const msg = err?.response?.data?.errors
         ? Object.values(err.response.data.errors).flat().join(', ')
@@ -106,31 +90,6 @@ export default function CreateSessionScreen({ route, navigation }: Props) {
 
         <View style={styles.row}>
           <View style={styles.half}>
-            <Text style={styles.label}>Small Blind</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="0"
-              placeholderTextColor={colors.textDim}
-              value={smallBlind}
-              onChangeText={setSmallBlind}
-              keyboardType="decimal-pad"
-            />
-          </View>
-          <View style={styles.half}>
-            <Text style={styles.label}>Big Blind</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="0"
-              placeholderTextColor={colors.textDim}
-              value={bigBlind}
-              onChangeText={setBigBlind}
-              keyboardType="decimal-pad"
-            />
-          </View>
-        </View>
-
-        <View style={styles.row}>
-          <View style={styles.half}>
             <Text style={styles.label}>Chip Ratio (optional)</Text>
             <TextInput
               style={styles.input}
@@ -140,7 +99,7 @@ export default function CreateSessionScreen({ route, navigation }: Props) {
               onChangeText={setChipRatio}
               keyboardType="decimal-pad"
             />
-            <Text style={styles.hint}>chips per ₪</Text>
+            <Text style={styles.hint}>chips per ₪1</Text>
           </View>
           <View style={styles.half}>
             <Text style={styles.label}>Default Buy-In ₪ (optional)</Text>

@@ -135,10 +135,9 @@ export default function StatsScreen({ navigation }: Props) {
             {activeSessions.map((s, i) => (
               <React.Fragment key={s.sessionId}>
                 {i > 0 && <View style={styles.divider} />}
-                <SessionRow session={s} onPress={() => navigation.navigate('SessionDetail', {
+                <SessionRow session={s} onPress={() => navigation.navigate('Session', {
                   sessionId: s.sessionId,
-                  sessionName: s.sessionName,
-                  userRole: s.userRole,
+                  groupId: s.groupId,
                 })} />
               </React.Fragment>
             ))}
@@ -154,9 +153,9 @@ export default function StatsScreen({ navigation }: Props) {
             {finishedSessions.map((s, i) => (
               <React.Fragment key={s.sessionId}>
                 {i > 0 && <View style={styles.divider} />}
-                <SessionRow session={s} onPress={() => navigation.navigate('SessionSummary', {
+                <SessionRow session={s} onPress={() => navigation.navigate('Session', {
                   sessionId: s.sessionId,
-                  sessionName: s.sessionName,
+                  groupId: s.groupId,
                 })} />
               </React.Fragment>
             ))}

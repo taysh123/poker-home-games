@@ -14,15 +14,11 @@ import InvitationsScreen from '../screens/InvitationsScreen';
 import EditGroupScreen from '../screens/EditGroupScreen';
 import SessionsListScreen from '../screens/SessionsListScreen';
 import CreateSessionScreen from '../screens/CreateSessionScreen';
-import SessionDetailScreen from '../screens/SessionDetailScreen';
+import SessionScreen from '../screens/SessionScreen';
 import SettlementScreen from '../screens/SettlementScreen';
-import SessionSummaryScreen from '../screens/SessionSummaryScreen';
 import StatsScreen from '../screens/StatsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
-import BalancesScreen from '../screens/BalancesScreen';
-import CreateDebtScreen from '../screens/CreateDebtScreen';
 
-// All possible route names and their params
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
@@ -34,13 +30,10 @@ export type RootStackParamList = {
   EditGroup: { groupId: string; groupName: string; description?: string };
   SessionsList: { groupId: string; groupName: string; userRole: string };
   CreateSession: { groupId: string; groupName: string };
-  SessionDetail: { sessionId: string; sessionName: string; userRole: string };
+  Session: { sessionId: string; groupId: string };
   Settlement: { sessionId: string; sessionName: string };
-  SessionSummary: { sessionId: string; sessionName: string };
   Stats: undefined;
-  Balances: undefined;
   Profile: undefined;
-  CreateDebt: { groupId?: string; groupName?: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -48,8 +41,6 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 export default function AppNavigator() {
   const { user, isLoading } = useAuth();
 
-  // While AuthContext is reading from secure storage, show a simple loading screen.
-  // This prevents a flash of the Login screen before the saved session is restored.
   if (isLoading) {
     return (
       <View style={styles.loading}>
@@ -70,15 +61,11 @@ export default function AppNavigator() {
         }}
       >
         {user === null ? (
-          // Not logged in → show auth screens
-          // When login/register succeeds, user becomes non-null and these screens
-          // are replaced by the app screens automatically — no navigation.replace() needed.
           <>
             <Stack.Screen name="Login"    component={LoginScreen}    options={{ headerShown: false }} />
             <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
           </>
         ) : (
-          // Logged in → show app screens
           <>
             <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
             <Stack.Screen name="GroupsList" component={GroupsListScreen} />
@@ -104,31 +91,20 @@ export default function AppNavigator() {
               component={CreateSessionScreen}
               options={{ presentation: 'modal' }}
             />
-            <Stack.Screen name="SessionDetail" component={SessionDetailScreen} />
+            <Stack.Screen
+              name="Session"
+              component={SessionScreen}
+              options={{ headerShown: false }}
+            />
             <Stack.Screen
               name="Settlement"
               component={SettlementScreen}
               options={{ headerShown: true, title: 'Settle Up', headerBackTitle: 'Back' }}
             />
             <Stack.Screen
-              name="SessionSummary"
-              component={SessionSummaryScreen}
-              options={{ headerShown: true, title: 'Session Summary', headerBackTitle: 'Back' }}
-            />
-            <Stack.Screen
               name="Stats"
               component={StatsScreen}
               options={{ headerShown: true, title: 'My Stats', headerBackTitle: 'Back' }}
-            />
-            <Stack.Screen
-              name="Balances"
-              component={BalancesScreen}
-              options={{ headerShown: true, title: 'My Balances', headerBackTitle: 'Back' }}
-            />
-            <Stack.Screen
-              name="CreateDebt"
-              component={CreateDebtScreen}
-              options={{ presentation: 'modal', title: 'Record Debt' }}
             />
             <Stack.Screen
               name="Profile"
