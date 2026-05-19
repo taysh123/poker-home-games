@@ -60,6 +60,13 @@ public sealed class AddPlayerCommandHandler(
         }
 
         await context.SessionPlayers.AddAsync(sessionPlayer, cancellationToken);
+
+        var actorName = currentUserService.Username ?? "Unknown";
+        var playerLabel = sessionPlayer.IsGuest ? request.GuestName! : actorName;
+        var activity = ActivityLog.Create(session.GroupId, callerId, actorName,
+            ActivityType.PlayerJoined, $"{playerLabel} joined session \"{session.Name}\"");
+        await context.ActivityLogs.AddAsync(activity, cancellationToken);
+
         await context.SaveChangesAsync(cancellationToken);
 
         return new AddPlayerResponse(

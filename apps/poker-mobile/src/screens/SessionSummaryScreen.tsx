@@ -18,6 +18,7 @@ import { getSessionById, getSessionBalances, SessionDetailDto, SessionBalancesDt
 import { getSessionSettlements, calculateSettlements, markSettlementPaid, SessionSettlementsDto } from '../api/settlementsApi';
 import { getSessionHandHistory, HandRecordDto } from '../api/handsApi';
 import { useAuth } from '../context/AuthContext';
+import { exportSessionCsv } from '../utils/exportUtils';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SessionSummary'>;
 
@@ -62,6 +63,7 @@ export default function SessionSummaryScreen({ route, navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [markingPaidId, setMarkingPaidId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -99,6 +101,17 @@ export default function SessionSummaryScreen({ route, navigation }: Props) {
       load();
     }, [load]),
   );
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      await exportSessionCsv(sessionId, sessionName);
+    } catch (err: any) {
+      Alert.alert('Export Failed', err?.message ?? 'Could not export session.');
+    } finally {
+      setExporting(false);
+    }
+  }
 
   async function handleMarkPaid(settlementId: string) {
     setMarkingPaidId(settlementId);
@@ -151,8 +164,19 @@ export default function SessionSummaryScreen({ route, navigation }: Props) {
       <View style={styles.infoCard}>
         <View style={styles.infoCardHeader}>
           <Text style={styles.sessionName} numberOfLines={1}>♠  {session.name}</Text>
-          <View style={styles.finishedBadge}>
-            <Text style={styles.finishedBadgeText}>FINISHED</Text>
+          <View style={styles.infoCardHeaderRight}>
+            <View style={styles.finishedBadge}>
+              <Text style={styles.finishedBadgeText}>FINISHED</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.exportBtn}
+              onPress={handleExport}
+              disabled={exporting}
+            >
+              {exporting
+                ? <ActivityIndicator size="small" color={colors.gold} />
+                : <Text style={styles.exportBtnText}>Export</Text>}
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -354,6 +378,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.gold,
   },
+  infoCardHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  exportBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.gold,
+    minWidth: 52,
+    alignItems: 'center',
+  },
+  exportBtnText: { fontSize: 11, fontWeight: '700', color: colors.gold },
   finishedBadge: {
     backgroundColor: 'rgba(122,138,153,0.15)',
     borderRadius: 6,

@@ -32,8 +32,13 @@ public sealed class AcceptInvitationCommandHandler(
 
         invitation.Accept();
         var membership = GroupMember.Create(invitation.GroupId, callerId, GroupRole.Member);
-
         await context.GroupMembers.AddAsync(membership, cancellationToken);
+
+        var actorName = currentUserService.Username ?? "Unknown";
+        var activity = ActivityLog.Create(invitation.GroupId, callerId, actorName,
+            ActivityType.MemberJoined, $"{actorName} joined the group");
+        await context.ActivityLogs.AddAsync(activity, cancellationToken);
+
         await context.SaveChangesAsync(cancellationToken);
 
         return new AcceptInvitationResponse(invitation.GroupId, invitation.Group.Name, nameof(GroupRole.Member));

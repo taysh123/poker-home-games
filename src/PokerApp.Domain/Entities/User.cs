@@ -25,6 +25,18 @@ public class User : BaseEntity
     public static User CreateWithGoogle(string username, string email, string googleId) =>
         new() { Username = username, Email = email, PasswordHash = string.Empty, GoogleId = googleId };
 
+    public void UpdateUsername(string username)
+    {
+        Username = username;
+        SetUpdatedAt();
+    }
+
+    public void UpdateEmail(string email)
+    {
+        Email = email;
+        SetUpdatedAt();
+    }
+
     public void UpdatePassword(string passwordHash)
     {
         PasswordHash = passwordHash;

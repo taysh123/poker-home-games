@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using PokerApp.Application.Common.Exceptions;
 using PokerApp.Application.Common.Interfaces;
 using PokerApp.Domain.Entities;
+using PokerApp.Domain.Enums;
 
 namespace PokerApp.Application.Features.Sessions.Commands.CreateSession;
 
@@ -31,6 +32,12 @@ public sealed class CreateSessionCommandHandler(
             request.ChipRatio, request.DefaultBuyIn);
 
         await context.Sessions.AddAsync(session, cancellationToken);
+
+        var actorName = currentUserService.Username ?? "Unknown";
+        var activity = ActivityLog.Create(request.GroupId, userId, actorName,
+            ActivityType.SessionCreated, $"{actorName} created session \"{request.Name}\"");
+        await context.ActivityLogs.AddAsync(activity, cancellationToken);
+
         await context.SaveChangesAsync(cancellationToken);
 
         return new CreateSessionResponse(

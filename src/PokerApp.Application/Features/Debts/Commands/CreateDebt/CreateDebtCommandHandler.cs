@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using PokerApp.Application.Common.Exceptions;
 using PokerApp.Application.Common.Interfaces;
 using PokerApp.Domain.Entities;
+using PokerApp.Domain.Enums;
 
 namespace PokerApp.Application.Features.Debts.Commands.CreateDebt;
 
@@ -41,6 +42,13 @@ public sealed class CreateDebtCommandHandler(
 
         var debt = Debt.Create(request.GroupId, request.FromUserId, request.ToUserId, request.Amount, request.Reason, callerId);
         await context.Debts.AddAsync(debt, cancellationToken);
+
+        var actorName = currentUserService.Username ?? "Unknown";
+        var activity = ActivityLog.Create(request.GroupId, callerId, actorName,
+            ActivityType.DebtCreated,
+            $"{fromUser.Username} owes {toUser.Username} ₪{request.Amount:0.##}");
+        await context.ActivityLogs.AddAsync(activity, cancellationToken);
+
         await context.SaveChangesAsync(cancellationToken);
 
         return new DebtDto(debt.Id, group.Id, group.Name, fromUser.Id, fromUser.Username,

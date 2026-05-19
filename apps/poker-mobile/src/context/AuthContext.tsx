@@ -12,6 +12,7 @@ type AuthContextType = {
   register: (username: string, email: string, password: string) => Promise<void>;
   googleLogin: (idToken: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (updates: Partial<AuthUser>) => Promise<void>;
 };
 
 // ─── Storage keys ────────────────────────────────────────────────────────────
@@ -94,6 +95,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await saveSession(response);
   }
 
+  async function updateUser(updates: Partial<AuthUser>) {
+    if (!user) return;
+    const updated = { ...user, ...updates };
+    setUser(updated);
+    try {
+      await SecureStore.setItemAsync(KEY_USER, JSON.stringify(updated));
+    } catch {
+      // Persistence failure is non-fatal — state is already updated in memory
+    }
+  }
+
   async function logout() {
     try {
       const [accessToken, refreshToken] = await Promise.all([
@@ -113,7 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, googleLogin, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, googleLogin, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

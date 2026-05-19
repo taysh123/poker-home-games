@@ -18,4 +18,6 @@ public class SessionPlayer : BaseEntity
 
     public static SessionPlayer CreateForGuest(Guid sessionId, string guestName)
         => new() { SessionId = sessionId, GuestName = guestName };
+
+    public void AnonymizeUser() => UserId = null;
 }

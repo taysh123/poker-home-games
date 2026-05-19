@@ -16,6 +16,7 @@ import { getMyGroups, getMyInvitations, MyGroupDto, PendingInvitationDto } from 
 import { getMyStats, MyStatsDto, RecentSessionDto } from '../api/statsApi';
 import { getMyPendingSettlements, MyPendingSettlementDto } from '../api/settlementsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import SkeletonCard from '../components/SkeletonCard';
 
 type HomeNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -142,13 +143,10 @@ export default function HomeScreen() {
         </View>
         <TouchableOpacity
           style={styles.avatar}
-          onPress={handleLogout}
-          disabled={loggingOut}
+          onPress={() => navigation.navigate('Profile')}
           activeOpacity={0.7}
         >
-          {loggingOut
-            ? <ActivityIndicator color={colors.gold} size="small" />
-            : <Text style={styles.avatarText}>{initial}</Text>}
+          <Text style={styles.avatarText}>{initial}</Text>
         </TouchableOpacity>
       </View>
 
@@ -171,26 +169,34 @@ export default function HomeScreen() {
             <Text style={styles.seeAll}>See all →</Text>
           </TouchableOpacity>
         </View>
+        {statsLoading ? (
+          <View style={styles.statsRow}>
+            {[0, 1, 2, 3].map(i => (
+              <View key={i} style={[styles.statCard, { justifyContent: 'center', gap: 6 }]}>
+                <SkeletonCard height={20} borderRadius={6} style={{ marginHorizontal: 4 }} />
+                <SkeletonCard height={12} borderRadius={4} style={{ marginHorizontal: 8 }} />
+              </View>
+            ))}
+          </View>
+        ) : (
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>
-              {statsLoading ? '—' : String(stats?.totalSessionsPlayed ?? 0)}
+              {String(stats?.totalSessionsPlayed ?? 0)}
             </Text>
             <Text style={styles.statLabel}>Sessions</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={[styles.statValue, { color: plColor }]}>
-              {statsLoading ? '—' : `${plValue >= 0 ? '+' : ''}₪${Math.round(Math.abs(plValue)).toLocaleString()}`}
+              {`${plValue >= 0 ? '+' : ''}₪${Math.round(Math.abs(plValue)).toLocaleString()}`}
             </Text>
             <Text style={styles.statLabel}>Total P&L</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={[styles.statValue, { color: colors.success }]}>
-              {statsLoading
-                ? '—'
-                : stats?.biggestWin != null
-                  ? `+₪${Math.round(stats.biggestWin).toLocaleString()}`
-                  : '—'}
+              {stats?.biggestWin != null
+                ? `+₪${Math.round(stats.biggestWin).toLocaleString()}`
+                : '—'}
             </Text>
             <Text style={styles.statLabel}>Best Win</Text>
           </View>
@@ -199,6 +205,7 @@ export default function HomeScreen() {
             <Text style={styles.statLabel}>Groups</Text>
           </View>
         </View>
+        )}
       </View>
 
       {/* ── Balances quick-link ── */}

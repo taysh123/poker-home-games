@@ -7,6 +7,7 @@ using PokerApp.Application.Features.Groups.Commands.LeaveGroup;
 using PokerApp.Application.Features.Groups.Commands.RemoveMember;
 using PokerApp.Application.Features.Groups.Commands.UpdateGroup;
 using PokerApp.Application.Features.Groups.Queries.GetGroupById;
+using PokerApp.Application.Features.Groups.Queries.GetGroupActivity;
 using PokerApp.Application.Features.Groups.Queries.GetGroupLeaderboard;
 using PokerApp.Application.Features.Groups.Queries.GetGroupMembers;
 using PokerApp.Application.Features.Groups.Queries.GetMyGroups;
@@ -103,6 +104,16 @@ public class GroupsController(IMediator mediator) : ControllerBase
     {
         await mediator.Send(new RemoveMemberCommand(id, userId), cancellationToken);
         return NoContent();
+    }
+
+    /// <summary>Returns the 50 most recent activity events for the group.</summary>
+    [HttpGet("{id:guid}/activity")]
+    [ProducesResponseType(typeof(List<ActivityLogDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetGroupActivity(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GetGroupActivityQuery(id), cancellationToken);
+        return Ok(result);
     }
 
     /// <summary>Returns lifetime P&L leaderboard for all registered players in the group (finished sessions only).</summary>

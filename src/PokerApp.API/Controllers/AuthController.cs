@@ -1,11 +1,14 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PokerApp.Application.Features.Auth.Commands.ChangePassword;
+using PokerApp.Application.Features.Auth.Commands.DeleteAccount;
 using PokerApp.Application.Features.Auth.Commands.GoogleLogin;
 using PokerApp.Application.Features.Auth.Commands.Login;
 using PokerApp.Application.Features.Auth.Commands.Logout;
 using PokerApp.Application.Features.Auth.Commands.RefreshToken;
 using PokerApp.Application.Features.Auth.Commands.Register;
+using PokerApp.Application.Features.Auth.Commands.UpdateProfile;
 using PokerApp.Application.Features.Auth.Queries.GetCurrentUser;
 using PokerApp.Application.Features.Users.Queries.GetMyStats;
 using PokerApp.Application.Features.Users.Queries.SearchUsers;
@@ -104,6 +107,45 @@ public class AuthController(IMediator mediator) : ControllerBase
     {
         var response = await mediator.Send(new GetMyStatsQuery(), cancellationToken);
         return Ok(response);
+    }
+
+    /// <summary>Updates the authenticated user's username and/or email.</summary>
+    [Authorize]
+    [HttpPut("profile")]
+    [ProducesResponseType(typeof(UpdateProfileResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> UpdateProfile(
+        [FromBody] UpdateProfileCommand command,
+        CancellationToken cancellationToken)
+    {
+        var response = await mediator.Send(command, cancellationToken);
+        return Ok(response);
+    }
+
+    /// <summary>Changes the authenticated user's password.</summary>
+    [Authorize]
+    [HttpPut("password")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ChangePassword(
+        [FromBody] ChangePasswordCommand command,
+        CancellationToken cancellationToken)
+    {
+        await mediator.Send(command, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>Permanently deletes the authenticated user's account.</summary>
+    [Authorize]
+    [HttpDelete("account")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> DeleteAccount(CancellationToken cancellationToken)
+    {
+        await mediator.Send(new DeleteAccountCommand(), cancellationToken);
+        return NoContent();
     }
 
     /// <summary>Searches registered users by username prefix. Minimum 2 characters. Returns top 20 matches.</summary>

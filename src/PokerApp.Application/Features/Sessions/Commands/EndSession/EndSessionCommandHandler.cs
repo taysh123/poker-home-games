@@ -30,6 +30,12 @@ public sealed class EndSessionCommandHandler(
             throw new ConflictException("Only Active sessions can be ended.");
 
         session.End();
+
+        var actorName = currentUserService.Username ?? "Unknown";
+        var activity = ActivityLog.Create(session.GroupId, userId, actorName,
+            ActivityType.SessionEnded, $"{actorName} ended session \"{session.Name}\"");
+        await context.ActivityLogs.AddAsync(activity, cancellationToken);
+
         await context.SaveChangesAsync(cancellationToken);
     }
 }

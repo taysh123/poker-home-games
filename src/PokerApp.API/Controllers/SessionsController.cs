@@ -1,3 +1,4 @@
+using System.Text;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -188,6 +189,25 @@ public class SessionsController(IMediator mediator) : ControllerBase
     {
         await mediator.Send(new DeleteHandRecordCommand(id, handId), cancellationToken);
         return NoContent();
+    }
+
+    /// <summary>Exports the session results as a CSV file.</summary>
+    [HttpGet("api/sessions/{id:guid}/export")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ExportSession(Guid id, CancellationToken cancellationToken)
+    {
+        var data = await mediator.Send(new GetSessionBalancesQuery(id), cancellationToken);
+
+        var sb = new StringBuilder();
+        sb.AppendLine("Player,Buy-In (ILS),Cash-Out (ILS),P&L (ILS)");
+        foreach (var p in data.Players.OrderByDescending(p => p.ProfitLoss))
+            sb.AppendLine($"\"{p.Username}\",{p.TotalBuyIn},{p.TotalCashOut},{p.ProfitLoss}");
+
+        var bytes = Encoding.UTF8.GetBytes(sb.ToString());
+        var fileName = $"session-{data.SessionName.Replace(" ", "-")}.csv";
+        return File(bytes, "text/csv", fileName);
     }
 
     /// <summary>Returns live balances for all players: total invested, cashed out, and profit/loss.</summary>

@@ -19,6 +19,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<SessionPlayer> SessionPlayers => Set<SessionPlayer>();
     public DbSet<HandRecord> HandRecords => Set<HandRecord>();
     public DbSet<Debt> Debts => Set<Debt>();
+    public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

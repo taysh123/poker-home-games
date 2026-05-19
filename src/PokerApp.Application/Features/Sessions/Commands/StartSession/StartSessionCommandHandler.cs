@@ -30,6 +30,12 @@ public sealed class StartSessionCommandHandler(
             throw new ConflictException("Only Draft sessions can be started.");
 
         session.Start();
+
+        var actorName = currentUserService.Username ?? "Unknown";
+        var activity = ActivityLog.Create(session.GroupId, userId, actorName,
+            ActivityType.SessionStarted, $"{actorName} started session \"{session.Name}\"");
+        await context.ActivityLogs.AddAsync(activity, cancellationToken);
+
         await context.SaveChangesAsync(cancellationToken);
     }
 }

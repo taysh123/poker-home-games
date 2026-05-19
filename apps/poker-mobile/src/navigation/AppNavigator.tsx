@@ -18,6 +18,7 @@ import SessionDetailScreen from '../screens/SessionDetailScreen';
 import SettlementScreen from '../screens/SettlementScreen';
 import SessionSummaryScreen from '../screens/SessionSummaryScreen';
 import StatsScreen from '../screens/StatsScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 import BalancesScreen from '../screens/BalancesScreen';
 import CreateDebtScreen from '../screens/CreateDebtScreen';
 
@@ -38,6 +39,7 @@ export type RootStackParamList = {
   SessionSummary: { sessionId: string; sessionName: string };
   Stats: undefined;
   Balances: undefined;
+  Profile: undefined;
   CreateDebt: { groupId?: string; groupName?: string };
 };
 
@@ -127,6 +129,11 @@ export default function AppNavigator() {
               name="CreateDebt"
               component={CreateDebtScreen}
               options={{ presentation: 'modal', title: 'Record Debt' }}
+            />
+            <Stack.Screen
+              name="Profile"
+              component={ProfileScreen}
+              options={{ title: 'My Profile' }}
             />
           </>
         )}

@@ -21,6 +21,7 @@ import {
 } from '../api/debtsApi';
 import { markSettlementPaid } from '../api/settlementsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { successNotification, errorNotification } from '../utils/haptics';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Balances'>;
 
@@ -70,8 +71,10 @@ export default function BalancesScreen({ navigation }: Props) {
       } else {
         await markDebtPaid(token, item.itemId);
       }
+      successNotification();
       await load(true);
     } catch (err: any) {
+      errorNotification();
       Alert.alert('Error', err?.response?.data?.message ?? 'Failed to mark as paid.');
     } finally {
       setMarkingId(null);

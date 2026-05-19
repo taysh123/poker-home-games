@@ -24,6 +24,7 @@ import {
   removeGroupMember,
   leaveGroup,
 } from '../api/groupsApi';
+import { getGroupActivity, ActivityLogDto } from '../api/activityApi';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
@@ -36,6 +37,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   const [group, setGroup] = useState<GroupDetailResponse | null>(null);
   const [members, setMembers] = useState<GroupMemberDto[]>([]);
   const [leaderboard, setLeaderboard] = useState<PlayerLeaderboardEntryDto[]>([]);
+  const [activity, setActivity] = useState<ActivityLogDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [inviteUsername, setInviteUsername] = useState('');
@@ -50,14 +52,16 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
     try {
       const token = await SecureStore.getItemAsync('accessToken');
       if (!token) throw new Error('Not authenticated');
-      const [groupData, membersData, leaderboardData] = await Promise.all([
+      const [groupData, membersData, leaderboardData, activityData] = await Promise.all([
         getGroupById(token, groupId),
         getGroupMembers(token, groupId),
         getGroupLeaderboard(token, groupId).catch(() => [] as PlayerLeaderboardEntryDto[]),
+        getGroupActivity(token, groupId).catch(() => [] as ActivityLogDto[]),
       ]);
       setGroup(groupData);
       setMembers(membersData);
       setLeaderboard(leaderboardData);
+      setActivity(activityData);
     } catch {
       setError('Failed to load group details.');
     } finally {
@@ -302,11 +306,26 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
         </View>
       }
       ListFooterComponent={
-        !isOwner ? (
-          <TouchableOpacity style={styles.leaveButton} onPress={handleLeaveGroup}>
-            <Text style={styles.leaveButtonText}>Leave Group</Text>
-          </TouchableOpacity>
-        ) : null
+        <View>
+          {activity.length > 0 && (
+            <View style={styles.activitySection}>
+              <Text style={styles.sectionTitle}>Recent Activity</Text>
+              <View style={styles.activityCard}>
+                {activity.slice(0, 15).map((item, i) => (
+                  <React.Fragment key={item.id}>
+                    {i > 0 && <View style={styles.activityDivider} />}
+                    <ActivityRow item={item} />
+                  </React.Fragment>
+                ))}
+              </View>
+            </View>
+          )}
+          {!isOwner && (
+            <TouchableOpacity style={styles.leaveButton} onPress={handleLeaveGroup}>
+              <Text style={styles.leaveButtonText}>Leave Group</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       }
     />
   );
@@ -367,6 +386,39 @@ function LeaderboardRow({ entry, rank }: { entry: PlayerLeaderboardEntryDto; ran
       <Text style={[styles.lbPL, { color: plColor }]}>
         {plPrefix}₪{Math.abs(entry.totalProfitLoss).toLocaleString()}
       </Text>
+    </View>
+  );
+}
+
+function activityIcon(type: string): string {
+  switch (type) {
+    case 'SessionCreated': return '🃏';
+    case 'SessionStarted': return '▶';
+    case 'SessionEnded':   return '■';
+    case 'PlayerJoined':   return '→';
+    case 'DebtCreated':    return '₪';
+    case 'DebtSettled':    return '✓';
+    case 'MemberJoined':   return '+';
+    default: return '·';
+  }
+}
+
+function ActivityRow({ item }: { item: ActivityLogDto }) {
+  const ago = (() => {
+    const diff = Date.now() - new Date(item.createdAt).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  })();
+
+  return (
+    <View style={styles.activityRow}>
+      <Text style={styles.activityIcon}>{activityIcon(item.type)}</Text>
+      <Text style={styles.activityDesc} numberOfLines={2}>{item.description}</Text>
+      <Text style={styles.activityTime}>{ago}</Text>
     </View>
   );
 }
@@ -576,4 +628,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyMembersText: { fontSize: 14, color: colors.textMuted },
+
+  activitySection: { marginHorizontal: 16, marginBottom: 16 },
+  activityCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  activityDivider: { height: 1, backgroundColor: colors.border, marginHorizontal: 14 },
+  activityRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 10,
+  },
+  activityIcon: { fontSize: 14, color: colors.gold, width: 18, textAlign: 'center', marginTop: 1 },
+  activityDesc: { flex: 1, fontSize: 13, color: colors.text },
+  activityTime: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
 });
