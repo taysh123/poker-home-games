@@ -25,19 +25,17 @@ public sealed class AddBuyInCommandHandler(
         if (!callerIsMember)
             throw new UnauthorizedException("You are not a member of this group.");
 
-        var targetIsPlayer = await context.SessionPlayers
-            .AnyAsync(sp => sp.SessionId == request.SessionId && sp.UserId == request.UserId, cancellationToken);
-
-        if (!targetIsPlayer)
-            throw new NotFoundException("Player", request.UserId);
+        var sessionPlayer = await context.SessionPlayers
+            .FirstOrDefaultAsync(sp => sp.Id == request.SessionPlayerId && sp.SessionId == request.SessionId, cancellationToken)
+            ?? throw new NotFoundException("Player", request.SessionPlayerId);
 
         if (session.Status != SessionStatus.Active)
             throw new BadRequestException("Buy-ins can only be added to active sessions.");
 
-        var buyIn = BuyIn.Create(session.Id, request.UserId, request.Amount);
+        var buyIn = BuyIn.Create(session.Id, sessionPlayer.Id, request.Amount);
         await context.BuyIns.AddAsync(buyIn, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
 
-        return new AddBuyInResponse(buyIn.Id, buyIn.SessionId, buyIn.UserId, buyIn.Amount, buyIn.Timestamp);
+        return new AddBuyInResponse(buyIn.Id, buyIn.SessionId, buyIn.SessionPlayerId!.Value, buyIn.Amount, buyIn.Timestamp);
     }
 }

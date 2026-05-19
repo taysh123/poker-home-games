@@ -25,25 +25,48 @@ public sealed class AddPlayerCommandHandler(
         if (!callerIsMember)
             throw new UnauthorizedException("You are not a member of this group.");
 
-        if (session.Status != SessionStatus.Draft)
-            throw new ConflictException("Players can only be added to Draft sessions.");
+        if (session.Status != SessionStatus.Draft && session.Status != SessionStatus.Active)
+            throw new ConflictException("Players can only be added to Draft or Active sessions.");
 
-        var targetIsMember = await context.GroupMembers
-            .AnyAsync(m => m.GroupId == session.GroupId && m.UserId == request.UserId, cancellationToken);
+        SessionPlayer sessionPlayer;
 
-        if (!targetIsMember)
-            throw new ConflictException("The user is not a member of this group.");
+        if (request.GuestName is not null)
+        {
+            var duplicateGuest = await context.SessionPlayers
+                .AnyAsync(sp => sp.SessionId == request.SessionId && sp.GuestName == request.GuestName, cancellationToken);
 
-        var alreadyAdded = await context.SessionPlayers
-            .AnyAsync(sp => sp.SessionId == request.SessionId && sp.UserId == request.UserId, cancellationToken);
+            if (duplicateGuest)
+                throw new ConflictException($"A guest named '{request.GuestName}' is already in this session.");
 
-        if (alreadyAdded)
-            throw new ConflictException("This player is already in the session.");
+            sessionPlayer = SessionPlayer.CreateForGuest(request.SessionId, request.GuestName);
+        }
+        else
+        {
+            var userId = request.UserId!.Value;
 
-        var sessionPlayer = SessionPlayer.Create(request.SessionId, request.UserId);
+            var userExists = await context.Users
+                .AnyAsync(u => u.Id == userId, cancellationToken);
+
+            if (!userExists)
+                throw new NotFoundException(nameof(User), userId);
+
+            var alreadyAdded = await context.SessionPlayers
+                .AnyAsync(sp => sp.SessionId == request.SessionId && sp.UserId == userId, cancellationToken);
+
+            if (alreadyAdded)
+                throw new ConflictException("This player is already in the session.");
+
+            sessionPlayer = SessionPlayer.CreateForUser(request.SessionId, userId);
+        }
+
         await context.SessionPlayers.AddAsync(sessionPlayer, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
 
-        return new AddPlayerResponse(sessionPlayer.Id, sessionPlayer.SessionId, sessionPlayer.UserId);
+        return new AddPlayerResponse(
+            sessionPlayer.Id,
+            sessionPlayer.SessionId,
+            sessionPlayer.UserId,
+            sessionPlayer.GuestName,
+            sessionPlayer.IsGuest);
     }
 }

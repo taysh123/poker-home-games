@@ -6,11 +6,12 @@ public sealed record GetSessionBalancesQuery(Guid SessionId)
     : IRequest<SessionBalancesDto>;
 
 public sealed record PlayerBalanceDto(
-    Guid UserId,
+    Guid SessionPlayerId,
     string Username,
     decimal TotalBuyIn,
     decimal TotalCashOut,
-    decimal ProfitLoss);
+    decimal ProfitLoss,
+    bool IsGuest);
 
 public sealed record SessionBalancesDto(
     Guid SessionId,

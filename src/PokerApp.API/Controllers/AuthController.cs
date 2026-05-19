@@ -8,6 +8,7 @@ using PokerApp.Application.Features.Auth.Commands.RefreshToken;
 using PokerApp.Application.Features.Auth.Commands.Register;
 using PokerApp.Application.Features.Auth.Queries.GetCurrentUser;
 using PokerApp.Application.Features.Users.Queries.GetMyStats;
+using PokerApp.Application.Features.Users.Queries.SearchUsers;
 
 namespace PokerApp.API.Controllers;
 
@@ -103,5 +104,19 @@ public class AuthController(IMediator mediator) : ControllerBase
     {
         var response = await mediator.Send(new GetMyStatsQuery(), cancellationToken);
         return Ok(response);
+    }
+
+    /// <summary>Searches registered users by username prefix. Minimum 2 characters. Returns top 20 matches.</summary>
+    [Authorize]
+    [HttpGet("users/search")]
+    [ProducesResponseType(typeof(List<UserSearchResultDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> SearchUsers([FromQuery] string q, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
+            return Ok(Array.Empty<UserSearchResultDto>());
+
+        var result = await mediator.Send(new SearchUsersQuery(q), cancellationToken);
+        return Ok(result);
     }
 }

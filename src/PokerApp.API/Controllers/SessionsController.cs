@@ -82,9 +82,10 @@ public class SessionsController(IMediator mediator) : ControllerBase
         return NoContent();
     }
 
-    /// <summary>Adds a group member as a player in a Draft session.</summary>
+    /// <summary>Adds a registered user or named guest as a player in a Draft or Active session.</summary>
     [HttpPost("api/sessions/{id:guid}/players")]
     [ProducesResponseType(typeof(AddPlayerResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -93,19 +94,19 @@ public class SessionsController(IMediator mediator) : ControllerBase
         [FromBody] AddPlayerRequest body,
         CancellationToken cancellationToken)
     {
-        var response = await mediator.Send(new AddPlayerCommand(id, body.UserId), cancellationToken);
+        var response = await mediator.Send(new AddPlayerCommand(id, body.UserId, body.GuestName), cancellationToken);
         return StatusCode(StatusCodes.Status201Created, response);
     }
 
-    /// <summary>Removes a player from a Draft session.</summary>
-    [HttpDelete("api/sessions/{id:guid}/players/{userId:guid}")]
+    /// <summary>Removes a player from a Draft or Active (guests only) session.</summary>
+    [HttpDelete("api/sessions/{id:guid}/players/{sessionPlayerId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> RemovePlayer(Guid id, Guid userId, CancellationToken cancellationToken)
+    public async Task<IActionResult> RemovePlayer(Guid id, Guid sessionPlayerId, CancellationToken cancellationToken)
     {
-        await mediator.Send(new RemovePlayerCommand(id, userId), cancellationToken);
+        await mediator.Send(new RemovePlayerCommand(id, sessionPlayerId), cancellationToken);
         return NoContent();
     }
 
@@ -120,7 +121,7 @@ public class SessionsController(IMediator mediator) : ControllerBase
         [FromBody] AddBuyInRequest body,
         CancellationToken cancellationToken)
     {
-        var response = await mediator.Send(new AddBuyInCommand(id, body.UserId, body.Amount), cancellationToken);
+        var response = await mediator.Send(new AddBuyInCommand(id, body.SessionPlayerId, body.Amount), cancellationToken);
         return StatusCode(StatusCodes.Status201Created, response);
     }
 
@@ -135,7 +136,7 @@ public class SessionsController(IMediator mediator) : ControllerBase
         [FromBody] AddCashOutRequest body,
         CancellationToken cancellationToken)
     {
-        var response = await mediator.Send(new AddCashOutCommand(id, body.UserId, body.Amount), cancellationToken);
+        var response = await mediator.Send(new AddCashOutCommand(id, body.SessionPlayerId, body.Amount), cancellationToken);
         return StatusCode(StatusCodes.Status201Created, response);
     }
 
@@ -152,6 +153,6 @@ public class SessionsController(IMediator mediator) : ControllerBase
 }
 
 public sealed record CreateSessionRequest(string Name, decimal SmallBlind, decimal BigBlind, decimal? ChipRatio, decimal? DefaultBuyIn);
-public sealed record AddPlayerRequest(Guid UserId);
-public sealed record AddBuyInRequest(Guid UserId, decimal Amount);
-public sealed record AddCashOutRequest(Guid UserId, decimal Amount);
+public sealed record AddPlayerRequest(Guid? UserId, string? GuestName);
+public sealed record AddBuyInRequest(Guid SessionPlayerId, decimal Amount);
+public sealed record AddCashOutRequest(Guid SessionPlayerId, decimal Amount);

@@ -29,7 +29,7 @@ public sealed class GetSessionByIdQueryHandler(
             throw new UnauthorizedException("You are not a member of this group.");
 
         var players = session.SessionPlayers
-            .Select(sp => new SessionPlayerDto(sp.UserId, sp.User?.Username ?? "Unknown"))
+            .Select(sp => new SessionPlayerDto(sp.Id, sp.UserId, sp.DisplayName, sp.IsGuest))
             .ToList();
 
         return new SessionDetailDto(

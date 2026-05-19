@@ -25,12 +25,29 @@ public sealed class RemovePlayerCommandHandler(
         if (!callerIsMember)
             throw new UnauthorizedException("You are not a member of this group.");
 
-        if (session.Status != SessionStatus.Draft)
-            throw new ConflictException("Players can only be removed from Draft sessions.");
-
         var sessionPlayer = await context.SessionPlayers
-            .FirstOrDefaultAsync(sp => sp.SessionId == request.SessionId && sp.UserId == request.UserId, cancellationToken)
-            ?? throw new NotFoundException(nameof(SessionPlayer), request.UserId);
+            .FirstOrDefaultAsync(sp => sp.Id == request.SessionPlayerId && sp.SessionId == request.SessionId, cancellationToken)
+            ?? throw new NotFoundException(nameof(SessionPlayer), request.SessionPlayerId);
+
+        if (session.Status == SessionStatus.Active)
+        {
+            if (!sessionPlayer.IsGuest)
+                throw new ConflictException("Cannot remove a registered player from an active session.");
+
+            var buyIns = await context.BuyIns
+                .Where(b => b.SessionPlayerId == sessionPlayer.Id)
+                .ToListAsync(cancellationToken);
+            context.BuyIns.RemoveRange(buyIns);
+
+            var cashOuts = await context.CashOuts
+                .Where(c => c.SessionPlayerId == sessionPlayer.Id)
+                .ToListAsync(cancellationToken);
+            context.CashOuts.RemoveRange(cashOuts);
+        }
+        else if (session.Status != SessionStatus.Draft)
+        {
+            throw new ConflictException("Players can only be removed from Draft or Active sessions.");
+        }
 
         context.SessionPlayers.Remove(sessionPlayer);
         await context.SaveChangesAsync(cancellationToken);

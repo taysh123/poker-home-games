@@ -180,7 +180,7 @@ export default function SessionSummaryScreen({ route, navigation }: Props) {
           const isLoser  = player.profitLoss < 0;
           const profitColor = isWinner ? colors.success : isLoser ? colors.error : colors.textMuted;
           return (
-            <React.Fragment key={player.userId}>
+            <React.Fragment key={player.sessionPlayerId}>
               {index > 0 && <View style={styles.divider} />}
               <View style={styles.playerRow}>
                 <View style={styles.playerLeft}>

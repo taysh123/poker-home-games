@@ -14,7 +14,10 @@ public class CashOutConfiguration : IEntityTypeConfiguration<CashOut>
             .IsRequired();
 
         builder.Property(c => c.UserId)
-            .IsRequired();
+            .IsRequired(false);
+
+        builder.Property(c => c.SessionPlayerId)
+            .IsRequired(false);
 
         builder.Property(c => c.Amount)
             .IsRequired()
@@ -32,11 +35,17 @@ public class CashOutConfiguration : IEntityTypeConfiguration<CashOut>
         builder.HasOne(c => c.User)
             .WithMany()
             .HasForeignKey(c => c.UserId)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Same pattern as BuyIns: aggregate cash-out per player per session
-        builder.HasIndex(c => new { c.SessionId, c.UserId })
-            .HasDatabaseName("IX_CashOuts_SessionId_UserId");
+        builder.HasOne(c => c.SessionPlayer)
+            .WithMany()
+            .HasForeignKey(c => c.SessionPlayerId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasIndex(c => new { c.SessionId, c.SessionPlayerId })
+            .HasDatabaseName("IX_CashOuts_SessionId_SessionPlayerId");
 
         builder.ToTable("CashOuts");
     }

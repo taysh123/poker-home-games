@@ -18,4 +18,4 @@ public sealed record SessionDetailDto(
     DateTime? EndedAt,
     DateTime CreatedAt);
 
-public sealed record SessionPlayerDto(Guid UserId, string Username);
+public sealed record SessionPlayerDto(Guid SessionPlayerId, Guid? UserId, string Username, bool IsGuest);

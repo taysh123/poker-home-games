@@ -14,7 +14,10 @@ public class BuyInConfiguration : IEntityTypeConfiguration<BuyIn>
             .IsRequired();
 
         builder.Property(b => b.UserId)
-            .IsRequired();
+            .IsRequired(false);
+
+        builder.Property(b => b.SessionPlayerId)
+            .IsRequired(false);
 
         builder.Property(b => b.Amount)
             .IsRequired()
@@ -29,15 +32,20 @@ public class BuyInConfiguration : IEntityTypeConfiguration<BuyIn>
         builder.Property(b => b.UpdatedAt)
             .IsRequired();
 
-        // UserId FK: restrict so a user with buy-ins can't be silently deleted
         builder.HasOne(b => b.User)
             .WithMany()
             .HasForeignKey(b => b.UserId)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Composite: all buy-ins per user per session (running total queries)
-        builder.HasIndex(b => new { b.SessionId, b.UserId })
-            .HasDatabaseName("IX_BuyIns_SessionId_UserId");
+        builder.HasOne(b => b.SessionPlayer)
+            .WithMany()
+            .HasForeignKey(b => b.SessionPlayerId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasIndex(b => new { b.SessionId, b.SessionPlayerId })
+            .HasDatabaseName("IX_BuyIns_SessionId_SessionPlayerId");
 
         builder.ToTable("BuyIns");
     }

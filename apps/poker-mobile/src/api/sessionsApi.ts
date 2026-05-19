@@ -18,8 +18,10 @@ export type SessionSummaryDto = {
 };
 
 export type SessionPlayerDto = {
-  userId: string;
+  sessionPlayerId: string;
+  userId?: string;
   username: string;
+  isGuest: boolean;
 };
 
 export type SessionDetailDto = {
@@ -52,20 +54,23 @@ export type CreateSessionResponse = {
 export type AddPlayerResponse = {
   sessionPlayerId: string;
   sessionId: string;
-  userId: string;
+  userId?: string;
+  guestName?: string;
+  isGuest: boolean;
 };
 
 export type AddTransactionResponse = {
   id: string;
   sessionId: string;
-  userId: string;
+  sessionPlayerId: string;
   amount: number;
   timestamp: string;
 };
 
 export type PlayerBalanceDto = {
-  userId: string;
+  sessionPlayerId: string;
   username: string;
+  isGuest: boolean;
   totalBuyIn: number;
   totalCashOut: number;
   profitLoss: number;
@@ -133,11 +138,12 @@ export async function endSession(token: string, sessionId: string): Promise<void
 export async function addPlayer(
   token: string,
   sessionId: string,
-  userId: string,
+  userId?: string,
+  guestName?: string,
 ): Promise<AddPlayerResponse> {
   const { data } = await api.post<AddPlayerResponse>(
     `/api/sessions/${sessionId}/players`,
-    { userId },
+    { userId, guestName },
     { headers: authHeader(token) },
   );
   return data;
@@ -146,9 +152,9 @@ export async function addPlayer(
 export async function removePlayer(
   token: string,
   sessionId: string,
-  userId: string,
+  sessionPlayerId: string,
 ): Promise<void> {
-  await api.delete(`/api/sessions/${sessionId}/players/${userId}`, {
+  await api.delete(`/api/sessions/${sessionId}/players/${sessionPlayerId}`, {
     headers: authHeader(token),
   });
 }
@@ -156,12 +162,12 @@ export async function removePlayer(
 export async function addBuyIn(
   token: string,
   sessionId: string,
-  userId: string,
+  sessionPlayerId: string,
   amount: number,
 ): Promise<AddTransactionResponse> {
   const { data } = await api.post<AddTransactionResponse>(
     `/api/sessions/${sessionId}/buyins`,
-    { userId, amount },
+    { sessionPlayerId, amount },
     { headers: authHeader(token) },
   );
   return data;
@@ -170,12 +176,12 @@ export async function addBuyIn(
 export async function addCashOut(
   token: string,
   sessionId: string,
-  userId: string,
+  sessionPlayerId: string,
   amount: number,
 ): Promise<AddTransactionResponse> {
   const { data } = await api.post<AddTransactionResponse>(
     `/api/sessions/${sessionId}/cashouts`,
-    { userId, amount },
+    { sessionPlayerId, amount },
     { headers: authHeader(token) },
   );
   return data;

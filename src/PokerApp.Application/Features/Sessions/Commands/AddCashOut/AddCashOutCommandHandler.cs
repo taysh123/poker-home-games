@@ -25,19 +25,17 @@ public sealed class AddCashOutCommandHandler(
         if (!callerIsMember)
             throw new UnauthorizedException("You are not a member of this group.");
 
-        var targetIsPlayer = await context.SessionPlayers
-            .AnyAsync(sp => sp.SessionId == request.SessionId && sp.UserId == request.UserId, cancellationToken);
-
-        if (!targetIsPlayer)
-            throw new NotFoundException("Player", request.UserId);
+        var sessionPlayer = await context.SessionPlayers
+            .FirstOrDefaultAsync(sp => sp.Id == request.SessionPlayerId && sp.SessionId == request.SessionId, cancellationToken)
+            ?? throw new NotFoundException("Player", request.SessionPlayerId);
 
         if (session.Status != SessionStatus.Active)
             throw new BadRequestException("Cash-outs can only be added to active sessions.");
 
-        var cashOut = CashOut.Create(session.Id, request.UserId, request.Amount);
+        var cashOut = CashOut.Create(session.Id, sessionPlayer.Id, request.Amount);
         await context.CashOuts.AddAsync(cashOut, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
 
-        return new AddCashOutResponse(cashOut.Id, cashOut.SessionId, cashOut.UserId, cashOut.Amount, cashOut.Timestamp);
+        return new AddCashOutResponse(cashOut.Id, cashOut.SessionId, cashOut.SessionPlayerId!.Value, cashOut.Amount, cashOut.Timestamp);
     }
 }

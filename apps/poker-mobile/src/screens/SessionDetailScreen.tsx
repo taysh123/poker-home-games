@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -30,7 +30,7 @@ import {
   SessionBalancesDto,
   PlayerBalanceDto,
 } from '../api/sessionsApi';
-import { getGroupMembers, GroupMemberDto } from '../api/groupsApi';
+import { searchUsers, UserSearchResultDto } from '../api/usersApi';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
@@ -39,7 +39,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'SessionDetail'>;
 type TransactionModal = {
   visible: boolean;
   type: 'buyin' | 'cashout';
-  player: { userId: string; username: string } | null;
+  player: { sessionPlayerId: string; username: string } | null;
 };
 
 export default function SessionDetailScreen({ route, navigation }: Props) {
@@ -48,7 +48,6 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
 
   const [session, setSession] = useState<SessionDetailDto | null>(null);
   const [balances, setBalances] = useState<SessionBalancesDto | null>(null);
-  const [groupMembers, setGroupMembers] = useState<GroupMemberDto[]>([]);
   const [myRole, setMyRole] = useState<string>('Member');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +60,13 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
   });
   const [amount, setAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Add Player modal state
+  const [userSearch, setUserSearch] = useState('');
+  const [searchResults, setSearchResults] = useState<UserSearchResultDto[]>([]);
+  const [guestNameInput, setGuestNameInput] = useState('');
+  const [addingPlayerId, setAddingPlayerId] = useState<string | null>(null);
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useLayoutEffect(() => {
     navigation.setOptions({
@@ -79,17 +85,16 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
       if (!token) throw new Error('Not authenticated');
 
       const sessionData = await getSessionById(token, sessionId);
-      const [membersData, balancesData] = await Promise.all([
-        getGroupMembers(token, sessionData.groupId),
+      const [balancesData] = await Promise.all([
         getSessionBalances(token, sessionId),
       ]);
 
       setSession(sessionData);
-      setGroupMembers(membersData);
       setBalances(balancesData);
 
-      const me = membersData.find((m) => m.userId === user?.userId);
-      setMyRole(me?.role ?? 'Member');
+      // Derive role from session players list (caller is a member if they can view)
+      const me = sessionData.players.find((p) => p.userId === user?.userId);
+      if (!me) setMyRole('Admin'); // non-player group members can still manage
     } catch {
       setError('Failed to load session.');
     } finally {
@@ -100,6 +105,38 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Load group members for role check separately
+  useEffect(() => {
+    async function checkRole() {
+      try {
+        const token = await SecureStore.getItemAsync('accessToken');
+        if (!token || !session) return;
+        const { getGroupMembers } = await import('../api/groupsApi');
+        const members = await getGroupMembers(token, session.groupId);
+        const me = members.find((m) => m.userId === user?.userId);
+        setMyRole(me?.role ?? 'Member');
+      } catch {}
+    }
+    if (session) checkRole();
+  }, [session?.groupId, user?.userId]);
+
+  function handleUserSearchChange(text: string) {
+    setUserSearch(text);
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    if (text.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        const token = await SecureStore.getItemAsync('accessToken');
+        if (!token) return;
+        const results = await searchUsers(token, text);
+        setSearchResults(results);
+      } catch {}
+    }, 300);
+  }
 
   async function handleStart() {
     setActionLoading(true);
@@ -137,22 +174,43 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
     ]);
   }
 
-  async function handleAddPlayer(userId: string) {
-    setShowAddPlayer(false);
-    setActionLoading(true);
+  async function handleAddRegisteredPlayer(userId: string) {
+    setAddingPlayerId(userId);
     try {
       const token = await SecureStore.getItemAsync('accessToken');
       if (!token) throw new Error('Not authenticated');
       await addPlayer(token, sessionId, userId);
       await load();
+      setUserSearch('');
+      setSearchResults([]);
     } catch (err: any) {
       Alert.alert('Error', err?.response?.data?.message ?? 'Failed to add player.');
     } finally {
-      setActionLoading(false);
+      setAddingPlayerId(null);
     }
   }
 
-  async function handleRemovePlayer(userId: string, username: string) {
+  async function handleAddGuest() {
+    const name = guestNameInput.trim();
+    if (!name) {
+      Alert.alert('Invalid', 'Please enter a guest name.');
+      return;
+    }
+    setAddingPlayerId('guest');
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!token) throw new Error('Not authenticated');
+      await addPlayer(token, sessionId, undefined, name);
+      await load();
+      setGuestNameInput('');
+    } catch (err: any) {
+      Alert.alert('Error', err?.response?.data?.message ?? 'Failed to add guest.');
+    } finally {
+      setAddingPlayerId(null);
+    }
+  }
+
+  async function handleRemovePlayer(sessionPlayerId: string, username: string) {
     Alert.alert('Remove Player', `Remove ${username} from this session?`, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -163,7 +221,7 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
           try {
             const token = await SecureStore.getItemAsync('accessToken');
             if (!token) throw new Error('Not authenticated');
-            await removePlayer(token, sessionId, userId);
+            await removePlayer(token, sessionId, sessionPlayerId);
             await load();
           } catch (err: any) {
             Alert.alert('Error', err?.response?.data?.message ?? 'Failed to remove player.');
@@ -175,12 +233,12 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
     ]);
   }
 
-  function openTransaction(type: 'buyin' | 'cashout', player: { userId: string; username: string }) {
+  function openTransaction(type: 'buyin' | 'cashout', player: { sessionPlayerId: string; username: string }) {
     setAmount('');
     setTxModal({ visible: true, type, player });
   }
 
-  function openRebuy(player: { userId: string; username: string }) {
+  function openRebuy(player: { sessionPlayerId: string; username: string }) {
     setAmount(session?.defaultBuyIn ? String(session.defaultBuyIn) : '');
     setTxModal({ visible: true, type: 'buyin', player });
   }
@@ -199,9 +257,9 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
       if (!token) throw new Error('Not authenticated');
 
       if (txModal.type === 'buyin') {
-        await addBuyIn(token, sessionId, txModal.player.userId, parsed);
+        await addBuyIn(token, sessionId, txModal.player.sessionPlayerId, parsed);
       } else {
-        await addCashOut(token, sessionId, txModal.player.userId, parsed);
+        await addCashOut(token, sessionId, txModal.player.sessionPlayerId, parsed);
       }
 
       setTxModal({ visible: false, type: 'buyin', player: null });
@@ -236,13 +294,17 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
   const isActive = session.status === 'Active';
   const isAdminOrOwner = myRole === 'Owner' || myRole === 'Admin';
 
-  const addablePlayers = groupMembers.filter(
-    (m) => !(session.players?.some((p) => p.userId === m.userId) ?? false),
-  );
+  const addedUserIds = new Set(session.players.filter((p) => !p.isGuest).map((p) => p.userId));
+  const addedGuestNames = new Set(session.players.filter((p) => p.isGuest).map((p) => p.username));
 
   const balanceMap = new Map<string, PlayerBalanceDto>(
-    balances?.players.map((p) => [p.userId, p]) ?? [],
+    balances?.players.map((p) => [p.sessionPlayerId, p]) ?? [],
   );
+
+  const totalBuyIns = balances?.totalPot ?? 0;
+  const sessionDuration = session.startedAt
+    ? formatDuration(new Date(session.startedAt), session.endedAt ? new Date(session.endedAt) : new Date())
+    : null;
 
   const txTitle = txModal.type === 'buyin'
     ? `Buy In — ${txModal.player?.username}`
@@ -257,14 +319,10 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
             <Text style={styles.sessionName}>{session.name}</Text>
             <StatusBadge status={session.status} />
           </View>
-          <View style={styles.infoRow}>
-            <InfoChip label="Small Blind" value={`₪${session.smallBlind}`} />
-            <InfoChip label="Big Blind" value={`₪${session.bigBlind}`} />
-          </View>
           {(session.chipRatio != null || session.defaultBuyIn != null) && (
             <View style={styles.infoRow}>
               {session.chipRatio != null && (
-                <InfoChip label="Chip Ratio" value={`1:${session.chipRatio} chips/₪`} />
+                <InfoChip label="Chip Ratio" value={`1:${session.chipRatio}`} />
               )}
               {session.defaultBuyIn != null && (
                 <InfoChip label="Default Buy-In" value={`₪${session.defaultBuyIn}`} />
@@ -276,18 +334,14 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
               Started {new Date(session.startedAt).toLocaleString()}
             </Text>
           )}
-          {session.endedAt && (
-            <Text style={styles.dateText}>
-              Ended {new Date(session.endedAt).toLocaleString()}
-            </Text>
-          )}
         </View>
 
-        {/* Financial summary */}
-        {balances && !isDraft && (
-          <View style={styles.financeCard}>
-            <Text style={styles.financeLabel}>TOTAL POT</Text>
-            <Text style={styles.financeAmount}>₪{balances.totalPot.toLocaleString()}</Text>
+        {/* Stats row */}
+        {!isDraft && (
+          <View style={styles.statsRow}>
+            <StatChip label="Players" value={String(session.players.length)} />
+            <StatChip label="Total Buy-Ins" value={`₪${totalBuyIns.toLocaleString()}`} />
+            {sessionDuration && <StatChip label="Duration" value={sessionDuration} />}
           </View>
         )}
 
@@ -296,15 +350,13 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
           <Text style={styles.sectionTitle}>
             Players ({session.players.length})
           </Text>
-          {isDraft && (
+          {(isDraft || isActive) && (
             <TouchableOpacity
               style={styles.addPlayerButton}
               onPress={() => setShowAddPlayer(true)}
-              disabled={actionLoading || addablePlayers.length === 0}
+              disabled={actionLoading}
             >
-              <Text style={[styles.addPlayerText, addablePlayers.length === 0 && styles.disabledText]}>
-                + Add Player
-              </Text>
+              <Text style={styles.addPlayerText}>+ Add Player</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -316,11 +368,11 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
         ) : isDraft ? (
           <View style={styles.playerList}>
             {session.players.map((player, index) => (
-              <React.Fragment key={player.userId}>
+              <React.Fragment key={player.sessionPlayerId}>
                 <PlayerRow
                   player={player}
                   canRemove
-                  onRemove={() => handleRemovePlayer(player.userId, player.username)}
+                  onRemove={() => handleRemovePlayer(player.sessionPlayerId, player.username)}
                 />
                 {index < session.players.length - 1 && <View style={styles.separator} />}
               </React.Fragment>
@@ -329,14 +381,16 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
         ) : (
           <View style={styles.playerList}>
             {session.players.map((player, index) => (
-              <React.Fragment key={player.userId}>
+              <React.Fragment key={player.sessionPlayerId}>
                 <PlayerBalanceCard
                   player={player}
-                  balance={balanceMap.get(player.userId) ?? null}
+                  balance={balanceMap.get(player.sessionPlayerId) ?? null}
                   isActive={isActive}
-                  onBuyIn={() => openTransaction('buyin', player)}
-                  onRebuy={session.defaultBuyIn != null ? () => openRebuy(player) : undefined}
-                  onCashOut={() => openTransaction('cashout', player)}
+                  canRemoveGuest={isActive && player.isGuest}
+                  onBuyIn={() => openTransaction('buyin', { sessionPlayerId: player.sessionPlayerId, username: player.username })}
+                  onRebuy={session.defaultBuyIn != null ? () => openRebuy({ sessionPlayerId: player.sessionPlayerId, username: player.username }) : undefined}
+                  onCashOut={() => openTransaction('cashout', { sessionPlayerId: player.sessionPlayerId, username: player.username })}
+                  onRemove={() => handleRemovePlayer(player.sessionPlayerId, player.username)}
                 />
                 {index < session.players.length - 1 && <View style={styles.separator} />}
               </React.Fragment>
@@ -391,30 +445,101 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
           activeOpacity={1}
           onPress={() => setShowAddPlayer(false)}
         >
-          <View style={styles.modalSheet}>
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Add Player</Text>
-            {addablePlayers.length === 0 ? (
-              <Text style={styles.noPlayersText}>All group members are already in the session.</Text>
-            ) : (
-              <FlatList
-                data={addablePlayers}
-                keyExtractor={(m) => m.userId}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.memberPickerRow}
-                    onPress={() => handleAddPlayer(item.userId)}
-                  >
-                    <View style={styles.memberAvatar}>
-                      <Text style={styles.memberAvatarText}>{(item.username?.[0] ?? '?').toUpperCase()}</Text>
-                    </View>
-                    <Text style={styles.memberPickerName}>{item.username}</Text>
-                  </TouchableOpacity>
-                )}
-                ItemSeparatorComponent={() => <View style={styles.separator} />}
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalSheet}
+          >
+            <TouchableOpacity activeOpacity={1}>
+              <View style={styles.modalHandle} />
+              <Text style={styles.modalTitle}>Add Player</Text>
+
+              {/* Search registered users */}
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search by username..."
+                placeholderTextColor={colors.textDim}
+                value={userSearch}
+                onChangeText={handleUserSearchChange}
+                autoCapitalize="none"
               />
-            )}
-          </View>
+
+              {searchResults.length > 0 && (
+                <View style={styles.searchResults}>
+                  {searchResults.map((result, index) => {
+                    const alreadyIn = addedUserIds.has(result.userId);
+                    return (
+                      <React.Fragment key={result.userId}>
+                        <View style={styles.memberPickerRow}>
+                          <View style={styles.memberAvatar}>
+                            <Text style={styles.memberAvatarText}>
+                              {(result.username?.[0] ?? '?').toUpperCase()}
+                            </Text>
+                          </View>
+                          <Text style={styles.memberPickerName}>{result.username}</Text>
+                          {alreadyIn ? (
+                            <Text style={styles.alreadyInText}>Added</Text>
+                          ) : (
+                            <TouchableOpacity
+                              style={styles.addBtn}
+                              onPress={() => handleAddRegisteredPlayer(result.userId)}
+                              disabled={addingPlayerId === result.userId}
+                            >
+                              {addingPlayerId === result.userId ? (
+                                <ActivityIndicator size="small" color={colors.gold} />
+                              ) : (
+                                <Text style={styles.addBtnText}>Add</Text>
+                              )}
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                        {index < searchResults.length - 1 && <View style={styles.separator} />}
+                      </React.Fragment>
+                    );
+                  })}
+                </View>
+              )}
+
+              {userSearch.length > 0 && userSearch.length < 2 && (
+                <Text style={styles.searchHint}>Type at least 2 characters to search</Text>
+              )}
+
+              {/* Divider */}
+              <View style={styles.modalDivider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>OR ADD GUEST</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              {/* Guest input */}
+              <View style={styles.guestRow}>
+                <TextInput
+                  style={styles.guestInput}
+                  placeholder="Guest name..."
+                  placeholderTextColor={colors.textDim}
+                  value={guestNameInput}
+                  onChangeText={setGuestNameInput}
+                  maxLength={50}
+                />
+                <TouchableOpacity
+                  style={[styles.addBtn, styles.addGuestBtn]}
+                  onPress={handleAddGuest}
+                  disabled={addingPlayerId === 'guest' || !guestNameInput.trim()}
+                >
+                  {addingPlayerId === 'guest' ? (
+                    <ActivityIndicator size="small" color={colors.gold} />
+                  ) : (
+                    <Text style={styles.addBtnText}>Add</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              {addedGuestNames.has(guestNameInput.trim()) && guestNameInput.trim() !== '' && (
+                <Text style={styles.guestDuplicateText}>
+                  A guest named "{guestNameInput.trim()}" is already in this session.
+                </Text>
+              )}
+            </TouchableOpacity>
+          </KeyboardAvoidingView>
         </TouchableOpacity>
       </Modal>
 
@@ -488,6 +613,15 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
   );
 }
 
+function formatDuration(start: Date, end: Date): string {
+  const diffMs = end.getTime() - start.getTime();
+  const totalMins = Math.floor(diffMs / 60000);
+  const hours = Math.floor(totalMins / 60);
+  const mins = totalMins % 60;
+  if (hours === 0) return `${mins}m`;
+  return `${hours}h ${mins}m`;
+}
+
 function PlayerRow({
   player,
   canRemove,
@@ -502,7 +636,10 @@ function PlayerRow({
       <View style={styles.playerAvatar}>
         <Text style={styles.playerAvatarText}>{(player.username?.[0] ?? '?').toUpperCase()}</Text>
       </View>
-      <Text style={styles.playerName}>{player.username}</Text>
+      <View style={styles.playerNameCol}>
+        <Text style={styles.playerName}>{player.username}</Text>
+        {player.isGuest && <Text style={styles.guestLabel}>Guest</Text>}
+      </View>
       {canRemove && (
         <TouchableOpacity onPress={onRemove} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Text style={styles.removeText}>Remove</Text>
@@ -516,16 +653,20 @@ function PlayerBalanceCard({
   player,
   balance,
   isActive,
+  canRemoveGuest,
   onBuyIn,
   onRebuy,
   onCashOut,
+  onRemove,
 }: {
   player: SessionPlayerDto;
   balance: PlayerBalanceDto | null;
   isActive: boolean;
+  canRemoveGuest: boolean;
   onBuyIn: () => void;
   onRebuy?: () => void;
   onCashOut: () => void;
+  onRemove: () => void;
 }) {
   const totalBuyIn = balance?.totalBuyIn ?? 0;
   const totalCashOut = balance?.totalCashOut ?? 0;
@@ -538,13 +679,16 @@ function PlayerBalanceCard({
           <Text style={styles.playerAvatarText}>{(player.username?.[0] ?? '?').toUpperCase()}</Text>
         </View>
         <View style={styles.balanceInfo}>
-          <Text style={styles.playerName}>{player.username}</Text>
+          <View style={styles.nameRow}>
+            <Text style={styles.playerName}>{player.username}</Text>
+            {player.isGuest && <Text style={styles.guestLabel}>Guest</Text>}
+          </View>
           <Text style={styles.balanceSubtext}>
             Invested ₪{totalBuyIn.toLocaleString()}
             {totalCashOut > 0 ? `  ·  Cashed ₪${totalCashOut.toLocaleString()}` : ''}
           </Text>
         </View>
-        <ProfitLossBadge amount={profitLoss} hasBuyIn={totalBuyIn > 0} />
+        {totalBuyIn > 0 && <ProfitLossBadge amount={profitLoss} />}
       </View>
       {isActive && (
         <View style={styles.balanceActions}>
@@ -559,14 +703,18 @@ function PlayerBalanceCard({
           <TouchableOpacity style={styles.cashOutBtn} onPress={onCashOut}>
             <Text style={styles.cashOutBtnText}>Cash Out</Text>
           </TouchableOpacity>
+          {canRemoveGuest && (
+            <TouchableOpacity style={styles.removeGuestBtn} onPress={onRemove}>
+              <Text style={styles.removeGuestText}>✕</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </View>
   );
 }
 
-function ProfitLossBadge({ amount, hasBuyIn }: { amount: number; hasBuyIn: boolean }) {
-  if (!hasBuyIn) return null;
+function ProfitLossBadge({ amount }: { amount: number }) {
   const isPositive = amount > 0;
   const isNegative = amount < 0;
   const color = isPositive ? colors.success : isNegative ? colors.error : colors.textMuted;
@@ -601,6 +749,15 @@ function InfoChip({ label, value }: { label: string; value: string }) {
   );
 }
 
+function StatChip({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.statChip}>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scrollContent: { padding: 16, paddingBottom: 100 },
@@ -618,7 +775,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 16,
     padding: 20,
-    marginBottom: 16,
+    marginBottom: 12,
     gap: 12,
   },
   infoTop: {
@@ -640,25 +797,23 @@ const styles = StyleSheet.create({
   chipValue: { fontSize: 18, fontWeight: '700', color: colors.gold },
   dateText: { fontSize: 12, color: colors.textMuted },
 
-  financeCard: {
+  statsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  statChip: {
+    flex: 1,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 16,
-    flexDirection: 'row',
+    borderRadius: 12,
+    padding: 12,
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 3,
   },
-  financeLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  financeAmount: { fontSize: 24, fontWeight: '800', color: colors.gold },
+  statValue: { fontSize: 16, fontWeight: '800', color: colors.gold },
+  statLabel: { fontSize: 10, fontWeight: '600', color: colors.textMuted, textTransform: 'uppercase' },
 
   sectionHeader: {
     flexDirection: 'row',
@@ -675,7 +830,6 @@ const styles = StyleSheet.create({
   },
   addPlayerButton: { paddingHorizontal: 4 },
   addPlayerText: { fontSize: 13, fontWeight: '700', color: colors.gold },
-  disabledText: { color: colors.textDim },
   playerList: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -700,7 +854,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   playerAvatarText: { fontSize: 14, fontWeight: '700', color: colors.gold },
-  playerName: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.text },
+  playerNameCol: { flex: 1, gap: 2 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  playerName: { fontSize: 15, fontWeight: '600', color: colors.text },
+  guestLabel: { fontSize: 11, color: colors.textMuted, fontWeight: '500' },
   removeText: { fontSize: 13, color: colors.error, fontWeight: '600' },
   separator: { height: 1, backgroundColor: colors.border, marginHorizontal: 14 },
   emptyPlayers: {
@@ -724,7 +881,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   profitBadgeText: { fontSize: 12, fontWeight: '700' },
-  balanceActions: { flexDirection: 'row', gap: 8, paddingLeft: 48 },
+  balanceActions: { flexDirection: 'row', gap: 6, paddingLeft: 48 },
   buyInBtn: {
     flex: 1,
     backgroundColor: 'rgba(201,168,76,0.15)',
@@ -734,7 +891,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     alignItems: 'center',
   },
-  buyInBtnText: { fontSize: 13, fontWeight: '700', color: colors.gold },
+  buyInBtnText: { fontSize: 12, fontWeight: '700', color: colors.gold },
   rebuyBtn: {
     flex: 1,
     backgroundColor: 'rgba(201,168,76,0.08)',
@@ -744,7 +901,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     alignItems: 'center',
   },
-  rebuyBtnText: { fontSize: 13, fontWeight: '700', color: colors.gold },
+  rebuyBtnText: { fontSize: 12, fontWeight: '700', color: colors.gold },
   cashOutBtn: {
     flex: 1,
     backgroundColor: colors.surfaceHigh,
@@ -754,7 +911,17 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     alignItems: 'center',
   },
-  cashOutBtnText: { fontSize: 13, fontWeight: '700', color: colors.text },
+  cashOutBtnText: { fontSize: 12, fontWeight: '700', color: colors.text },
+  removeGuestBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeGuestText: { fontSize: 12, color: colors.error, fontWeight: '700' },
 
   actionBar: {
     position: 'absolute',
@@ -815,7 +982,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     padding: 20,
     paddingBottom: 40,
-    maxHeight: '70%',
+    maxHeight: '80%',
   },
   txSheet: {
     backgroundColor: colors.surface,
@@ -838,6 +1005,78 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: 16,
   },
+  searchInput: {
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 15,
+    color: colors.text,
+    marginBottom: 8,
+  },
+  searchResults: {
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  searchHint: { fontSize: 12, color: colors.textMuted, marginBottom: 8, paddingLeft: 4 },
+  modalDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginVertical: 16,
+  },
+  dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
+  dividerText: { fontSize: 11, fontWeight: '600', color: colors.textMuted, letterSpacing: 0.8 },
+  guestRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  guestInput: {
+    flex: 1,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 15,
+    color: colors.text,
+  },
+  guestDuplicateText: { fontSize: 12, color: colors.error, marginTop: 6 },
+  memberPickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 12,
+  },
+  memberAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  memberAvatarText: { fontSize: 13, fontWeight: '700', color: colors.gold },
+  memberPickerName: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.text },
+  alreadyInText: { fontSize: 12, color: colors.textMuted, fontWeight: '500' },
+  addBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 52,
+  },
+  addGuestBtn: { paddingHorizontal: 16, paddingVertical: 12 },
+  addBtnText: { fontSize: 13, fontWeight: '700', color: colors.gold },
+
   txAmountLabel: {
     fontSize: 11,
     fontWeight: '600',
@@ -881,24 +1120,6 @@ const styles = StyleSheet.create({
   },
   txConfirmText: { fontSize: 15, fontWeight: '700', color: colors.background },
   txConfirmTextCashout: { color: colors.success },
-  memberPickerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    gap: 12,
-  },
-  memberAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.surfaceHigh,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  memberAvatarText: { fontSize: 14, fontWeight: '700', color: colors.gold },
-  memberPickerName: { fontSize: 15, fontWeight: '600', color: colors.text },
   noPlayersText: { fontSize: 14, color: colors.textMuted, textAlign: 'center', padding: 16 },
   errorText: { fontSize: 15, color: colors.error, textAlign: 'center' },
   retryButton: {
