@@ -868,9 +868,17 @@ export default function SessionScreen({ route, navigation }: Props) {
       <Modal visible={txModal.visible} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.sheet}>
-            <Text style={styles.sheetTitle}>
-              {txModal.type === 'buyin' ? 'Buy In' : 'Cash Out'} — {txModal.player?.username}
-            </Text>
+            <View style={styles.sheetTitleRow}>
+              <View>
+                <Text style={styles.sheetTitle}>
+                  {txModal.type === 'buyin' ? 'Buy In' : 'Cash Out'}
+                </Text>
+                <Text style={styles.sheetSubtitle}>{txModal.player?.username}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setTxModal({ visible: false, type: 'buyin', player: null })} hitSlop={8}>
+                <Text style={styles.closeBtn}>✕</Text>
+              </TouchableOpacity>
+            </View>
 
             {session.chipRatio && (
               <View style={styles.toggleRow}>
@@ -894,15 +902,17 @@ export default function SessionScreen({ route, navigation }: Props) {
               value={txAmount}
               onChangeText={setTxAmount}
               keyboardType="decimal-pad"
-              placeholder={useChips ? 'Chip count' : 'Amount (₪)'}
+              placeholder="0"
               placeholderTextColor={colors.textDim}
               autoFocus
             />
 
-            {useChips && session.chipRatio && txAmount !== '' && !isNaN(parseFloat(txAmount)) && (
+            {useChips && session.chipRatio && txAmount !== '' && !isNaN(parseFloat(txAmount)) ? (
               <Text style={styles.txConvert}>
                 = {formatMoney(toMoney(parseFloat(txAmount), session.chipRatio, true))}
               </Text>
+            ) : (
+              <Text style={styles.txUnit}>{useChips ? 'chips' : '₪'}</Text>
             )}
 
             <View style={styles.sheetActions}>
@@ -917,9 +927,16 @@ export default function SessionScreen({ route, navigation }: Props) {
                 onPress={handleTransaction}
                 disabled={txLoading}
               >
-                {txLoading
-                  ? <ActivityIndicator color={colors.background} size="small" />
-                  : <Text style={styles.confirmBtnText}>Confirm</Text>}
+                {txLoading ? (
+                  <ActivityIndicator color={colors.background} size="small" />
+                ) : (
+                  <Text style={styles.confirmBtnText}>
+                    {txModal.type === 'buyin' ? 'Confirm Buy-In' : 'Confirm Cash-Out'}
+                    {txAmount && !isNaN(parseFloat(txAmount)) && parseFloat(txAmount) > 0
+                      ? `  ${formatMoney(toMoney(parseFloat(txAmount), session.chipRatio, useChips))}`
+                      : ''}
+                  </Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -1445,7 +1462,8 @@ const styles = StyleSheet.create({
   },
   sheetTall: { maxHeight: '85%' },
   sheetTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
-  sheetTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  sheetSubtitle: { fontSize: 13, color: colors.textMuted, fontWeight: '500', marginTop: 2 },
+  sheetTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   closeBtn: { fontSize: 18, color: colors.textMuted },
   subLabel: {
     fontSize: 12,
@@ -1475,22 +1493,29 @@ const styles = StyleSheet.create({
 
   // Transaction inputs
   txInput: {
-    backgroundColor: colors.surfaceHigh,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 20,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.border,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+    fontSize: 42,
     color: colors.text,
     fontWeight: '700',
     textAlign: 'center',
+    marginVertical: 4,
   },
   txConvert: {
     textAlign: 'center',
-    fontSize: 14,
+    fontSize: 16,
     color: colors.gold,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  txUnit: {
+    textAlign: 'center',
+    fontSize: 14,
+    color: colors.textDim,
+    fontWeight: '500',
   },
   sheetActions: { flexDirection: 'row', gap: 10, marginTop: 4 },
   cancelBtn: {
