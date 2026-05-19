@@ -18,6 +18,8 @@ import SessionDetailScreen from '../screens/SessionDetailScreen';
 import SettlementScreen from '../screens/SettlementScreen';
 import SessionSummaryScreen from '../screens/SessionSummaryScreen';
 import StatsScreen from '../screens/StatsScreen';
+import BalancesScreen from '../screens/BalancesScreen';
+import CreateDebtScreen from '../screens/CreateDebtScreen';
 
 // All possible route names and their params
 export type RootStackParamList = {
@@ -35,6 +37,8 @@ export type RootStackParamList = {
   Settlement: { sessionId: string; sessionName: string };
   SessionSummary: { sessionId: string; sessionName: string };
   Stats: undefined;
+  Balances: undefined;
+  CreateDebt: { groupId?: string; groupName?: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -113,6 +117,16 @@ export default function AppNavigator() {
               name="Stats"
               component={StatsScreen}
               options={{ headerShown: true, title: 'My Stats', headerBackTitle: 'Back' }}
+            />
+            <Stack.Screen
+              name="Balances"
+              component={BalancesScreen}
+              options={{ headerShown: true, title: 'My Balances', headerBackTitle: 'Back' }}
+            />
+            <Stack.Screen
+              name="CreateDebt"
+              component={CreateDebtScreen}
+              options={{ presentation: 'modal', title: 'Record Debt' }}
             />
           </>
         )}

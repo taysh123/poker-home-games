@@ -221,20 +221,28 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
             </View>
           )}
 
-          {/* Sessions nav */}
-          <TouchableOpacity
-            style={styles.navButton}
-            onPress={() =>
-              navigation.navigate('SessionsList', {
-                groupId,
-                groupName,
-                userRole: group.myRole,
-              })
-            }
-          >
-            <Text style={styles.navButtonText}>Sessions</Text>
-            <Text style={styles.navChevron}>›</Text>
-          </TouchableOpacity>
+          {/* Nav buttons */}
+          <View style={styles.navRow}>
+            <TouchableOpacity
+              style={[styles.navButton, { flex: 1 }]}
+              onPress={() =>
+                navigation.navigate('SessionsList', {
+                  groupId,
+                  groupName,
+                  userRole: group.myRole,
+                })
+              }
+            >
+              <Text style={styles.navButtonText}>Sessions</Text>
+              <Text style={styles.navChevron}>›</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.navButton, styles.navButtonDebt]}
+              onPress={() => navigation.navigate('CreateDebt', { groupId, groupName })}
+            >
+              <Text style={styles.navButtonDebtText}>+ Record Debt</Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Invite — Admin/Owner only */}
           {isAdminOrOwner && (
@@ -411,6 +419,7 @@ const styles = StyleSheet.create({
   metaText: { fontSize: 13, color: colors.textMuted },
   dot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: colors.textDim },
 
+  navRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   navButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -420,9 +429,15 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 12,
     padding: 16,
-    marginBottom: 16,
+  },
+  navButtonDebt: {
+    flex: 0,
+    borderColor: colors.gold,
+    backgroundColor: 'rgba(201,168,76,0.08)',
+    justifyContent: 'center',
   },
   navButtonText: { fontSize: 15, fontWeight: '600', color: colors.text },
+  navButtonDebtText: { fontSize: 13, fontWeight: '700', color: colors.gold },
   navChevron: { fontSize: 22, color: colors.gold, lineHeight: 24 },
 
   inviteSection: { marginBottom: 16 },

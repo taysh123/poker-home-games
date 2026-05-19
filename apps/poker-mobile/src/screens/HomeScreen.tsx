@@ -201,10 +201,28 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      {/* ── Balances quick-link ── */}
+      <View style={styles.section}>
+        <TouchableOpacity
+          style={styles.balancesLink}
+          onPress={() => navigation.navigate('Balances')}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.balancesLinkText}>My Balances</Text>
+          <Text style={styles.balancesLinkSub}>Session debts + manual IOUs</Text>
+          <Text style={styles.rowChevron}>›</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* ── Pending Settlements (only if any) ── */}
       {pendingSettlements.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Pending Settlements</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Pending Settlements</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Balances')}>
+              <Text style={styles.seeAll}>See all →</Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.groupsCard}>
             {pendingSettlements.map((s, i) => {
               const iOwe = s.payerUserId === user?.userId;
@@ -555,6 +573,19 @@ const styles = StyleSheet.create({
   groupRowMeta: { fontSize: 12, color: colors.textMuted },
   rowChevron: { fontSize: 20, color: colors.textDim, fontWeight: '300' },
   moreGroupsText: { flex: 1, fontSize: 14, color: colors.textMuted },
+  balancesLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 6,
+  },
+  balancesLinkText: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.text },
+  balancesLinkSub: { fontSize: 12, color: colors.textMuted },
   debtLabel: { fontSize: 14, fontWeight: '600', marginBottom: 2 },
   debtOwed: { color: colors.error },
   debtReceivable: { color: colors.success },

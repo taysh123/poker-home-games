@@ -18,6 +18,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<GroupInvitation> GroupInvitations => Set<GroupInvitation>();
     public DbSet<SessionPlayer> SessionPlayers => Set<SessionPlayer>();
     public DbSet<HandRecord> HandRecords => Set<HandRecord>();
+    public DbSet<Debt> Debts => Set<Debt>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
