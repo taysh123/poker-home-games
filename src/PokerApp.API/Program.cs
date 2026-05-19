@@ -15,9 +15,19 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // ── CORS ─────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
+    // Development: open CORS for local testing
     options.AddPolicy("Dev", policy =>
         policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+
+    // Production: restrict to explicitly configured origins
+    var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>()
+                         ?? Array.Empty<string>();
+    options.AddPolicy("Prod", policy =>
+        policy.WithOrigins(allowedOrigins).AllowAnyMethod().AllowAnyHeader());
 });
+
+// ── Health checks ────────────────────────────────────────────────────────────
+builder.Services.AddHealthChecks();
 
 // ── Controllers ─────────────────────────────────────────────────────────────
 builder.Services.AddControllers();
@@ -87,12 +97,13 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "PokerApp API v1"));
 }
 
-app.UseCors("Dev");
+app.UseCors(app.Environment.IsDevelopment() ? "Dev" : "Prod");
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();

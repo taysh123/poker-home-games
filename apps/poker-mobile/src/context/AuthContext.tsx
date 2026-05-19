@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import * as SecureStore from '../utils/storage';
 import { loginApi, registerApi, logoutApi, googleLoginApi, AuthUser, AuthResponse } from '../api/authApi';
+import { registerUnauthenticatedCallback } from '../api/apiClient';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -28,6 +29,11 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // When any authenticated request gets a 401 that survives token refresh, log out
+  useEffect(() => {
+    registerUnauthenticatedCallback(clearSession);
+  }, []);
 
   // On app start: try to restore a saved session from encrypted device storage
   useEffect(() => {
