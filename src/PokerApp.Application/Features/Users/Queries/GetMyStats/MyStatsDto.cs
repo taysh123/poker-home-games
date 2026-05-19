@@ -5,6 +5,10 @@ public sealed record MyStatsDto(
     decimal TotalProfitLoss,
     decimal? BiggestWin,
     decimal? BiggestLoss,
+    int WinsCount,
+    int LossesCount,
+    int BreakEvenCount,
+    decimal AverageProfitLoss,
     List<RecentSessionDto> RecentSessions
 );
 

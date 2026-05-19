@@ -22,7 +22,7 @@ public sealed class GetMyStatsQueryHandler(
         var sessionIds = sessionPlayers.Select(x => x.SessionId).ToList();
 
         if (sessionIds.Count == 0)
-            return new MyStatsDto(0, 0m, null, null, []);
+            return new MyStatsDto(0, 0m, null, null, 0, 0, 0, 0m, []);
 
         var spIdBySession = sessionPlayers.ToDictionary(x => x.SessionId, x => x.Id);
 
@@ -83,15 +83,20 @@ public sealed class GetMyStatsQueryHandler(
         var totalProfitLoss = finishedProfits.Sum();
         var biggestWin  = finishedProfits.Any(p => p > 0) ? finishedProfits.Where(p => p > 0).Max() : (decimal?)null;
         var biggestLoss = finishedProfits.Any(p => p < 0) ? finishedProfits.Where(p => p < 0).Min() : (decimal?)null;
+        var winsCount       = finishedProfits.Count(p => p > 0);
+        var lossesCount     = finishedProfits.Count(p => p < 0);
+        var breakEvenCount  = finishedProfits.Count(p => p == 0);
+        var avgProfitLoss   = finishedProfits.Count > 0 ? totalProfitLoss / finishedProfits.Count : 0m;
 
-        var recentSessions = sessions.Take(8).Select(s =>
+        var allSessions = sessions.Select(s =>
         {
-            var profit   = s.Status == SessionStatus.Finished ? GetProfit(s.Id) : (decimal?)null;
+            var profit    = s.Status == SessionStatus.Finished ? GetProfit(s.Id) : (decimal?)null;
             var groupName = groups.GetValueOrDefault(s.GroupId, "Unknown");
             var userRole  = groupRoles.GetValueOrDefault(s.GroupId, "Member");
             return new RecentSessionDto(s.Id, s.Name, s.GroupId, groupName, userRole, s.Status.ToString(), profit, s.CreatedAt);
         }).ToList();
 
-        return new MyStatsDto(finishedSessions.Count, totalProfitLoss, biggestWin, biggestLoss, recentSessions);
+        return new MyStatsDto(finishedSessions.Count, totalProfitLoss, biggestWin, biggestLoss,
+            winsCount, lossesCount, breakEvenCount, avgProfitLoss, allSessions);
     }
 }

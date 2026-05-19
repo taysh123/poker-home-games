@@ -112,13 +112,20 @@ export default function SessionsListScreen({ route, navigation }: Props) {
       renderItem={({ item }) => (
         <SessionCard
           session={item}
-          onPress={() =>
-            navigation.navigate('SessionDetail', {
-              sessionId: item.id,
-              sessionName: item.name,
-              userRole,
-            })
-          }
+          onPress={() => {
+            if (item.status === 'Finished') {
+              navigation.navigate('SessionSummary', {
+                sessionId: item.id,
+                sessionName: item.name,
+              });
+            } else {
+              navigation.navigate('SessionDetail', {
+                sessionId: item.id,
+                sessionName: item.name,
+                userRole,
+              });
+            }
+          }}
         />
       )}
       ItemSeparatorComponent={() => <View style={styles.separator} />}

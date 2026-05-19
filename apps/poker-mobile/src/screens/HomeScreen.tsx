@@ -127,7 +127,7 @@ export default function HomeScreen() {
   const previewGroups = groups.slice(0, 3);
 
   const activeSessions = stats?.recentSessions.filter(s => s.status === 'Active') ?? [];
-  const recentSessions = stats?.recentSessions ?? [];
+  const recentSessions = (stats?.recentSessions ?? []).slice(0, 5);
 
   const plValue = stats?.totalProfitLoss ?? 0;
   const plColor = plValue > 0 ? colors.success : plValue < 0 ? colors.error : colors.gold;
@@ -165,7 +165,12 @@ export default function HomeScreen() {
 
       {/* ── Quick Stats ── */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>My Stats</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>My Stats</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Stats')}>
+            <Text style={styles.seeAll}>See all →</Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>
@@ -354,7 +359,14 @@ export default function HomeScreen() {
 
       {/* ── Recent Sessions ── */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recent Sessions</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recent Sessions</Text>
+          {recentSessions.length > 0 && (
+            <TouchableOpacity onPress={() => navigation.navigate('Stats')}>
+              <Text style={styles.seeAll}>See all →</Text>
+            </TouchableOpacity>
+          )}
+        </View>
         {statsLoading ? (
           <View style={styles.emptyCard}>
             <ActivityIndicator color={colors.gold} size="small" />

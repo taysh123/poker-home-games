@@ -23,6 +23,10 @@ export type MyStatsDto = {
   totalProfitLoss: number;
   biggestWin: number | null;
   biggestLoss: number | null;
+  winsCount: number;
+  lossesCount: number;
+  breakEvenCount: number;
+  averageProfitLoss: number;
   recentSessions: RecentSessionDto[];
 };
 
