@@ -31,6 +31,7 @@ import {
   PlayerBalanceDto,
 } from '../api/sessionsApi';
 import { searchUsers, UserSearchResultDto } from '../api/usersApi';
+import { getSessionHandHistory, addHandRecord, deleteHandRecord, updateSessionNotes, HandRecordDto } from '../api/handsApi';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
@@ -61,6 +62,20 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
   const [amount, setAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // Notes state
+  const [notesInput, setNotesInput] = useState('');
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [savingNotes, setSavingNotes] = useState(false);
+
+  // Hand history state
+  const [hands, setHands] = useState<HandRecordDto[]>([]);
+  const [showHandModal, setShowHandModal] = useState(false);
+  const [handWinner, setHandWinner] = useState('');
+  const [handPot, setHandPot] = useState('');
+  const [handNote, setHandNote] = useState('');
+  const [handSubmitting, setHandSubmitting] = useState(false);
+  const [deletingHandId, setDeletingHandId] = useState<string | null>(null);
+
   // Add Player modal state
   const [userSearch, setUserSearch] = useState('');
   const [searchResults, setSearchResults] = useState<UserSearchResultDto[]>([]);
@@ -85,12 +100,15 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
       if (!token) throw new Error('Not authenticated');
 
       const sessionData = await getSessionById(token, sessionId);
-      const [balancesData] = await Promise.all([
+      const [balancesData, handsData] = await Promise.all([
         getSessionBalances(token, sessionId),
+        getSessionHandHistory(token, sessionId).catch(() => [] as HandRecordDto[]),
       ]);
 
       setSession(sessionData);
       setBalances(balancesData);
+      setHands(handsData);
+      setNotesInput(sessionData.notes ?? '');
 
       // Derive role from session players list (caller is a member if they can view)
       const me = sessionData.players.find((p) => p.userId === user?.userId);
@@ -271,6 +289,56 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
     }
   }
 
+  async function handleSaveNotes() {
+    setSavingNotes(true);
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!token) return;
+      await updateSessionNotes(token, sessionId, notesInput.trim() || null);
+      setEditingNotes(false);
+    } catch {
+      Alert.alert('Error', 'Failed to save notes.');
+    } finally {
+      setSavingNotes(false);
+    }
+  }
+
+  async function handleLogHand() {
+    const pot = parseFloat(handPot);
+    if (!handWinner) { Alert.alert('Missing', 'Please select a winner.'); return; }
+    if (isNaN(pot) || pot <= 0) { Alert.alert('Invalid', 'Enter a valid pot amount greater than 0.'); return; }
+    setHandSubmitting(true);
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!token) return;
+      const newHand = await addHandRecord(token, sessionId, handWinner, pot, handNote.trim() || undefined);
+      setHands(prev => [...prev, newHand]);
+      setShowHandModal(false);
+      setHandWinner('');
+      setHandPot('');
+      setHandNote('');
+    } catch (err: any) {
+      Alert.alert('Error', err?.response?.data?.message ?? 'Failed to log hand.');
+    } finally {
+      setHandSubmitting(false);
+    }
+  }
+
+  async function handleDeleteHand(handId: string) {
+    setDeletingHandId(handId);
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!token) return;
+      await deleteHandRecord(token, sessionId, handId);
+      setHands(prev => prev.filter(h => h.id !== handId));
+    } catch (err: any) {
+      const status = err?.response?.status;
+      Alert.alert('Error', status === 403 ? 'You can only delete hands you logged.' : 'Failed to delete hand.');
+    } finally {
+      setDeletingHandId(null);
+    }
+  }
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -396,6 +464,106 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
               </React.Fragment>
             ))}
           </View>
+        )}
+        {/* Notes section */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Session Notes</Text>
+          {!editingNotes && (
+            <TouchableOpacity onPress={() => setEditingNotes(true)}>
+              <Text style={styles.addPlayerText}>{notesInput ? 'Edit' : '+ Add'}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        {editingNotes ? (
+          <View style={styles.notesEditCard}>
+            <TextInput
+              style={styles.notesInput}
+              value={notesInput}
+              onChangeText={setNotesInput}
+              placeholder="Add notes about this session..."
+              placeholderTextColor={colors.textDim}
+              multiline
+              maxLength={500}
+              autoFocus
+            />
+            <View style={styles.notesButtons}>
+              <TouchableOpacity
+                style={styles.notesCancelBtn}
+                onPress={() => { setEditingNotes(false); setNotesInput(session.notes ?? ''); }}
+                disabled={savingNotes}
+              >
+                <Text style={styles.notesCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.notesSaveBtn}
+                onPress={handleSaveNotes}
+                disabled={savingNotes}
+              >
+                {savingNotes
+                  ? <ActivityIndicator size="small" color={colors.background} />
+                  : <Text style={styles.notesSaveText}>Save</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : notesInput ? (
+          <View style={styles.notesCard}>
+            <Text style={styles.notesText}>{notesInput}</Text>
+          </View>
+        ) : (
+          <View style={styles.notesEmpty}>
+            <Text style={styles.notesEmptyText}>No notes yet</Text>
+          </View>
+        )}
+
+        {/* Hand history section — only during active sessions */}
+        {isActive && (
+          <>
+            <View style={[styles.sectionHeader, { marginTop: 20 }]}>
+              <Text style={styles.sectionTitle}>Hands {hands.length > 0 ? `(${hands.length})` : ''}</Text>
+              <TouchableOpacity onPress={() => { setHandWinner(''); setHandPot(''); setHandNote(''); setShowHandModal(true); }}>
+                <Text style={styles.addPlayerText}>+ Log Hand</Text>
+              </TouchableOpacity>
+            </View>
+            {hands.length === 0 ? (
+              <View style={styles.notesEmpty}>
+                <Text style={styles.notesEmptyText}>No hands logged yet</Text>
+              </View>
+            ) : (
+              <View style={styles.playerList}>
+                {[...hands].reverse().map((hand, index) => {
+                  const isOwn = hand.createdByUserId === user?.userId;
+                  const isDeleting = deletingHandId === hand.id;
+                  return (
+                    <React.Fragment key={hand.id}>
+                      {index > 0 && <View style={styles.separator} />}
+                      <View style={styles.handRow}>
+                        <View style={styles.handLeft}>
+                          <Text style={styles.handPot}>₪{hand.potAmount.toLocaleString()}</Text>
+                          <Text style={styles.handWinner}> → {hand.winnerName}</Text>
+                        </View>
+                        <View style={styles.handRight}>
+                          {hand.note ? (
+                            <Text style={styles.handNote} numberOfLines={1}>"{hand.note}"</Text>
+                          ) : null}
+                          {isOwn && (
+                            <TouchableOpacity
+                              onPress={() => handleDeleteHand(hand.id)}
+                              disabled={isDeleting}
+                              hitSlop={8}
+                            >
+                              {isDeleting
+                                ? <ActivityIndicator size="small" color={colors.error} />
+                                : <Text style={styles.handDeleteBtn}>✕</Text>}
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      </View>
+                    </React.Fragment>
+                  );
+                })}
+              </View>
+            )}
+          </>
         )}
       </ScrollView>
 
@@ -541,6 +709,89 @@ export default function SessionDetailScreen({ route, navigation }: Props) {
             </TouchableOpacity>
           </KeyboardAvoidingView>
         </TouchableOpacity>
+      </Modal>
+
+      {/* Log Hand Modal */}
+      <Modal
+        visible={showHandModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowHandModal(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => !handSubmitting && setShowHandModal(false)}
+          >
+            <View style={styles.txSheet}>
+              <View style={styles.modalHandle} />
+              <Text style={styles.modalTitle}>Log Hand</Text>
+
+              <Text style={styles.txAmountLabel}>POT AMOUNT (₪)</Text>
+              <TextInput
+                style={[styles.txInput, { marginBottom: 16 }]}
+                keyboardType="decimal-pad"
+                placeholder="0"
+                placeholderTextColor={colors.textDim}
+                value={handPot}
+                onChangeText={setHandPot}
+                editable={!handSubmitting}
+              />
+
+              <Text style={styles.txAmountLabel}>WINNER</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  {session?.players.map(p => (
+                    <TouchableOpacity
+                      key={p.sessionPlayerId}
+                      style={[styles.winnerChip, handWinner === p.username && styles.winnerChipSelected]}
+                      onPress={() => setHandWinner(p.username)}
+                    >
+                      <Text style={[styles.winnerChipText, handWinner === p.username && styles.winnerChipTextSelected]}>
+                        {p.username}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+
+              <Text style={styles.txAmountLabel}>NOTE (OPTIONAL)</Text>
+              <TextInput
+                style={[styles.txInput, { fontSize: 15, fontWeight: '400', height: 60, marginBottom: 20 }]}
+                placeholder="e.g. rivered a flush..."
+                placeholderTextColor={colors.textDim}
+                value={handNote}
+                onChangeText={setHandNote}
+                maxLength={300}
+                multiline
+                editable={!handSubmitting}
+              />
+
+              <View style={styles.txButtons}>
+                <TouchableOpacity
+                  style={styles.txCancelBtn}
+                  onPress={() => setShowHandModal(false)}
+                  disabled={handSubmitting}
+                >
+                  <Text style={styles.txCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.txConfirmBtn}
+                  onPress={handleLogHand}
+                  disabled={handSubmitting}
+                >
+                  {handSubmitting
+                    ? <ActivityIndicator color={colors.background} size="small" />
+                    : <Text style={styles.txConfirmText}>Save Hand</Text>}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Transaction Modal */}
@@ -1121,6 +1372,92 @@ const styles = StyleSheet.create({
   txConfirmText: { fontSize: 15, fontWeight: '700', color: colors.background },
   txConfirmTextCashout: { color: colors.success },
   noPlayersText: { fontSize: 14, color: colors.textMuted, textAlign: 'center', padding: 16 },
+
+  // Notes
+  notesCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 4,
+  },
+  notesText: { fontSize: 14, color: colors.text, lineHeight: 20 },
+  notesEmpty: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 14,
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  notesEmptyText: { fontSize: 13, color: colors.textMuted },
+  notesEditCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.gold,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 4,
+    gap: 10,
+  },
+  notesInput: {
+    fontSize: 14,
+    color: colors.text,
+    lineHeight: 20,
+    minHeight: 72,
+    textAlignVertical: 'top',
+  },
+  notesButtons: { flexDirection: 'row', gap: 8, justifyContent: 'flex-end' },
+  notesCancelBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  notesCancelText: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
+  notesSaveBtn: {
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: colors.gold,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  notesSaveText: { fontSize: 13, color: colors.background, fontWeight: '700' },
+
+  // Hand history
+  handRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    gap: 8,
+  },
+  handLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  handPot: { fontSize: 14, fontWeight: '700', color: colors.gold },
+  handWinner: { fontSize: 14, fontWeight: '600', color: colors.text },
+  handRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  handNote: { fontSize: 12, color: colors.textMuted, fontStyle: 'italic', maxWidth: 140 },
+  handDeleteBtn: { fontSize: 14, color: colors.error, fontWeight: '700' },
+
+  // Winner chips
+  winnerChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceHigh,
+  },
+  winnerChipSelected: {
+    borderColor: colors.gold,
+    backgroundColor: 'rgba(201,168,76,0.15)',
+  },
+  winnerChipText: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
+  winnerChipTextSelected: { color: colors.gold },
+
   errorText: { fontSize: 15, color: colors.error, textAlign: 'center' },
   retryButton: {
     paddingHorizontal: 20,

@@ -38,6 +38,7 @@ export type SessionDetailDto = {
   startedAt: string | null;
   endedAt: string | null;
   createdAt: string;
+  notes: string | null;
 };
 
 export type CreateSessionResponse = {

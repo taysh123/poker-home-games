@@ -29,6 +29,14 @@ public class SessionConfiguration : IEntityTypeConfiguration<Session>
             .IsRequired()
             .HasConversion<int>();
 
+        builder.Property(s => s.Notes)
+            .HasMaxLength(500);
+
+        builder.HasMany<HandRecord>()
+            .WithOne(h => h.Session)
+            .HasForeignKey(h => h.SessionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         builder.Property(s => s.CreatedAt)
             .IsRequired();
 

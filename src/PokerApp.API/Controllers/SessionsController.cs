@@ -8,9 +8,13 @@ using PokerApp.Application.Features.Sessions.Commands.RemovePlayer;
 using PokerApp.Application.Features.Sessions.Commands.StartSession;
 using PokerApp.Application.Features.Sessions.Commands.AddBuyIn;
 using PokerApp.Application.Features.Sessions.Commands.AddCashOut;
+using PokerApp.Application.Features.Sessions.Commands.AddHandRecord;
+using PokerApp.Application.Features.Sessions.Commands.DeleteHandRecord;
+using PokerApp.Application.Features.Sessions.Commands.UpdateSessionNotes;
 using PokerApp.Application.Features.Sessions.Queries.GetGroupSessions;
 using PokerApp.Application.Features.Sessions.Queries.GetSessionBalances;
 using PokerApp.Application.Features.Sessions.Queries.GetSessionById;
+using PokerApp.Application.Features.Sessions.Queries.GetSessionHandHistory;
 
 namespace PokerApp.API.Controllers;
 
@@ -140,6 +144,52 @@ public class SessionsController(IMediator mediator) : ControllerBase
         return StatusCode(StatusCodes.Status201Created, response);
     }
 
+    /// <summary>Updates the free-text notes on a session. Any group member can call this.</summary>
+    [HttpPatch("api/sessions/{id:guid}/notes")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateNotes(Guid id, [FromBody] UpdateNotesRequest body, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new UpdateSessionNotesCommand(id, body.Notes), cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>Returns the hand log for a session, oldest-first.</summary>
+    [HttpGet("api/sessions/{id:guid}/hands")]
+    [ProducesResponseType(typeof(IReadOnlyList<HandRecordDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetHandHistory(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GetSessionHandHistoryQuery(id), cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>Logs a hand during an active session. Any group member can call this.</summary>
+    [HttpPost("api/sessions/{id:guid}/hands")]
+    [ProducesResponseType(typeof(HandRecordResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AddHand(Guid id, [FromBody] AddHandRequest body, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new AddHandRecordCommand(id, body.WinnerName, body.PotAmount, body.Note), cancellationToken);
+        return StatusCode(StatusCodes.Status201Created, result);
+    }
+
+    /// <summary>Deletes a hand log entry. Only the user who logged it can delete it.</summary>
+    [HttpDelete("api/sessions/{id:guid}/hands/{handId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteHand(Guid id, Guid handId, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new DeleteHandRecordCommand(id, handId), cancellationToken);
+        return NoContent();
+    }
+
     /// <summary>Returns live balances for all players: total invested, cashed out, and profit/loss.</summary>
     [HttpGet("api/sessions/{id:guid}/balances")]
     [ProducesResponseType(typeof(SessionBalancesDto), StatusCodes.Status200OK)]
@@ -156,3 +206,5 @@ public sealed record CreateSessionRequest(string Name, decimal SmallBlind, decim
 public sealed record AddPlayerRequest(Guid? UserId, string? GuestName);
 public sealed record AddBuyInRequest(Guid SessionPlayerId, decimal Amount);
 public sealed record AddCashOutRequest(Guid SessionPlayerId, decimal Amount);
+public sealed record UpdateNotesRequest(string? Notes);
+public sealed record AddHandRequest(string WinnerName, decimal PotAmount, string? Note);

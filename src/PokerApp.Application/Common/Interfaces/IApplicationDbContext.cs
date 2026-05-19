@@ -18,6 +18,7 @@ public interface IApplicationDbContext
     DbSet<RefreshToken> RefreshTokens { get; }
     DbSet<GroupInvitation> GroupInvitations { get; }
     DbSet<SessionPlayer> SessionPlayers { get; }
+    DbSet<HandRecord> HandRecords { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

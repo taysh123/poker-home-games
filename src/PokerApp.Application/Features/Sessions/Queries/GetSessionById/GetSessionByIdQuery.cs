@@ -16,6 +16,7 @@ public sealed record SessionDetailDto(
     IReadOnlyList<SessionPlayerDto> Players,
     DateTime? StartedAt,
     DateTime? EndedAt,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    string? Notes);
 
 public sealed record SessionPlayerDto(Guid SessionPlayerId, Guid? UserId, string Username, bool IsGuest);

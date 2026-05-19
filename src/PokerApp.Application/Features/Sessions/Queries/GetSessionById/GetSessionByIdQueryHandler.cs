@@ -44,6 +44,7 @@ public sealed class GetSessionByIdQueryHandler(
             players,
             session.StartedAt,
             session.EndedAt,
-            session.CreatedAt);
+            session.CreatedAt,
+            session.Notes);
     }
 }

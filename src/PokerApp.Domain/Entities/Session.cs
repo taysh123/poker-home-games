@@ -12,6 +12,7 @@ public class Session : BaseEntity
     public decimal? ChipRatio { get; private set; }
     public decimal? DefaultBuyIn { get; private set; }
     public SessionStatus Status { get; private set; }
+    public string? Notes { get; private set; }
     public DateTime? StartedAt { get; private set; }
     public DateTime? EndedAt { get; private set; }
 
@@ -54,6 +55,12 @@ public class Session : BaseEntity
     {
         Status = SessionStatus.Finished;
         EndedAt = DateTime.UtcNow;
+        SetUpdatedAt();
+    }
+
+    public void UpdateNotes(string? notes)
+    {
+        Notes = notes?.Trim();
         SetUpdatedAt();
     }
 }

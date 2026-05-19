@@ -16,6 +16,7 @@ import { colors } from '../theme/colors';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { getSessionById, getSessionBalances, SessionDetailDto, SessionBalancesDto } from '../api/sessionsApi';
 import { getSessionSettlements, calculateSettlements, markSettlementPaid, SessionSettlementsDto } from '../api/settlementsApi';
+import { getSessionHandHistory, HandRecordDto } from '../api/handsApi';
 import { useAuth } from '../context/AuthContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SessionSummary'>;
@@ -24,6 +25,7 @@ type SummaryData = {
   session: SessionDetailDto;
   balances: SessionBalancesDto;
   settlements: SessionSettlementsDto;
+  hands: HandRecordDto[];
 };
 
 function formatDuration(startedAt: string | null, endedAt: string | null): string | null {
@@ -66,10 +68,11 @@ export default function SessionSummaryScreen({ route, navigation }: Props) {
       setError(null);
       const token = await SecureStore.getItemAsync('accessToken');
       if (!token) return;
-      const [session, balances, settlementsRaw] = await Promise.all([
+      const [session, balances, settlementsRaw, handsData] = await Promise.all([
         getSessionById(token, sessionId),
         getSessionBalances(token, sessionId),
         getSessionSettlements(token, sessionId),
+        getSessionHandHistory(token, sessionId).catch(() => [] as HandRecordDto[]),
       ]);
 
       let settlements = settlementsRaw;
@@ -82,7 +85,7 @@ export default function SessionSummaryScreen({ route, navigation }: Props) {
         }
       }
 
-      setData({ session, balances, settlements });
+      setData({ session, balances, settlements, hands: handsData });
     } catch {
       setError('Failed to load session summary.');
     } finally {
@@ -131,7 +134,7 @@ export default function SessionSummaryScreen({ route, navigation }: Props) {
     );
   }
 
-  const { session, balances, settlements } = data;
+  const { session, balances, settlements, hands } = data;
   const sortedPlayers = [...balances.players].sort((a, b) => b.profitLoss - a.profitLoss);
   const hasSettlements = settlements.settlements.length > 0;
   const duration = formatDuration(session.startedAt, session.endedAt);
@@ -207,6 +210,38 @@ export default function SessionSummaryScreen({ route, navigation }: Props) {
           );
         })}
       </View>
+
+      {/* ── Notes ── */}
+      {session.notes ? (
+        <>
+          <Text style={styles.sectionTitle}>NOTES</Text>
+          <View style={styles.notesCard}>
+            <Text style={styles.notesText}>{session.notes}</Text>
+          </View>
+        </>
+      ) : null}
+
+      {/* ── Hand History ── */}
+      {hands.length > 0 && (
+        <>
+          <Text style={styles.sectionTitle}>HAND HISTORY ({hands.length})</Text>
+          <View style={styles.resultsCard}>
+            {hands.map((hand, index) => (
+              <React.Fragment key={hand.id}>
+                {index > 0 && <View style={styles.divider} />}
+                <View style={styles.handRow}>
+                  <Text style={styles.handPot}>₪{hand.potAmount.toLocaleString()}</Text>
+                  <Text style={styles.handArrow}> → </Text>
+                  <Text style={styles.handWinner}>{hand.winnerName}</Text>
+                  {hand.note ? (
+                    <Text style={styles.handNote} numberOfLines={1}>  "{hand.note}"</Text>
+                  ) : null}
+                </View>
+              </React.Fragment>
+            ))}
+          </View>
+        </>
+      )}
 
       {/* ── Settlements ── */}
       <Text style={styles.sectionTitle}>SETTLEMENTS</Text>
@@ -466,6 +501,30 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   manageBtnText: { color: colors.gold, fontSize: 14, fontWeight: '700' },
+
+  // Notes
+  notesCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+    marginBottom: 20,
+  },
+  notesText: { fontSize: 14, color: colors.text, lineHeight: 20 },
+
+  // Hand history
+  handRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexWrap: 'wrap',
+  },
+  handPot: { fontSize: 14, fontWeight: '700', color: colors.gold },
+  handArrow: { fontSize: 14, color: colors.gold, fontWeight: '700' },
+  handWinner: { fontSize: 14, fontWeight: '600', color: colors.text },
+  handNote: { fontSize: 12, color: colors.textMuted, fontStyle: 'italic', flex: 1 },
 
   // No settlements state
   noSettlementsCard: {
