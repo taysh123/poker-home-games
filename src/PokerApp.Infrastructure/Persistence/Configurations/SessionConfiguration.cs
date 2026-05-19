@@ -17,14 +17,6 @@ public class SessionConfiguration : IEntityTypeConfiguration<Session>
         builder.Property(s => s.GroupId)
             .IsRequired();
 
-        builder.Property(s => s.SmallBlind)
-            .IsRequired()
-            .HasPrecision(18, 2);
-
-        builder.Property(s => s.BigBlind)
-            .IsRequired()
-            .HasPrecision(18, 2);
-
         builder.Property(s => s.Status)
             .IsRequired()
             .HasConversion<int>();

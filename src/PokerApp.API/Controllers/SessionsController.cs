@@ -35,7 +35,7 @@ public class SessionsController(IMediator mediator) : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await mediator.Send(
-            new CreateSessionCommand(groupId, body.Name, body.SmallBlind, body.BigBlind, body.ChipRatio, body.DefaultBuyIn),
+            new CreateSessionCommand(groupId, body.Name, body.ChipRatio, body.DefaultBuyIn),
             cancellationToken);
 
         return CreatedAtAction(nameof(GetSessionById), new { id = response.Id }, response);
@@ -75,15 +75,18 @@ public class SessionsController(IMediator mediator) : ControllerBase
         return NoContent();
     }
 
-    /// <summary>Ends an Active session. Requires Owner or Admin role in the group.</summary>
+    /// <summary>Ends an Active session. Optionally accepts final chip stacks which are recorded as cash-outs. Requires Owner or Admin role.</summary>
     [HttpPost("api/sessions/{id:guid}/end")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> EndSession(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> EndSession(Guid id, [FromBody] EndSessionRequest? body, CancellationToken cancellationToken)
     {
-        await mediator.Send(new EndSessionCommand(id), cancellationToken);
+        var finalStacks = body?.FinalStacks?
+            .Select(s => new FinalStackItem(s.SessionPlayerId, s.Amount))
+            .ToList();
+        await mediator.Send(new EndSessionCommand(id, finalStacks), cancellationToken);
         return NoContent();
     }
 
@@ -99,7 +102,7 @@ public class SessionsController(IMediator mediator) : ControllerBase
         [FromBody] AddPlayerRequest body,
         CancellationToken cancellationToken)
     {
-        var response = await mediator.Send(new AddPlayerCommand(id, body.UserId, body.GuestName), cancellationToken);
+        var response = await mediator.Send(new AddPlayerCommand(id, body.UserId, body.GuestName, body.LinkedUserId), cancellationToken);
         return StatusCode(StatusCodes.Status201Created, response);
     }
 
@@ -222,8 +225,10 @@ public class SessionsController(IMediator mediator) : ControllerBase
     }
 }
 
-public sealed record CreateSessionRequest(string Name, decimal SmallBlind, decimal BigBlind, decimal? ChipRatio, decimal? DefaultBuyIn);
-public sealed record AddPlayerRequest(Guid? UserId, string? GuestName);
+public sealed record CreateSessionRequest(string Name, decimal? ChipRatio, decimal? DefaultBuyIn);
+public sealed record EndSessionRequest(IReadOnlyList<EndSessionFinalStack>? FinalStacks);
+public sealed record EndSessionFinalStack(Guid SessionPlayerId, decimal Amount);
+public sealed record AddPlayerRequest(Guid? UserId, string? GuestName, Guid? LinkedUserId = null);
 public sealed record AddBuyInRequest(Guid SessionPlayerId, decimal Amount);
 public sealed record AddCashOutRequest(Guid SessionPlayerId, decimal Amount);
 public sealed record UpdateNotesRequest(string? Notes);

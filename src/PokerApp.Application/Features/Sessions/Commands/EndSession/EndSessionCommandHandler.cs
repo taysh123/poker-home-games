@@ -29,6 +29,26 @@ public sealed class EndSessionCommandHandler(
         if (session.Status != SessionStatus.Active)
             throw new ConflictException("Only Active sessions can be ended.");
 
+        if (request.FinalStacks is { Count: > 0 })
+        {
+            var validPlayerIdList = await context.SessionPlayers
+                .Where(sp => sp.SessionId == request.SessionId)
+                .Select(sp => sp.Id)
+                .ToListAsync(cancellationToken);
+            var validPlayerIds = validPlayerIdList.ToHashSet();
+
+            foreach (var stack in request.FinalStacks)
+            {
+                if (!validPlayerIds.Contains(stack.SessionPlayerId))
+                    throw new BadRequestException($"Player {stack.SessionPlayerId} is not in this session.");
+                if (stack.Amount < 0)
+                    throw new BadRequestException("Final stack amounts cannot be negative.");
+
+                var cashOut = CashOut.Create(session.Id, stack.SessionPlayerId, stack.Amount);
+                await context.CashOuts.AddAsync(cashOut, cancellationToken);
+            }
+        }
+
         session.End();
 
         var actorName = currentUserService.Username ?? "Unknown";

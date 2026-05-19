@@ -38,7 +38,7 @@ public sealed class AddPlayerCommandHandler(
             if (duplicateGuest)
                 throw new ConflictException($"A guest named '{request.GuestName}' is already in this session.");
 
-            sessionPlayer = SessionPlayer.CreateForGuest(request.SessionId, request.GuestName);
+            sessionPlayer = SessionPlayer.CreateForGuest(request.SessionId, request.GuestName, request.LinkedUserId);
         }
         else
         {
@@ -74,6 +74,7 @@ public sealed class AddPlayerCommandHandler(
             sessionPlayer.SessionId,
             sessionPlayer.UserId,
             sessionPlayer.GuestName,
-            sessionPlayer.IsGuest);
+            sessionPlayer.IsGuest,
+            sessionPlayer.LinkedUserId);
     }
 }

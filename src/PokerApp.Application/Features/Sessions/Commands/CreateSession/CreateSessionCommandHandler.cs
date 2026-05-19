@@ -28,7 +28,7 @@ public sealed class CreateSessionCommandHandler(
             throw new UnauthorizedException("You are not a member of this group.");
 
         var session = Session.Create(
-            request.Name, request.GroupId, request.SmallBlind, request.BigBlind,
+            request.Name, request.GroupId,
             request.ChipRatio, request.DefaultBuyIn);
 
         await context.Sessions.AddAsync(session, cancellationToken);
@@ -45,8 +45,6 @@ public sealed class CreateSessionCommandHandler(
             session.Name,
             session.GroupId,
             session.Status.ToString(),
-            session.SmallBlind,
-            session.BigBlind,
             session.ChipRatio,
             session.DefaultBuyIn,
             session.CreatedAt);

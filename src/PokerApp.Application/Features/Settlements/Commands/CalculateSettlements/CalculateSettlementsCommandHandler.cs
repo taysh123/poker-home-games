@@ -28,9 +28,9 @@ public sealed class CalculateSettlementsCommandHandler(
         if (!callerIsMember)
             throw new UnauthorizedException("You are not a member of this group.");
 
-        // Only registered players participate in digital settlements; guests settle in cash
+        // Players with a SettlementUserId (UserId or LinkedUserId for guests) participate in digital settlements
         var registeredPlayers = await context.SessionPlayers
-            .Where(sp => sp.SessionId == request.SessionId && sp.UserId != null)
+            .Where(sp => sp.SessionId == request.SessionId && (sp.UserId != null || sp.LinkedUserId != null))
             .ToListAsync(cancellationToken);
 
         var allBuyIns = await context.BuyIns
@@ -41,20 +41,23 @@ public sealed class CalculateSettlementsCommandHandler(
             .Where(c => c.SessionId == request.SessionId)
             .ToListAsync(cancellationToken);
 
-        var netBalances = registeredPlayers.Select(sp =>
-        {
-            var totalBuyIn = allBuyIns
-                .Where(b => b.SessionPlayerId == sp.Id || (b.SessionPlayerId == null && b.UserId == sp.UserId))
-                .Sum(b => b.Amount);
-            var totalCashOut = allCashOuts
-                .Where(c => c.SessionPlayerId == sp.Id || (c.SessionPlayerId == null && c.UserId == sp.UserId))
-                .Sum(c => c.Amount);
-            return new PlayerNetBalance(sp.UserId!.Value, totalCashOut - totalBuyIn);
-        }).ToList();
+        // Group by SettlementUserId so linked guests aggregate into the linked user's balance
+        var balancesBySettlementUser = registeredPlayers
+            .GroupBy(sp => sp.SettlementUserId!.Value)
+            .Select(group =>
+            {
+                var totalBuyIn = allBuyIns
+                    .Where(b => group.Any(sp => b.SessionPlayerId == sp.Id || (b.SessionPlayerId == null && b.UserId == sp.UserId)))
+                    .Sum(b => b.Amount);
+                var totalCashOut = allCashOuts
+                    .Where(c => group.Any(sp => c.SessionPlayerId == sp.Id || (c.SessionPlayerId == null && c.UserId == sp.UserId)))
+                    .Sum(c => c.Amount);
+                return new PlayerNetBalance(group.Key, totalCashOut - totalBuyIn);
+            }).ToList();
 
-        var instructions = calculator.Calculate(netBalances).ToList();
+        var instructions = calculator.Calculate(balancesBySettlementUser).ToList();
 
-        var allPlayerIds = registeredPlayers.Select(sp => sp.UserId!.Value).ToHashSet();
+        var allPlayerIds = registeredPlayers.Select(sp => sp.SettlementUserId!.Value).ToHashSet();
 
         // Load usernames for DTO population
         var users = await context.Users

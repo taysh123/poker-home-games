@@ -29,7 +29,7 @@ public sealed class GetSessionByIdQueryHandler(
             throw new UnauthorizedException("You are not a member of this group.");
 
         var players = session.SessionPlayers
-            .Select(sp => new SessionPlayerDto(sp.Id, sp.UserId, sp.DisplayName, sp.IsGuest))
+            .Select(sp => new SessionPlayerDto(sp.Id, sp.UserId, sp.DisplayName, sp.IsGuest, sp.LinkedUserId))
             .ToList();
 
         return new SessionDetailDto(
@@ -37,8 +37,6 @@ public sealed class GetSessionByIdQueryHandler(
             session.Name,
             session.GroupId,
             session.Status.ToString(),
-            session.SmallBlind,
-            session.BigBlind,
             session.ChipRatio,
             session.DefaultBuyIn,
             players,

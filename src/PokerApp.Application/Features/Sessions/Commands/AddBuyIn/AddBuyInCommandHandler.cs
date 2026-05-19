@@ -29,8 +29,11 @@ public sealed class AddBuyInCommandHandler(
             .FirstOrDefaultAsync(sp => sp.Id == request.SessionPlayerId && sp.SessionId == request.SessionId, cancellationToken)
             ?? throw new NotFoundException("Player", request.SessionPlayerId);
 
-        if (session.Status != SessionStatus.Active)
-            throw new BadRequestException("Buy-ins can only be added to active sessions.");
+        if (session.Status == SessionStatus.Finished)
+            throw new BadRequestException("Buy-ins cannot be added to a finished session.");
+
+        if (session.Status == SessionStatus.Draft)
+            session.Start();
 
         var buyIn = BuyIn.Create(session.Id, sessionPlayer.Id, request.Amount);
         await context.BuyIns.AddAsync(buyIn, cancellationToken);

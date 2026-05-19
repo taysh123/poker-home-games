@@ -9,8 +9,6 @@ public sealed record SessionDetailDto(
     string Name,
     Guid GroupId,
     string Status,
-    decimal SmallBlind,
-    decimal BigBlind,
     decimal? ChipRatio,
     decimal? DefaultBuyIn,
     IReadOnlyList<SessionPlayerDto> Players,
@@ -19,4 +17,4 @@ public sealed record SessionDetailDto(
     DateTime CreatedAt,
     string? Notes);
 
-public sealed record SessionPlayerDto(Guid SessionPlayerId, Guid? UserId, string Username, bool IsGuest);
+public sealed record SessionPlayerDto(Guid SessionPlayerId, Guid? UserId, string Username, bool IsGuest, Guid? LinkedUserId);

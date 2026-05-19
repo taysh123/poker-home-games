@@ -24,6 +24,12 @@ public class SessionPlayerConfiguration : IEntityTypeConfiguration<SessionPlayer
             .IsRequired(false)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasOne(x => x.LinkedUser)
+            .WithMany()
+            .HasForeignKey(x => x.LinkedUserId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasIndex(x => new { x.SessionId, x.UserId })
             .IsUnique()
             .HasFilter("\"UserId\" IS NOT NULL")
