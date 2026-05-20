@@ -93,7 +93,7 @@ public sealed class GetMyStatsQueryHandler(
             var profit    = s.Status == SessionStatus.Finished ? GetProfit(s.Id) : (decimal?)null;
             var groupName = s.GroupId.HasValue ? groups.GetValueOrDefault(s.GroupId.Value, "Unknown") : "Personal";
             var userRole  = s.GroupId.HasValue ? groupRoles.GetValueOrDefault(s.GroupId.Value, "Member") : "Owner";
-            return new RecentSessionDto(s.Id, s.Name, s.GroupId, groupName, userRole, s.Status.ToString(), profit, s.CreatedAt);
+            return new RecentSessionDto(s.Id, s.Name, s.GroupId, groupName, userRole, s.Status.ToString(), profit, s.CreatedAt, s.StartedAt, s.EndedAt);
         }).ToList();
 
         return new MyStatsDto(finishedSessions.Count, totalProfitLoss, biggestWin, biggestLoss,

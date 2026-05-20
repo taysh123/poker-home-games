@@ -27,6 +27,14 @@ function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+function formatDuration(startedAt: string, endedAt: string): string {
+  const mins = Math.round((new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 60000);
+  if (mins < 60) return `${mins}m`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
 export default function StatsScreen() {
   const navigation = useNavigation<Nav>();
   const [stats, setStats] = useState<MyStatsDto | null>(null);
@@ -238,11 +246,16 @@ function HighlightCard({ label, value, valueColor }: { label: string; value: str
 function SessionRow({ session, onPress }: { session: RecentSessionDto; onPress: () => void }) {
   const pl = session.profitLoss;
   const plColor = pl != null && pl > 0 ? colors.success : pl != null && pl < 0 ? colors.error : colors.textMuted;
+  const duration = session.status === 'Finished' && session.startedAt && session.endedAt
+    ? formatDuration(session.startedAt, session.endedAt)
+    : null;
   return (
     <TouchableOpacity style={styles.sessionRow} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.sessionRowLeft}>
         <Text style={styles.sessionName} numberOfLines={1}>{session.sessionName}</Text>
-        <Text style={styles.sessionMeta}>{session.groupName}  ·  {formatDate(session.createdAt)}</Text>
+        <Text style={styles.sessionMeta}>
+          {session.groupName}  ·  {formatDate(session.createdAt)}{duration ? `  ·  ${duration}` : ''}
+        </Text>
       </View>
       {pl != null ? (
         <Text style={[styles.sessionPL, { color: plColor }]}>{formatPL(pl)}</Text>

@@ -20,5 +20,7 @@ public sealed record RecentSessionDto(
     string UserRole,
     string Status,
     decimal? ProfitLoss,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    DateTime? StartedAt,
+    DateTime? EndedAt
 );

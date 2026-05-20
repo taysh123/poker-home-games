@@ -10,4 +10,6 @@ public sealed record PlayerLeaderboardEntryDto(
     int SessionsPlayed,
     decimal TotalProfitLoss,
     decimal? BiggestWin,
-    decimal? BiggestLoss);
+    decimal? BiggestLoss,
+    int WinsCount,
+    decimal AvgProfitLoss);

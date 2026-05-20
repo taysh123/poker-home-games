@@ -179,6 +179,8 @@ export type PlayerLeaderboardEntryDto = {
   totalProfitLoss: number;
   biggestWin: number | null;
   biggestLoss: number | null;
+  winsCount: number;
+  avgProfitLoss: number;
 };
 
 export async function getGroupLeaderboard(

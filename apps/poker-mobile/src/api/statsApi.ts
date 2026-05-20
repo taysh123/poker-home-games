@@ -11,6 +11,8 @@ export type RecentSessionDto = {
   status: string;
   profitLoss: number | null;
   createdAt: string;
+  startedAt: string | null;
+  endedAt: string | null;
 };
 
 export type MyStatsDto = {

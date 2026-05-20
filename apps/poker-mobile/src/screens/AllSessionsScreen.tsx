@@ -27,6 +27,14 @@ function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+function formatDuration(startedAt: string, endedAt: string): string {
+  const mins = Math.round((new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 60000);
+  if (mins < 60) return `${mins}m`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
 export default function AllSessionsScreen() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
@@ -135,7 +143,10 @@ export default function AllSessionsScreen() {
                 <TouchableOpacity style={styles.row} onPress={() => openSession(s)} activeOpacity={0.7}>
                   <View style={styles.rowLeft}>
                     <Text style={styles.sessionName}>{s.sessionName}</Text>
-                    <Text style={styles.groupName}>{s.groupName}  ·  {formatDate(s.createdAt)}</Text>
+                    <Text style={styles.groupName}>
+                      {s.groupName}  ·  {formatDate(s.createdAt)}
+                      {s.startedAt && s.endedAt ? `  ·  ${formatDuration(s.startedAt, s.endedAt)}` : ''}
+                    </Text>
                   </View>
                   {pl != null ? (
                     <Text style={[styles.plValue, { color: plColor }]}>{formatPL(pl)}</Text>

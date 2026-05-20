@@ -452,24 +452,43 @@ function MemberRow({ member, canRemove, isRemoving, onRemove }: MemberRowProps) 
   );
 }
 
+const RANK_MEDALS: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
+
 function LeaderboardRow({ entry, rank }: { entry: PlayerLeaderboardEntryDto; rank: number }) {
   const isPositive = entry.totalProfitLoss > 0;
   const isNegative = entry.totalProfitLoss < 0;
   const plColor = isPositive ? colors.success : isNegative ? colors.error : colors.textMuted;
   const plPrefix = isPositive ? '+' : '';
+  const winRate = entry.sessionsPlayed > 0
+    ? Math.round((entry.winsCount / entry.sessionsPlayed) * 100)
+    : 0;
+  const avgIsPos = entry.avgProfitLoss > 0;
+  const avgIsNeg = entry.avgProfitLoss < 0;
+  const avgColor = avgIsPos ? colors.success : avgIsNeg ? colors.error : colors.textMuted;
+
   return (
     <View style={styles.leaderboardRow}>
-      <Text style={[styles.lbRank, rank === 1 && styles.lbRankFirst]}>{rank}</Text>
+      <Text style={styles.lbMedal}>
+        {RANK_MEDALS[rank] ?? <Text style={[styles.lbRank, rank <= 3 && styles.lbRankTop]}>{rank}</Text>}
+      </Text>
       <View style={styles.avatar}>
         <Text style={styles.avatarText}>{(entry.username?.[0] ?? '?').toUpperCase()}</Text>
       </View>
       <View style={styles.lbInfo}>
         <Text style={styles.lbUsername}>{entry.username}</Text>
-        <Text style={styles.lbSessions}>{entry.sessionsPlayed} session{entry.sessionsPlayed !== 1 ? 's' : ''}</Text>
+        <Text style={styles.lbSessions}>
+          {entry.sessionsPlayed} game{entry.sessionsPlayed !== 1 ? 's' : ''}
+          {' · '}{winRate}% win rate
+        </Text>
       </View>
-      <Text style={[styles.lbPL, { color: plColor }]}>
-        {plPrefix}₪{Math.abs(entry.totalProfitLoss).toLocaleString()}
-      </Text>
+      <View style={styles.lbRight}>
+        <Text style={[styles.lbPL, { color: plColor }]}>
+          {plPrefix}₪{Math.abs(Math.round(entry.totalProfitLoss)).toLocaleString()}
+        </Text>
+        <Text style={[styles.lbAvg, { color: avgColor }]}>
+          avg {entry.avgProfitLoss >= 0 ? '+' : ''}₪{Math.abs(Math.round(entry.avgProfitLoss)).toLocaleString()}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -727,21 +746,25 @@ const styles = StyleSheet.create({
   leaderboardRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     gap: 10,
   },
+  lbMedal: { width: 24, fontSize: 18, textAlign: 'center' },
   lbRank: {
-    width: 22,
+    width: 24,
     fontSize: 13,
     fontWeight: '700',
     color: colors.textMuted,
     textAlign: 'center',
   },
-  lbRankFirst: { color: colors.gold },
-  lbInfo: { flex: 1, gap: 2 },
-  lbUsername: { fontSize: 14, fontWeight: '600', color: colors.text },
+  lbRankTop: { color: colors.gold },
+  lbInfo: { flex: 1, gap: 3 },
+  lbUsername: { fontSize: 14, fontWeight: '700', color: colors.text },
   lbSessions: { fontSize: 11, color: colors.textMuted },
-  lbPL: { fontSize: 15, fontWeight: '700' },
+  lbRight: { alignItems: 'flex-end', gap: 3 },
+  lbPL: { fontSize: 15, fontWeight: '800' },
+  lbAvg: { fontSize: 11, fontWeight: '600' },
 
   emptyMembers: {
     backgroundColor: colors.surface,

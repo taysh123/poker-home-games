@@ -87,6 +87,8 @@ public sealed class GetGroupLeaderboardQueryHandler(
             var totalPL = sessionProfits.Sum();
             var biggestWin = sessionProfits.Any(p => p > 0) ? sessionProfits.Where(p => p > 0).Max() : (decimal?)null;
             var biggestLoss = sessionProfits.Any(p => p < 0) ? sessionProfits.Where(p => p < 0).Min() : (decimal?)null;
+            var winsCount = sessionProfits.Count(p => p > 0);
+            var avgPL = sessionProfits.Count > 0 ? totalPL / sessionProfits.Count : 0m;
 
             return new PlayerLeaderboardEntryDto(
                 uid,
@@ -94,7 +96,9 @@ public sealed class GetGroupLeaderboardQueryHandler(
                 players.Count,
                 totalPL,
                 biggestWin,
-                biggestLoss);
+                biggestLoss,
+                winsCount,
+                avgPL);
         })
         .OrderByDescending(e => e.TotalProfitLoss)
         .ToList();

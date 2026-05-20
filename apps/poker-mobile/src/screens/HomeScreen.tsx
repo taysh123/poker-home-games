@@ -32,6 +32,14 @@ function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+function formatDuration(startedAt: string, endedAt: string): string {
+  const mins = Math.round((new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 60000);
+  if (mins < 60) return `${mins}m`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
 
 export default function HomeScreen() {
   const { user, logout } = useAuth();
@@ -285,6 +293,7 @@ export default function HomeScreen() {
                       <Text style={styles.sessionName} numberOfLines={1}>{s.sessionName}</Text>
                       <Text style={styles.sessionMeta}>
                         {s.groupName ?? 'Solo'}  ·  {formatDate(s.createdAt)}
+                        {s.startedAt && s.endedAt ? `  ·  ${formatDuration(s.startedAt, s.endedAt)}` : ''}
                       </Text>
                     </View>
                     {pl != null && (
