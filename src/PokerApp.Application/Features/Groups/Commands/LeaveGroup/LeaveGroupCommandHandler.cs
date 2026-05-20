@@ -24,6 +24,13 @@ public sealed class LeaveGroupCommandHandler(
             throw new ConflictException("The group owner cannot leave. Transfer ownership or delete the group first.");
 
         context.GroupMembers.Remove(membership);
+
+        var actorName = currentUserService.Username ?? "Unknown";
+        await context.ActivityLogs.AddAsync(
+            ActivityLog.Create(request.GroupId, callerId, actorName, ActivityType.MemberLeft,
+                $"{actorName} left the group"),
+            cancellationToken);
+
         await context.SaveChangesAsync(cancellationToken);
     }
 }

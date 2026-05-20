@@ -37,6 +37,17 @@ public sealed class RemoveMemberCommandHandler(
             throw new ConflictException("The group owner cannot be removed.");
 
         context.GroupMembers.Remove(targetMembership);
+
+        var actorName = currentUserService.Username ?? "Unknown";
+        var targetUser = await context.Users
+            .Where(u => u.Id == request.UserId)
+            .Select(u => u.Username)
+            .FirstOrDefaultAsync(cancellationToken) ?? "Unknown";
+        await context.ActivityLogs.AddAsync(
+            ActivityLog.Create(request.GroupId, callerId, actorName, ActivityType.MemberRemoved,
+                $"{actorName} removed {targetUser} from the group"),
+            cancellationToken);
+
         await context.SaveChangesAsync(cancellationToken);
     }
 }

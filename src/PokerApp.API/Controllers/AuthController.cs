@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using PokerApp.Application.Features.Auth.Commands.ChangePassword;
 using PokerApp.Application.Features.Auth.Commands.DeleteAccount;
 using PokerApp.Application.Features.Auth.Commands.GoogleLogin;
@@ -24,6 +25,7 @@ public class AuthController(IMediator mediator) : ControllerBase
     /// If the email already exists as a password account, it links the Google identity to it.
     /// </summary>
     [HttpPost("google")]
+    [EnableRateLimiting("auth-login")]
     [ProducesResponseType(typeof(GoogleLoginResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GoogleLogin(
@@ -36,6 +38,7 @@ public class AuthController(IMediator mediator) : ControllerBase
 
     /// <summary>Creates a new user account and returns an initial token pair.</summary>
     [HttpPost("register")]
+    [EnableRateLimiting("auth-register")]
     [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -49,6 +52,7 @@ public class AuthController(IMediator mediator) : ControllerBase
 
     /// <summary>Authenticates a user and returns a token pair.</summary>
     [HttpPost("login")]
+    [EnableRateLimiting("auth-login")]
     [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login(
@@ -61,6 +65,7 @@ public class AuthController(IMediator mediator) : ControllerBase
 
     /// <summary>Exchanges a valid refresh token for a new token pair (rotation).</summary>
     [HttpPost("refresh")]
+    [EnableRateLimiting("auth-refresh")]
     [ProducesResponseType(typeof(RefreshTokenResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Refresh(

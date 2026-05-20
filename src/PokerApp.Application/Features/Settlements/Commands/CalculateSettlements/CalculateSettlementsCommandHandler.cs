@@ -22,11 +22,18 @@ public sealed class CalculateSettlementsCommandHandler(
             throw new BadRequestException("Settlements can only be calculated for finished sessions.");
 
         var callerId = currentUserService.UserId;
-        var callerIsMember = await context.GroupMembers
-            .AnyAsync(m => m.GroupId == session.GroupId && m.UserId == callerId, cancellationToken);
 
-        if (!callerIsMember)
-            throw new UnauthorizedException("You are not a member of this group.");
+        if (session.GroupId.HasValue)
+        {
+            var isMember = await context.GroupMembers
+                .AnyAsync(m => m.GroupId == session.GroupId.Value && m.UserId == callerId, cancellationToken);
+            if (!isMember)
+                throw new UnauthorizedException("You are not a member of this group.");
+        }
+        else if (session.CreatorId != callerId)
+        {
+            throw new UnauthorizedException("Only the session creator can calculate settlements.");
+        }
 
         var allPlayers = await context.SessionPlayers
             .Where(sp => sp.SessionId == request.SessionId)

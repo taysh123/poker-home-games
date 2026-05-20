@@ -1,5 +1,7 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using PokerApp.API.Middleware;
@@ -24,6 +26,40 @@ builder.Services.AddCors(options =>
                          ?? Array.Empty<string>();
     options.AddPolicy("Prod", policy =>
         policy.WithOrigins(allowedOrigins).AllowAnyMethod().AllowAnyHeader());
+});
+
+// ── Rate Limiting ────────────────────────────────────────────────────────────
+// Built-in .NET 8 rate limiting — no extra package required
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    // Login: 10 attempts per minute per IP
+    options.AddFixedWindowLimiter("auth-login", opt =>
+    {
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.PermitLimit = 10;
+        opt.QueueLimit = 0;
+        opt.AutoReplenishment = true;
+    });
+
+    // Register: 5 per minute per IP
+    options.AddFixedWindowLimiter("auth-register", opt =>
+    {
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.PermitLimit = 5;
+        opt.QueueLimit = 0;
+        opt.AutoReplenishment = true;
+    });
+
+    // Token refresh: 20 per minute per IP (clients refresh frequently)
+    options.AddFixedWindowLimiter("auth-refresh", opt =>
+    {
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.PermitLimit = 20;
+        opt.QueueLimit = 0;
+        opt.AutoReplenishment = true;
+    });
 });
 
 // ── Health checks ────────────────────────────────────────────────────────────
@@ -101,6 +137,7 @@ app.UseCors(app.Environment.IsDevelopment() ? "Dev" : "Prod");
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

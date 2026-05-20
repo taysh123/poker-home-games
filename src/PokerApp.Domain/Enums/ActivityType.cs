@@ -9,4 +9,6 @@ public enum ActivityType
     DebtCreated      = 5,
     DebtSettled      = 6,
     MemberJoined     = 7,
+    MemberLeft       = 8,
+    MemberRemoved    = 9,
 }

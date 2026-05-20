@@ -41,6 +41,14 @@ public sealed class AddPlayerCommandHandler(
             if (duplicateGuest)
                 throw new ConflictException($"A guest named '{request.GuestName}' is already in this session.");
 
+            if (request.LinkedUserId.HasValue)
+            {
+                var linkedUserExists = await context.Users
+                    .AnyAsync(u => u.Id == request.LinkedUserId.Value, cancellationToken);
+                if (!linkedUserExists)
+                    throw new NotFoundException(nameof(User), request.LinkedUserId.Value);
+            }
+
             sessionPlayer = SessionPlayer.CreateForGuest(request.SessionId, request.GuestName, request.LinkedUserId);
         }
         else
