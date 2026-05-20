@@ -25,14 +25,6 @@ public sealed class DeleteAccountCommandHandler(
             throw new BadRequestException(
                 "You own one or more groups. Transfer ownership or delete the groups before deleting your account.");
 
-        // Block if the user has pending debts they are party to
-        var hasPendingDebts = await context.Debts
-            .AnyAsync(d => (d.FromUserId == userId || d.ToUserId == userId)
-                           && d.Status == SettlementStatus.Pending, cancellationToken);
-        if (hasPendingDebts)
-            throw new BadRequestException(
-                "You have pending debts. Settle or cancel them before deleting your account.");
-
         // Remove group memberships, invitations, and refresh tokens
         var memberships = await context.GroupMembers
             .Where(m => m.UserId == userId).ToListAsync(cancellationToken);

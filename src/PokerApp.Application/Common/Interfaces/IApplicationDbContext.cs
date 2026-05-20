@@ -19,7 +19,6 @@ public interface IApplicationDbContext
     DbSet<GroupInvitation> GroupInvitations { get; }
     DbSet<SessionPlayer> SessionPlayers { get; }
     DbSet<HandRecord> HandRecords { get; }
-    DbSet<Debt> Debts { get; }
     DbSet<ActivityLog> ActivityLogs { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
