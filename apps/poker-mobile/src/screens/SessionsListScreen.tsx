@@ -122,11 +122,23 @@ export default function SessionsListScreen({ route, navigation }: Props) {
   );
 }
 
+function formatDuration(startedAt: string, endedAt: string): string {
+  const mins = Math.round((new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 60000);
+  if (mins < 60) return `${mins}m`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
 function SessionCard({ session, onPress }: { session: SessionSummaryDto; onPress: () => void }) {
   const date = session.startedAt ?? session.createdAt;
   const dateStr = new Date(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   const pl = session.myProfitLoss;
-  const showPL = session.status === 'Finished' && pl != null;
+  const isFinished = session.status === 'Finished';
+  const showPL = isFinished && pl != null;
+  const duration = isFinished && session.startedAt && session.endedAt
+    ? formatDuration(session.startedAt, session.endedAt)
+    : null;
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
@@ -147,6 +159,12 @@ function SessionCard({ session, onPress }: { session: SessionSummaryDto; onPress
         </Text>
         <View style={styles.dot} />
         <Text style={styles.metaText}>{dateStr}</Text>
+        {duration && (
+          <>
+            <View style={styles.dot} />
+            <Text style={styles.metaText}>{duration}</Text>
+          </>
+        )}
       </View>
     </TouchableOpacity>
   );
