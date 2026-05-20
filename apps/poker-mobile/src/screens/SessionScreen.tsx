@@ -51,6 +51,7 @@ import {
 } from '../api/handsApi';
 import { exportSessionCsv, shareSessionCard } from '../utils/exportUtils';
 import { successNotification, errorNotification, lightTap } from '../utils/haptics';
+import { showToast } from '../utils/toast';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Session'>;
 
@@ -253,11 +254,12 @@ export default function SessionScreen({ route, navigation }: Props) {
         await addCashOut(token, sessionId, txModal.player.sessionPlayerId, money);
       }
       successNotification();
+      showToast(txModal.type === 'buyin' ? 'Buy-in recorded' : 'Cash-out recorded', 'success');
       setTxModal({ visible: false, type: 'buyin', player: null, needsPlayerSelect: false });
       await load(true);
     } catch (e: any) {
       errorNotification();
-      Alert.alert('Error', e?.response?.data?.message ?? 'Failed to record transaction.');
+      showToast(e?.response?.data?.message ?? 'Failed to record transaction.', 'error');
     } finally {
       setTxLoading(false);
     }
@@ -1401,7 +1403,14 @@ const styles = StyleSheet.create({
     minHeight: 68,
   },
   playerRowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
-  playerRowFirst: { backgroundColor: 'rgba(201,168,76,0.06)' },
+  playerRowFirst: {
+    backgroundColor: 'rgba(201,168,76,0.06)',
+    shadowColor: colors.gold,
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
   playerAvatar: {
     width: 40,
     height: 40,

@@ -22,6 +22,7 @@ import SettlementScreen from '../screens/SettlementScreen';
 import StatsScreen from '../screens/StatsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import NewGameScreen from '../screens/NewGameScreen';
+import Toast from '../components/Toast';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -134,6 +135,7 @@ export default function AppNavigator() {
 
   return (
     <NavigationContainer>
+      <Toast />
       <Stack.Navigator screenOptions={stackScreenOptions}>
         {user === null ? (
           <>

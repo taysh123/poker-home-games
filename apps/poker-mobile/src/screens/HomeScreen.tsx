@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Animated,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -39,6 +40,18 @@ export default function HomeScreen() {
   const navigation = useNavigation<HomeNav>();
 
   const [loggingOut, setLoggingOut]     = useState(false);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.5, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
   const [groups, setGroups]             = useState<MyGroupDto[]>([]);
   const [stats, setStats]               = useState<MyStatsDto | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
@@ -104,29 +117,30 @@ export default function HomeScreen() {
     >
       {/* ── Top bar ── */}
       <View style={styles.topBar}>
-        <View>
+        <View style={styles.topBarLeft}>
           <Text style={styles.greeting}>{getGreeting()}</Text>
           <Text style={styles.username}>{user?.username ?? 'Player'}</Text>
         </View>
-        <TouchableOpacity
-          style={styles.avatar}
-          onPress={() => navigation.navigate('Profile')}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.avatarText}>{initial}</Text>
-        </TouchableOpacity>
+        <View style={styles.topBarRight}>
+          <TouchableOpacity
+            style={[styles.logoutIcon, loggingOut && styles.logoutButtonDisabled]}
+            onPress={handleLogout}
+            disabled={loggingOut}
+            activeOpacity={0.7}
+          >
+            {loggingOut
+              ? <ActivityIndicator color={colors.textMuted} size="small" />
+              : <Text style={styles.logoutIconText}>→</Text>}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.avatar}
+            onPress={() => navigation.navigate('Profile')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.avatarText}>{initial}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-
-      <TouchableOpacity
-        style={[styles.logoutButton, loggingOut && styles.logoutButtonDisabled]}
-        onPress={handleLogout}
-        disabled={loggingOut}
-        activeOpacity={0.8}
-      >
-        {loggingOut
-          ? <ActivityIndicator color={colors.textMuted} size="small" />
-          : <Text style={styles.logoutText}>Sign Out</Text>}
-      </TouchableOpacity>
 
       {/* ── New Game CTA ── */}
       <TouchableOpacity
@@ -152,7 +166,7 @@ export default function HomeScreen() {
                   onPress={() => handleSessionPress(s.sessionId, s.groupId)}
                   activeOpacity={0.7}
                 >
-                  <View style={styles.activePulse} />
+                  <Animated.View style={[styles.activePulse, { transform: [{ scale: pulseAnim }] }]} />
                   <View style={styles.activeRowLeft}>
                     <Text style={styles.activeSessionName}>{s.sessionName}</Text>
                     <Text style={styles.activeGroupName}>{s.groupName}</Text>
@@ -318,9 +332,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
     marginTop: 8,
   },
+  topBarLeft: { flex: 1 },
+  topBarRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   greeting: {
     fontSize: 13,
     color: colors.textMuted,
@@ -339,18 +355,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: { fontSize: 18, fontWeight: '700', color: colors.gold },
-
-  logoutButton: {
-    alignSelf: 'flex-start',
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 8,
+  logoutIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    marginBottom: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  logoutIconText: { fontSize: 18, color: colors.textMuted, lineHeight: 22 },
   logoutButtonDisabled: { opacity: 0.5 },
-  logoutText: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
 
   newGameBtn: {
     flexDirection: 'row',

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   Platform,
   ActivityIndicator,
   KeyboardAvoidingView,
+  Alert,
+  Animated,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as SecureStore from '../utils/storage';
@@ -20,6 +22,7 @@ import { createSession, addPlayer } from '../api/sessionsApi';
 import AppTextInput from '../components/AppTextInput';
 import PrimaryButton from '../components/PrimaryButton';
 import { getRecentGuests, recordGuestName } from '../utils/guestHistory';
+import { showToast } from '../utils/toast';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'NewGame'>;
 
@@ -32,11 +35,28 @@ export default function NewGameScreen({ route, navigation }: Props) {
 
   // Step: 1 = Details, 2 = Players, 3 = Review
   const [step, setStep] = useState(1);
+  const progressAnim = useRef(new Animated.Value(1 / 3)).current;
+
+  const STEP_LABELS = ['Game Details', 'Add Players', 'Review'];
+
+  function animateProgress(toStep: number) {
+    Animated.timing(progressAnim, {
+      toValue: toStep / 3,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  }
+
+  function goToStep(n: number) {
+    setStep(n);
+    animateProgress(n);
+  }
   const [starting, setStarting] = useState(false);
 
   // Step 1 state
   const [sessionName, setSessionName] = useState('Game Night');
   const [nameError, setNameError] = useState('');
+  const [groupError, setGroupError] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(route.params?.groupId ?? null);
   const [selectedGroupName, setSelectedGroupName] = useState<string>(route.params?.groupName ?? '');
   const [chipRatio, setChipRatio] = useState('');
@@ -101,10 +121,13 @@ export default function NewGameScreen({ route, navigation }: Props) {
         return;
       }
       setNameError('');
-      if (selectedGroupId) {
-        loadMembers(selectedGroupId);
+      if (!selectedGroupId) {
+        setGroupError('Please select a group.');
+        return;
       }
-      setStep(2);
+      setGroupError('');
+      loadMembers(selectedGroupId);
+      goToStep(2);
     } else if (step === 2) {
       // Build addedPlayers from selections
       const players: AddedPlayer[] = [];
@@ -116,7 +139,7 @@ export default function NewGameScreen({ route, navigation }: Props) {
         players.push(p);
       }
       setAddedPlayers(players);
-      setStep(3);
+      goToStep(3);
     }
   }
 
@@ -181,8 +204,10 @@ export default function NewGameScreen({ route, navigation }: Props) {
         await recordGuestName(name);
       }
 
+      showToast('Game started!', 'success');
       navigation.replace('Session', { sessionId, groupId });
     } catch {
+      Alert.alert('Failed to start game', 'Please check your connection and try again.');
       setStarting(false);
     }
   }
@@ -199,16 +224,19 @@ export default function NewGameScreen({ route, navigation }: Props) {
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => step > 1 ? setStep(s => s - 1) : navigation.goBack()} hitSlop={12}>
+        <TouchableOpacity onPress={() => step > 1 ? goToStep(step - 1) : navigation.goBack()} hitSlop={12}>
           <Text style={styles.backArrow}>‹</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>New Game</Text>
-        <View style={styles.stepIndicator}>
-          {[1, 2, 3].map(s => (
-            <View key={s} style={[styles.stepDot, s === step && styles.stepDotActive, s < step && styles.stepDotDone]} />
-          ))}
-        </View>
+        <Text style={styles.headerStep}>{step} / 3</Text>
       </View>
+
+      {/* Progress bar */}
+      <View style={styles.progressTrack}>
+        <Animated.View style={[styles.progressFill, { flex: progressAnim }]} />
+        <Animated.View style={{ flex: Animated.subtract(1, progressAnim) }} />
+      </View>
+      <Text style={styles.progressLabel}>{STEP_LABELS[step - 1]}</Text>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
@@ -227,24 +255,23 @@ export default function NewGameScreen({ route, navigation }: Props) {
             />
 
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Group (optional)</Text>
+              <Text style={styles.fieldLabel}>Group</Text>
               {groupsLoading ? (
                 <ActivityIndicator color={colors.gold} style={{ alignSelf: 'flex-start', marginTop: 8 }} />
+              ) : groups.length === 0 ? (
+                <View style={styles.noGroupsBox}>
+                  <Text style={styles.noGroupsText}>You need a group to start a game.</Text>
+                  <TouchableOpacity onPress={() => navigation.navigate('CreateGroup')}>
+                    <Text style={styles.noGroupsLink}>+ Create Group</Text>
+                  </TouchableOpacity>
+                </View>
               ) : (
                 <View style={styles.chipRow}>
-                  <TouchableOpacity
-                    style={[styles.groupChip, !selectedGroupId && styles.groupChipSelected]}
-                    onPress={() => { setSelectedGroupId(null); setSelectedGroupName(''); }}
-                  >
-                    <Text style={[styles.groupChipText, !selectedGroupId && styles.groupChipTextSelected]}>
-                      No Group
-                    </Text>
-                  </TouchableOpacity>
                   {groups.map(g => (
                     <TouchableOpacity
                       key={g.id}
                       style={[styles.groupChip, selectedGroupId === g.id && styles.groupChipSelected]}
-                      onPress={() => { setSelectedGroupId(g.id); setSelectedGroupName(g.name); }}
+                      onPress={() => { setSelectedGroupId(g.id); setSelectedGroupName(g.name); setGroupError(''); }}
                     >
                       <Text style={[styles.groupChipText, selectedGroupId === g.id && styles.groupChipTextSelected]}>
                         {g.name}
@@ -253,6 +280,7 @@ export default function NewGameScreen({ route, navigation }: Props) {
                   ))}
                 </View>
               )}
+              {groupError ? <Text style={styles.fieldError}>{groupError}</Text> : null}
             </View>
 
             <View style={styles.row}>
@@ -373,7 +401,7 @@ export default function NewGameScreen({ route, navigation }: Props) {
             )}
 
             <View style={styles.actionRow}>
-              <PrimaryButton label="← Back" onPress={() => setStep(1)} variant="outline" fullWidth={false} style={styles.backBtn} />
+              <PrimaryButton label="← Back" onPress={() => goToStep(1)} variant="outline" fullWidth={false} style={styles.backBtn} />
               <PrimaryButton label="Review →" onPress={handleNextStep} fullWidth={false} style={styles.nextBtn} />
             </View>
           </View>
@@ -416,7 +444,7 @@ export default function NewGameScreen({ route, navigation }: Props) {
             </View>
 
             <View style={styles.actionRow}>
-              <PrimaryButton label="← Back" onPress={() => setStep(2)} variant="outline" fullWidth={false} style={styles.backBtn} />
+              <PrimaryButton label="← Back" onPress={() => goToStep(2)} variant="outline" fullWidth={false} style={styles.backBtn} />
               <PrimaryButton
                 label="Start Game ▶"
                 onPress={handleStartGame}
@@ -450,15 +478,24 @@ const styles = StyleSheet.create({
   },
   backArrow: { fontSize: 28, color: colors.text, lineHeight: 32 },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: colors.text },
-  stepIndicator: { flexDirection: 'row', gap: 6 },
-  stepDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  headerStep: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
+
+  progressTrack: {
+    flexDirection: 'row',
+    height: 3,
     backgroundColor: colors.border,
   },
-  stepDotActive: { backgroundColor: colors.gold, width: 20, borderRadius: 4 },
-  stepDotDone: { backgroundColor: colors.gold },
+  progressFill: { backgroundColor: colors.gold },
+  progressLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
 
   scroll: { flex: 1 },
   content: { padding: 20 },
@@ -583,6 +620,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(201,168,76,0.3)',
   },
 
+  fieldError: { fontSize: 12, color: colors.error, marginTop: 2 },
+  noGroupsBox: { gap: 8, padding: 14, backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, borderColor: colors.border },
+  noGroupsText: { fontSize: 13, color: colors.textMuted },
+  noGroupsLink: { fontSize: 13, fontWeight: '700', color: colors.gold },
   noPlayers: { fontSize: 13, color: colors.textMuted, fontStyle: 'italic' },
   reviewPlayerChip: {
     paddingHorizontal: 12,

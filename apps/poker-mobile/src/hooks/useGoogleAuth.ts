@@ -10,16 +10,14 @@ if (Platform.OS !== 'web') {
 
 const EXPO_CLIENT_ID = '12435044751-jdh0dldfhkn2h8hqs3ssegbjflhvcmfi.apps.googleusercontent.com';
 const IOS_CLIENT_ID  = '12435044751-jap7j5prc6vm0eh0mj517nv0phrlu8mr.apps.googleusercontent.com';
-// Web client ID: create at Google Cloud Console → APIs & Services → Credentials → Web application
-// Add authorized redirect URI: http://localhost:8081 (dev) + your production domain
-const WEB_CLIENT_ID  = 'REPLACE_WITH_WEB_CLIENT_ID.apps.googleusercontent.com';
+const WEB_CLIENT_ID  = '12435044751-eruvq9uduc9sk5mietg9eiab2epddsp6.apps.googleusercontent.com';
 
 type GoogleAuthResult =
   | { type: 'success'; idToken: string }
   | { type: 'error'; message: string }
   | { type: 'cancel' };
 
-// Stub returned on web until webClientId is configured
+// Stub returned on web when webClientId is not configured
 function useGoogleAuthDisabled(_onResult: (result: GoogleAuthResult) => void) {
   return { prompt: () => {}, ready: false as const };
 }

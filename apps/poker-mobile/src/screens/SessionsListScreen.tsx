@@ -92,7 +92,7 @@ export default function SessionsListScreen({ route, navigation }: Props) {
         <Text style={styles.emptySubtitle}>Create the first session for {groupName}</Text>
         <TouchableOpacity
           style={styles.createButton}
-          onPress={() => navigation.navigate('CreateSession', { groupId, groupName })}
+          onPress={() => navigation.navigate('NewGame', { groupId, groupName })}
         >
           <Text style={styles.createButtonText}>Create Session</Text>
         </TouchableOpacity>
