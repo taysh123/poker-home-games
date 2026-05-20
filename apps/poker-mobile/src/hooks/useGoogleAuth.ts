@@ -1,9 +1,5 @@
 import { useEffect, useRef } from 'react';
 import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
-
-// Must be called on all platforms — on web this closes the OAuth popup after redirect
-WebBrowser.maybeCompleteAuthSession();
 
 const EXPO_CLIENT_ID = '12435044751-jdh0dldfhkn2h8hqs3ssegbjflhvcmfi.apps.googleusercontent.com';
 const IOS_CLIENT_ID  = '12435044751-jap7j5prc6vm0eh0mj517nv0phrlu8mr.apps.googleusercontent.com';

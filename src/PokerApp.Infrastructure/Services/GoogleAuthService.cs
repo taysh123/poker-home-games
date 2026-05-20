@@ -12,7 +12,8 @@ public sealed class GoogleAuthService(IConfiguration configuration) : IGoogleAut
         {
             var settings = new GoogleJsonWebSignature.ValidationSettings
             {
-                Audience = [configuration["GoogleSettings:ClientId"]!]
+                Audience = configuration.GetSection("GoogleSettings:ClientIds").Get<IList<string>>()
+                    ?? throw new InvalidOperationException("GoogleSettings:ClientIds not configured.")
             };
             var payload = await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
             var name = payload.Name ?? payload.Email.Split('@')[0];
