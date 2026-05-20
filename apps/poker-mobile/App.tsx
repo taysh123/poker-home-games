@@ -4,6 +4,7 @@ import { Linking } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { NavigationContainerRef } from '@react-navigation/native';
 import { AuthProvider } from './src/context/AuthContext';
+import { ActiveSessionProvider } from './src/context/ActiveSessionContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import { RootStackParamList } from './src/navigation/AppNavigator';
 
@@ -21,7 +22,6 @@ export default function App() {
     function handleUrl(url: string) {
       const token = extractInviteToken(url);
       if (token) {
-        // Navigate once the navigator is ready
         const navigate = () => {
           if (navRef.current?.isReady()) {
             navRef.current.navigate('JoinSession', { inviteToken: token });
@@ -40,8 +40,10 @@ export default function App() {
 
   return (
     <AuthProvider>
-      <StatusBar style="light" />
-      <AppNavigator navigationRef={navRef} />
+      <ActiveSessionProvider>
+        <StatusBar style="light" />
+        <AppNavigator navigationRef={navRef} />
+      </ActiveSessionProvider>
     </AuthProvider>
   );
 }

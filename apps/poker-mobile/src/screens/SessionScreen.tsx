@@ -29,6 +29,7 @@ import {
   addCashOut,
   addPlayer,
   removePlayer,
+  startSession,
   endSession,
   deleteSession,
   generateSessionInviteToken,
@@ -114,11 +115,15 @@ export default function SessionScreen({ route, navigation }: Props) {
   const [addingPlayerId, setAddingPlayerId] = useState<string | null>(null);
   const [addingGuest, setAddingGuest] = useState(false);
 
-  // End session modal — 0=closed, 1=final stacks, 2=summary
-  const [endStep, setEndStep] = useState<0 | 1 | 2>(0);
+  // End session modal — 0=closed, 1=confirm/skip, 2=final stacks, 3=game over summary
+  const [endStep, setEndStep] = useState<0 | 1 | 2 | 3>(0);
   const [endSummary, setEndSummary] = useState<{ players: PlayerBalanceDto[]; settlements: SettlementDto[] } | null>(null);
   const [finalStacks, setFinalStacks] = useState<Record<string, string>>({});
   const [endLoading, setEndLoading] = useState(false);
+  const [overrideBalance, setOverrideBalance] = useState(false);
+
+  // Start session (Draft → Active)
+  const [startLoading, setStartLoading] = useState(false);
 
   // Hand modal
   const [handModal, setHandModal] = useState(false);
@@ -334,7 +339,24 @@ export default function SessionScreen({ route, navigation }: Props) {
     session?.players.forEach(p => { stacks[p.sessionPlayerId] = ''; });
     setFinalStacks(stacks);
     setEndSummary(null);
+    setOverrideBalance(false);
     setEndStep(1);
+  }
+
+  async function handleStartSession() {
+    setStartLoading(true);
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!token) return;
+      await startSession(token, sessionId);
+      successNotification();
+      await load(true);
+    } catch (e: any) {
+      errorNotification();
+      Alert.alert('Error', e?.response?.data?.message ?? 'Failed to start session.');
+    } finally {
+      setStartLoading(false);
+    }
   }
 
   async function handleEndSession() {
@@ -362,7 +384,7 @@ export default function SessionScreen({ route, navigation }: Props) {
       setSettlementsLoaded(true);
       setEndSummary({ players: balData?.players ?? [], settlements: calcResult.settlements });
       successNotification();
-      setEndStep(2);
+      setEndStep(3);
     } catch (e: any) {
       errorNotification();
       Alert.alert('Error', e?.response?.data?.message ?? 'Failed to end session.');
@@ -765,16 +787,20 @@ export default function SessionScreen({ route, navigation }: Props) {
                         {isActive && (
                           <View style={styles.txButtons}>
                             <TouchableOpacity
-                              style={styles.txBtn}
+                              style={styles.quickTxBtn}
                               onPress={() => openTransaction('buyin', player)}
+                              activeOpacity={0.7}
                             >
-                              <Text style={styles.txBtnText}>Buy In</Text>
+                              <Text style={styles.quickTxIcon}>↑</Text>
+                              <Text style={styles.quickTxLabel}>In</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                              style={[styles.txBtn, styles.txBtnCash]}
+                              style={[styles.quickTxBtn, styles.quickTxBtnOut]}
                               onPress={() => openTransaction('cashout', player)}
+                              activeOpacity={0.7}
                             >
-                              <Text style={styles.txBtnText}>Cash Out</Text>
+                              <Text style={[styles.quickTxIcon, styles.quickTxIconOut]}>↓</Text>
+                              <Text style={[styles.quickTxLabel, styles.quickTxLabelOut]}>Out</Text>
                             </TouchableOpacity>
                           </View>
                         )}
@@ -984,8 +1010,24 @@ export default function SessionScreen({ route, navigation }: Props) {
           </View>
         )}
 
-        <View style={{ height: isActive ? (isAdminOrOwner ? 230 : 170) : 100 }} />
+        <View style={{ height: isDraft ? (isAdminOrOwner ? 110 : 40) : isActive ? (isAdminOrOwner ? 240 : 160) : 60 }} />
       </ScrollView>
+
+      {/* ── START GAME bar (Draft, Admin/Owner) ── */}
+      {isDraft && isAdminOrOwner && (
+        <View style={styles.startGameBar}>
+          <TouchableOpacity
+            style={styles.startGameBtn}
+            onPress={handleStartSession}
+            disabled={startLoading}
+            activeOpacity={0.85}
+          >
+            {startLoading
+              ? <ActivityIndicator color={colors.background} size="small" />
+              : <Text style={styles.startGameBtnText}>▶  START GAME</Text>}
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* ── Floating Log Hand button (Active) ── */}
       {isActive && (
@@ -1213,20 +1255,91 @@ export default function SessionScreen({ route, navigation }: Props) {
         </View>
       </Modal>
 
-      {/* ── End Session Modal (Step 1: Final Stacks) ── */}
+      {/* ── End Session Modal (Step 1: Confirm / Skip intent) ── */}
       <Modal visible={endStep === 1} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.sheet}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>End Game?</Text>
+
+            <View style={styles.endInfoCard}>
+              <View style={styles.endInfoRow}>
+                <Text style={styles.endInfoLabel}>Players</Text>
+                <Text style={styles.endInfoValue}>{session.players.length}</Text>
+              </View>
+              <View style={styles.endInfoRow}>
+                <Text style={styles.endInfoLabel}>Total pot</Text>
+                <Text style={[styles.endInfoValue, { color: colors.gold }]}>{formatMoney(totalPot)}</Text>
+              </View>
+              {session.startedAt && (
+                <View style={styles.endInfoRow}>
+                  <Text style={styles.endInfoLabel}>Duration</Text>
+                  <Text style={styles.endInfoValue}>{formatDuration(session.startedAt, null, tick)}</Text>
+                </View>
+              )}
+            </View>
+
+            <TouchableOpacity style={styles.endOptionBtn} onPress={() => setEndStep(2)} activeOpacity={0.8}>
+              <Text style={styles.endOptionIcon}>📋</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.endOptionTitle}>Enter Final {session.chipRatio ? 'Chip Counts' : 'Cash Amounts'}</Text>
+                <Text style={styles.endOptionSub}>Recommended — most accurate results</Text>
+              </View>
+              <Text style={styles.endOptionChevron}>›</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.endOptionBtn, styles.endOptionBtnSecondary]}
+              onPress={() => handleEndSession()}
+              disabled={endLoading}
+              activeOpacity={0.8}
+            >
+              {endLoading ? (
+                <ActivityIndicator color={colors.textMuted} size="small" style={{ flex: 1 }} />
+              ) : (
+                <>
+                  <Text style={styles.endOptionIcon}>⚡</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.endOptionTitle, { color: colors.textMuted }]}>Skip — Use Transaction Records</Text>
+                    <Text style={styles.endOptionSub}>Calculate from recorded buy-ins and cash-outs</Text>
+                  </View>
+                  <Text style={styles.endOptionChevron}>›</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.endCancelRow} onPress={() => setEndStep(0)}>
+              <Text style={styles.endCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── End Session Modal (Step 2: Final Stacks + Live Validation) ── */}
+      <Modal visible={endStep === 2} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={[styles.sheet, styles.sheetTall]}>
             <View style={styles.sheetHandle} />
             <View style={styles.sheetTitleRow}>
-              <Text style={styles.sheetTitle}>Final Stacks</Text>
-              <TouchableOpacity onPress={() => setEndStep(0)} hitSlop={8}>
+              <View>
+                <Text style={styles.sheetTitle}>Final {session.chipRatio && useChips ? 'Chip Counts' : 'Cash Amounts'}</Text>
+                <Text style={styles.endSubtitle}>Enter what each player has left at the table.</Text>
+              </View>
+              <TouchableOpacity onPress={() => setEndStep(1)} hitSlop={8}>
                 <Text style={styles.closeBtn}>✕</Text>
               </TouchableOpacity>
             </View>
-            <Text style={styles.endSubtitle}>
-              Enter final {session.chipRatio && useChips ? 'chip counts' : 'cash amounts'} for players still at the table. Leave blank to skip.
-            </Text>
+
+            {session.chipRatio && (
+              <View style={styles.toggleRow}>
+                <TouchableOpacity style={[styles.toggleBtn, !useChips && styles.toggleBtnActive]} onPress={() => setUseChips(false)}>
+                  <Text style={[styles.toggleBtnText, !useChips && styles.toggleBtnTextActive]}>₪ Money</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.toggleBtn, useChips && styles.toggleBtnActive]} onPress={() => setUseChips(true)}>
+                  <Text style={[styles.toggleBtnText, useChips && styles.toggleBtnTextActive]}>🪙 Chips</Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
             <ScrollView style={styles.endPlayerList} keyboardShouldPersistTaps="handled">
               {session.players.map(p => {
@@ -1234,18 +1347,22 @@ export default function SessionScreen({ route, navigation }: Props) {
                 const hasCashOut = (bal?.totalCashOut ?? 0) > 0;
                 return (
                   <View key={p.sessionPlayerId} style={styles.endPlayerRow}>
+                    <View style={[styles.endPlayerAvatar]}>
+                      <Text style={styles.endPlayerAvatarText}>{p.username[0].toUpperCase()}</Text>
+                    </View>
                     <Text style={styles.endPlayerName}>{p.username}</Text>
                     {hasCashOut ? (
-                      <Text style={styles.endPlayerCashed}>
-                        Cashed {formatMoney(bal!.totalCashOut)}
-                      </Text>
+                      <Text style={styles.endPlayerCashed}>Cashed {formatMoney(bal!.totalCashOut)}</Text>
                     ) : (
                       <TextInput
                         style={styles.endStackInput}
                         value={finalStacks[p.sessionPlayerId] ?? ''}
-                        onChangeText={v => setFinalStacks(prev => ({ ...prev, [p.sessionPlayerId]: v }))}
+                        onChangeText={v => {
+                          setFinalStacks(prev => ({ ...prev, [p.sessionPlayerId]: v }));
+                          setOverrideBalance(false);
+                        }}
                         keyboardType="decimal-pad"
-                        placeholder={session.chipRatio && useChips ? 'Chips' : '₪'}
+                        placeholder={session.chipRatio && useChips ? 'chips' : '₪'}
                         placeholderTextColor={colors.textDim}
                       />
                     )}
@@ -1254,72 +1371,190 @@ export default function SessionScreen({ route, navigation }: Props) {
               })}
             </ScrollView>
 
-            <TouchableOpacity
-              style={styles.endConfirmBtn}
-              onPress={handleEndSession}
-              disabled={endLoading}
-            >
-              {endLoading
-                ? <ActivityIndicator color={colors.background} />
-                : <Text style={styles.endConfirmBtnText}>Calculate Results →</Text>}
-            </TouchableOpacity>
+            {/* Live chip/money validation */}
+            {(() => {
+              const totalCashedOut = balances.reduce((s, b) => s + b.totalCashOut, 0);
+              const expectedRemaining = totalPot - totalCashedOut;
+              const expectedInUnits = session.chipRatio && useChips
+                ? expectedRemaining * session.chipRatio
+                : expectedRemaining;
+              const totalEntered = Object.entries(finalStacks)
+                .filter(([, v]) => v.trim() !== '' && !isNaN(parseFloat(v)) && parseFloat(v) >= 0)
+                .reduce((sum, [, v]) => sum + parseFloat(v), 0);
+              const hasAnyEntered = Object.values(finalStacks).some(v => v.trim() !== '');
+              const diff = totalEntered - expectedInUnits;
+              const isBalanced = !hasAnyEntered || Math.abs(diff) < 0.5;
+              const unitLabel = session.chipRatio && useChips ? 'chips' : '₪';
+              const fmt = (n: number) => session.chipRatio && useChips
+                ? Math.round(n).toLocaleString()
+                : formatMoney(n);
+              const blocked = hasAnyEntered && !isBalanced && !overrideBalance;
+
+              return (
+                <>
+                  {hasAnyEntered && (
+                    <View style={[styles.chipCounter, isBalanced ? styles.chipCounterOk : styles.chipCounterWarn]}>
+                      <View style={styles.chipCounterRow}>
+                        <Text style={styles.chipCounterLabel}>Entered</Text>
+                        <Text style={[styles.chipCounterValue, isBalanced ? styles.chipCounterValueOk : styles.chipCounterValueWarn]}>
+                          {fmt(totalEntered)} {unitLabel}
+                        </Text>
+                      </View>
+                      <View style={styles.chipCounterRow}>
+                        <Text style={styles.chipCounterLabel}>Expected</Text>
+                        <Text style={styles.chipCounterValue}>{fmt(expectedInUnits)} {unitLabel}</Text>
+                      </View>
+                      {isBalanced
+                        ? <Text style={styles.chipCounterMatch}>✓ Totals match</Text>
+                        : <Text style={styles.chipCounterDiff}>
+                            {diff > 0 ? '+' : ''}{fmt(Math.abs(diff))} {diff > 0 ? 'over' : 'short'}
+                          </Text>
+                      }
+                    </View>
+                  )}
+
+                  {!isBalanced && (
+                    <TouchableOpacity
+                      style={styles.overrideRow}
+                      onPress={() => setOverrideBalance(v => !v)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[styles.overrideCheckbox, overrideBalance && styles.overrideCheckboxChecked]}>
+                        {overrideBalance && <Text style={styles.overrideCheckmark}>✓</Text>}
+                      </View>
+                      <Text style={styles.overrideLabel}>Calculate anyway (totals don't balance)</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  <TouchableOpacity
+                    style={[styles.endConfirmBtn, blocked && styles.endConfirmBtnDisabled]}
+                    onPress={handleEndSession}
+                    disabled={endLoading || blocked}
+                  >
+                    {endLoading
+                      ? <ActivityIndicator color={styles.endConfirmBtnText.color as string} />
+                      : <Text style={styles.endConfirmBtnText}>Calculate Results →</Text>}
+                  </TouchableOpacity>
+                </>
+              );
+            })()}
           </View>
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* ── End Session Modal (Step 2: Summary) ── */}
-      <Modal visible={endStep === 2} transparent animationType="fade">
+      {/* ── End Session Modal (Step 3: Game Over Summary) ── */}
+      <Modal visible={endStep === 3} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={[styles.sheet, styles.sheetTall]}>
             <View style={styles.sheetHandle} />
             <Text style={styles.summaryTitle}>🏆 Game Over!</Text>
             <Text style={styles.summarySessionName}>{session.name}</Text>
-            {session.startedAt && (
-              <Text style={styles.summaryDuration}>
-                {formatDuration(session.startedAt, new Date().toISOString())}
-              </Text>
-            )}
 
-            <View style={styles.divider} />
+            {/* Stats row */}
+            <View style={styles.summaryStatsRow}>
+              {session.startedAt && (
+                <View style={styles.summaryStat}>
+                  <Text style={styles.summaryStatValue}>{formatDuration(session.startedAt, new Date().toISOString())}</Text>
+                  <Text style={styles.summaryStatLabel}>Duration</Text>
+                </View>
+              )}
+              <View style={styles.summaryStat}>
+                <Text style={[styles.summaryStatValue, { color: colors.gold }]}>{formatMoney(totalPot)}</Text>
+                <Text style={styles.summaryStatLabel}>Pot</Text>
+              </View>
+              <View style={styles.summaryStat}>
+                <Text style={styles.summaryStatValue}>{endSummary?.players.length ?? 0}</Text>
+                <Text style={styles.summaryStatLabel}>Players</Text>
+              </View>
+            </View>
 
-            <Text style={styles.summarySection}>Results</Text>
+            {/* Biggest winner / loser highlights */}
+            {endSummary && endSummary.players.length > 0 && (() => {
+              const sorted = [...endSummary.players].sort((a, b) => b.profitLoss - a.profitLoss);
+              const winner = sorted[0];
+              const loser = sorted[sorted.length - 1];
+              if (winner === loser) return null;
+              return (
+                <View style={styles.summaryHighlights}>
+                  {winner.profitLoss > 0 && (
+                    <View style={[styles.summaryHighlight, styles.summaryHighlightWin]}>
+                      <Text style={styles.summaryHighlightEmoji}>🏆</Text>
+                      <View style={{ gap: 1 }}>
+                        <Text style={styles.summaryHighlightName} numberOfLines={1}>{winner.username}</Text>
+                        <Text style={[styles.summaryHighlightAmount, { color: colors.success }]}>+{formatMoney(winner.profitLoss)}</Text>
+                      </View>
+                    </View>
+                  )}
+                  {loser.profitLoss < 0 && (
+                    <View style={[styles.summaryHighlight, styles.summaryHighlightLoss]}>
+                      <Text style={styles.summaryHighlightEmoji}>💸</Text>
+                      <View style={{ gap: 1 }}>
+                        <Text style={styles.summaryHighlightName} numberOfLines={1}>{loser.username}</Text>
+                        <Text style={[styles.summaryHighlightAmount, { color: colors.error }]}>{formatMoney(loser.profitLoss)}</Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              );
+            })()}
+
             <ScrollView style={styles.endPlayerList} showsVerticalScrollIndicator={false}>
+              {/* Results */}
+              <Text style={styles.summarySection}>Results</Text>
               {[...(endSummary?.players ?? [])]
                 .sort((a, b) => b.profitLoss - a.profitLoss)
                 .map((p, i) => (
                   <View key={p.sessionPlayerId} style={styles.summaryPlayerRow}>
                     <Text style={styles.summaryRank}>{rankLabel(i + 1)}</Text>
                     <Text style={styles.summaryPlayerName}>{p.username}</Text>
-                    <Text style={[
-                      styles.summaryPL,
-                      p.profitLoss > 0 ? styles.plPos : p.profitLoss < 0 ? styles.plNeg : styles.plZero,
-                    ]}>
+                    <Text style={[styles.summaryPL,
+                      p.profitLoss > 0 ? styles.plPos : p.profitLoss < 0 ? styles.plNeg : styles.plZero]}>
                       {p.profitLoss > 0 ? '+' : ''}{formatMoney(p.profitLoss)}
                     </Text>
                   </View>
                 ))}
 
+              {/* Settlements with inline Mark Paid */}
               {(endSummary?.settlements ?? []).length > 0 && (
                 <>
                   <View style={styles.divider} />
                   <Text style={styles.summarySection}>Settlements</Text>
-                  {(endSummary?.settlements ?? []).map(s => (
-                    <View key={s.id} style={styles.summarySettlementRow}>
-                      <Text style={styles.summarySettlementText}>
-                        <Text style={styles.summarySettlementPayer}>{s.payerName}</Text>
-                        {' → '}
-                        <Text style={styles.summarySettlementReceiver}>{s.receiverName}</Text>
-                        {'  '}
-                        <Text style={styles.summarySettlementAmount}>{formatMoney(s.amount)}</Text>
-                      </Text>
-                    </View>
-                  ))}
+                  {(endSummary?.settlements ?? []).map(s => {
+                    const isPaid = s.status === 'Confirmed';
+                    return (
+                      <View key={s.id} style={styles.summarySettlementCard}>
+                        <View style={styles.summarySettlementInfo}>
+                          <Text style={styles.summarySettlementLine}>
+                            <Text style={styles.summarySettlementPayer}>{s.payerName}</Text>
+                            <Text style={{ color: colors.textDim }}>{' → '}</Text>
+                            <Text style={styles.summarySettlementReceiver}>{s.receiverName}</Text>
+                          </Text>
+                          <Text style={styles.summarySettlementAmount}>{formatMoney(s.amount)}</Text>
+                        </View>
+                        {!isPaid ? (
+                          <TouchableOpacity
+                            style={styles.summaryMarkPaidBtn}
+                            onPress={() => handleMarkPaid(s.id)}
+                            disabled={markingPaidId === s.id}
+                          >
+                            {markingPaidId === s.id
+                              ? <ActivityIndicator size="small" color={colors.background} />
+                              : <Text style={styles.summaryMarkPaidText}>Mark Paid</Text>}
+                          </TouchableOpacity>
+                        ) : (
+                          <View style={styles.summaryPaidBadge}>
+                            <Text style={styles.summaryPaidBadgeText}>PAID</Text>
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })}
                 </>
               )}
             </ScrollView>
 
             <TouchableOpacity style={styles.finishGameBtn} onPress={finishGame}>
-              <Text style={styles.finishGameBtnText}>✓  Finish Game</Text>
+              <Text style={styles.finishGameBtnText}>✓  Save & View Session</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -2090,6 +2325,198 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   guestBadgeText: { fontSize: 9, fontWeight: '700', color: colors.textDim, textTransform: 'uppercase', letterSpacing: 0.5 },
+
+  // Quick tx buttons on player row
+  quickTxBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(201,168,76,0.12)',
+    borderWidth: 1,
+    borderColor: colors.gold,
+    gap: 1,
+    minWidth: 40,
+  },
+  quickTxBtnOut: {
+    backgroundColor: 'rgba(39,174,96,0.10)',
+    borderColor: colors.success,
+  },
+  quickTxIcon: { fontSize: 14, fontWeight: '800', color: colors.gold, lineHeight: 16 },
+  quickTxIconOut: { color: colors.success },
+  quickTxLabel: { fontSize: 10, fontWeight: '700', color: colors.gold },
+  quickTxLabelOut: { color: colors.success },
+
+  // Start Game bar
+  startGameBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'ios' ? 36 : 16,
+  },
+  startGameBtn: {
+    backgroundColor: colors.gold,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    shadowColor: colors.gold,
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  startGameBtnText: { fontSize: 16, fontWeight: '800', color: colors.background, letterSpacing: 0.5 },
+
+  // End Game — Step 1 info card
+  endInfoCard: {
+    backgroundColor: colors.surfaceHigh,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  endInfoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  endInfoLabel: { fontSize: 14, color: colors.textMuted, fontWeight: '500' },
+  endInfoValue: { fontSize: 14, fontWeight: '700', color: colors.text },
+
+  // End Game — option buttons
+  endOptionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(201,168,76,0.08)',
+    borderWidth: 1,
+    borderColor: colors.gold,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+  },
+  endOptionBtnSecondary: {
+    backgroundColor: colors.surfaceHigh,
+    borderColor: colors.border,
+  },
+  endOptionIcon: { fontSize: 22 },
+  endOptionTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
+  endOptionSub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  endOptionChevron: { fontSize: 22, color: colors.textMuted, fontWeight: '300' },
+  endCancelRow: { alignItems: 'center', paddingVertical: 8 },
+  endCancelText: { fontSize: 14, color: colors.textMuted, fontWeight: '600' },
+
+  // End Game — Step 2 player avatar in list
+  endPlayerAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceHigh,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  endPlayerAvatarText: { fontSize: 13, fontWeight: '700', color: colors.textMuted },
+
+  // Disabled confirm button
+  endConfirmBtnDisabled: { opacity: 0.4 },
+
+  // Chip counter validation block
+  chipCounter: {
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 6,
+  },
+  chipCounterOk: { backgroundColor: 'rgba(39,174,96,0.08)', borderColor: 'rgba(39,174,96,0.35)' },
+  chipCounterWarn: { backgroundColor: 'rgba(231,76,60,0.08)', borderColor: 'rgba(231,76,60,0.35)' },
+  chipCounterRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  chipCounterLabel: { fontSize: 13, color: colors.textMuted, fontWeight: '500' },
+  chipCounterValue: { fontSize: 13, fontWeight: '700', color: colors.text },
+  chipCounterValueOk: { color: colors.success },
+  chipCounterValueWarn: { color: colors.error },
+  chipCounterMatch: { fontSize: 12, color: colors.success, fontWeight: '700', textAlign: 'center' },
+  chipCounterDiff: { fontSize: 12, color: colors.error, fontWeight: '700', textAlign: 'center' },
+
+  // Override balance checkbox row
+  overrideRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 4,
+  },
+  overrideCheckbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceHigh,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  overrideCheckboxChecked: { backgroundColor: colors.gold, borderColor: colors.gold },
+  overrideCheckmark: { fontSize: 13, color: colors.background, fontWeight: '800' },
+  overrideLabel: { flex: 1, fontSize: 13, color: colors.textMuted, fontWeight: '500' },
+
+  // Game Over summary — stats row
+  summaryStatsRow: { flexDirection: 'row', justifyContent: 'space-around', marginVertical: 4 },
+  summaryStat: { alignItems: 'center', gap: 2 },
+  summaryStatValue: { fontSize: 18, fontWeight: '800', color: colors.text },
+  summaryStatLabel: { fontSize: 11, color: colors.textMuted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+
+  // Game Over summary — highlights (biggest winner/loser)
+  summaryHighlights: { flexDirection: 'row', gap: 8 },
+  summaryHighlight: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+  },
+  summaryHighlightWin: { backgroundColor: 'rgba(39,174,96,0.08)', borderColor: 'rgba(39,174,96,0.30)' },
+  summaryHighlightLoss: { backgroundColor: 'rgba(231,76,60,0.08)', borderColor: 'rgba(231,76,60,0.30)' },
+  summaryHighlightEmoji: { fontSize: 20 },
+  summaryHighlightName: { fontSize: 13, fontWeight: '700', color: colors.text },
+  summaryHighlightAmount: { fontSize: 13, fontWeight: '800' },
+
+  // Game Over summary — settlement cards
+  summarySettlementCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceHigh,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 6,
+    gap: 10,
+  },
+  summarySettlementInfo: { flex: 1, gap: 2 },
+  summarySettlementLine: { fontSize: 14, lineHeight: 20 },
+  summaryMarkPaidBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 7,
+    backgroundColor: colors.gold,
+  },
+  summaryMarkPaidText: { fontSize: 12, fontWeight: '700', color: colors.background },
+  summaryPaidBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: 'rgba(39,174,96,0.15)',
+    borderWidth: 1,
+    borderColor: colors.success,
+  },
+  summaryPaidBadgeText: { fontSize: 10, fontWeight: '700', color: colors.success, textTransform: 'uppercase', letterSpacing: 0.5 },
 
   // Misc
   emptyCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 24, alignItems: 'center', gap: 12 },

@@ -18,7 +18,7 @@ import { typography } from '../theme/typography';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { getMyGroups, getGroupMembers, MyGroupDto, GroupMemberDto } from '../api/groupsApi';
-import { createSession, addPlayer } from '../api/sessionsApi';
+import { createSession, addPlayer, startSession } from '../api/sessionsApi';
 import AppTextInput from '../components/AppTextInput';
 import PrimaryButton from '../components/PrimaryButton';
 import { getRecentGuests, recordGuestName } from '../utils/guestHistory';
@@ -188,6 +188,9 @@ export default function NewGameScreen({ route, navigation }: Props) {
       for (const name of guestNames) {
         await recordGuestName(name);
       }
+
+      // Start the session immediately so it arrives as Active
+      await startSession(token, sessionId);
 
       showToast('Game started!', 'success');
       navigation.replace('Session', { sessionId, groupId });

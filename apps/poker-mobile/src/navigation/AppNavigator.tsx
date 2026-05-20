@@ -1,11 +1,13 @@
 import React from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, Platform } from 'react-native';
+import { NavigationContainer, NavigationContainerRef, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp, createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
+import { useActiveSession } from '../context/ActiveSessionContext';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import HomeScreen from '../screens/HomeScreen';
@@ -67,60 +69,93 @@ const stackScreenOptions = {
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
+const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 49 : 56;
+
+function LiveGameBar() {
+  const { activeSession } = useActiveSession();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const insets = useSafeAreaInsets();
+
+  if (!activeSession) return null;
+
+  return (
+    <TouchableOpacity
+      style={[liveBarStyles.bar, { bottom: TAB_BAR_HEIGHT + insets.bottom + 6 }]}
+      onPress={() => navigation.navigate('Session', {
+        sessionId: activeSession.sessionId,
+        groupId: activeSession.groupId ?? '',
+      })}
+      activeOpacity={0.9}
+    >
+      <View style={liveBarStyles.dotWrapper}>
+        <View style={liveBarStyles.dot} />
+      </View>
+      <View style={liveBarStyles.textGroup}>
+        <Text style={liveBarStyles.title} numberOfLines={1}>{activeSession.sessionName}</Text>
+        <Text style={liveBarStyles.sub}>Live game · tap to return</Text>
+      </View>
+      <Text style={liveBarStyles.chevron}>›</Text>
+    </TouchableOpacity>
+  );
+}
+
 function TabNavigator() {
   return (
-    <Tab.Navigator
-      screenOptions={({ route }) => {
-        const icons: Record<string, { active: IoniconsName; inactive: IoniconsName }> = {
-          Home:        { active: 'home',      inactive: 'home-outline' },
-          AllSessions: { active: 'card',      inactive: 'card-outline' },
-          GroupsList:  { active: 'people',    inactive: 'people-outline' },
-          Stats:       { active: 'bar-chart', inactive: 'bar-chart-outline' },
-        };
-        return {
-          tabBarStyle: { backgroundColor: colors.background, borderTopColor: colors.border },
-          tabBarActiveTintColor: colors.gold,
-          tabBarInactiveTintColor: colors.textMuted,
-          tabBarIcon: ({ focused, color, size }: { focused: boolean; color: string; size: number }) => {
-            const pair = icons[route.name] ?? { active: 'ellipse', inactive: 'ellipse-outline' };
-            return <Ionicons name={focused ? pair.active : pair.inactive} size={size} color={color} />;
-          },
-        };
-      }}
-    >
-      <Tab.Screen
-        name="Home"
-        component={HomeScreen}
-        options={{ title: 'Home', headerShown: false }}
-      />
-      <Tab.Screen
-        name="AllSessions"
-        component={AllSessionsScreen}
-        options={{ title: 'Sessions', headerShown: false }}
-      />
-      <Tab.Screen
-        name="GroupsList"
-        component={GroupsListScreen}
-        options={{
-          title: 'Groups',
-          headerShown: true,
-          headerStyle: { backgroundColor: colors.background },
-          headerTintColor: colors.text,
-          headerTitleStyle: { fontWeight: '700' },
+    <View style={{ flex: 1 }}>
+      <Tab.Navigator
+        screenOptions={({ route }) => {
+          const icons: Record<string, { active: IoniconsName; inactive: IoniconsName }> = {
+            Home:        { active: 'home',      inactive: 'home-outline' },
+            AllSessions: { active: 'card',      inactive: 'card-outline' },
+            GroupsList:  { active: 'people',    inactive: 'people-outline' },
+            Stats:       { active: 'bar-chart', inactive: 'bar-chart-outline' },
+          };
+          return {
+            tabBarStyle: { backgroundColor: colors.background, borderTopColor: colors.border },
+            tabBarActiveTintColor: colors.gold,
+            tabBarInactiveTintColor: colors.textMuted,
+            tabBarIcon: ({ focused, color, size }: { focused: boolean; color: string; size: number }) => {
+              const pair = icons[route.name] ?? { active: 'ellipse', inactive: 'ellipse-outline' };
+              return <Ionicons name={focused ? pair.active : pair.inactive} size={size} color={color} />;
+            },
+          };
         }}
-      />
-      <Tab.Screen
-        name="Stats"
-        component={StatsScreen}
-        options={{
-          title: 'My Stats',
-          headerShown: true,
-          headerStyle: { backgroundColor: colors.background },
-          headerTintColor: colors.text,
-          headerTitleStyle: { fontWeight: '700' },
-        }}
-      />
-    </Tab.Navigator>
+      >
+        <Tab.Screen
+          name="Home"
+          component={HomeScreen}
+          options={{ title: 'Home', headerShown: false }}
+        />
+        <Tab.Screen
+          name="AllSessions"
+          component={AllSessionsScreen}
+          options={{ title: 'Sessions', headerShown: false }}
+        />
+        <Tab.Screen
+          name="GroupsList"
+          component={GroupsListScreen}
+          options={{
+            title: 'Groups',
+            headerShown: true,
+            headerStyle: { backgroundColor: colors.background },
+            headerTintColor: colors.text,
+            headerTitleStyle: { fontWeight: '700' },
+          }}
+        />
+        <Tab.Screen
+          name="Stats"
+          component={StatsScreen}
+          options={{
+            title: 'My Stats',
+            headerShown: true,
+            headerStyle: { backgroundColor: colors.background },
+            headerTintColor: colors.text,
+            headerTitleStyle: { fontWeight: '700' },
+          }}
+        />
+      </Tab.Navigator>
+      <LiveGameBar />
+    </View>
   );
 }
 
@@ -176,4 +211,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+});
+
+const liveBarStyles = StyleSheet.create({
+  bar: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.gold,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 10,
+    shadowColor: colors.gold,
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 8,
+  },
+  dotWrapper: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: 'rgba(201,168,76,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.gold,
+  },
+  textGroup: { flex: 1, gap: 1 },
+  title: { fontSize: 14, fontWeight: '700', color: colors.text },
+  sub: { fontSize: 11, color: colors.textMuted, fontWeight: '500' },
+  chevron: { fontSize: 22, color: colors.gold, fontWeight: '300' },
 });
