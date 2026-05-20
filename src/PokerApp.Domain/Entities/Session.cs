@@ -56,6 +56,12 @@ public class Session : BaseEntity
         SetUpdatedAt();
     }
 
+    public void UpdateName(string name)
+    {
+        Name = name.Trim();
+        SetUpdatedAt();
+    }
+
     public void UpdateNotes(string? notes)
     {
         Notes = notes?.Trim();

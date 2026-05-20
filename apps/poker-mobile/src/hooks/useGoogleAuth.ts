@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react';
 import * as Google from 'expo-auth-session/providers/google';
 
-const EXPO_CLIENT_ID = '12435044751-jdh0dldfhkn2h8hqs3ssegbjflhvcmfi.apps.googleusercontent.com';
-const IOS_CLIENT_ID  = '12435044751-jap7j5prc6vm0eh0mj517nv0phrlu8mr.apps.googleusercontent.com';
-const WEB_CLIENT_ID  = '12435044751-eruvq9uduc9sk5mietg9eiab2epddsp6.apps.googleusercontent.com';
+// OAuth client IDs — set EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID in .env for production Android
+const EXPO_CLIENT_ID    = '12435044751-jdh0dldfhkn2h8hqs3ssegbjflhvcmfi.apps.googleusercontent.com';
+const IOS_CLIENT_ID     = '12435044751-jap7j5prc6vm0eh0mj517nv0phrlu8mr.apps.googleusercontent.com';
+const WEB_CLIENT_ID     = '12435044751-eruvq9uduc9sk5mietg9eiab2epddsp6.apps.googleusercontent.com';
+const ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? EXPO_CLIENT_ID;
 
 type GoogleAuthResult =
   | { type: 'success'; idToken: string }
@@ -18,6 +20,7 @@ function useGoogleAuthNative(onResult: (result: GoogleAuthResult) => void) {
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: EXPO_CLIENT_ID,
     iosClientId: IOS_CLIENT_ID,
+    androidClientId: ANDROID_CLIENT_ID,
     webClientId: WEB_CLIENT_ID,
   });
 

@@ -54,8 +54,12 @@ export default function CreateGroupScreen({ navigation }: Props) {
     try {
       const token = await SecureStore.getItemAsync('accessToken');
       if (!token) throw new Error('Not authenticated');
-      await createGroup(token, trimmedName, description.trim() || undefined);
-      navigation.goBack();
+      const group = await createGroup(token, trimmedName, description.trim() || undefined);
+      navigation.replace('GroupDetail', {
+        groupId: group.id,
+        groupName: group.name,
+        showInviteOnLoad: true,
+      });
     } catch (err: any) {
       const msg =
         err?.response?.data?.errors

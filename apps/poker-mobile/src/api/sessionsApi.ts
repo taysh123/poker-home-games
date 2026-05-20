@@ -212,6 +212,18 @@ export async function deleteSession(token: string, sessionId: string): Promise<v
   await api.delete(`/api/sessions/${sessionId}`, { headers: authHeader(token) });
 }
 
+export async function updateSessionName(
+  token: string,
+  sessionId: string,
+  name: string,
+): Promise<void> {
+  await api.patch(
+    `/api/sessions/${sessionId}/name`,
+    { name },
+    { headers: authHeader(token) },
+  );
+}
+
 export async function exportSessionCsv(token: string, sessionId: string): Promise<string> {
   const { data } = await api.get<string>(
     `/api/sessions/${sessionId}/export`,

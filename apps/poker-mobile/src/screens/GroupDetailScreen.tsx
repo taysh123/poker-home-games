@@ -35,8 +35,9 @@ import { searchUsers, UserSearchResultDto } from '../api/usersApi';
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupDetail'>;
 
 export default function GroupDetailScreen({ route, navigation }: Props) {
-  const { groupId, groupName } = route.params;
+  const { groupId, groupName, showInviteOnLoad } = route.params;
   const { user } = useAuth();
+  const hasAutoInvited = React.useRef(false);
 
   const [group, setGroup] = useState<GroupDetailResponse | null>(null);
   const [members, setMembers] = useState<GroupMemberDto[]>([]);
@@ -83,6 +84,21 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
       load();
     }, [load]),
   );
+
+  React.useEffect(() => {
+    if (!showInviteOnLoad || hasAutoInvited.current || loading || !group) return;
+    if (group.memberCount <= 1) {
+      hasAutoInvited.current = true;
+      Alert.alert(
+        'Group Created!',
+        `"${group.name}" is ready. Share the invite link so your friends can join.`,
+        [
+          { text: 'Later', style: 'cancel' },
+          { text: 'Share Invite Link', onPress: handleShareInvite },
+        ],
+      );
+    }
+  }, [showInviteOnLoad, loading, group]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -184,9 +200,9 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
               const token = await SecureStore.getItemAsync('accessToken');
               if (!token) return;
               await leaveGroup(token, groupId);
-              navigation.navigate('GroupsList');
+              navigation.goBack();
             } catch {
-              Alert.alert('Error', 'Failed to leave group.');
+              Alert.alert('Error', 'Failed to leave group. Please try again.');
             }
           },
         },
@@ -631,7 +647,7 @@ const styles = StyleSheet.create({
   },
   navButtonText: { fontSize: 15, fontWeight: '600', color: colors.text },
   navChevron: { fontSize: 22, color: colors.gold, lineHeight: 24 },
-  navButtonGold: { backgroundColor: 'rgba(201,168,76,0.10)', borderColor: colors.gold },
+  navButtonGold: { backgroundColor: colors.goldFaint, borderColor: colors.gold },
   navButtonGoldText: { fontSize: 15, fontWeight: '700', color: colors.gold },
   navChevronGold: { fontSize: 13, color: colors.gold },
 
@@ -653,7 +669,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1.5,
     borderColor: colors.gold,
-    backgroundColor: 'rgba(201,168,76,0.08)',
+    backgroundColor: colors.goldFaint,
     minHeight: 46,
   },
   shareInviteText: { fontSize: 14, fontWeight: '700', color: colors.gold },
@@ -704,9 +720,9 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: 'rgba(201,168,76,0.15)',
+    backgroundColor: colors.goldSubtle,
     borderWidth: 1,
-    borderColor: 'rgba(201,168,76,0.3)',
+    borderColor: colors.goldMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -769,20 +785,20 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
-    backgroundColor: 'rgba(231,76,60,0.08)',
+    backgroundColor: colors.errorFaint,
   },
   deleteGroupButtonText: { fontSize: 15, fontWeight: '700', color: colors.error },
 
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   badgeOwner: {
-    backgroundColor: 'rgba(201,168,76,0.15)',
+    backgroundColor: colors.goldSubtle,
     borderWidth: 1,
     borderColor: colors.gold,
   },
   badgeAdmin: {
-    backgroundColor: 'rgba(201,168,76,0.08)',
+    backgroundColor: colors.goldFaint,
     borderWidth: 1,
-    borderColor: 'rgba(201,168,76,0.4)',
+    borderColor: colors.goldMuted,
   },
   badgeMember: {
     backgroundColor: colors.surfaceHigh,

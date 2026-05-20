@@ -33,7 +33,7 @@ export type RootStackParamList = {
   MainTabs: undefined;
   Profile: undefined;
   CreateGroup: undefined;
-  GroupDetail: { groupId: string; groupName: string };
+  GroupDetail: { groupId: string; groupName: string; showInviteOnLoad?: boolean };
   Invitations: undefined;
   EditGroup: { groupId: string; groupName: string; description?: string };
   SessionsList: { groupId: string; groupName: string; userRole: string };
@@ -237,7 +237,7 @@ const liveBarStyles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: 'rgba(201,168,76,0.25)',
+    backgroundColor: colors.goldSubtle,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -12,6 +12,7 @@ using PokerApp.Application.Features.Sessions.Commands.AddBuyIn;
 using PokerApp.Application.Features.Sessions.Commands.AddCashOut;
 using PokerApp.Application.Features.Sessions.Commands.AddHandRecord;
 using PokerApp.Application.Features.Sessions.Commands.DeleteHandRecord;
+using PokerApp.Application.Features.Sessions.Commands.UpdateSessionName;
 using PokerApp.Application.Features.Sessions.Commands.UpdateSessionNotes;
 using PokerApp.Application.Features.Sessions.Commands.GenerateSessionInviteToken;
 using PokerApp.Application.Features.Sessions.Commands.JoinSessionByToken;
@@ -178,6 +179,17 @@ public class SessionsController(IMediator mediator) : ControllerBase
         return StatusCode(StatusCodes.Status201Created, response);
     }
 
+    /// <summary>Renames a session. Admins/owners for group sessions; creator for standalone.</summary>
+    [HttpPatch("api/sessions/{id:guid}/name")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateName(Guid id, [FromBody] UpdateNameRequest body, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new UpdateSessionNameCommand(id, body.Name), cancellationToken);
+        return NoContent();
+    }
+
     /// <summary>Updates the free-text notes on a session. Any group member can call this.</summary>
     [HttpPatch("api/sessions/{id:guid}/notes")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -285,5 +297,6 @@ public sealed record EndSessionFinalStack(Guid SessionPlayerId, decimal Amount);
 public sealed record AddPlayerRequest(Guid? UserId, string? GuestName, Guid? LinkedUserId = null);
 public sealed record AddBuyInRequest(Guid SessionPlayerId, decimal Amount);
 public sealed record AddCashOutRequest(Guid SessionPlayerId, decimal Amount);
+public sealed record UpdateNameRequest(string Name);
 public sealed record UpdateNotesRequest(string? Notes);
 public sealed record AddHandRequest(string WinnerName, decimal PotAmount, string? Note);

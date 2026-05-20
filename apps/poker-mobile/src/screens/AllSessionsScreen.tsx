@@ -8,6 +8,10 @@ import {
   StyleSheet,
   RefreshControl,
   Alert,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,7 +19,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
 import { getMyStats, RecentSessionDto } from '../api/statsApi';
-import { deleteSession } from '../api/sessionsApi';
+import { deleteSession, updateSessionName } from '../api/sessionsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { formatPL, formatDate, formatDuration } from '../utils/formatters';
 
@@ -28,6 +32,9 @@ export default function AllSessionsScreen() {
   const [loading, setLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError]       = useState<string | null>(null);
+  const [renameState, setRenameState] = useState<{ sessionId: string; name: string } | null>(null);
+  const [renameInput, setRenameInput] = useState('');
+  const [renaming, setRenaming] = useState(false);
 
   const load = useCallback(async (isRefresh = false) => {
     if (!isRefresh) setLoading(true);
@@ -53,14 +60,18 @@ export default function AllSessionsScreen() {
     navigation.navigate('Session', { sessionId: s.sessionId, groupId: s.groupId ?? '' });
   }
 
-  function promptDelete(s: RecentSessionDto) {
+  function promptActions(s: RecentSessionDto) {
     Alert.alert(
       s.sessionName,
       s.groupName || undefined,
       [
+        { text: 'Open Session', onPress: () => openSession(s) },
         {
-          text: 'Open Session',
-          onPress: () => openSession(s),
+          text: 'Rename Session',
+          onPress: () => {
+            setRenameState({ sessionId: s.sessionId, name: s.sessionName });
+            setRenameInput(s.sessionName);
+          },
         },
         {
           text: 'Delete Session',
@@ -95,6 +106,26 @@ export default function AllSessionsScreen() {
         },
       ],
     );
+  }
+
+  async function handleRename() {
+    if (!renameState) return;
+    const trimmed = renameInput.trim();
+    if (!trimmed || trimmed === renameState.name) { setRenameState(null); return; }
+    setRenaming(true);
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!token) return;
+      await updateSessionName(token, renameState.sessionId, trimmed);
+      setSessions(prev =>
+        prev.map(s => s.sessionId === renameState.sessionId ? { ...s, sessionName: trimmed } : s),
+      );
+      setRenameState(null);
+    } catch {
+      Alert.alert('Error', 'Failed to rename session. Please try again.');
+    } finally {
+      setRenaming(false);
+    }
   }
 
   const active   = sessions.filter(s => s.status === 'Active');
@@ -171,34 +202,83 @@ export default function AllSessionsScreen() {
             return (
               <React.Fragment key={s.sessionId}>
                 {i > 0 && <View style={styles.divider} />}
-                <TouchableOpacity style={styles.row} onPress={() => openSession(s)} activeOpacity={0.7}>
-                  <View style={styles.rowLeft}>
-                    <Text style={styles.sessionName}>{s.sessionName}</Text>
-                    <Text style={styles.groupName}>
-                      {s.groupName}  ·  {formatDate(s.createdAt)}
-                      {s.startedAt && s.endedAt ? `  ·  ${formatDuration(s.startedAt, s.endedAt)}` : ''}
-                    </Text>
-                  </View>
-                  {pl != null ? (
-                    <Text style={[styles.plValue, { color: plColor }]}>{formatPL(pl)}</Text>
-                  ) : (
-                    <Text style={styles.chevron}>›</Text>
-                  )}
+                <View style={styles.rowWrapper}>
+                  <TouchableOpacity style={styles.row} onPress={() => openSession(s)} activeOpacity={0.7}>
+                    <View style={styles.rowLeft}>
+                      <Text style={styles.sessionName}>{s.sessionName}</Text>
+                      <Text style={styles.groupName}>
+                        {s.groupName}  ·  {formatDate(s.createdAt)}
+                        {s.startedAt && s.endedAt ? `  ·  ${formatDuration(s.startedAt, s.endedAt)}` : ''}
+                      </Text>
+                    </View>
+                    {pl != null ? (
+                      <Text style={[styles.plValue, { color: plColor }]}>{formatPL(pl)}</Text>
+                    ) : (
+                      <Text style={styles.chevron}>›</Text>
+                    )}
+                  </TouchableOpacity>
                   {canManage && (
                     <TouchableOpacity
                       style={styles.moreBtn}
-                      onPress={() => promptDelete(s)}
-                      hitSlop={8}
+                      onPress={() => promptActions(s)}
+                      hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
                     >
                       <Text style={styles.moreBtnText}>···</Text>
                     </TouchableOpacity>
                   )}
-                </TouchableOpacity>
+                </View>
               </React.Fragment>
             );
           })}
         </View>
       )}
+      {/* Rename modal */}
+      <Modal
+        visible={renameState !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRenameState(null)}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Rename Session</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={renameInput}
+              onChangeText={setRenameInput}
+              placeholder="Session name"
+              placeholderTextColor={colors.textDim}
+              autoFocus
+              maxLength={80}
+              returnKeyType="done"
+              onSubmitEditing={handleRename}
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancel}
+                onPress={() => setRenameState(null)}
+                disabled={renaming}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalSave, (!renameInput.trim() || renaming) && styles.modalSaveDisabled]}
+                onPress={handleRename}
+                disabled={!renameInput.trim() || renaming}
+              >
+                {renaming ? (
+                  <ActivityIndicator size="small" color={colors.background} />
+                ) : (
+                  <Text style={styles.modalSaveText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </ScrollView>
   );
 }
@@ -251,6 +331,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   row: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
@@ -265,6 +346,7 @@ const styles = StyleSheet.create({
   moreBtnText: { fontSize: 16, color: colors.textMuted, letterSpacing: 1 },
 
   divider: { height: 1, backgroundColor: colors.border, marginHorizontal: 16 },
+  rowWrapper: { flexDirection: 'row', alignItems: 'center' },
 
   newGameCta: {
     flexDirection: 'row',
@@ -295,4 +377,49 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 15, color: colors.error, textAlign: 'center', marginHorizontal: 24 },
   retryBtn:  { borderWidth: 1, borderColor: colors.gold, borderRadius: 8, paddingHorizontal: 20, paddingVertical: 8 },
   retryText: { color: colors.gold, fontWeight: '600' },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: colors.bgOverlay,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  modalCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    padding: 24,
+    gap: 16,
+  },
+  modalTitle: { fontSize: 17, fontWeight: '700', color: colors.text },
+  modalInput: {
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: colors.text,
+  },
+  modalActions: { flexDirection: 'row', gap: 10 },
+  modalCancel: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  modalCancelText: { fontSize: 15, fontWeight: '600', color: colors.textMuted },
+  modalSave: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 10,
+    backgroundColor: colors.gold,
+    alignItems: 'center',
+  },
+  modalSaveDisabled: { opacity: 0.5 },
+  modalSaveText: { fontSize: 15, fontWeight: '700', color: colors.background },
 });
