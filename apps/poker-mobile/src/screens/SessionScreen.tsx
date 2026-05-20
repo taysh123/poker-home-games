@@ -18,6 +18,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
+import { typography } from '../theme/typography';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import {
@@ -949,13 +950,13 @@ export default function SessionScreen({ route, navigation }: Props) {
           </View>
         )}
 
-        <View style={{ height: isActive ? (isAdminOrOwner ? 210 : 160) : 100 }} />
+        <View style={{ height: isActive ? (isAdminOrOwner ? 230 : 170) : 100 }} />
       </ScrollView>
 
       {/* ── Floating Log Hand button (Active) ── */}
       {isActive && (
         <TouchableOpacity
-          style={[styles.fab, isAdminOrOwner && { bottom: 140 }]}
+          style={[styles.fab, isAdminOrOwner && { bottom: Platform.OS === 'ios' ? 158 : 140 }]}
           onPress={() => { setHandPot(''); setHandWinner(''); setHandNote(''); setHandModal(true); }}
         >
           <Text style={styles.fabText}>+ Hand</Text>
@@ -972,20 +973,26 @@ export default function SessionScreen({ route, navigation }: Props) {
       {/* ── Bottom Action Bar (Active sessions only) ── */}
       {isActive && (
         <View style={styles.actionBar}>
-          {(['buyin', 'buyin', 'cashout'] as const).map((type, idx) => {
-            const label = idx === 0 ? 'Buy In' : idx === 1 ? 'Rebuy' : 'Cash Out';
-            const isLast = idx === 2;
-            return (
-              <TouchableOpacity
-                key={idx}
-                style={[styles.actionBarBtn, isLast && styles.actionBarBtnCash]}
-                onPress={() => openActionBar(type)}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.actionBarBtnText, isLast && styles.actionBarBtnTextCash]}>{label}</Text>
-              </TouchableOpacity>
-            );
-          })}
+          <TouchableOpacity style={styles.actionBarBtn} onPress={() => openActionBar('buyin')} activeOpacity={0.8}>
+            <Text style={styles.actionBarBtnIcon}>+</Text>
+            <Text style={styles.actionBarBtnText}>Buy In</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionBarBtn} onPress={() => openActionBar('buyin')} activeOpacity={0.8}>
+            <Text style={styles.actionBarBtnIcon}>↺</Text>
+            <Text style={styles.actionBarBtnText}>Rebuy</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.actionBarBtn, styles.actionBarBtnCash]} onPress={() => openActionBar('cashout')} activeOpacity={0.8}>
+            <Text style={[styles.actionBarBtnIcon, styles.actionBarBtnIconCash]}>$</Text>
+            <Text style={[styles.actionBarBtnText, styles.actionBarBtnTextCash]}>Cash Out</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBarBtn, styles.actionBarBtnPlayer]}
+            onPress={() => { setAddPlayerModal(true); setPlayerSearch(''); setGuestName(''); }}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.actionBarBtnIcon, styles.actionBarBtnIconPlayer]}>＋</Text>
+            <Text style={[styles.actionBarBtnText, styles.actionBarBtnTextPlayer]}>Player</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -993,6 +1000,7 @@ export default function SessionScreen({ route, navigation }: Props) {
       <Modal visible={txModal.visible} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.sheet}>
+            <View style={styles.sheetHandle} />
             <View style={styles.sheetTitleRow}>
               <View>
                 <Text style={styles.sheetTitle}>
@@ -1118,6 +1126,7 @@ export default function SessionScreen({ route, navigation }: Props) {
       <Modal visible={addPlayerModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={[styles.sheet, styles.sheetTall]}>
+            <View style={styles.sheetHandle} />
             <View style={styles.sheetTitleRow}>
               <Text style={styles.sheetTitle}>Add Player</Text>
               <TouchableOpacity onPress={() => setAddPlayerModal(false)} hitSlop={8}>
@@ -1174,6 +1183,7 @@ export default function SessionScreen({ route, navigation }: Props) {
       <Modal visible={endStep === 1} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={[styles.sheet, styles.sheetTall]}>
+            <View style={styles.sheetHandle} />
             <View style={styles.sheetTitleRow}>
               <Text style={styles.sheetTitle}>Final Stacks</Text>
               <TouchableOpacity onPress={() => setEndStep(0)} hitSlop={8}>
@@ -1227,6 +1237,7 @@ export default function SessionScreen({ route, navigation }: Props) {
       <Modal visible={endStep === 2} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={[styles.sheet, styles.sheetTall]}>
+            <View style={styles.sheetHandle} />
             <Text style={styles.summaryTitle}>🏆 Game Over!</Text>
             <Text style={styles.summarySessionName}>{session.name}</Text>
             {session.startedAt && (
@@ -1284,6 +1295,7 @@ export default function SessionScreen({ route, navigation }: Props) {
       <Modal visible={handModal} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.sheet}>
+            <View style={styles.sheetHandle} />
             <View style={styles.sheetTitleRow}>
               <Text style={styles.sheetTitle}>Log Hand</Text>
               <TouchableOpacity onPress={() => setHandModal(false)} hitSlop={8}>
@@ -1398,7 +1410,7 @@ const styles = StyleSheet.create({
   backBtn: { padding: 4 },
   backArrow: { fontSize: 28, color: colors.text, lineHeight: 32 },
   headerCenter: { flex: 1 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
+  headerTitle: { ...typography.h3, color: colors.text },
   headerMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   timer: { fontSize: 12, color: colors.textMuted, fontWeight: '600' },
   liveDot: {
@@ -1505,15 +1517,15 @@ const styles = StyleSheet.create({
   plZero: { color: colors.textMuted },
   txButtons: { flexDirection: 'row', gap: 6 },
   txBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 8,
     backgroundColor: 'rgba(201,168,76,0.15)',
     borderWidth: 1,
     borderColor: colors.gold,
   },
   txBtnCash: { backgroundColor: 'rgba(39,174,96,0.12)', borderColor: colors.success },
-  txBtnText: { fontSize: 11, fontWeight: '700', color: colors.gold },
+  txBtnText: { fontSize: 12, fontWeight: '700', color: colors.gold },
   removeBtn: { padding: 4 },
   removeBtnText: { fontSize: 16, color: colors.error },
 
@@ -1523,16 +1535,20 @@ const styles = StyleSheet.create({
   // End Game sticky CTA bar
   endGameBar: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 88 : 72,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.gold,
-    paddingVertical: 14,
+    bottom: Platform.OS === 'ios' ? 98 : 80,
+    left: 16,
+    right: 16,
+    backgroundColor: colors.error,
+    paddingVertical: 13,
     alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(201,168,76,0.4)',
+    borderRadius: 12,
+    shadowColor: colors.error,
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
   },
-  endGameBarText: { fontSize: 15, fontWeight: '800', color: colors.background, letterSpacing: 0.5 },
+  endGameBarText: { fontSize: 15, fontWeight: '800', color: colors.text, letterSpacing: 0.5 },
 
   // Chip/Money pill toggle row
   chipPillRow: {
@@ -1713,7 +1729,7 @@ const styles = StyleSheet.create({
   // FAB
   fab: {
     position: 'absolute',
-    bottom: 88,
+    bottom: Platform.OS === 'ios' ? 92 : 76,
     right: 20,
     backgroundColor: colors.surfaceHigh,
     borderWidth: 1,
@@ -1739,26 +1755,36 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    paddingBottom: Platform.OS === 'ios' ? 28 : 8,
-    paddingTop: 8,
-    paddingHorizontal: 12,
-    gap: 8,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 10,
+    paddingTop: 10,
+    paddingHorizontal: 10,
+    gap: 6,
   },
   actionBarBtn: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 10,
     alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: 10,
     backgroundColor: 'rgba(201,168,76,0.12)',
     borderWidth: 1,
     borderColor: colors.gold,
+    gap: 2,
   },
   actionBarBtnCash: {
     backgroundColor: 'rgba(39,174,96,0.10)',
     borderColor: colors.success,
   },
-  actionBarBtnText: { fontSize: 13, fontWeight: '700', color: colors.gold },
+  actionBarBtnPlayer: {
+    backgroundColor: colors.surfaceHigh,
+    borderColor: colors.border,
+  },
+  actionBarBtnIcon: { fontSize: 14, fontWeight: '800', color: colors.gold, lineHeight: 16 },
+  actionBarBtnIconCash: { color: colors.success },
+  actionBarBtnIconPlayer: { color: colors.textMuted },
+  actionBarBtnText: { fontSize: 11, fontWeight: '700', color: colors.gold },
   actionBarBtnTextCash: { color: colors.success },
+  actionBarBtnTextPlayer: { color: colors.textMuted },
 
   // Preset amount chips
   presetRow: { flexDirection: 'row', gap: 8, justifyContent: 'center' },
@@ -1788,8 +1814,17 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 24,
+    paddingTop: 12,
     paddingBottom: Platform.OS === 'ios' ? 40 : 24,
     gap: 12,
+  },
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+    alignSelf: 'center',
+    marginBottom: 8,
   },
   sheetTall: { maxHeight: '85%' },
   sheetTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
