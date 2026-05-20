@@ -8,14 +8,14 @@ import {
   StyleSheet,
   RefreshControl,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
 import { getMyStats, MyStatsDto, RecentSessionDto } from '../api/statsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Stats'>;
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 function formatPL(value: number): string {
   const abs = Math.abs(Math.round(value));
@@ -26,7 +26,8 @@ function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-export default function StatsScreen({ navigation }: Props) {
+export default function StatsScreen() {
+  const navigation = useNavigation<Nav>();
   const [stats, setStats] = useState<MyStatsDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

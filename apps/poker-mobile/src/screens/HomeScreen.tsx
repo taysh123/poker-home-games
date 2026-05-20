@@ -15,7 +15,7 @@ import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import { getMyGroups, getMyInvitations, MyGroupDto, PendingInvitationDto } from '../api/groupsApi';
-import { getMyStats, MyStatsDto, RecentSessionDto } from '../api/statsApi';
+import { getMyStats, MyStatsDto } from '../api/statsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import SkeletonCard from '../components/SkeletonCard';
 
@@ -33,9 +33,6 @@ function formatProfitLoss(value: number): string {
   return `${value >= 0 ? '+' : '-'}₪${abs.toLocaleString()}`;
 }
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
 
 export default function HomeScreen() {
   const { user, logout } = useAuth();
@@ -85,18 +82,14 @@ export default function HomeScreen() {
     }
   }
 
-  function handleSessionPress(session: RecentSessionDto) {
-    navigation.navigate('Session', {
-      sessionId: session.sessionId,
-      groupId: session.groupId,
-    });
+  function handleSessionPress(sessionId: string, groupId: string) {
+    navigation.navigate('Session', { sessionId, groupId });
   }
 
   const initial = user?.username?.[0]?.toUpperCase() ?? '?';
   const previewGroups = groups.slice(0, 3);
 
   const activeSessions = stats?.recentSessions.filter(s => s.status === 'Active') ?? [];
-  const recentSessions = (stats?.recentSessions ?? []).slice(0, 5);
 
   const plValue = stats?.totalProfitLoss ?? 0;
   const plColor = plValue > 0 ? colors.success : plValue < 0 ? colors.error : colors.gold;
@@ -145,7 +138,7 @@ export default function HomeScreen() {
                 {i > 0 && <View style={styles.divider} />}
                 <TouchableOpacity
                   style={styles.activeRow}
-                  onPress={() => handleSessionPress(s)}
+                  onPress={() => handleSessionPress(s.sessionId, s.groupId)}
                   activeOpacity={0.7}
                 >
                   <View style={styles.activePulse} />
@@ -165,7 +158,7 @@ export default function HomeScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>My Stats</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Stats')}>
+          <TouchableOpacity onPress={() => navigation.navigate('AllSessions')}>
             <Text style={styles.seeAll}>See all →</Text>
           </TouchableOpacity>
         </View>
@@ -302,76 +295,6 @@ export default function HomeScreen() {
         )}
       </View>
 
-      {/* ── Recent Sessions ── */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Sessions</Text>
-          {recentSessions.length > 0 && (
-            <TouchableOpacity onPress={() => navigation.navigate('Stats')}>
-              <Text style={styles.seeAll}>See all →</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-        {statsLoading ? (
-          <View style={styles.emptyCard}>
-            <ActivityIndicator color={colors.gold} size="small" />
-          </View>
-        ) : recentSessions.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptySubtitle}>No sessions played yet</Text>
-          </View>
-        ) : (
-          <View style={styles.groupsCard}>
-            {recentSessions.map((s, i) => {
-              const isActive   = s.status === 'Active';
-              const isFinished = s.status === 'Finished';
-              const plVal      = s.profitLoss;
-              const plClr      = plVal != null && plVal > 0
-                ? colors.success
-                : plVal != null && plVal < 0
-                  ? colors.error
-                  : colors.textMuted;
-              return (
-                <React.Fragment key={s.sessionId}>
-                  {i > 0 && <View style={styles.divider} />}
-                  <TouchableOpacity
-                    style={styles.groupRow}
-                    onPress={() => handleSessionPress(s)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.groupRowLeft}>
-                      <View style={styles.sessionNameRow}>
-                        <Text style={styles.groupRowName}>{s.sessionName}</Text>
-                        <View style={[
-                          styles.statusBadge,
-                          isActive ? styles.badgeActive : styles.badgeNeutral,
-                        ]}>
-                          <Text style={[
-                            styles.statusBadgeText,
-                            isActive ? styles.badgeActiveText : styles.badgeNeutralText,
-                          ]}>
-                            {s.status.toUpperCase()}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text style={styles.groupRowMeta}>
-                        {s.groupName}  ·  {formatDate(s.createdAt)}
-                      </Text>
-                    </View>
-                    {isFinished && plVal != null ? (
-                      <Text style={[styles.sessionPl, { color: plClr }]}>
-                        {formatProfitLoss(plVal)}
-                      </Text>
-                    ) : (
-                      <Text style={styles.rowChevron}>›</Text>
-                    )}
-                  </TouchableOpacity>
-                </React.Fragment>
-              );
-            })}
-          </View>
-        )}
-      </View>
     </ScrollView>
   );
 }

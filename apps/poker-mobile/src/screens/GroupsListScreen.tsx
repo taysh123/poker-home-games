@@ -7,16 +7,17 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
 import { getMyGroups, getMyInvitations, MyGroupDto } from '../api/groupsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'GroupsList'>;
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-export default function GroupsListScreen({ navigation }: Props) {
+export default function GroupsListScreen() {
+  const navigation = useNavigation<Nav>();
   const [groups, setGroups] = useState<MyGroupDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
