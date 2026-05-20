@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PokerApp.Application.Features.Groups.Commands.CreateGroup;
 using PokerApp.Application.Features.Groups.Commands.InviteUser;
+using PokerApp.Application.Features.Groups.Commands.DeleteGroup;
 using PokerApp.Application.Features.Groups.Commands.LeaveGroup;
 using PokerApp.Application.Features.Groups.Commands.RemoveMember;
 using PokerApp.Application.Features.Groups.Commands.UpdateGroup;
@@ -125,6 +126,17 @@ public class GroupsController(IMediator mediator) : ControllerBase
     {
         var result = await mediator.Send(new GetGroupLeaderboardQuery(id), cancellationToken);
         return Ok(result);
+    }
+
+    /// <summary>Permanently deletes the group. Only the group owner can do this.</summary>
+    [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteGroup(Guid id, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new DeleteGroupCommand(id), cancellationToken);
+        return NoContent();
     }
 
     /// <summary>Leaves the group. The group owner cannot leave.</summary>

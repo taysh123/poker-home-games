@@ -154,6 +154,10 @@ export async function leaveGroup(token: string, groupId: string): Promise<void> 
   });
 }
 
+export async function deleteGroup(token: string, groupId: string): Promise<void> {
+  await api.delete(`/api/groups/${groupId}`, { headers: authHeader(token) });
+}
+
 export async function updateGroup(
   token: string,
   groupId: string,

@@ -23,6 +23,7 @@ import {
   sendGroupInvitation,
   removeGroupMember,
   leaveGroup,
+  deleteGroup,
 } from '../api/groupsApi';
 import { getGroupActivity, ActivityLogDto } from '../api/activityApi';
 import { useAuth } from '../context/AuthContext';
@@ -159,6 +160,30 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
               navigation.navigate('GroupsList');
             } catch {
               Alert.alert('Error', 'Failed to leave group.');
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleDeleteGroup = () => {
+    Alert.alert(
+      'Delete Group',
+      `Permanently delete "${group?.name ?? groupName}"? This cannot be undone. All sessions, members, and history will be removed.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const token = await SecureStore.getItemAsync('accessToken');
+              if (!token) return;
+              await deleteGroup(token, groupId);
+              navigation.navigate('GroupsList');
+            } catch {
+              Alert.alert('Error', 'Failed to delete group.');
             }
           },
         },
@@ -317,6 +342,11 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
           {!isOwner && (
             <TouchableOpacity style={styles.leaveButton} onPress={handleLeaveGroup}>
               <Text style={styles.leaveButtonText}>Leave Group</Text>
+            </TouchableOpacity>
+          )}
+          {isOwner && (
+            <TouchableOpacity style={styles.deleteGroupButton} onPress={handleDeleteGroup}>
+              <Text style={styles.deleteGroupButtonText}>Delete Group</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -549,6 +579,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   leaveButtonText: { fontSize: 15, fontWeight: '600', color: colors.error },
+
+  deleteGroupButton: {
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: colors.error,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    backgroundColor: 'rgba(231,76,60,0.08)',
+  },
+  deleteGroupButtonText: { fontSize: 15, fontWeight: '700', color: colors.error },
 
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   badgeOwner: {
