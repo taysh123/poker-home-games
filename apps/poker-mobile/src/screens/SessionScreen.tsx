@@ -48,7 +48,7 @@ import {
   updateSessionNotes,
   HandRecordDto,
 } from '../api/handsApi';
-import { exportSessionCsv } from '../utils/exportUtils';
+import { exportSessionCsv, shareSessionCard } from '../utils/exportUtils';
 import { successNotification, errorNotification, lightTap } from '../utils/haptics';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Session'>;
@@ -132,6 +132,7 @@ export default function SessionScreen({ route, navigation }: Props) {
 
   // Export
   const [exporting, setExporting] = useState(false);
+  const [sharing, setSharing]     = useState(false);
 
   // Delete session
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -438,6 +439,24 @@ export default function SessionScreen({ route, navigation }: Props) {
     }
   }
 
+  async function handleShareCard() {
+    if (!session || !balances) return;
+    setSharing(true);
+    try {
+      const date = new Date(session.endedAt ?? session.createdAt).toLocaleDateString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric',
+      });
+      const dur = session.startedAt && session.endedAt
+        ? formatDuration(session.startedAt, session.endedAt)
+        : '';
+      await shareSessionCard(session.name, '', date, dur, balances, settlements);
+    } catch (e: any) {
+      Alert.alert('Share Failed', e?.message ?? 'Could not generate share card.');
+    } finally {
+      setSharing(false);
+    }
+  }
+
   // ── Delete Session ──
 
   function handleDeleteSession() {
@@ -552,7 +571,12 @@ export default function SessionScreen({ route, navigation }: Props) {
           </View>
           {isFinished && (
             <TouchableOpacity onPress={handleExport} style={styles.exportBtn} disabled={exporting}>
-              {exporting ? <ActivityIndicator color={colors.gold} size="small" /> : <Text style={styles.exportText}>Export</Text>}
+              {exporting ? <ActivityIndicator color={colors.gold} size="small" /> : <Text style={styles.exportText}>CSV</Text>}
+            </TouchableOpacity>
+          )}
+          {isFinished && balances.length > 0 && (
+            <TouchableOpacity onPress={handleShareCard} style={styles.exportBtn} disabled={sharing}>
+              {sharing ? <ActivityIndicator color={colors.gold} size="small" /> : <Text style={styles.exportText}>Share</Text>}
             </TouchableOpacity>
           )}
           {isAdminOrOwner && (

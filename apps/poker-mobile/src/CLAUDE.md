@@ -78,16 +78,16 @@ import * as SecureStore from '../utils/storage'; // not 'expo-secure-store'
 
 ## navigation/AppNavigator.tsx
 
-Single `createNativeStackNavigator`. Auth-gated: renders Login+Register when
-`user === null`, all app screens otherwise. React Navigation automatically swaps the
-stack when `user` changes — no manual `navigation.replace()` needed.
+Two-level navigator. Auth-gated: renders Login+Register when `user === null`.
+When logged in: a **bottom tab navigator** (`MainTabs`) sits at the root of the app stack,
+with deep screens (GroupDetail, Session, etc.) pushed on top of it (tab bar hides when inside a session).
 
-**Header defaults for authenticated screens:**
-- Background: `colors.background`
-- Tint (back arrow + title): `colors.text`
-- Bold title
+**Tabs:** Home | Sessions (AllSessions) | Groups (GroupsList) | Stats
 
-Screens with `headerShown: false`: Login, Register, Home (all have their own full-screen UI).
+**Deep screens above tabs (root stack):** GroupDetail, Invitations, EditGroup, SessionsList,
+CreateSession (modal), Session, Settlement, Profile, CreateGroup (modal)
+
+React Navigation automatically swaps Auth ↔ App when `user` changes — no manual `navigation.replace()` needed.
 
 ---
 
@@ -101,20 +101,24 @@ Each screen is self-contained. It owns:
 
 **Screens inventory:**
 
-| Screen | Route | Purpose |
-|--------|-------|---------|
-| `LoginScreen` | Login | Email/password sign-in |
-| `RegisterScreen` | Register | New account creation |
-| `HomeScreen` | Home | Dashboard: stats, recent groups/sessions |
-| `GroupsListScreen` | GroupsList | All user groups |
-| `CreateGroupScreen` | CreateGroup (modal) | New group form |
-| `GroupDetailScreen` | GroupDetail | Group info, members, sessions |
-| `SessionsListScreen` | SessionsList | Sessions in a group |
-| `CreateSessionScreen` | CreateSession (modal) | New session form |
-| `SessionDetailScreen` | SessionDetail | Live session: players, buy-ins, cash-outs |
-| `SessionSummaryScreen` | SessionSummary | Finished session results |
-| `SettlementScreen` | Settlement | Who owes who, mark paid |
-| `SplashScreen` | — | Initial loading screen |
+| Screen | Route | Tab? | Purpose |
+|--------|-------|------|---------|
+| `LoginScreen` | Login | — | Email/password sign-in |
+| `RegisterScreen` | Register | — | New account creation |
+| `HomeScreen` | Home | ✅ Tab 1 | Dashboard: active sessions, quick stats, groups |
+| `AllSessionsScreen` | AllSessions | ✅ Tab 2 | All sessions across groups (active first, then recent) |
+| `GroupsListScreen` | GroupsList | ✅ Tab 3 | All user groups |
+| `StatsScreen` | Stats | ✅ Tab 4 | Lifetime P&L, win/loss record, session history |
+| `CreateGroupScreen` | CreateGroup (modal) | — | New group form |
+| `GroupDetailScreen` | GroupDetail | — | Group info, members, leaderboard, activity |
+| `InvitationsScreen` | Invitations | — | Accept/decline group invites |
+| `EditGroupScreen` | EditGroup (modal) | — | Edit group name/description |
+| `SessionsListScreen` | SessionsList | — | Sessions in a group |
+| `CreateSessionScreen` | CreateSession (modal) | — | New session form |
+| `SessionScreen` | Session | — | Unified live + finished session (Draft/Active/Finished adaptive) |
+| `SettlementScreen` | Settlement | — | Who owes who, mark paid |
+| `ProfileScreen` | Profile | — | Edit profile, change password, delete account |
+| `SplashScreen` | — | — | Initial loading screen |
 
 ---
 

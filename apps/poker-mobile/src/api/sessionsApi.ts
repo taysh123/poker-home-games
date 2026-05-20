@@ -208,3 +208,11 @@ export async function getSessionBalances(
 export async function deleteSession(token: string, sessionId: string): Promise<void> {
   await api.delete(`/api/sessions/${sessionId}`, { headers: authHeader(token) });
 }
+
+export async function exportSessionCsv(token: string, sessionId: string): Promise<string> {
+  const { data } = await api.get<string>(
+    `/api/sessions/${sessionId}/export`,
+    { headers: authHeader(token) },
+  );
+  return data;
+}
