@@ -21,6 +21,7 @@ import SessionScreen from '../screens/SessionScreen';
 import SettlementScreen from '../screens/SettlementScreen';
 import StatsScreen from '../screens/StatsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import NewGameScreen from '../screens/NewGameScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -35,6 +36,7 @@ export type RootStackParamList = {
   CreateSession: { groupId: string; groupName: string };
   Session: { sessionId: string; groupId: string };
   Settlement: { sessionId: string; sessionName: string };
+  NewGame: { groupId?: string; groupName?: string };
   // Kept for TypeScript compat on existing screens that navigate to these by name
   Home: undefined;
   AllSessions: undefined;
@@ -150,6 +152,7 @@ export default function AppNavigator() {
             <Stack.Screen name="Session"       component={SessionScreen}         options={{ headerShown: false }} />
             <Stack.Screen name="Settlement"    component={SettlementScreen}      options={{ title: 'Settle Up' }} />
             <Stack.Screen name="Profile"       component={ProfileScreen}         options={{ title: 'My Profile' }} />
+            <Stack.Screen name="NewGame"       component={NewGameScreen}         options={{ headerShown: false }} />
           </>
         )}
       </Stack.Navigator>

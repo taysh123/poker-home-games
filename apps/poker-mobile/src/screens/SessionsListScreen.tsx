@@ -33,7 +33,7 @@ export default function SessionsListScreen({ route, navigation }: Props) {
       headerTitleStyle: { fontWeight: '700' },
       headerRight: () => (
         <TouchableOpacity
-          onPress={() => navigation.navigate('CreateSession', { groupId, groupName })}
+          onPress={() => navigation.navigate('NewGame', { groupId, groupName })}
           style={{ marginRight: 4 }}
         >
           <Text style={{ color: colors.gold, fontSize: 28, lineHeight: 32 }}>+</Text>

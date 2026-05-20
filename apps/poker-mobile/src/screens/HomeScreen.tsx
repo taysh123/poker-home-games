@@ -128,6 +128,17 @@ export default function HomeScreen() {
           : <Text style={styles.logoutText}>Sign Out</Text>}
       </TouchableOpacity>
 
+      {/* ── New Game CTA ── */}
+      <TouchableOpacity
+        style={styles.newGameBtn}
+        onPress={() => navigation.navigate('NewGame', {})}
+        activeOpacity={0.85}
+      >
+        <Text style={styles.newGameIcon}>♠</Text>
+        <Text style={styles.newGameText}>New Game</Text>
+        <Text style={styles.newGameChevron}>›</Text>
+      </TouchableOpacity>
+
       {/* ── Active Sessions — dominant, shown first ── */}
       {activeSessions.length > 0 && (
         <View style={styles.section}>
@@ -336,10 +347,29 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.border,
-    marginBottom: 28,
+    marginBottom: 16,
   },
   logoutButtonDisabled: { opacity: 0.5 },
   logoutText: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
+
+  newGameBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.gold,
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 22,
+    marginBottom: 28,
+    gap: 12,
+    shadowColor: colors.gold,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  newGameIcon: { fontSize: 24 },
+  newGameText: { flex: 1, fontSize: 18, fontWeight: '800', color: colors.background },
+  newGameChevron: { fontSize: 24, color: colors.background, fontWeight: '300' },
 
   section: { marginBottom: 28 },
   sectionHeader: {
