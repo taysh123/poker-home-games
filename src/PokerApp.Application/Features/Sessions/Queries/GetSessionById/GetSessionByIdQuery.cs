@@ -8,6 +8,7 @@ public sealed record SessionDetailDto(
     Guid Id,
     string Name,
     Guid? GroupId,
+    string? GroupName,
     Guid CreatorId,
     string Status,
     decimal? ChipRatio,

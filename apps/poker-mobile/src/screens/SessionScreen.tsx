@@ -515,7 +515,7 @@ export default function SessionScreen({ route, navigation }: Props) {
       const dur = session.startedAt && session.endedAt
         ? formatDuration(session.startedAt, session.endedAt)
         : '';
-      await shareSessionCard(session.name, '', date, dur, balances, settlements);
+      await shareSessionCard(session.name, session.groupName ?? '', date, dur, balances, settlements);
     } catch (e: any) {
       Alert.alert('Share Failed', e?.message ?? 'Could not generate share card.');
     } finally {

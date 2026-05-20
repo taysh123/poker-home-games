@@ -18,6 +18,7 @@ public sealed class GetSessionByIdQueryHandler(
             .AsNoTracking()
             .Include(s => s.SessionPlayers)
                 .ThenInclude(sp => sp.User)
+            .Include(s => s.Group)
             .FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken)
             ?? throw new NotFoundException(nameof(Session), request.SessionId);
 
@@ -43,6 +44,7 @@ public sealed class GetSessionByIdQueryHandler(
             session.Id,
             session.Name,
             session.GroupId,
+            session.Group?.Name,
             session.CreatorId,
             session.Status.ToString(),
             session.ChipRatio,
