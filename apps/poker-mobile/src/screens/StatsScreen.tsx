@@ -12,6 +12,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
+import { typography } from '../theme/typography';
 import { getMyStats, MyStatsDto, RecentSessionDto } from '../api/statsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
@@ -128,6 +129,14 @@ export default function StatsScreen() {
         />
       </View>
 
+      {/* ── P&L chart (only when there are finished sessions) ── */}
+      {finishedSessions.length >= 2 && (
+        <>
+          <Text style={styles.sectionTitle}>P&L TREND</Text>
+          <PLBarChart sessions={finishedSessions.slice(-10)} />
+        </>
+      )}
+
       {/* ── Active sessions ── */}
       {activeSessions.length > 0 && (
         <>
@@ -172,6 +181,35 @@ export default function StatsScreen() {
         </View>
       )}
     </ScrollView>
+  );
+}
+
+function PLBarChart({ sessions }: { sessions: RecentSessionDto[] }) {
+  const values = sessions.map(s => s.profitLoss ?? 0);
+  const maxAbs = Math.max(...values.map(Math.abs), 1);
+  const CHART_H = 90;
+
+  return (
+    <View style={styles.chartCard}>
+      <View style={styles.chartArea}>
+        {/* Zero line */}
+        <View style={styles.chartZeroLine} />
+        {/* Bars */}
+        <View style={styles.chartBars}>
+          {values.map((v, i) => {
+            const ratio = Math.abs(v) / maxAbs;
+            const barH = Math.max(Math.round(ratio * (CHART_H / 2)), 3);
+            const isPos = v >= 0;
+            return (
+              <View key={i} style={styles.chartBarCol}>
+                <View style={[styles.chartBarTop, { height: isPos ? barH : 0 }, isPos && styles.chartBarWin]} />
+                <View style={[styles.chartBarBot, { height: isPos ? 0 : barH }, !isPos && styles.chartBarLoss]} />
+              </View>
+            );
+          })}
+        </View>
+      </View>
+    </View>
   );
 }
 
@@ -250,7 +288,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-  heroAmount: { fontSize: 42, fontWeight: '800', letterSpacing: -1 },
+  heroAmount: { ...typography.hero },
   heroSub: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
 
   sectionTitle: {
@@ -322,6 +360,52 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: colors.gold,
   },
+
+  chartCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 20,
+  },
+  chartArea: {
+    height: 90,
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  chartZeroLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '50%',
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  chartBars: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 90,
+    gap: 4,
+  },
+  chartBarCol: {
+    flex: 1,
+    height: 90,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chartBarTop: {
+    width: '80%',
+    borderTopLeftRadius: 3,
+    borderTopRightRadius: 3,
+  },
+  chartBarBot: {
+    width: '80%',
+    borderBottomLeftRadius: 3,
+    borderBottomRightRadius: 3,
+  },
+  chartBarWin: { backgroundColor: colors.success },
+  chartBarLoss: { backgroundColor: colors.error },
 
   emptyCard: {
     backgroundColor: colors.surface,

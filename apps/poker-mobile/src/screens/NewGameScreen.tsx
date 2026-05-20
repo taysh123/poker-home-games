@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,11 +10,11 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Alert,
-  Animated,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
+import { typography } from '../theme/typography';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { getMyGroups, getGroupMembers, MyGroupDto, GroupMemberDto } from '../api/groupsApi';
@@ -35,21 +35,10 @@ export default function NewGameScreen({ route, navigation }: Props) {
 
   // Step: 1 = Details, 2 = Players, 3 = Review
   const [step, setStep] = useState(1);
-  const progressAnim = useRef(new Animated.Value(1 / 3)).current;
-
-  const STEP_LABELS = ['Game Details', 'Add Players', 'Review'];
-
-  function animateProgress(toStep: number) {
-    Animated.timing(progressAnim, {
-      toValue: toStep / 3,
-      duration: 300,
-      useNativeDriver: false,
-    }).start();
-  }
+  const STEP_LABELS = ['Details', 'Players', 'Review'];
 
   function goToStep(n: number) {
     setStep(n);
-    animateProgress(n);
   }
   const [starting, setStarting] = useState(false);
 
@@ -224,15 +213,30 @@ export default function NewGameScreen({ route, navigation }: Props) {
           <Text style={styles.backArrow}>‹</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>New Game</Text>
-        <Text style={styles.headerStep}>{step} / 3</Text>
+        <View style={{ width: 32 }} />
       </View>
 
-      {/* Progress bar */}
-      <View style={styles.progressTrack}>
-        <Animated.View style={[styles.progressFill, { flex: progressAnim }]} />
-        <Animated.View style={{ flex: Animated.subtract(1, progressAnim) }} />
+      {/* Step indicator */}
+      <View style={styles.stepIndicator}>
+        {STEP_LABELS.map((label, i) => {
+          const n = i + 1;
+          const active = step === n;
+          const done = step > n;
+          return (
+            <React.Fragment key={n}>
+              {i > 0 && <View style={[styles.stepConnector, (done || active) && styles.stepConnectorActive]} />}
+              <View style={styles.stepItem}>
+                <View style={[styles.stepCircle, active && styles.stepCircleActive, done && styles.stepCircleDone]}>
+                  <Text style={[styles.stepCircleText, active && styles.stepCircleTextActive, done && styles.stepCircleTextDone]}>
+                    {done ? '✓' : String(n)}
+                  </Text>
+                </View>
+                <Text style={[styles.stepLabel, active && styles.stepLabelActive]}>{label}</Text>
+              </View>
+            </React.Fragment>
+          );
+        })}
       </View>
-      <Text style={styles.progressLabel}>{STEP_LABELS[step - 1]}</Text>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
@@ -478,25 +482,46 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   backArrow: { fontSize: 28, color: colors.text, lineHeight: 32 },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: colors.text },
-  headerStep: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
+  headerTitle: { flex: 1, ...typography.h3, color: colors.text },
 
-  progressTrack: {
+  // Step indicator
+  stepIndicator: {
     flexDirection: 'row',
-    height: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  stepItem: { alignItems: 'center', gap: 6 },
+  stepConnector: {
+    flex: 1,
+    height: 2,
     backgroundColor: colors.border,
+    marginBottom: 18,
+    marginHorizontal: 4,
+    maxWidth: 48,
   },
-  progressFill: { backgroundColor: colors.gold },
-  progressLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 4,
+  stepConnectorActive: { backgroundColor: colors.gold },
+  stepCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceHigh,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  stepCircleActive: { borderColor: colors.gold, backgroundColor: 'rgba(201,168,76,0.15)' },
+  stepCircleDone: { borderColor: colors.gold, backgroundColor: colors.gold },
+  stepCircleText: { fontSize: 12, fontWeight: '700', color: colors.textMuted },
+  stepCircleTextActive: { color: colors.gold },
+  stepCircleTextDone: { color: colors.background },
+  stepLabel: { fontSize: 11, fontWeight: '600', color: colors.textDim, textTransform: 'uppercase' as const, letterSpacing: 0.5 },
+  stepLabelActive: { color: colors.gold },
 
   scroll: { flex: 1 },
   content: { padding: 20 },

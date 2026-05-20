@@ -90,7 +90,9 @@ export default function AllSessionsScreen() {
       <Text style={styles.sectionLabel}>Active Now</Text>
       {active.length === 0 ? (
         <View style={styles.emptyCard}>
+          <Text style={styles.emptyCardIcon}>♠</Text>
           <Text style={styles.emptyText}>No active sessions</Text>
+          <Text style={styles.emptySubtext}>Start a new game from the Home tab</Text>
         </View>
       ) : (
         <View style={styles.activeCard}>
@@ -114,7 +116,9 @@ export default function AllSessionsScreen() {
       <Text style={[styles.sectionLabel, { marginTop: 28 }]}>Recent Sessions</Text>
       {finished.length === 0 ? (
         <View style={styles.emptyCard}>
-          <Text style={styles.emptyText}>No finished sessions yet</Text>
+          <Text style={styles.emptyCardIcon}>🃏</Text>
+          <Text style={styles.emptyText}>No sessions yet</Text>
+          <Text style={styles.emptySubtext}>Finished games will appear here</Text>
         </View>
       ) : (
         <View style={styles.card}>
@@ -211,9 +215,11 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 14,
     padding: 24,
-    alignItems: 'center',
+    alignItems: 'center' as const,
   },
-  emptyText: { fontSize: 14, color: colors.textMuted },
+  emptyCardIcon: { fontSize: 28, marginBottom: 4 },
+  emptyText: { fontSize: 14, fontWeight: '600', color: colors.textMuted },
+  emptySubtext: { fontSize: 12, color: colors.textDim, marginTop: 2 },
   errorText: { fontSize: 15, color: colors.error, textAlign: 'center', marginHorizontal: 24 },
   retryBtn:  { borderWidth: 1, borderColor: colors.gold, borderRadius: 8, paddingHorizontal: 20, paddingVertical: 8 },
   retryText: { color: colors.gold, fontWeight: '600' },
