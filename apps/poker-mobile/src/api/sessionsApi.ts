@@ -25,6 +25,7 @@ export type SessionDetailDto = {
   id: string;
   name: string;
   groupId: string | null;
+  creatorId: string;
   status: string;
   chipRatio?: number;
   defaultBuyIn?: number;

@@ -111,8 +111,9 @@ export default function SessionScreen({ route, navigation }: Props) {
   const [addingPlayerId, setAddingPlayerId] = useState<string | null>(null);
   const [addingGuest, setAddingGuest] = useState(false);
 
-  // End session modal (final stacks)
-  const [endModal, setEndModal] = useState(false);
+  // End session modal — 0=closed, 1=final stacks, 2=summary
+  const [endStep, setEndStep] = useState<0 | 1 | 2>(0);
+  const [endSummary, setEndSummary] = useState<{ players: PlayerBalanceDto[]; settlements: SettlementDto[] } | null>(null);
   const [finalStacks, setFinalStacks] = useState<Record<string, string>>({});
   const [endLoading, setEndLoading] = useState(false);
 
@@ -148,7 +149,8 @@ export default function SessionScreen({ route, navigation }: Props) {
   const isActive = session?.status === 'Active';
   const isDraft = session?.status === 'Draft';
   const isFinished = session?.status === 'Finished';
-  const isAdminOrOwner = myRole === 'Admin' || myRole === 'Owner';
+  const isAdminOrOwner = myRole === 'Admin' || myRole === 'Owner'
+    || (session?.groupId == null && session?.creatorId === user?.userId);
 
   const load = useCallback(async (isRefresh = false) => {
     if (!isRefresh) setLoading(true);
@@ -324,7 +326,8 @@ export default function SessionScreen({ route, navigation }: Props) {
     const stacks: Record<string, string> = {};
     session?.players.forEach(p => { stacks[p.sessionPlayerId] = ''; });
     setFinalStacks(stacks);
-    setEndModal(true);
+    setEndSummary(null);
+    setEndStep(1);
   }
 
   async function handleEndSession() {
@@ -341,19 +344,30 @@ export default function SessionScreen({ route, navigation }: Props) {
         }));
 
       await endSession(token, sessionId, finalStackItems);
-      const calcResult = await calculateSettlements(token, sessionId).catch(() => ({ settlements: [], guestBalances: [] }));
+      const [balData, calcResult] = await Promise.all([
+        getSessionBalances(token, sessionId).catch(() => null),
+        calculateSettlements(token, sessionId).catch(() => ({ settlements: [], guestBalances: [] })),
+      ]);
+
+      if (balData) setBalances(balData.players);
       setSettlements(calcResult.settlements);
       setGuestBalances(calcResult.guestBalances);
       setSettlementsLoaded(true);
+      setEndSummary({ players: balData?.players ?? [], settlements: calcResult.settlements });
       successNotification();
-      setEndModal(false);
-      await load(true);
+      setEndStep(2);
     } catch (e: any) {
       errorNotification();
       Alert.alert('Error', e?.response?.data?.message ?? 'Failed to end session.');
     } finally {
       setEndLoading(false);
     }
+  }
+
+  function finishGame() {
+    setEndStep(0);
+    setEndSummary(null);
+    load(true);
   }
 
   // ── Hand Logging ──
@@ -580,16 +594,6 @@ export default function SessionScreen({ route, navigation }: Props) {
                   <Text style={styles.timer}>{formatDuration(session.startedAt, null, tick)}</Text>
                 </>
               )}
-              {session.chipRatio && (
-                <TouchableOpacity
-                  style={[styles.chipToggle, useChips && styles.chipToggleOn]}
-                  onPress={() => setUseChips(v => !v)}
-                >
-                  <Text style={[styles.chipToggleText, useChips && styles.chipToggleTextOn]}>
-                    {useChips ? '🪙 Chips' : '₪ Money'}
-                  </Text>
-                </TouchableOpacity>
-              )}
             </View>
           </View>
           {isFinished && (
@@ -626,6 +630,25 @@ export default function SessionScreen({ route, navigation }: Props) {
             <MetaChip label={`Pot: ${formatMoney(totalPot)}`} gold />
           )}
         </View>
+
+        {/* ── Chip/Money toggle pill (only when chipRatio set) ── */}
+        {session.chipRatio ? (
+          <View style={styles.chipPillRow}>
+            <Text style={styles.chipPillLabel}>Display:</Text>
+            <TouchableOpacity
+              style={[styles.chipPill, !useChips && styles.chipPillActive]}
+              onPress={() => setUseChips(false)}
+            >
+              <Text style={[styles.chipPillText, !useChips && styles.chipPillTextActive]}>₪ Money</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.chipPill, useChips && styles.chipPillActive]}
+              onPress={() => setUseChips(true)}
+            >
+              <Text style={[styles.chipPillText, useChips && styles.chipPillTextActive]}>🪙 Chips</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         {/* ── Players ── */}
         <View style={styles.section}>
@@ -737,12 +760,6 @@ export default function SessionScreen({ route, navigation }: Props) {
           )}
         </View>
 
-        {/* ── End Session button (Active, Admin/Owner) ── */}
-        {isActive && isAdminOrOwner && (
-          <TouchableOpacity style={styles.endSessionBtn} onPress={openEndModal}>
-            <Text style={styles.endSessionBtnText}>End Session</Text>
-          </TouchableOpacity>
-        )}
 
         {/* ── Settlements (Finished) ── */}
         {isFinished && (
@@ -932,16 +949,23 @@ export default function SessionScreen({ route, navigation }: Props) {
           </View>
         )}
 
-        <View style={{ height: isActive ? 160 : 100 }} />
+        <View style={{ height: isActive ? (isAdminOrOwner ? 210 : 160) : 100 }} />
       </ScrollView>
 
       {/* ── Floating Log Hand button (Active) ── */}
       {isActive && (
         <TouchableOpacity
-          style={styles.fab}
+          style={[styles.fab, isAdminOrOwner && { bottom: 140 }]}
           onPress={() => { setHandPot(''); setHandWinner(''); setHandNote(''); setHandModal(true); }}
         >
           <Text style={styles.fabText}>+ Hand</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* ── End Game sticky CTA (Active, Admin/Owner, above action bar) ── */}
+      {isActive && isAdminOrOwner && (
+        <TouchableOpacity style={styles.endGameBar} onPress={openEndModal} activeOpacity={0.85}>
+          <Text style={styles.endGameBarText}>🏁  End Game</Text>
         </TouchableOpacity>
       )}
 
@@ -1146,13 +1170,13 @@ export default function SessionScreen({ route, navigation }: Props) {
         </View>
       </Modal>
 
-      {/* ── End Session Modal ── */}
-      <Modal visible={endModal} transparent animationType="slide">
+      {/* ── End Session Modal (Step 1: Final Stacks) ── */}
+      <Modal visible={endStep === 1} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={[styles.sheet, styles.sheetTall]}>
             <View style={styles.sheetTitleRow}>
-              <Text style={styles.sheetTitle}>End Session</Text>
-              <TouchableOpacity onPress={() => setEndModal(false)} hitSlop={8}>
+              <Text style={styles.sheetTitle}>Final Stacks</Text>
+              <TouchableOpacity onPress={() => setEndStep(0)} hitSlop={8}>
                 <Text style={styles.closeBtn}>✕</Text>
               </TouchableOpacity>
             </View>
@@ -1193,10 +1217,67 @@ export default function SessionScreen({ route, navigation }: Props) {
             >
               {endLoading
                 ? <ActivityIndicator color={colors.background} />
-                : <Text style={styles.endConfirmBtnText}>End Session & Calculate →</Text>}
+                : <Text style={styles.endConfirmBtnText}>Calculate Results →</Text>}
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ── End Session Modal (Step 2: Summary) ── */}
+      <Modal visible={endStep === 2} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.sheet, styles.sheetTall]}>
+            <Text style={styles.summaryTitle}>🏆 Game Over!</Text>
+            <Text style={styles.summarySessionName}>{session.name}</Text>
+            {session.startedAt && (
+              <Text style={styles.summaryDuration}>
+                {formatDuration(session.startedAt, new Date().toISOString())}
+              </Text>
+            )}
+
+            <View style={styles.divider} />
+
+            <Text style={styles.summarySection}>Results</Text>
+            <ScrollView style={styles.endPlayerList} showsVerticalScrollIndicator={false}>
+              {[...(endSummary?.players ?? [])]
+                .sort((a, b) => b.profitLoss - a.profitLoss)
+                .map((p, i) => (
+                  <View key={p.sessionPlayerId} style={styles.summaryPlayerRow}>
+                    <Text style={styles.summaryRank}>{rankLabel(i + 1)}</Text>
+                    <Text style={styles.summaryPlayerName}>{p.username}</Text>
+                    <Text style={[
+                      styles.summaryPL,
+                      p.profitLoss > 0 ? styles.plPos : p.profitLoss < 0 ? styles.plNeg : styles.plZero,
+                    ]}>
+                      {p.profitLoss > 0 ? '+' : ''}{formatMoney(p.profitLoss)}
+                    </Text>
+                  </View>
+                ))}
+
+              {(endSummary?.settlements ?? []).length > 0 && (
+                <>
+                  <View style={styles.divider} />
+                  <Text style={styles.summarySection}>Settlements</Text>
+                  {(endSummary?.settlements ?? []).map(s => (
+                    <View key={s.id} style={styles.summarySettlementRow}>
+                      <Text style={styles.summarySettlementText}>
+                        <Text style={styles.summarySettlementPayer}>{s.payerName}</Text>
+                        {' → '}
+                        <Text style={styles.summarySettlementReceiver}>{s.receiverName}</Text>
+                        {'  '}
+                        <Text style={styles.summarySettlementAmount}>{formatMoney(s.amount)}</Text>
+                      </Text>
+                    </View>
+                  ))}
+                </>
+              )}
+            </ScrollView>
+
+            <TouchableOpacity style={styles.finishGameBtn} onPress={finishGame}>
+              <Text style={styles.finishGameBtnText}>✓  Finish Game</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
 
       {/* ── Hand Modal ── */}
@@ -1331,17 +1412,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     elevation: 4,
   },
-  chipToggle: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceHigh,
-  },
-  chipToggleOn: { borderColor: colors.gold, backgroundColor: 'rgba(201,168,76,0.12)' },
-  chipToggleText: { fontSize: 11, color: colors.textMuted, fontWeight: '600' },
-  chipToggleTextOn: { color: colors.gold },
   exportBtn: { padding: 8 },
   exportText: { color: colors.gold, fontSize: 14, fontWeight: '600' },
   deleteBtn: { padding: 8 },
@@ -1450,18 +1520,40 @@ const styles = StyleSheet.create({
   emptyPlayers: { padding: 24, alignItems: 'center' },
   emptyPlayersText: { color: colors.textMuted, fontSize: 14 },
 
-  // End Session button
-  endSessionBtn: {
-    margin: 16,
-    marginTop: 8,
-    backgroundColor: 'rgba(231,76,60,0.12)',
-    borderWidth: 1,
-    borderColor: colors.error,
-    borderRadius: 12,
+  // End Game sticky CTA bar
+  endGameBar: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 88 : 72,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.gold,
     paddingVertical: 14,
     alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(201,168,76,0.4)',
   },
-  endSessionBtnText: { fontSize: 15, fontWeight: '700', color: colors.error },
+  endGameBarText: { fontSize: 15, fontWeight: '800', color: colors.background, letterSpacing: 0.5 },
+
+  // Chip/Money pill toggle row
+  chipPillRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  chipPillLabel: { fontSize: 12, color: colors.textMuted, fontWeight: '600' },
+  chipPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  chipPillActive: { backgroundColor: colors.gold, borderColor: colors.gold },
+  chipPillText: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
+  chipPillTextActive: { color: colors.background },
 
   // "Everyone is even" empty state
   evenCard: {
@@ -1647,7 +1739,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 8,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 8,
     paddingTop: 8,
     paddingHorizontal: 12,
     gap: 8,
@@ -1848,6 +1940,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   endConfirmBtnText: { fontSize: 15, fontWeight: '700', color: colors.text },
+
+  // Summary modal (Step 2)
+  summaryTitle: { fontSize: 26, fontWeight: '800', color: colors.gold, textAlign: 'center' },
+  summarySessionName: { fontSize: 16, fontWeight: '600', color: colors.text, textAlign: 'center' },
+  summaryDuration: { fontSize: 13, color: colors.textMuted, textAlign: 'center' },
+  summarySection: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  summaryPlayerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  summaryRank: { fontSize: 18, width: 30, textAlign: 'center' },
+  summaryPlayerName: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.text },
+  summaryPL: { fontSize: 16, fontWeight: '800' },
+  summarySettlementRow: { paddingVertical: 6 },
+  summarySettlementText: { fontSize: 14, color: colors.text, lineHeight: 20 },
+  summarySettlementPayer: { fontWeight: '700', color: colors.error },
+  summarySettlementReceiver: { fontWeight: '700', color: colors.success },
+  summarySettlementAmount: { fontWeight: '800', color: colors.gold },
+  finishGameBtn: {
+    marginTop: 4,
+    backgroundColor: colors.gold,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  finishGameBtnText: { fontSize: 15, fontWeight: '800', color: colors.background },
 
   // Hand winner
   winnerScroll: { marginVertical: 4 },

@@ -43,6 +43,7 @@ public sealed class GetSessionByIdQueryHandler(
             session.Id,
             session.Name,
             session.GroupId,
+            session.CreatorId,
             session.Status.ToString(),
             session.ChipRatio,
             session.DefaultBuyIn,
