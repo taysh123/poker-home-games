@@ -18,6 +18,17 @@ export type SessionSettlementsDto = {
   settlements: SettlementDto[];
 };
 
+export type GuestBalanceDto = {
+  sessionPlayerId: string;
+  guestName: string;
+  netBalance: number;
+};
+
+export type CalculateSettlementsResponse = {
+  settlements: SettlementDto[];
+  guestBalances: GuestBalanceDto[];
+};
+
 export type MyPendingSettlementDto = {
   id: string;
   sessionId: string;
@@ -37,8 +48,8 @@ function authHeader(token: string) {
 export async function calculateSettlements(
   token: string,
   sessionId: string,
-): Promise<SettlementDto[]> {
-  const { data } = await api.post<SettlementDto[]>(
+): Promise<CalculateSettlementsResponse> {
+  const { data } = await api.post<CalculateSettlementsResponse>(
     `/api/sessions/${sessionId}/settlements/calculate`,
     {},
     { headers: authHeader(token) },

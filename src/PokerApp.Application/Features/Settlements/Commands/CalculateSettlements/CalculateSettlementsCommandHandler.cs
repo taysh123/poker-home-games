@@ -10,9 +10,9 @@ namespace PokerApp.Application.Features.Settlements.Commands.CalculateSettlement
 public sealed class CalculateSettlementsCommandHandler(
     IApplicationDbContext context,
     ICurrentUserService currentUserService,
-    ISettlementCalculator calculator) : IRequestHandler<CalculateSettlementsCommand, List<SettlementDto>>
+    ISettlementCalculator calculator) : IRequestHandler<CalculateSettlementsCommand, CalculateSettlementsResult>
 {
-    public async Task<List<SettlementDto>> Handle(CalculateSettlementsCommand request, CancellationToken cancellationToken)
+    public async Task<CalculateSettlementsResult> Handle(CalculateSettlementsCommand request, CancellationToken cancellationToken)
     {
         var session = await context.Sessions
             .FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken)
@@ -28,9 +28,8 @@ public sealed class CalculateSettlementsCommandHandler(
         if (!callerIsMember)
             throw new UnauthorizedException("You are not a member of this group.");
 
-        // Players with a SettlementUserId (UserId or LinkedUserId for guests) participate in digital settlements
-        var registeredPlayers = await context.SessionPlayers
-            .Where(sp => sp.SessionId == request.SessionId && (sp.UserId != null || sp.LinkedUserId != null))
+        var allPlayers = await context.SessionPlayers
+            .Where(sp => sp.SessionId == request.SessionId)
             .ToListAsync(cancellationToken);
 
         var allBuyIns = await context.BuyIns
@@ -41,8 +40,13 @@ public sealed class CalculateSettlementsCommandHandler(
             .Where(c => c.SessionId == request.SessionId)
             .ToListAsync(cancellationToken);
 
+        // Split: players with a SettlementUserId participate in formal (digital) settlements;
+        // unlinked guests have no SettlementUserId and are handled manually outside the app.
+        var linkedPlayers = allPlayers.Where(sp => sp.SettlementUserId.HasValue).ToList();
+        var unlinkedGuests = allPlayers.Where(sp => !sp.SettlementUserId.HasValue).ToList();
+
         // Group by SettlementUserId so linked guests aggregate into the linked user's balance
-        var balancesBySettlementUser = registeredPlayers
+        var balancesBySettlementUser = linkedPlayers
             .GroupBy(sp => sp.SettlementUserId!.Value)
             .Select(group =>
             {
@@ -57,11 +61,11 @@ public sealed class CalculateSettlementsCommandHandler(
 
         var instructions = calculator.Calculate(balancesBySettlementUser).ToList();
 
-        var allPlayerIds = registeredPlayers.Select(sp => sp.SettlementUserId!.Value).ToHashSet();
+        var allLinkedPlayerIds = linkedPlayers.Select(sp => sp.SettlementUserId!.Value).ToHashSet();
 
         // Load usernames for DTO population
         var users = await context.Users
-            .Where(u => allPlayerIds.Contains(u.Id))
+            .Where(u => allLinkedPlayerIds.Contains(u.Id))
             .Select(u => new { u.Id, u.Username })
             .ToDictionaryAsync(u => u.Id, u => u.Username, cancellationToken);
 
@@ -78,7 +82,7 @@ public sealed class CalculateSettlementsCommandHandler(
         await context.Settlements.AddRangeAsync(newSettlements, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
 
-        return newSettlements.Select(s => new SettlementDto(
+        var settlementDtos = newSettlements.Select(s => new SettlementDto(
             s.Id,
             s.PayerUserId,
             users.GetValueOrDefault(s.PayerUserId, "Unknown"),
@@ -87,5 +91,18 @@ public sealed class CalculateSettlementsCommandHandler(
             s.Amount,
             s.Status.ToString()
         )).ToList();
+
+        // Compute net balance for each unlinked guest — callers must settle these in cash
+        var guestBalanceDtos = unlinkedGuests
+            .Select(sp =>
+            {
+                var totalBuyIn = allBuyIns.Where(b => b.SessionPlayerId == sp.Id).Sum(b => b.Amount);
+                var totalCashOut = allCashOuts.Where(c => c.SessionPlayerId == sp.Id).Sum(c => c.Amount);
+                return new GuestBalanceDto(sp.Id, sp.GuestName!, totalCashOut - totalBuyIn);
+            })
+            .Where(g => g.NetBalance != 0)
+            .ToList();
+
+        return new CalculateSettlementsResult(settlementDtos, guestBalanceDtos);
     }
 }

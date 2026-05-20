@@ -40,6 +40,7 @@ import {
   calculateSettlements,
   markSettlementPaid,
   SettlementDto,
+  GuestBalanceDto,
 } from '../api/settlementsApi';
 import {
   getSessionHandHistory,
@@ -129,6 +130,7 @@ export default function SessionScreen({ route, navigation }: Props) {
   const [calcLoading, setCalcLoading] = useState(false);
   const [markingPaidId, setMarkingPaidId] = useState<string | null>(null);
   const [settlementsLoaded, setSettlementsLoaded] = useState(false);
+  const [guestBalances, setGuestBalances] = useState<GuestBalanceDto[]>([]);
 
   // Export
   const [exporting, setExporting] = useState(false);
@@ -172,13 +174,24 @@ export default function SessionScreen({ route, navigation }: Props) {
         ]);
         if (balData) setBalances(balData.players);
         setHands(handsData);
-      }
 
-      if (sessionData.status === 'Finished') {
-        const settData = await getSessionSettlements(token, sessionId).catch(() => null);
-        if (settData) {
-          setSettlements(settData.settlements);
-          setSettlementsLoaded(true);
+        if (sessionData.status === 'Finished') {
+          const settData = await getSessionSettlements(token, sessionId).catch(() => null);
+          if (settData) {
+            setSettlements(settData.settlements);
+            setSettlementsLoaded(true);
+          }
+          // Derive unlinked guest balances from already-loaded player + balance data
+          if (balData) {
+            const computed = sessionData.players
+              .filter(p => p.isGuest && !p.linkedUserId)
+              .map(p => {
+                const bal = balData.players.find(b => b.sessionPlayerId === p.sessionPlayerId);
+                return { sessionPlayerId: p.sessionPlayerId, guestName: p.username, netBalance: bal?.profitLoss ?? 0 };
+              })
+              .filter(g => g.netBalance !== 0);
+            setGuestBalances(computed);
+          }
         }
       }
     } catch {
@@ -320,8 +333,9 @@ export default function SessionScreen({ route, navigation }: Props) {
         }));
 
       await endSession(token, sessionId, finalStackItems);
-      const settled = await calculateSettlements(token, sessionId).catch(() => []);
-      setSettlements(settled);
+      const calcResult = await calculateSettlements(token, sessionId).catch(() => ({ settlements: [], guestBalances: [] }));
+      setSettlements(calcResult.settlements);
+      setGuestBalances(calcResult.guestBalances);
       setSettlementsLoaded(true);
       successNotification();
       setEndModal(false);
@@ -401,7 +415,8 @@ export default function SessionScreen({ route, navigation }: Props) {
       const token = await SecureStore.getItemAsync('accessToken');
       if (!token) return;
       const result = await calculateSettlements(token, sessionId);
-      setSettlements(result);
+      setSettlements(result.settlements);
+      setGuestBalances(result.guestBalances);
       successNotification();
     } catch {
       Alert.alert('Error', 'Failed to calculate settlements.');
@@ -803,6 +818,40 @@ export default function SessionScreen({ route, navigation }: Props) {
                 })}
               </View>
             )}
+          </View>
+        )}
+
+        {/* ── Guest Manual Settlements ── */}
+        {isFinished && guestBalances.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Handle Manually</Text>
+              <View style={styles.guestManualBadge}>
+                <Text style={styles.guestManualBadgeText}>GUEST PLAYERS</Text>
+              </View>
+            </View>
+            <View style={styles.guestManualCard}>
+              <Text style={styles.guestManualSubtitle}>
+                These guest players are not in the app — settle with them directly in cash.
+              </Text>
+              {guestBalances.map(g => {
+                const owes = g.netBalance < 0;
+                const amount = formatMoney(Math.abs(g.netBalance));
+                return (
+                  <View key={g.sessionPlayerId} style={styles.guestManualRow}>
+                    <View style={[styles.guestManualAvatar, owes ? styles.guestManualAvatarOwes : styles.guestManualAvatarOwed]}>
+                      <Text style={styles.settlementAvatarText}>{g.guestName[0]?.toUpperCase() ?? '?'}</Text>
+                    </View>
+                    <View style={styles.guestManualInfo}>
+                      <Text style={styles.guestManualName}>{g.guestName}</Text>
+                      <Text style={[styles.guestManualAction, owes ? styles.guestManualOwes : styles.guestManualOwed]}>
+                        {owes ? `Owes ${amount} — collect cash` : `Is owed ${amount} — pay in cash`}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
           </View>
         )}
 
@@ -1412,6 +1461,41 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   settlementBadgeText: { fontSize: 10, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
+
+  // Guest manual settlements
+  guestManualBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  guestManualBadgeText: { fontSize: 9, fontWeight: '700', color: colors.textDim, textTransform: 'uppercase', letterSpacing: 0.5 },
+  guestManualCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: 'rgba(201,168,76,0.25)',
+    borderRadius: 14,
+    padding: 16,
+    gap: 12,
+  },
+  guestManualSubtitle: { fontSize: 12, color: colors.textMuted, lineHeight: 17 },
+  guestManualRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  guestManualAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  guestManualAvatarOwes: { backgroundColor: 'rgba(231,76,60,0.15)', borderWidth: 1, borderColor: 'rgba(231,76,60,0.4)' },
+  guestManualAvatarOwed: { backgroundColor: 'rgba(39,174,96,0.15)', borderWidth: 1, borderColor: 'rgba(39,174,96,0.4)' },
+  guestManualInfo: { flex: 1, gap: 2 },
+  guestManualName: { fontSize: 14, fontWeight: '700', color: colors.text },
+  guestManualAction: { fontSize: 12, fontWeight: '500' },
+  guestManualOwes: { color: colors.error },
+  guestManualOwed: { color: colors.success },
 
   // Notes
   notesText: { fontSize: 14, color: colors.text, lineHeight: 21 },

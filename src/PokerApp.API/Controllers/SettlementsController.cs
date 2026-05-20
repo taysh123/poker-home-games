@@ -15,7 +15,7 @@ public class SettlementsController(IMediator mediator) : ControllerBase
 {
     /// <summary>Calculates optimized settlements for a finished session. Safe to call multiple times.</summary>
     [HttpPost("api/sessions/{sessionId:guid}/settlements/calculate")]
-    [ProducesResponseType(typeof(List<SettlementDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(CalculateSettlementsResult), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
