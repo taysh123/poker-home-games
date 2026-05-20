@@ -20,6 +20,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<HandRecord> HandRecords => Set<HandRecord>();
     public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
     public DbSet<SessionInviteToken> SessionInviteTokens => Set<SessionInviteToken>();
+    public DbSet<GroupInviteLink> GroupInviteLinks => Set<GroupInviteLink>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

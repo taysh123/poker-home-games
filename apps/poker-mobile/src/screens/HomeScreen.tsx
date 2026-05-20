@@ -125,7 +125,7 @@ export default function HomeScreen() {
       {/* ── Header ── */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={styles.brand}>♠ PokerHome</Text>
+          <Text style={styles.brand}>♠ T Poker</Text>
           <Text style={styles.username} numberOfLines={1}>{user?.username ?? 'Player'}</Text>
         </View>
         <View style={styles.headerRight}>

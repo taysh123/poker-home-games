@@ -10,9 +10,12 @@ import { RootStackParamList } from './src/navigation/AppNavigator';
 
 WebBrowser.maybeCompleteAuthSession();
 
-function extractInviteToken(url: string): string | null {
-  const match = url.match(/(?:tpoker:\/\/join\/|\/join\/)([A-Za-z0-9]+)/);
-  return match ? match[1] : null;
+function extractDeepLink(url: string): { type: 'session' | 'group'; token: string } | null {
+  const s = url.match(/(?:tpoker:\/\/join\/|\/join\/)([A-Za-z0-9]+)/);
+  if (s) return { type: 'session', token: s[1] };
+  const g = url.match(/(?:tpoker:\/\/group\/|\/group\/)([A-Za-z0-9]+)/);
+  if (g) return { type: 'group', token: g[1] };
+  return null;
 }
 
 export default function App() {
@@ -20,17 +23,20 @@ export default function App() {
 
   useEffect(() => {
     function handleUrl(url: string) {
-      const token = extractInviteToken(url);
-      if (token) {
-        const navigate = () => {
-          if (navRef.current?.isReady()) {
-            navRef.current.navigate('JoinSession', { inviteToken: token });
+      const link = extractDeepLink(url);
+      if (!link) return;
+      const navigate = () => {
+        if (navRef.current?.isReady()) {
+          if (link.type === 'session') {
+            navRef.current.navigate('JoinSession', { inviteToken: link.token });
           } else {
-            setTimeout(navigate, 100);
+            navRef.current.navigate('JoinGroup', { inviteToken: link.token });
           }
-        };
-        navigate();
-      }
+        } else {
+          setTimeout(navigate, 100);
+        }
+      };
+      navigate();
     }
 
     Linking.getInitialURL().then(url => { if (url) handleUrl(url); });

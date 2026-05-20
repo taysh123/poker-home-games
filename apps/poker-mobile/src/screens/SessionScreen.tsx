@@ -373,6 +373,10 @@ export default function SessionScreen({ route, navigation }: Props) {
         }));
 
       await endSession(token, sessionId, finalStackItems);
+      // Update local session status immediately so the screen renders Finished state
+      // without needing a full reload (which could trigger the 401 → logout path).
+      setSession(s => s ? { ...s, status: 'Finished', endedAt: new Date().toISOString() } : s);
+
       const [balData, calcResult] = await Promise.all([
         getSessionBalances(token, sessionId).catch(() => null),
         calculateSettlements(token, sessionId).catch(() => ({ settlements: [], guestBalances: [] })),
@@ -396,7 +400,8 @@ export default function SessionScreen({ route, navigation }: Props) {
   function finishGame() {
     setEndStep(0);
     setEndSummary(null);
-    load(true);
+    // State is already fresh from handleEndSession; useFocusEffect reloads on next focus.
+    // Removed load(true) here — it could trigger 401 → clearSession → Login redirect.
   }
 
   // ── Hand Logging ──

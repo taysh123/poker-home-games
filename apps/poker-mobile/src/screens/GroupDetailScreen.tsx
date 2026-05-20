@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Alert,
   TextInput,
+  Share,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -24,6 +25,7 @@ import {
   removeGroupMember,
   leaveGroup,
   deleteGroup,
+  generateGroupInviteLink,
 } from '../api/groupsApi';
 import { getGroupActivity, ActivityLogDto } from '../api/activityApi';
 import { useAuth } from '../context/AuthContext';
@@ -47,6 +49,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<UserSearchResultDto[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isAdminOrOwner = group?.myRole === 'Admin' || group?.myRole === 'Owner';
@@ -215,6 +218,23 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
     );
   };
 
+  const handleShareInvite = async () => {
+    setShareLoading(true);
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!token) return;
+      const result = await generateGroupInviteLink(token, groupId);
+      await Share.share({
+        message: `Join "${group?.name ?? groupName}" on T Poker: ${result.deepLinkUrl}`,
+        url: result.deepLinkUrl,
+      });
+    } catch {
+      Alert.alert('Error', 'Failed to generate invite link.');
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -299,6 +319,25 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
               </TouchableOpacity>
             )}
           </View>
+
+          {/* Share Invite — Admin/Owner only */}
+          {isAdminOrOwner && (
+            <TouchableOpacity
+              style={styles.shareInviteBtn}
+              onPress={handleShareInvite}
+              disabled={shareLoading}
+              activeOpacity={0.7}
+            >
+              {shareLoading ? (
+                <ActivityIndicator size="small" color={colors.gold} />
+              ) : (
+                <>
+                  <Text style={styles.shareInviteText}>Share Invite Link</Text>
+                  <Text style={styles.shareInviteIcon}>↗</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
 
           {/* Invite — Admin/Owner only */}
           {isAdminOrOwner && (
@@ -592,6 +631,22 @@ const styles = StyleSheet.create({
   navButtonGold: { backgroundColor: 'rgba(201,168,76,0.10)', borderColor: colors.gold },
   navButtonGoldText: { fontSize: 15, fontWeight: '700', color: colors.gold },
   navChevronGold: { fontSize: 13, color: colors.gold },
+
+  shareInviteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 11,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    marginBottom: 16,
+    minHeight: 44,
+  },
+  shareInviteText: { fontSize: 14, fontWeight: '600', color: colors.textMuted },
+  shareInviteIcon: { fontSize: 16, color: colors.textMuted },
 
   inviteSection: { marginBottom: 16 },
   inviteRow: { flexDirection: 'row', gap: 10 },

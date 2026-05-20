@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
+  Image,
   TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
@@ -69,7 +70,7 @@ export default function LoginScreen({ navigation }: Props) {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <Text style={styles.suit}>♠</Text>
+          <Image source={require('../../assets/icon.png')} style={styles.logo} resizeMode="contain" />
           <Text style={styles.title}>Welcome back</Text>
           <Text style={styles.subtitle}>Sign in to your account</Text>
         </View>
@@ -138,7 +139,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
   container: { flexGrow: 1, padding: 24, justifyContent: 'center' },
   header: { alignItems: 'center', marginBottom: 40 },
-  suit: { fontSize: 52, color: colors.gold, marginBottom: 16 },
+  logo: { width: 88, height: 88, borderRadius: 18, marginBottom: 20 },
   title: { fontSize: 28, fontWeight: '700', color: colors.text, marginBottom: 6 },
   subtitle: { fontSize: 15, color: colors.textMuted },
   form: { gap: 20 },

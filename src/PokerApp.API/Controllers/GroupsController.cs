@@ -2,8 +2,10 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PokerApp.Application.Features.Groups.Commands.CreateGroup;
+using PokerApp.Application.Features.Groups.Commands.GenerateGroupInviteLink;
 using PokerApp.Application.Features.Groups.Commands.InviteUser;
 using PokerApp.Application.Features.Groups.Commands.DeleteGroup;
+using PokerApp.Application.Features.Groups.Commands.JoinGroupByInviteLink;
 using PokerApp.Application.Features.Groups.Commands.LeaveGroup;
 using PokerApp.Application.Features.Groups.Commands.RemoveMember;
 using PokerApp.Application.Features.Groups.Commands.UpdateGroup;
@@ -137,6 +139,28 @@ public class GroupsController(IMediator mediator) : ControllerBase
     {
         await mediator.Send(new DeleteGroupCommand(id), cancellationToken);
         return NoContent();
+    }
+
+    /// <summary>Generates (or regenerates) a shareable group invite link. Requires Admin or Owner role.</summary>
+    [HttpPost("{id:guid}/invite-link")]
+    [ProducesResponseType(typeof(GenerateGroupInviteLinkResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GenerateGroupInviteLink(Guid id, CancellationToken cancellationToken)
+    {
+        var response = await mediator.Send(new GenerateGroupInviteLinkCommand(id), cancellationToken);
+        return Ok(response);
+    }
+
+    /// <summary>Joins a group via an invite link token. Any authenticated user.</summary>
+    [HttpPost("join/{token}")]
+    [ProducesResponseType(typeof(JoinGroupByInviteLinkResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> JoinGroupByInviteLink(string token, CancellationToken cancellationToken)
+    {
+        var response = await mediator.Send(new JoinGroupByInviteLinkCommand(token), cancellationToken);
+        return Ok(response);
     }
 
     /// <summary>Leaves the group. The group owner cannot leave.</summary>

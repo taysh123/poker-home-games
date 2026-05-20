@@ -1,12 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Image, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { colors } from '../theme/colors';
 
 export default function SplashScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.suit}>♠</Text>
-      <Text style={styles.title}>T Poker</Text>
+      <Image source={require('../../assets/icon.png')} style={styles.logo} resizeMode="contain" />
       <Text style={styles.subtitle}>Your private poker group manager</Text>
       <ActivityIndicator style={styles.spinner} color={colors.gold} size="small" />
     </View>
@@ -21,16 +20,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
   },
-  suit: {
-    fontSize: 80,
-    color: colors.gold,
+  logo: {
+    width: 140,
+    height: 140,
+    borderRadius: 28,
     marginBottom: 8,
-  },
-  title: {
-    fontSize: 38,
-    fontWeight: '700',
-    color: colors.text,
-    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 15,

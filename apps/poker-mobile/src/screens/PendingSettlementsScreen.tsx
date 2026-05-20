@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -55,6 +55,16 @@ export default function PendingSettlementsScreen() {
   }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 4 }}>
+          <Text style={{ color: colors.gold, fontSize: 16, fontWeight: '600' }}>Done</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
 
   async function handleMarkPaid(id: string) {
     setMarkingId(id);

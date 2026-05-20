@@ -21,6 +21,7 @@ public interface IApplicationDbContext
     DbSet<HandRecord> HandRecords { get; }
     DbSet<ActivityLog> ActivityLogs { get; }
     DbSet<SessionInviteToken> SessionInviteTokens { get; }
+    DbSet<GroupInviteLink> GroupInviteLinks { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

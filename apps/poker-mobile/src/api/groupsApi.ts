@@ -183,6 +183,42 @@ export type PlayerLeaderboardEntryDto = {
   avgProfitLoss: number;
 };
 
+export type GroupInviteLinkResponse = {
+  token: string;
+  deepLinkUrl: string;
+  expiresAt: string;
+};
+
+export type JoinGroupByLinkResponse = {
+  groupId: string;
+  groupName: string;
+  role: string;
+};
+
+export async function generateGroupInviteLink(
+  token: string,
+  groupId: string,
+): Promise<GroupInviteLinkResponse> {
+  const { data } = await api.post<GroupInviteLinkResponse>(
+    `/api/groups/${groupId}/invite-link`,
+    {},
+    { headers: authHeader(token) },
+  );
+  return data;
+}
+
+export async function joinGroupByInviteLink(
+  token: string,
+  inviteToken: string,
+): Promise<JoinGroupByLinkResponse> {
+  const { data } = await api.post<JoinGroupByLinkResponse>(
+    `/api/groups/join/${inviteToken}`,
+    {},
+    { headers: authHeader(token) },
+  );
+  return data;
+}
+
 export async function getGroupLeaderboard(
   token: string,
   groupId: string,
