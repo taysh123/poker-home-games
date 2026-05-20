@@ -23,6 +23,7 @@ import AppTextInput from '../components/AppTextInput';
 import PrimaryButton from '../components/PrimaryButton';
 import { getRecentGuests, recordGuestName } from '../utils/guestHistory';
 import { showToast } from '../utils/toast';
+import { useActiveSession } from '../context/ActiveSessionContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'NewGame'>;
 
@@ -32,6 +33,7 @@ type AddedPlayer =
 
 export default function NewGameScreen({ route, navigation }: Props) {
   const { user } = useAuth();
+  const { refresh: refreshActiveSession } = useActiveSession();
 
   // Step: 1 = Details, 2 = Players, 3 = Review
   const [step, setStep] = useState(1);
@@ -191,6 +193,7 @@ export default function NewGameScreen({ route, navigation }: Props) {
 
       // Start the session immediately so it arrives as Active
       await startSession(token, sessionId);
+      refreshActiveSession();
 
       showToast('Game started!', 'success');
       navigation.replace('Session', { sessionId, groupId });

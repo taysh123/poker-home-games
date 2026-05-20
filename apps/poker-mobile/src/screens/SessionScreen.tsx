@@ -57,6 +57,7 @@ import { exportSessionCsv, shareSessionCard } from '../utils/exportUtils';
 import { successNotification, errorNotification, lightTap } from '../utils/haptics';
 import { showToast } from '../utils/toast';
 import { formatMoney } from '../utils/formatters';
+import { useActiveSession } from '../context/ActiveSessionContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Session'>;
 
@@ -81,6 +82,7 @@ function formatDate(iso: string): string {
 export default function SessionScreen({ route, navigation }: Props) {
   const { sessionId, groupId } = route.params;
   const { user } = useAuth();
+  const { refresh: refreshActiveSession, clear: clearActiveSession } = useActiveSession();
 
   const [session, setSession] = useState<SessionDetailDto | null>(null);
   const [balances, setBalances] = useState<PlayerBalanceDto[]>([]);
@@ -214,7 +216,8 @@ export default function SessionScreen({ route, navigation }: Props) {
 
   useFocusEffect(useCallback(() => {
     load();
-  }, [load]));
+    refreshActiveSession();
+  }, [load, refreshActiveSession]));
 
   // Timer for active sessions — ticks every 30s (updates duration display + reloads data)
   useEffect(() => {
@@ -373,6 +376,7 @@ export default function SessionScreen({ route, navigation }: Props) {
       // Update local session status immediately so the screen renders Finished state
       // without needing a full reload (which could trigger the 401 → logout path).
       setSession(s => s ? { ...s, status: 'Finished', endedAt: new Date().toISOString() } : s);
+      clearActiveSession();
 
       const [balData, calcResult] = await Promise.all([
         getSessionBalances(token, sessionId).catch(() => null),

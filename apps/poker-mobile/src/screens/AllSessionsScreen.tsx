@@ -55,8 +55,28 @@ export default function AllSessionsScreen() {
 
   function promptDelete(s: RecentSessionDto) {
     Alert.alert(
+      s.sessionName,
+      s.groupName || undefined,
+      [
+        {
+          text: 'Open Session',
+          onPress: () => openSession(s),
+        },
+        {
+          text: 'Delete Session',
+          style: 'destructive',
+          onPress: () => confirmDelete(s),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+      { cancelable: true },
+    );
+  }
+
+  function confirmDelete(s: RecentSessionDto) {
+    Alert.alert(
       'Delete Session',
-      `Delete "${s.sessionName}"? This cannot be undone.`,
+      `Permanently remove "${s.sessionName}"? All buy-ins, cash-outs, and history will be deleted. This cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {

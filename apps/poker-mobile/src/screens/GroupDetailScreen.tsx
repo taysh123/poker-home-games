@@ -279,21 +279,6 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
             </View>
           </View>
 
-          {/* Leaderboard */}
-          {leaderboard.length > 0 && (
-            <View style={styles.leaderboardSection}>
-              <Text style={styles.sectionTitle}>Leaderboard</Text>
-              <View style={styles.leaderboardCard}>
-                {leaderboard.map((entry, index) => (
-                  <React.Fragment key={entry.userId}>
-                    {index > 0 && <View style={styles.separator} />}
-                    <LeaderboardRow entry={entry} rank={index + 1} />
-                  </React.Fragment>
-                ))}
-              </View>
-            </View>
-          )}
-
           {/* Nav buttons */}
           <View style={styles.navRow}>
             <TouchableOpacity
@@ -320,84 +305,102 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
             )}
           </View>
 
-          {/* Share Invite — Admin/Owner only */}
+          {/* ── Invite & Manage — Admin/Owner only, shown prominently above leaderboard ── */}
           {isAdminOrOwner && (
-            <TouchableOpacity
-              style={styles.shareInviteBtn}
-              onPress={handleShareInvite}
-              disabled={shareLoading}
-              activeOpacity={0.7}
-            >
-              {shareLoading ? (
-                <ActivityIndicator size="small" color={colors.gold} />
-              ) : (
-                <>
-                  <Text style={styles.shareInviteText}>Share Invite Link</Text>
-                  <Text style={styles.shareInviteIcon}>↗</Text>
-                </>
-              )}
-            </TouchableOpacity>
+            <View style={styles.manageSection}>
+              <Text style={styles.sectionTitle}>Manage Group</Text>
+
+              {/* Share invite link */}
+              <TouchableOpacity
+                style={styles.shareInviteBtn}
+                onPress={handleShareInvite}
+                disabled={shareLoading}
+                activeOpacity={0.7}
+              >
+                {shareLoading ? (
+                  <ActivityIndicator size="small" color={colors.gold} />
+                ) : (
+                  <>
+                    <Text style={styles.shareInviteText}>Share Invite Link</Text>
+                    <Text style={styles.shareInviteIcon}>↗</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              {/* Invite by username */}
+              <View style={styles.inviteSection}>
+                <Text style={styles.inviteLabel}>Invite by username</Text>
+                <View style={styles.inviteRow}>
+                  <TextInput
+                    style={styles.inviteInput}
+                    value={inviteUsername}
+                    onChangeText={handleInviteSearch}
+                    placeholder="Search by username..."
+                    placeholderTextColor={colors.textDim}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    returnKeyType="send"
+                    onSubmitEditing={() => handleInvite()}
+                    editable={!inviteLoading}
+                  />
+                  <TouchableOpacity
+                    style={[
+                      styles.inviteButton,
+                      (!inviteUsername.trim() || inviteLoading) && styles.inviteButtonDisabled,
+                    ]}
+                    onPress={() => handleInvite()}
+                    disabled={!inviteUsername.trim() || inviteLoading}
+                  >
+                    {inviteLoading ? (
+                      <ActivityIndicator size="small" color={colors.background} />
+                    ) : (
+                      <Text style={styles.inviteButtonText}>Send</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+                {/* Search results dropdown */}
+                {(searchLoading || searchResults.length > 0) && (
+                  <View style={styles.searchDropdown}>
+                    {searchLoading ? (
+                      <View style={styles.searchDropdownItem}>
+                        <ActivityIndicator size="small" color={colors.gold} />
+                      </View>
+                    ) : (
+                      searchResults.map(r => (
+                        <TouchableOpacity
+                          key={r.userId}
+                          style={styles.searchDropdownItem}
+                          onPress={() => handleInvite(r.username)}
+                          activeOpacity={0.7}
+                        >
+                          <View style={styles.searchDropdownAvatar}>
+                            <Text style={styles.searchDropdownAvatarText}>
+                              {r.username[0]?.toUpperCase() ?? '?'}
+                            </Text>
+                          </View>
+                          <Text style={styles.searchDropdownName}>{r.username}</Text>
+                          <Text style={styles.searchDropdownInvite}>Invite →</Text>
+                        </TouchableOpacity>
+                      ))
+                    )}
+                  </View>
+                )}
+              </View>
+            </View>
           )}
 
-          {/* Invite — Admin/Owner only */}
-          {isAdminOrOwner && (
-            <View style={styles.inviteSection}>
-              <Text style={styles.sectionTitle}>Invite Member</Text>
-              <View style={styles.inviteRow}>
-                <TextInput
-                  style={styles.inviteInput}
-                  value={inviteUsername}
-                  onChangeText={handleInviteSearch}
-                  placeholder="Search by username..."
-                  placeholderTextColor={colors.textDim}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  returnKeyType="send"
-                  onSubmitEditing={() => handleInvite()}
-                  editable={!inviteLoading}
-                />
-                <TouchableOpacity
-                  style={[
-                    styles.inviteButton,
-                    (!inviteUsername.trim() || inviteLoading) && styles.inviteButtonDisabled,
-                  ]}
-                  onPress={() => handleInvite()}
-                  disabled={!inviteUsername.trim() || inviteLoading}
-                >
-                  {inviteLoading ? (
-                    <ActivityIndicator size="small" color={colors.background} />
-                  ) : (
-                    <Text style={styles.inviteButtonText}>Send</Text>
-                  )}
-                </TouchableOpacity>
+          {/* Leaderboard */}
+          {leaderboard.length > 0 && (
+            <View style={styles.leaderboardSection}>
+              <Text style={styles.sectionTitle}>Leaderboard</Text>
+              <View style={styles.leaderboardCard}>
+                {leaderboard.map((entry, index) => (
+                  <React.Fragment key={entry.userId}>
+                    {index > 0 && <View style={styles.separator} />}
+                    <LeaderboardRow entry={entry} rank={index + 1} />
+                  </React.Fragment>
+                ))}
               </View>
-              {/* Search results dropdown */}
-              {(searchLoading || searchResults.length > 0) && (
-                <View style={styles.searchDropdown}>
-                  {searchLoading ? (
-                    <View style={styles.searchDropdownItem}>
-                      <ActivityIndicator size="small" color={colors.gold} />
-                    </View>
-                  ) : (
-                    searchResults.map(r => (
-                      <TouchableOpacity
-                        key={r.userId}
-                        style={styles.searchDropdownItem}
-                        onPress={() => handleInvite(r.username)}
-                        activeOpacity={0.7}
-                      >
-                        <View style={styles.searchDropdownAvatar}>
-                          <Text style={styles.searchDropdownAvatarText}>
-                            {r.username[0]?.toUpperCase() ?? '?'}
-                          </Text>
-                        </View>
-                        <Text style={styles.searchDropdownName}>{r.username}</Text>
-                        <Text style={styles.searchDropdownInvite}>Invite →</Text>
-                      </TouchableOpacity>
-                    ))
-                  )}
-                </View>
-              )}
             </View>
           )}
 
@@ -632,23 +635,32 @@ const styles = StyleSheet.create({
   navButtonGoldText: { fontSize: 15, fontWeight: '700', color: colors.gold },
   navChevronGold: { fontSize: 13, color: colors.gold },
 
+  manageSection: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 20,
+    gap: 14,
+  },
   shareInviteBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 11,
+    paddingVertical: 12,
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    marginBottom: 16,
-    minHeight: 44,
+    borderWidth: 1.5,
+    borderColor: colors.gold,
+    backgroundColor: 'rgba(201,168,76,0.08)',
+    minHeight: 46,
   },
-  shareInviteText: { fontSize: 14, fontWeight: '600', color: colors.textMuted },
-  shareInviteIcon: { fontSize: 16, color: colors.textMuted },
+  shareInviteText: { fontSize: 14, fontWeight: '700', color: colors.gold },
+  shareInviteIcon: { fontSize: 16, color: colors.gold },
 
-  inviteSection: { marginBottom: 16 },
+  inviteSection: { gap: 8 },
+  inviteLabel: { fontSize: 12, fontWeight: '600', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
   inviteRow: { flexDirection: 'row', gap: 10 },
   inviteInput: {
     flex: 1,

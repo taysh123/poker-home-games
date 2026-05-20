@@ -21,6 +21,7 @@ import { getMyPendingSettlements, MyPendingSettlementDto } from '../api/settleme
 import { RootStackParamList } from '../navigation/AppNavigator';
 import SkeletonCard from '../components/SkeletonCard';
 import { formatPL, formatDate, formatDuration } from '../utils/formatters';
+import { useActiveSession } from '../context/ActiveSessionContext';
 
 type HomeNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -29,6 +30,7 @@ export default function HomeScreen() {
   const { user, logout } = useAuth();
   const navigation = useNavigation<HomeNav>();
   const insets = useSafeAreaInsets();
+  const { refresh: refreshActiveSession } = useActiveSession();
 
   const [loggingOut, setLoggingOut] = useState(false);
   const [groups, setGroups] = useState<MyGroupDto[]>([]);
@@ -74,7 +76,7 @@ export default function HomeScreen() {
     }
   }, []);
 
-  useFocusEffect(useCallback(() => { loadAll(); }, [loadAll]));
+  useFocusEffect(useCallback(() => { loadAll(); refreshActiveSession(); }, [loadAll, refreshActiveSession]));
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
