@@ -14,11 +14,6 @@ type GoogleAuthResult =
   | { type: 'error'; message: string }
   | { type: 'cancel' };
 
-// Stub returned on web when webClientId is not configured
-function useGoogleAuthDisabled(_onResult: (result: GoogleAuthResult) => void) {
-  return { prompt: () => {}, ready: false as const };
-}
-
 function useGoogleAuthNative(onResult: (result: GoogleAuthResult) => void) {
   // Ref keeps the latest callback without triggering the effect to re-run
   const onResultRef = useRef(onResult);

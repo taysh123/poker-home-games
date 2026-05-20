@@ -163,7 +163,7 @@ export default function HomeScreen() {
                 {i > 0 && <View style={styles.divider} />}
                 <TouchableOpacity
                   style={styles.activeRow}
-                  onPress={() => handleSessionPress(s.sessionId, s.groupId)}
+                  onPress={() => handleSessionPress(s.sessionId, s.groupId ?? '')}
                   activeOpacity={0.7}
                 >
                   <Animated.View style={[styles.activePulse, { transform: [{ scale: pulseAnim }] }]} />

@@ -27,7 +27,7 @@ public sealed class GetMyPendingSettlementsQueryHandler(
                 s.Id,
                 s.SessionId,
                 s.Session.Name,
-                s.Session.Group.Name,
+                s.Session.Group != null ? s.Session.Group.Name : "Personal",
                 s.PayerUserId,
                 s.PayerUser.Username,
                 s.ReceiverUserId,

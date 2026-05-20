@@ -138,7 +138,7 @@ export default function StatsScreen() {
                 {i > 0 && <View style={styles.divider} />}
                 <SessionRow session={s} onPress={() => navigation.navigate('Session', {
                   sessionId: s.sessionId,
-                  groupId: s.groupId,
+                  groupId: s.groupId ?? '',
                 })} />
               </React.Fragment>
             ))}
@@ -156,7 +156,7 @@ export default function StatsScreen() {
                 {i > 0 && <View style={styles.divider} />}
                 <SessionRow session={s} onPress={() => navigation.navigate('Session', {
                   sessionId: s.sessionId,
-                  groupId: s.groupId,
+                  groupId: s.groupId ?? '',
                 })} />
               </React.Fragment>
             ))}

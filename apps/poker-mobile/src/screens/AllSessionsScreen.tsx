@@ -55,7 +55,7 @@ export default function AllSessionsScreen() {
   const onRefresh = useCallback(() => { setRefreshing(true); load(true); }, [load]);
 
   function openSession(s: RecentSessionDto) {
-    navigation.navigate('Session', { sessionId: s.sessionId, groupId: s.groupId });
+    navigation.navigate('Session', { sessionId: s.sessionId, groupId: s.groupId ?? '' });
   }
 
   const active   = sessions.filter(s => s.status === 'Active');

@@ -5,7 +5,7 @@ const api = apiClient;
 export type RecentSessionDto = {
   sessionId: string;
   sessionName: string;
-  groupId: string;
+  groupId: string | null;
   groupName: string;
   userRole: string;
   status: string;
