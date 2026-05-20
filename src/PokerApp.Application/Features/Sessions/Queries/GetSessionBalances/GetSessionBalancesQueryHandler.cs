@@ -19,12 +19,15 @@ public sealed class GetSessionBalancesQueryHandler(
             .FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken)
             ?? throw new NotFoundException(nameof(Session), request.SessionId);
 
-        var isMember = await context.GroupMembers
-            .AsNoTracking()
-            .AnyAsync(m => m.GroupId == session.GroupId && m.UserId == callerId, cancellationToken);
-
-        if (!isMember)
-            throw new UnauthorizedException("You are not a member of this group.");
+        bool hasAccess;
+        if (session.GroupId.HasValue)
+            hasAccess = await context.GroupMembers
+                .AsNoTracking()
+                .AnyAsync(m => m.GroupId == session.GroupId.Value && m.UserId == callerId, cancellationToken);
+        else
+            hasAccess = session.CreatorId == callerId;
+        if (!hasAccess)
+            throw new UnauthorizedException("You do not have access to this session.");
 
         var players = await context.SessionPlayers
             .AsNoTracking()

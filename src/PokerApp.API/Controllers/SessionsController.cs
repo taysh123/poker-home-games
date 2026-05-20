@@ -24,6 +24,22 @@ namespace PokerApp.API.Controllers;
 [ApiController]
 public class SessionsController(IMediator mediator) : ControllerBase
 {
+    /// <summary>Creates a new standalone Draft session (no group). The creator has full control.</summary>
+    [HttpPost("api/sessions")]
+    [ProducesResponseType(typeof(CreateSessionResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> CreateStandaloneSession(
+        [FromBody] CreateSessionRequest body,
+        CancellationToken cancellationToken)
+    {
+        var response = await mediator.Send(
+            new CreateSessionCommand(null, body.Name, body.ChipRatio, body.DefaultBuyIn),
+            cancellationToken);
+
+        return CreatedAtAction(nameof(GetSessionById), new { id = response.Id }, response);
+    }
+
     /// <summary>Creates a new Draft session in the group. Any group member can create.</summary>
     [HttpPost("api/groups/{groupId:guid}/sessions")]
     [ProducesResponseType(typeof(CreateSessionResponse), StatusCodes.Status201Created)]

@@ -56,7 +56,6 @@ export default function NewGameScreen({ route, navigation }: Props) {
   // Step 1 state
   const [sessionName, setSessionName] = useState('Game Night');
   const [nameError, setNameError] = useState('');
-  const [groupError, setGroupError] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(route.params?.groupId ?? null);
   const [selectedGroupName, setSelectedGroupName] = useState<string>(route.params?.groupName ?? '');
   const [chipRatio, setChipRatio] = useState('');
@@ -121,12 +120,9 @@ export default function NewGameScreen({ route, navigation }: Props) {
         return;
       }
       setNameError('');
-      if (!selectedGroupId) {
-        setGroupError('Please select a group.');
-        return;
+      if (selectedGroupId) {
+        loadMembers(selectedGroupId);
       }
-      setGroupError('');
-      loadMembers(selectedGroupId);
       goToStep(2);
     } else if (step === 2) {
       // Build addedPlayers from selections
@@ -183,7 +179,7 @@ export default function NewGameScreen({ route, navigation }: Props) {
       const ratio = chipRatio ? parseFloat(chipRatio) : undefined;
       const buyIn = defaultBuyIn ? parseFloat(defaultBuyIn) : undefined;
 
-      const session = await createSession(token, selectedGroupId ?? '', sessionName.trim(), ratio, buyIn);
+      const session = await createSession(token, selectedGroupId, sessionName.trim(), ratio, buyIn);
       const sessionId = session.id;
       const groupId = selectedGroupId ?? '';
 
@@ -267,11 +263,19 @@ export default function NewGameScreen({ route, navigation }: Props) {
                 </View>
               ) : (
                 <View style={styles.chipRow}>
+                  <TouchableOpacity
+                    style={[styles.groupChip, selectedGroupId === null && styles.groupChipSelected]}
+                    onPress={() => { setSelectedGroupId(null); setSelectedGroupName(''); }}
+                  >
+                    <Text style={[styles.groupChipText, selectedGroupId === null && styles.groupChipTextSelected]}>
+                      No Group
+                    </Text>
+                  </TouchableOpacity>
                   {groups.map(g => (
                     <TouchableOpacity
                       key={g.id}
                       style={[styles.groupChip, selectedGroupId === g.id && styles.groupChipSelected]}
-                      onPress={() => { setSelectedGroupId(g.id); setSelectedGroupName(g.name); setGroupError(''); }}
+                      onPress={() => { setSelectedGroupId(g.id); setSelectedGroupName(g.name); }}
                     >
                       <Text style={[styles.groupChipText, selectedGroupId === g.id && styles.groupChipTextSelected]}>
                         {g.name}
@@ -280,7 +284,6 @@ export default function NewGameScreen({ route, navigation }: Props) {
                   ))}
                 </View>
               )}
-              {groupError ? <Text style={styles.fieldError}>{groupError}</Text> : null}
             </View>
 
             <View style={styles.row}>
@@ -414,9 +417,7 @@ export default function NewGameScreen({ route, navigation }: Props) {
 
             <View style={styles.reviewCard}>
               <Text style={styles.reviewName}>{sessionName}</Text>
-              {selectedGroupName ? (
-                <Text style={styles.reviewMeta}>{selectedGroupName}</Text>
-              ) : null}
+              <Text style={styles.reviewMeta}>{selectedGroupName || 'No Group'}</Text>
               <View style={styles.reviewMetaRow}>
                 {defaultBuyIn ? <Text style={styles.reviewChip}>₪{defaultBuyIn} buy-in</Text> : null}
                 {chipRatio ? <Text style={styles.reviewChip}>{chipRatio} chips/₪</Text> : null}

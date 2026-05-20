@@ -19,19 +19,26 @@ public sealed class DeleteSessionCommandHandler(
             .FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken)
             ?? throw new NotFoundException(nameof(Session), request.SessionId);
 
-        var membership = await context.GroupMembers
-            .FirstOrDefaultAsync(m => m.GroupId == session.GroupId && m.UserId == userId, cancellationToken)
-            ?? throw new UnauthorizedException("You are not a member of this group.");
+        if (session.GroupId.HasValue)
+        {
+            var membership = await context.GroupMembers
+                .FirstOrDefaultAsync(m => m.GroupId == session.GroupId.Value && m.UserId == userId, cancellationToken)
+                ?? throw new UnauthorizedException("You are not a member of this group.");
 
-        if (membership.Role == GroupRole.Member)
-            throw new UnauthorizedException("Only admins and owners can delete a session.");
+            if (membership.Role == GroupRole.Member)
+                throw new UnauthorizedException("Only admins and owners can delete a session.");
 
-        var actorName = currentUserService.Username ?? "Unknown";
-        var activity = ActivityLog.Create(
-            session.GroupId, userId, actorName,
-            ActivityType.SessionEnded,
-            $"{actorName} deleted session \"{session.Name}\"");
-        await context.ActivityLogs.AddAsync(activity, cancellationToken);
+            var actorName = currentUserService.Username ?? "Unknown";
+            var activity = ActivityLog.Create(
+                session.GroupId.Value, userId, actorName,
+                ActivityType.SessionEnded,
+                $"{actorName} deleted session \"{session.Name}\"");
+            await context.ActivityLogs.AddAsync(activity, cancellationToken);
+        }
+        else if (session.CreatorId != userId)
+        {
+            throw new UnauthorizedException("Only the session creator can delete this session.");
+        }
 
         // EF cascade deletes: BuyIns, CashOuts, Settlements, SessionPlayers, HandRecords
         context.Sessions.Remove(session);

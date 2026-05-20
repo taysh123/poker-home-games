@@ -3,7 +3,7 @@ using MediatR;
 namespace PokerApp.Application.Features.Sessions.Commands.CreateSession;
 
 public sealed record CreateSessionCommand(
-    Guid GroupId,
+    Guid? GroupId,
     string Name,
     decimal? ChipRatio,
     decimal? DefaultBuyIn) : IRequest<CreateSessionResponse>;
@@ -11,7 +11,7 @@ public sealed record CreateSessionCommand(
 public sealed record CreateSessionResponse(
     Guid Id,
     string Name,
-    Guid GroupId,
+    Guid? GroupId,
     string Status,
     decimal? ChipRatio,
     decimal? DefaultBuyIn,

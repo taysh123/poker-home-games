@@ -15,28 +15,34 @@ public sealed class CreateSessionCommandHandler(
     {
         var userId = currentUserService.UserId;
 
-        var groupExists = await context.Groups
-            .AnyAsync(g => g.Id == request.GroupId, cancellationToken);
+        if (request.GroupId.HasValue)
+        {
+            var groupExists = await context.Groups
+                .AnyAsync(g => g.Id == request.GroupId.Value, cancellationToken);
 
-        if (!groupExists)
-            throw new NotFoundException(nameof(Group), request.GroupId);
+            if (!groupExists)
+                throw new NotFoundException(nameof(Group), request.GroupId.Value);
 
-        var isMember = await context.GroupMembers
-            .AnyAsync(m => m.GroupId == request.GroupId && m.UserId == userId, cancellationToken);
+            var isMember = await context.GroupMembers
+                .AnyAsync(m => m.GroupId == request.GroupId.Value && m.UserId == userId, cancellationToken);
 
-        if (!isMember)
-            throw new UnauthorizedException("You are not a member of this group.");
+            if (!isMember)
+                throw new UnauthorizedException("You are not a member of this group.");
+        }
 
         var session = Session.Create(
-            request.Name, request.GroupId,
+            request.Name, userId, request.GroupId,
             request.ChipRatio, request.DefaultBuyIn);
 
         await context.Sessions.AddAsync(session, cancellationToken);
 
-        var actorName = currentUserService.Username ?? "Unknown";
-        var activity = ActivityLog.Create(request.GroupId, userId, actorName,
-            ActivityType.SessionCreated, $"{actorName} created session \"{request.Name}\"");
-        await context.ActivityLogs.AddAsync(activity, cancellationToken);
+        if (request.GroupId.HasValue)
+        {
+            var actorName = currentUserService.Username ?? "Unknown";
+            var activity = ActivityLog.Create(request.GroupId.Value, userId, actorName,
+                ActivityType.SessionCreated, $"{actorName} created session \"{request.Name}\"");
+            await context.ActivityLogs.AddAsync(activity, cancellationToken);
+        }
 
         await context.SaveChangesAsync(cancellationToken);
 

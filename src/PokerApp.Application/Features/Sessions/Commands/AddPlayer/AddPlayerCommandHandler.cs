@@ -19,11 +19,14 @@ public sealed class AddPlayerCommandHandler(
             .FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken)
             ?? throw new NotFoundException(nameof(Session), request.SessionId);
 
-        var callerIsMember = await context.GroupMembers
-            .AnyAsync(m => m.GroupId == session.GroupId && m.UserId == callerId, cancellationToken);
-
-        if (!callerIsMember)
-            throw new UnauthorizedException("You are not a member of this group.");
+        bool hasAccess;
+        if (session.GroupId.HasValue)
+            hasAccess = await context.GroupMembers
+                .AnyAsync(m => m.GroupId == session.GroupId.Value && m.UserId == callerId, cancellationToken);
+        else
+            hasAccess = session.CreatorId == callerId;
+        if (!hasAccess)
+            throw new UnauthorizedException("You do not have access to this session.");
 
         if (session.Status != SessionStatus.Draft && session.Status != SessionStatus.Active)
             throw new ConflictException("Players can only be added to Draft or Active sessions.");
@@ -61,11 +64,14 @@ public sealed class AddPlayerCommandHandler(
 
         await context.SessionPlayers.AddAsync(sessionPlayer, cancellationToken);
 
-        var actorName = currentUserService.Username ?? "Unknown";
-        var playerLabel = sessionPlayer.IsGuest ? request.GuestName! : actorName;
-        var activity = ActivityLog.Create(session.GroupId, callerId, actorName,
-            ActivityType.PlayerJoined, $"{playerLabel} joined session \"{session.Name}\"");
-        await context.ActivityLogs.AddAsync(activity, cancellationToken);
+        if (session.GroupId.HasValue)
+        {
+            var actorName = currentUserService.Username ?? "Unknown";
+            var playerLabel = sessionPlayer.IsGuest ? request.GuestName! : actorName;
+            var activity = ActivityLog.Create(session.GroupId.Value, callerId, actorName,
+                ActivityType.PlayerJoined, $"{playerLabel} joined session \"{session.Name}\"");
+            await context.ActivityLogs.AddAsync(activity, cancellationToken);
+        }
 
         await context.SaveChangesAsync(cancellationToken);
 

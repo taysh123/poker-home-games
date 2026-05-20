@@ -1,12 +1,9 @@
 import { useEffect, useRef } from 'react';
-import { Platform } from 'react-native';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 
-// Only complete the auth session redirect on native — web doesn't use the proxy flow
-if (Platform.OS !== 'web') {
-  WebBrowser.maybeCompleteAuthSession();
-}
+// Must be called on all platforms — on web this closes the OAuth popup after redirect
+WebBrowser.maybeCompleteAuthSession();
 
 const EXPO_CLIENT_ID = '12435044751-jdh0dldfhkn2h8hqs3ssegbjflhvcmfi.apps.googleusercontent.com';
 const IOS_CLIENT_ID  = '12435044751-jap7j5prc6vm0eh0mj517nv0phrlu8mr.apps.googleusercontent.com';
@@ -53,8 +50,4 @@ function useGoogleAuthNative(onResult: (result: GoogleAuthResult) => void) {
   return { prompt: () => promptAsync(), ready: !!request };
 }
 
-// Use the same implementation on all platforms — webClientId is now configured.
-// Replace WEB_CLIENT_ID above with the actual value from Google Cloud Console.
-export const useGoogleAuth = WEB_CLIENT_ID.startsWith('REPLACE')
-  ? (Platform.OS === 'web' ? useGoogleAuthDisabled : useGoogleAuthNative)
-  : useGoogleAuthNative;
+export const useGoogleAuth = useGoogleAuthNative;

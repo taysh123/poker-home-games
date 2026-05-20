@@ -24,7 +24,7 @@ export type SessionPlayerDto = {
 export type SessionDetailDto = {
   id: string;
   name: string;
-  groupId: string;
+  groupId: string | null;
   status: string;
   chipRatio?: number;
   defaultBuyIn?: number;
@@ -38,7 +38,7 @@ export type SessionDetailDto = {
 export type CreateSessionResponse = {
   id: string;
   name: string;
-  groupId: string;
+  groupId: string | null;
   status: string;
   chipRatio?: number;
   defaultBuyIn?: number;
@@ -101,13 +101,14 @@ export async function getGroupSessions(
 
 export async function createSession(
   token: string,
-  groupId: string,
+  groupId: string | null,
   name: string,
   chipRatio?: number,
   defaultBuyIn?: number,
 ): Promise<CreateSessionResponse> {
+  const url = groupId ? `/api/groups/${groupId}/sessions` : `/api/sessions`;
   const { data } = await api.post<CreateSessionResponse>(
-    `/api/groups/${groupId}/sessions`,
+    url,
     { name, chipRatio, defaultBuyIn },
     { headers: authHeader(token) },
   );

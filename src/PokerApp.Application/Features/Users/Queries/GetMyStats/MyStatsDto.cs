@@ -15,7 +15,7 @@ public sealed record MyStatsDto(
 public sealed record RecentSessionDto(
     Guid SessionId,
     string SessionName,
-    Guid GroupId,
+    Guid? GroupId,
     string GroupName,
     string UserRole,
     string Status,

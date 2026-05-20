@@ -7,7 +7,7 @@ public sealed record GetSessionByIdQuery(Guid SessionId) : IRequest<SessionDetai
 public sealed record SessionDetailDto(
     Guid Id,
     string Name,
-    Guid GroupId,
+    Guid? GroupId,
     string Status,
     decimal? ChipRatio,
     decimal? DefaultBuyIn,

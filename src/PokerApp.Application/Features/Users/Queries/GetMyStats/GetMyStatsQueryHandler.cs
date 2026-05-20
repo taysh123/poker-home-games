@@ -56,7 +56,7 @@ public sealed class GetMyStatsQueryHandler(
             .OrderByDescending(s => s.CreatedAt)
             .ToListAsync(cancellationToken);
 
-        var groupIds = sessions.Select(s => s.GroupId).Distinct().ToList();
+        var groupIds = sessions.Select(s => s.GroupId).Where(id => id.HasValue).Select(id => id!.Value).Distinct().ToList();
 
         var groups = await context.Groups
             .AsNoTracking()
@@ -91,8 +91,8 @@ public sealed class GetMyStatsQueryHandler(
         var allSessions = sessions.Select(s =>
         {
             var profit    = s.Status == SessionStatus.Finished ? GetProfit(s.Id) : (decimal?)null;
-            var groupName = groups.GetValueOrDefault(s.GroupId, "Unknown");
-            var userRole  = groupRoles.GetValueOrDefault(s.GroupId, "Member");
+            var groupName = s.GroupId.HasValue ? groups.GetValueOrDefault(s.GroupId.Value, "Unknown") : "Personal";
+            var userRole  = s.GroupId.HasValue ? groupRoles.GetValueOrDefault(s.GroupId.Value, "Member") : "Owner";
             return new RecentSessionDto(s.Id, s.Name, s.GroupId, groupName, userRole, s.Status.ToString(), profit, s.CreatedAt);
         }).ToList();
 

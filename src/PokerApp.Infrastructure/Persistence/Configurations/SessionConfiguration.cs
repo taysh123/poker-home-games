@@ -14,8 +14,11 @@ public class SessionConfiguration : IEntityTypeConfiguration<Session>
             .IsRequired()
             .HasMaxLength(100);
 
-        builder.Property(s => s.GroupId)
+        builder.Property(s => s.CreatorId)
             .IsRequired();
+
+        builder.Property(s => s.GroupId)
+            .IsRequired(false);
 
         builder.Property(s => s.Status)
             .IsRequired()

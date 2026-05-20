@@ -5,8 +5,9 @@ namespace PokerApp.Domain.Entities;
 public class Session : BaseEntity
 {
     public string Name { get; private set; } = string.Empty;
-    public Guid GroupId { get; private set; }
-    public Group Group { get; private set; } = null!;
+    public Guid? GroupId { get; private set; }
+    public Group? Group { get; private set; }
+    public Guid CreatorId { get; private set; }
     public decimal? ChipRatio { get; private set; }
     public decimal? DefaultBuyIn { get; private set; }
     public SessionStatus Status { get; private set; }
@@ -29,11 +30,12 @@ public class Session : BaseEntity
     private Session() { }
 
     public static Session Create(
-        string name, Guid groupId,
+        string name, Guid creatorId, Guid? groupId = null,
         decimal? chipRatio = null, decimal? defaultBuyIn = null)
         => new()
         {
             Name = name,
+            CreatorId = creatorId,
             GroupId = groupId,
             ChipRatio = chipRatio,
             DefaultBuyIn = defaultBuyIn,
