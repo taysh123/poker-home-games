@@ -165,9 +165,13 @@ npm run tunnel   # For devices behind firewalls
 
 ### Frontend
 
+Copy `apps/poker-mobile/.env.example` → `.env`:
+
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `EXPO_PUBLIC_API_URL` | Backend API base URL | `http://localhost:5062` |
+| `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` | Android OAuth client (production builds) | Expo proxy |
+| `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | iOS OAuth client (production builds) | Expo proxy |
 
 ### Backend (appsettings.json)
 
@@ -177,8 +181,33 @@ npm run tunnel   # For devices behind firewalls
 | `JwtSettings:Secret` | JWT signing key (min 32 chars) |
 | `JwtSettings:Issuer` | Token issuer (e.g. "TPoker") |
 | `JwtSettings:Audience` | Token audience |
-| `GoogleAuth:ClientId` | Google OAuth client ID |
+| `GoogleAuth:ClientId` | Google OAuth **web** client ID |
 | `AllowedOrigins` | Comma-separated list (production CORS) |
+
+### Google OAuth — Production Setup
+
+Google sign-in works out of the box in **Expo Go** (uses the Expo proxy). For
+production standalone builds:
+
+**Android**
+1. [Google Cloud Console](https://console.cloud.google.com) → APIs & Services → Credentials
+2. Create OAuth 2.0 Client ID → Application type: **Android**
+3. Package name: value of `android.package` in `app.json`
+4. SHA-1 fingerprint:
+   ```bash
+   # Debug keystore
+   keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android
+   # Release keystore — use your own keystore path
+   ```
+5. Set `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` in your Vercel/EAS environment
+
+**iOS**
+1. Create OAuth 2.0 Client ID → Application type: **iOS**
+2. Bundle ID: value of `ios.bundleIdentifier` in `app.json`
+3. Set `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
+
+If Google sign-in shows "blocked" or "not configured", the SHA-1 or bundle ID
+doesn't match the registered client. Email/password auth always works as fallback.
 
 ---
 

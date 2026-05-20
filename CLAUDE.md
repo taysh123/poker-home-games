@@ -220,6 +220,47 @@ useFocusEffect(useCallback(() => { load(); }, [load]));
 | `utils/parseAuthError.ts` | Converts axios errors → user-friendly messages |
 | `api/apiClient.ts` | Axios instance with 401 refresh interceptor |
 
+### Cross-platform Alert rule
+
+`Alert.alert()` with **3+ buttons** does NOT work on React Native Web — the browser
+has no API for multi-button native dialogs. Use the `ActionSheet` component instead
+for any action menu with 3+ options.
+
+`Alert.alert()` with exactly 2 buttons (Cancel + action) DOES work on web via
+`window.confirm()` and is fine for simple destructive confirmations.
+
+```typescript
+// ✓ Works on all platforms (2 buttons)
+Alert.alert('Delete?', 'This cannot be undone.', [
+  { text: 'Cancel', style: 'cancel' },
+  { text: 'Delete', style: 'destructive', onPress: doDelete },
+]);
+
+// ✗ BROKEN on web — use ActionSheet component instead
+Alert.alert('Options', undefined, [
+  { text: 'Open', onPress: doOpen },
+  { text: 'Edit', onPress: doEdit },
+  { text: 'Delete', style: 'destructive', onPress: doDelete },
+  { text: 'Cancel', style: 'cancel' },
+]);
+```
+
+### Share + Clipboard pattern
+
+`Share.share()` works on iOS/Android. On web desktop, the Web Share API is unavailable.
+Always add a clipboard fallback when sharing invite links:
+
+```typescript
+try {
+  await Share.share({ message, url });
+} catch {
+  if (Platform.OS === 'web' && navigator?.clipboard) {
+    await navigator.clipboard.writeText(url);
+    showToast('Link copied!', 'success');
+  }
+}
+```
+
 ---
 
 ## How to Run
@@ -251,16 +292,38 @@ npm run tunnel     # ngrok tunnel for physical devices
 ## Environment Variables
 
 ### Frontend (`apps/poker-mobile/.env` — gitignored)
-```
-EXPO_PUBLIC_API_URL=https://api.yourapp.com
-```
-Falls back to `http://localhost:5062` (web) or LAN IP (native) if not set.
+Copy `apps/poker-mobile/.env.example` → `.env` and fill in values.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `EXPO_PUBLIC_API_URL` | `http://localhost:5062` | Backend API URL |
+| `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` | Expo proxy client | Android OAuth client ID (production only) |
+| `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | Hardcoded Expo client | iOS OAuth client ID (production only) |
+
+### Google OAuth Setup
+
+**Expo Go (development)**: No env vars needed. The hardcoded `EXPO_CLIENT_ID` in
+`useGoogleAuth.ts` routes through `auth.expo.io`, which works for testing.
+
+**Production Android** (`EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID`):
+1. Google Cloud Console → APIs & Services → Credentials → Create OAuth 2.0 Client ID
+2. Application type: **Android**
+3. Package name: match `android.package` in `app.json`
+4. SHA-1: `keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android`
+5. For release builds, use the release keystore SHA-1 instead
+
+**Production iOS** (`EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`):
+1. Application type: **iOS**, Bundle ID: match `ios.bundleIdentifier` in `app.json`
+
+If OAuth shows "blocked" or "not configured", the redirect URI or SHA-1 is not registered.
+The app degrades gracefully — email/password auth still works.
 
 ### Backend (`src/PokerApp.API/appsettings.Development.json` — gitignored)
 ```json
 {
   "ConnectionStrings": { "DefaultConnection": "Host=localhost;Database=poker_app_dev;..." },
-  "JwtSettings": { "Secret": "...", "Issuer": "TPoker", "Audience": "TPokerUsers" }
+  "JwtSettings": { "Secret": "...", "Issuer": "TPoker", "Audience": "TPokerUsers" },
+  "GoogleAuth": { "ClientId": "your-google-web-client-id.apps.googleusercontent.com" }
 }
 ```
 
