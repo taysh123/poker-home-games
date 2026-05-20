@@ -289,6 +289,15 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
               <Text style={styles.navButtonText}>Sessions</Text>
               <Text style={styles.navChevron}>›</Text>
             </TouchableOpacity>
+            {isAdminOrOwner && (
+              <TouchableOpacity
+                style={[styles.navButton, styles.navButtonGold]}
+                onPress={() => navigation.navigate('NewGame', { groupId, groupName })}
+              >
+                <Text style={styles.navButtonGoldText}>New Game</Text>
+                <Text style={styles.navChevronGold}>▶</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Invite — Admin/Owner only */}
@@ -474,6 +483,8 @@ function activityIcon(type: string): string {
     case 'DebtCreated':    return '₪';
     case 'DebtSettled':    return '✓';
     case 'MemberJoined':   return '+';
+    case 'MemberLeft':     return '←';
+    case 'MemberRemoved':  return '✕';
     default: return '·';
   }
 }
@@ -559,6 +570,9 @@ const styles = StyleSheet.create({
   },
   navButtonText: { fontSize: 15, fontWeight: '600', color: colors.text },
   navChevron: { fontSize: 22, color: colors.gold, lineHeight: 24 },
+  navButtonGold: { backgroundColor: 'rgba(201,168,76,0.10)', borderColor: colors.gold },
+  navButtonGoldText: { fontSize: 15, fontWeight: '700', color: colors.gold },
+  navChevronGold: { fontSize: 13, color: colors.gold },
 
   inviteSection: { marginBottom: 16 },
   inviteRow: { flexDirection: 'row', gap: 10 },
