@@ -98,7 +98,8 @@ export default function SessionScreen({ route, navigation }: Props) {
     visible: boolean;
     type: 'buyin' | 'cashout';
     player: SessionPlayerDto | null;
-  }>({ visible: false, type: 'buyin', player: null });
+    needsPlayerSelect: boolean;
+  }>({ visible: false, type: 'buyin', player: null, needsPlayerSelect: false });
   const [txAmount, setTxAmount] = useState('');
   const [txLoading, setTxLoading] = useState(false);
 
@@ -226,7 +227,12 @@ export default function SessionScreen({ route, navigation }: Props) {
 
   function openTransaction(type: 'buyin' | 'cashout', player: SessionPlayerDto) {
     setTxAmount(session?.defaultBuyIn ? String(session.defaultBuyIn) : '');
-    setTxModal({ visible: true, type, player });
+    setTxModal({ visible: true, type, player, needsPlayerSelect: false });
+  }
+
+  function openActionBar(type: 'buyin' | 'cashout') {
+    setTxAmount(session?.defaultBuyIn ? String(session.defaultBuyIn) : '');
+    setTxModal({ visible: true, type, player: null, needsPlayerSelect: true });
   }
 
   async function handleTransaction() {
@@ -247,7 +253,7 @@ export default function SessionScreen({ route, navigation }: Props) {
         await addCashOut(token, sessionId, txModal.player.sessionPlayerId, money);
       }
       successNotification();
-      setTxModal({ visible: false, type: 'buyin', player: null });
+      setTxModal({ visible: false, type: 'buyin', player: null, needsPlayerSelect: false });
       await load(true);
     } catch (e: any) {
       errorNotification();
@@ -924,7 +930,7 @@ export default function SessionScreen({ route, navigation }: Props) {
           </View>
         )}
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: isActive ? 160 : 100 }} />
       </ScrollView>
 
       {/* ── Floating Log Hand button (Active) ── */}
@@ -937,6 +943,26 @@ export default function SessionScreen({ route, navigation }: Props) {
         </TouchableOpacity>
       )}
 
+      {/* ── Bottom Action Bar (Active sessions only) ── */}
+      {isActive && (
+        <View style={styles.actionBar}>
+          {(['buyin', 'buyin', 'cashout'] as const).map((type, idx) => {
+            const label = idx === 0 ? 'Buy In' : idx === 1 ? 'Rebuy' : 'Cash Out';
+            const isLast = idx === 2;
+            return (
+              <TouchableOpacity
+                key={idx}
+                style={[styles.actionBarBtn, isLast && styles.actionBarBtnCash]}
+                onPress={() => openActionBar(type)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.actionBarBtnText, isLast && styles.actionBarBtnTextCash]}>{label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+
       {/* ── Transaction Modal ── */}
       <Modal visible={txModal.visible} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -946,72 +972,118 @@ export default function SessionScreen({ route, navigation }: Props) {
                 <Text style={styles.sheetTitle}>
                   {txModal.type === 'buyin' ? 'Buy In' : 'Cash Out'}
                 </Text>
-                <Text style={styles.sheetSubtitle}>{txModal.player?.username}</Text>
+                {txModal.player && <Text style={styles.sheetSubtitle}>{txModal.player.username}</Text>}
               </View>
-              <TouchableOpacity onPress={() => setTxModal({ visible: false, type: 'buyin', player: null })} hitSlop={8}>
+              <TouchableOpacity onPress={() => setTxModal({ visible: false, type: 'buyin', player: null, needsPlayerSelect: false })} hitSlop={8}>
                 <Text style={styles.closeBtn}>✕</Text>
               </TouchableOpacity>
             </View>
 
-            {session.chipRatio && (
-              <View style={styles.toggleRow}>
-                <TouchableOpacity
-                  style={[styles.toggleBtn, !useChips && styles.toggleBtnActive]}
-                  onPress={() => setUseChips(false)}
-                >
-                  <Text style={[styles.toggleBtnText, !useChips && styles.toggleBtnTextActive]}>₪ Money</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.toggleBtn, useChips && styles.toggleBtnActive]}
-                  onPress={() => setUseChips(true)}
-                >
-                  <Text style={[styles.toggleBtnText, useChips && styles.toggleBtnTextActive]}>🪙 Chips</Text>
-                </TouchableOpacity>
-              </View>
+            {/* Player selector phase (opened from bottom bar) */}
+            {txModal.needsPlayerSelect && (
+              <>
+                <Text style={styles.subLabel}>Select Player</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.playerSelectScroll}>
+                  {(session?.players ?? []).map(p => (
+                    <TouchableOpacity
+                      key={p.sessionPlayerId}
+                      style={[styles.winnerChip, txModal.player?.sessionPlayerId === p.sessionPlayerId && styles.winnerChipSelected]}
+                      onPress={() => setTxModal(prev => ({ ...prev, player: p, needsPlayerSelect: false }))}
+                    >
+                      <Text style={[styles.winnerChipText, txModal.player?.sessionPlayerId === p.sessionPlayerId && styles.winnerChipTextSelected]}>
+                        {p.username}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </>
             )}
 
-            <TextInput
-              style={styles.txInput}
-              value={txAmount}
-              onChangeText={setTxAmount}
-              keyboardType="decimal-pad"
-              placeholder="0"
-              placeholderTextColor={colors.textDim}
-              autoFocus
-            />
-
-            {useChips && session.chipRatio && txAmount !== '' && !isNaN(parseFloat(txAmount)) ? (
-              <Text style={styles.txConvert}>
-                = {formatMoney(toMoney(parseFloat(txAmount), session.chipRatio, true))}
-              </Text>
-            ) : (
-              <Text style={styles.txUnit}>{useChips ? 'chips' : '₪'}</Text>
-            )}
-
-            <View style={styles.sheetActions}>
-              <TouchableOpacity
-                style={styles.cancelBtn}
-                onPress={() => setTxModal({ visible: false, type: 'buyin', player: null })}
-              >
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.confirmBtn, txModal.type === 'cashout' && styles.confirmBtnCash]}
-                onPress={handleTransaction}
-                disabled={txLoading}
-              >
-                {txLoading ? (
-                  <ActivityIndicator color={colors.background} size="small" />
-                ) : (
-                  <Text style={styles.confirmBtnText}>
-                    {txModal.type === 'buyin' ? 'Confirm Buy-In' : 'Confirm Cash-Out'}
-                    {txAmount && !isNaN(parseFloat(txAmount)) && parseFloat(txAmount) > 0
-                      ? `  ${formatMoney(toMoney(parseFloat(txAmount), session.chipRatio, useChips))}`
-                      : ''}
-                  </Text>
+            {/* Amount input (shown after player is selected or when opened from player row) */}
+            {!txModal.needsPlayerSelect && (
+              <>
+                {session.chipRatio && (
+                  <View style={styles.toggleRow}>
+                    <TouchableOpacity
+                      style={[styles.toggleBtn, !useChips && styles.toggleBtnActive]}
+                      onPress={() => setUseChips(false)}
+                    >
+                      <Text style={[styles.toggleBtnText, !useChips && styles.toggleBtnTextActive]}>₪ Money</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.toggleBtn, useChips && styles.toggleBtnActive]}
+                      onPress={() => setUseChips(true)}
+                    >
+                      <Text style={[styles.toggleBtnText, useChips && styles.toggleBtnTextActive]}>🪙 Chips</Text>
+                    </TouchableOpacity>
+                  </View>
                 )}
-              </TouchableOpacity>
-            </View>
+
+                <TextInput
+                  style={styles.txInput}
+                  value={txAmount}
+                  onChangeText={setTxAmount}
+                  keyboardType="decimal-pad"
+                  placeholder="0"
+                  placeholderTextColor={colors.textDim}
+                  autoFocus
+                />
+
+                {/* Preset amount chips */}
+                {(() => {
+                  const base = session?.defaultBuyIn ?? 100;
+                  const presets = [base, base * 2, base * 3];
+                  return (
+                    <View style={styles.presetRow}>
+                      {presets.map(p => (
+                        <TouchableOpacity
+                          key={p}
+                          style={[styles.presetChip, txAmount === String(p) && styles.presetChipActive]}
+                          onPress={() => setTxAmount(String(p))}
+                        >
+                          <Text style={[styles.presetChipText, txAmount === String(p) && styles.presetChipTextActive]}>
+                            ₪{p.toLocaleString()}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  );
+                })()}
+
+                {useChips && session.chipRatio && txAmount !== '' && !isNaN(parseFloat(txAmount)) ? (
+                  <Text style={styles.txConvert}>
+                    = {formatMoney(toMoney(parseFloat(txAmount), session.chipRatio, true))}
+                  </Text>
+                ) : (
+                  <Text style={styles.txUnit}>{useChips ? 'chips' : '₪'}</Text>
+                )}
+
+                <View style={styles.sheetActions}>
+                  <TouchableOpacity
+                    style={styles.cancelBtn}
+                    onPress={() => setTxModal({ visible: false, type: 'buyin', player: null, needsPlayerSelect: false })}
+                  >
+                    <Text style={styles.cancelBtnText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.confirmBtn, txModal.type === 'cashout' && styles.confirmBtnCash]}
+                    onPress={handleTransaction}
+                    disabled={txLoading}
+                  >
+                    {txLoading ? (
+                      <ActivityIndicator color={colors.background} size="small" />
+                    ) : (
+                      <Text style={styles.confirmBtnText}>
+                        {txModal.type === 'buyin' ? 'Confirm Buy-In' : 'Confirm Cash-Out'}
+                        {txAmount && !isNaN(parseFloat(txAmount)) && parseFloat(txAmount) > 0
+                          ? `  ${formatMoney(toMoney(parseFloat(txAmount), session.chipRatio, useChips))}`
+                          : ''}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -1540,19 +1612,69 @@ const styles = StyleSheet.create({
   // FAB
   fab: {
     position: 'absolute',
-    bottom: 24,
+    bottom: 88,
     right: 20,
-    backgroundColor: colors.gold,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 24,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
   },
-  fabText: { fontSize: 14, fontWeight: '700', color: colors.background },
+  fabText: { fontSize: 13, fontWeight: '700', color: colors.textMuted },
+
+  // Bottom action bar
+  actionBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 8,
+    paddingTop: 8,
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  actionBarBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 10,
+    backgroundColor: 'rgba(201,168,76,0.12)',
+    borderWidth: 1,
+    borderColor: colors.gold,
+  },
+  actionBarBtnCash: {
+    backgroundColor: 'rgba(39,174,96,0.10)',
+    borderColor: colors.success,
+  },
+  actionBarBtnText: { fontSize: 13, fontWeight: '700', color: colors.gold },
+  actionBarBtnTextCash: { color: colors.success },
+
+  // Preset amount chips
+  presetRow: { flexDirection: 'row', gap: 8, justifyContent: 'center' },
+  presetChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  presetChipActive: { borderColor: colors.gold, backgroundColor: 'rgba(201,168,76,0.12)' },
+  presetChipText: { fontSize: 14, fontWeight: '600', color: colors.textMuted },
+  presetChipTextActive: { color: colors.gold },
+
+  // Player select in modal
+  playerSelectScroll: { marginVertical: 4 },
 
   // Modal / Sheet
   modalOverlay: {
