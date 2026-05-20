@@ -606,7 +606,7 @@ export default function SessionScreen({ route, navigation }: Props) {
               {sharing ? <ActivityIndicator color={colors.gold} size="small" /> : <Text style={styles.exportText}>Share</Text>}
             </TouchableOpacity>
           )}
-          {isAdminOrOwner && (
+          {isAdminOrOwner && !isActive && (
             <TouchableOpacity onPress={handleDeleteSession} style={styles.deleteBtn} disabled={deleteLoading} hitSlop={8}>
               {deleteLoading
                 ? <ActivityIndicator color={colors.error} size="small" />

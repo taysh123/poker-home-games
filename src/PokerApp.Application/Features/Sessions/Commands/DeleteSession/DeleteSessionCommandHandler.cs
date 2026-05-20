@@ -19,6 +19,9 @@ public sealed class DeleteSessionCommandHandler(
             .FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken)
             ?? throw new NotFoundException(nameof(Session), request.SessionId);
 
+        if (session.Status == SessionStatus.Active)
+            throw new BadRequestException("Cannot delete an active session. End the game first.");
+
         if (session.GroupId.HasValue)
         {
             var membership = await context.GroupMembers
