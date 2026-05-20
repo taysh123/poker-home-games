@@ -56,16 +56,13 @@ import {
 import { exportSessionCsv, shareSessionCard } from '../utils/exportUtils';
 import { successNotification, errorNotification, lightTap } from '../utils/haptics';
 import { showToast } from '../utils/toast';
+import { formatMoney } from '../utils/formatters';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Session'>;
 
 function toMoney(input: number, chipRatio: number | undefined, useChips: boolean): number {
   if (!useChips || !chipRatio || chipRatio === 0) return input;
   return input / chipRatio;
-}
-
-function formatMoney(value: number): string {
-  return `₪${Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 }
 
 function formatDuration(start: string, end?: string | null, _tick?: number): string {

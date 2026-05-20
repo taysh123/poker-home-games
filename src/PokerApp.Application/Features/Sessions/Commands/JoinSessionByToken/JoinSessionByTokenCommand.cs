@@ -8,4 +8,5 @@ public sealed record JoinSessionByTokenResponse(
     Guid SessionId,
     string SessionName,
     string SessionStatus,
-    Guid SessionPlayerId);
+    Guid SessionPlayerId,
+    Guid? GroupId);

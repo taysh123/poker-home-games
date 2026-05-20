@@ -143,7 +143,12 @@ export default function GroupsListScreen() {
             ) : null}
             <Text style={styles.memberCount}>{item.memberCount} member{item.memberCount !== 1 ? 's' : ''}</Text>
           </View>
-          <RoleBadge role={item.role} />
+          <View style={styles.cardRight}>
+            <RoleBadge role={item.role} />
+            {(item.role === 'Owner' || item.role === 'Admin') && (
+              <Text style={styles.manageLabel}>Manage ›</Text>
+            )}
+          </View>
         </TouchableOpacity>
       )}
       ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -211,11 +216,20 @@ const styles = StyleSheet.create({
   separator: {
     height: 10,
   },
+  cardRight: {
+    alignItems: 'flex-end',
+    gap: 6,
+    marginLeft: 12,
+  },
+  manageLabel: {
+    fontSize: 12,
+    color: colors.gold,
+    fontWeight: '600',
+  },
   badge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
-    marginLeft: 12,
   },
   badgeOwner: {
     backgroundColor: 'rgba(201,168,76,0.15)',

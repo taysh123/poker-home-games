@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   StyleSheet,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,26 +15,11 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
 import { getMyStats, RecentSessionDto } from '../api/statsApi';
+import { deleteSession } from '../api/sessionsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { formatPL, formatDate, formatDuration } from '../utils/formatters';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-
-function formatPL(value: number): string {
-  const abs = Math.abs(Math.round(value));
-  return `${value >= 0 ? '+' : '-'}₪${abs.toLocaleString()}`;
-}
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-function formatDuration(startedAt: string, endedAt: string): string {
-  const mins = Math.round((new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 60000);
-  if (mins < 60) return `${mins}m`;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
-}
 
 export default function AllSessionsScreen() {
   const navigation = useNavigation<Nav>();
@@ -65,6 +51,30 @@ export default function AllSessionsScreen() {
 
   function openSession(s: RecentSessionDto) {
     navigation.navigate('Session', { sessionId: s.sessionId, groupId: s.groupId ?? '' });
+  }
+
+  function promptDelete(s: RecentSessionDto) {
+    Alert.alert(
+      'Delete Session',
+      `Delete "${s.sessionName}"? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const token = await SecureStore.getItemAsync('accessToken');
+              if (!token) return;
+              await deleteSession(token, s.sessionId);
+              setSessions(prev => prev.filter(x => x.sessionId !== s.sessionId));
+            } catch {
+              Alert.alert('Error', 'Failed to delete session. Please try again.');
+            }
+          },
+        },
+      ],
+    );
   }
 
   const active   = sessions.filter(s => s.status === 'Active');
@@ -137,6 +147,7 @@ export default function AllSessionsScreen() {
           {finished.map((s, i) => {
             const pl = s.profitLoss;
             const plColor = pl != null && pl > 0 ? colors.success : pl != null && pl < 0 ? colors.error : colors.textMuted;
+            const canManage = s.userRole === 'Admin' || s.userRole === 'Owner';
             return (
               <React.Fragment key={s.sessionId}>
                 {i > 0 && <View style={styles.divider} />}
@@ -152,6 +163,15 @@ export default function AllSessionsScreen() {
                     <Text style={[styles.plValue, { color: plColor }]}>{formatPL(pl)}</Text>
                   ) : (
                     <Text style={styles.chevron}>›</Text>
+                  )}
+                  {canManage && (
+                    <TouchableOpacity
+                      style={styles.moreBtn}
+                      onPress={() => promptDelete(s)}
+                      hitSlop={8}
+                    >
+                      <Text style={styles.moreBtnText}>···</Text>
+                    </TouchableOpacity>
                   )}
                 </TouchableOpacity>
               </React.Fragment>
@@ -221,6 +241,8 @@ const styles = StyleSheet.create({
   groupName:   { fontSize: 12, color: colors.textMuted },
   plValue:     { fontSize: 14, fontWeight: '700' },
   chevron:     { fontSize: 20, color: colors.textDim, fontWeight: '300' },
+  moreBtn:     { paddingHorizontal: 6, paddingVertical: 4, marginLeft: 4 },
+  moreBtnText: { fontSize: 16, color: colors.textMuted, letterSpacing: 1 },
 
   divider: { height: 1, backgroundColor: colors.border, marginHorizontal: 16 },
 

@@ -32,7 +32,7 @@ function formatExpiry(expiresAt: string): string {
   return `Expires in ${days} days`;
 }
 
-export default function InvitationsScreen({ navigation: _navigation }: Props) {
+export default function InvitationsScreen({ navigation }: Props) {
   const [invitations, setInvitations] = useState<PendingInvitationDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -72,8 +72,7 @@ export default function InvitationsScreen({ navigation: _navigation }: Props) {
       const token = await SecureStore.getItemAsync('accessToken');
       if (!token) return;
       await acceptInvitation(token, inv.invitationId);
-      Alert.alert('Joined!', `You are now a member of ${inv.groupName}.`);
-      await load();
+      navigation.navigate('GroupDetail', { groupId: inv.groupId, groupName: inv.groupName });
     } catch {
       Alert.alert('Error', 'Failed to accept invitation.');
     } finally {

@@ -70,7 +70,10 @@ export default function LoginScreen({ navigation }: Props) {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <Image source={require('../../assets/icon.png')} style={styles.logo} resizeMode="contain" />
+          <View style={styles.logoRing}>
+            <Image source={require('../../assets/icon.png')} style={styles.logo} resizeMode="contain" />
+          </View>
+          <Text style={styles.appName}>T POKER</Text>
           <Text style={styles.title}>Welcome back</Text>
           <Text style={styles.subtitle}>Sign in to your account</Text>
         </View>
@@ -138,8 +141,16 @@ export default function LoginScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
   container: { flexGrow: 1, padding: 24, justifyContent: 'center' },
-  header: { alignItems: 'center', marginBottom: 40 },
-  logo: { width: 88, height: 88, borderRadius: 18, marginBottom: 20 },
+  header: { alignItems: 'center', marginBottom: 44 },
+  logoRing: {
+    borderWidth: 1.5,
+    borderColor: 'rgba(201,168,76,0.4)',
+    borderRadius: 28,
+    padding: 4,
+    marginBottom: 12,
+  },
+  logo: { width: 112, height: 112, borderRadius: 22 },
+  appName: { fontSize: 11, fontWeight: '700', color: colors.gold, letterSpacing: 2.5, marginBottom: 14 },
   title: { fontSize: 28, fontWeight: '700', color: colors.text, marginBottom: 6 },
   subtitle: { fontSize: 15, color: colors.textMuted },
   form: { gap: 20 },

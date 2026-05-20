@@ -40,7 +40,7 @@ public sealed class JoinSessionByTokenCommandHandler(
             var existingPlayer = await context.SessionPlayers
                 .FirstAsync(sp => sp.SessionId == session.Id && sp.UserId == callerId, cancellationToken);
 
-            return new JoinSessionByTokenResponse(session.Id, session.Name, session.Status.ToString(), existingPlayer.Id);
+            return new JoinSessionByTokenResponse(session.Id, session.Name, session.Status.ToString(), existingPlayer.Id, session.GroupId);
         }
 
         var sessionPlayer = SessionPlayer.CreateForUser(session.Id, callerId);
@@ -62,6 +62,6 @@ public sealed class JoinSessionByTokenCommandHandler(
 
         await context.SaveChangesAsync(cancellationToken);
 
-        return new JoinSessionByTokenResponse(session.Id, session.Name, session.Status.ToString(), sessionPlayer.Id);
+        return new JoinSessionByTokenResponse(session.Id, session.Name, session.Status.ToString(), sessionPlayer.Id, session.GroupId);
     }
 }

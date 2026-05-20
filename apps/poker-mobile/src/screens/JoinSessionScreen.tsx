@@ -14,6 +14,7 @@ export default function JoinSessionScreen({ route, navigation }: Props) {
   const [status, setStatus] = useState<'joining' | 'success' | 'error'>('joining');
   const [errorMsg, setErrorMsg] = useState('');
   const [sessionId, setSessionId] = useState('');
+  const [groupId, setGroupId] = useState('');
 
   useEffect(() => {
     join();
@@ -31,6 +32,7 @@ export default function JoinSessionScreen({ route, navigation }: Props) {
       }
       const result = await joinSessionByToken(token, inviteToken);
       setSessionId(result.sessionId);
+      setGroupId(result.groupId ?? '');
       setStatus('success');
     } catch (e: any) {
       const msg = e?.response?.data?.message ?? e?.message ?? 'This invite link is invalid or has expired.';
@@ -68,7 +70,7 @@ export default function JoinSessionScreen({ route, navigation }: Props) {
       <Text style={styles.successSub}>You've joined the session.</Text>
       <TouchableOpacity
         style={styles.btn}
-        onPress={() => navigation.replace('Session', { sessionId, groupId: '' })}
+        onPress={() => navigation.replace('Session', { sessionId, groupId })}
       >
         <Text style={styles.btnText}>Open Session</Text>
       </TouchableOpacity>

@@ -22,12 +22,9 @@ import {
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { successNotification, errorNotification } from '../utils/haptics';
 import { showToast } from '../utils/toast';
+import { formatMoney } from '../utils/formatters';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-
-function formatMoney(value: number): string {
-  return `₪${Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
-}
 
 export default function PendingSettlementsScreen() {
   const navigation = useNavigation<Nav>();

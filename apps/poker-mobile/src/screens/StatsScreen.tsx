@@ -15,25 +15,9 @@ import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { getMyStats, MyStatsDto, RecentSessionDto } from '../api/statsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { formatPL, formatDate, formatDuration } from '../utils/formatters';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-
-function formatPL(value: number): string {
-  const abs = Math.abs(Math.round(value));
-  return `${value >= 0 ? '+' : '-'}₪${abs.toLocaleString()}`;
-}
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-function formatDuration(startedAt: string, endedAt: string): string {
-  const mins = Math.round((new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 60000);
-  if (mins < 60) return `${mins}m`;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
-}
 
 export default function StatsScreen() {
   const navigation = useNavigation<Nav>();
@@ -105,16 +89,24 @@ export default function StatsScreen() {
         <Text style={styles.heroSub}>{stats.totalSessionsPlayed} sessions played</Text>
       </View>
 
+
       {/* ── Win / Loss record ── */}
       <Text style={styles.sectionTitle}>RECORD</Text>
-      <View style={styles.recordCard}>
-        <RecordCell label="Wins" value={stats.winsCount} color={colors.success} />
-        <View style={styles.recordDivider} />
-        <RecordCell label="Losses" value={stats.lossesCount} color={colors.error} />
-        <View style={styles.recordDivider} />
-        <RecordCell label="Even" value={stats.breakEvenCount} color={colors.textMuted} />
-        <View style={styles.recordDivider} />
-        <RecordCell label="Win Rate" value={`${winRate}%`} color={winRate >= 50 ? colors.success : colors.textMuted} />
+      <View style={styles.recordCardWrapper}>
+        <View style={styles.recordCard}>
+          <RecordCell label="Wins" value={stats.winsCount} color={colors.success} />
+          <View style={styles.recordDivider} />
+          <RecordCell label="Losses" value={stats.lossesCount} color={colors.error} />
+          <View style={styles.recordDivider} />
+          <RecordCell label="Even" value={stats.breakEvenCount} color={colors.textMuted} />
+          <View style={styles.recordDivider} />
+          <RecordCell label="Win Rate" value={`${winRate}%`} color={winRate >= 50 ? colors.success : colors.textMuted} />
+        </View>
+        {stats.totalSessionsPlayed > 0 && (
+          <View style={styles.winRateTrack}>
+            <View style={[styles.winRateFill, { width: `${winRate}%` as any }]} />
+          </View>
+        )}
       </View>
 
       {/* ── Highlights ── */}
@@ -195,28 +187,28 @@ export default function StatsScreen() {
 const CHART_HALF = 52;
 
 function PLBarChart({ sessions }: { sessions: RecentSessionDto[] }) {
-  const values = sessions.map(s => s.profitLoss ?? 0);
-  const maxAbs = Math.max(...values.map(Math.abs), 1);
+  const maxAbs = Math.max(...sessions.map(s => Math.abs(s.profitLoss ?? 0)), 1);
 
   return (
     <View style={styles.chartCard}>
+      <Text style={styles.chartZeroLabel}>₪0</Text>
       <View style={styles.chartBars}>
-        {values.map((v, i) => {
-          const ratio = Math.abs(v) / maxAbs;
-          const barH = Math.max(Math.round(ratio * CHART_HALF), 3);
+        {sessions.map((session, i) => {
+          const v = session.profitLoss ?? 0;
+          const barH = Math.max(Math.round((Math.abs(v) / maxAbs) * CHART_HALF), 3);
           const isPos = v >= 0;
           return (
             <View key={i} style={styles.chartBarCol}>
-              {/* Upper half — positive bars anchor to bottom */}
               <View style={styles.chartHalfTop}>
                 {isPos && <View style={[styles.chartBarFill, styles.chartBarWin, { height: barH }]} />}
               </View>
-              {/* Zero line */}
               <View style={styles.chartZeroLine} />
-              {/* Lower half — negative bars anchor to top */}
               <View style={styles.chartHalfBot}>
                 {!isPos && <View style={[styles.chartBarFill, styles.chartBarLoss, { height: barH }]} />}
               </View>
+              <Text style={styles.chartDateLabel} numberOfLines={1}>
+                {formatDate(session.createdAt)}
+              </Text>
             </View>
           );
         })}
@@ -292,6 +284,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.gold,
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
@@ -318,6 +312,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
 
+  recordCardWrapper: {
+    marginBottom: 20,
+  },
   recordCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -325,7 +322,18 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     flexDirection: 'row',
     overflow: 'hidden',
-    marginBottom: 20,
+  },
+  winRateTrack: {
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+    overflow: 'hidden',
+    marginTop: 6,
+    marginHorizontal: 2,
+  },
+  winRateFill: {
+    height: 3,
+    backgroundColor: colors.gold,
   },
   recordCell: {
     flex: 1,
@@ -384,8 +392,15 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 14,
     paddingHorizontal: 12,
-    paddingVertical: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
     marginBottom: 20,
+  },
+  chartZeroLabel: {
+    fontSize: 8,
+    color: colors.textMuted,
+    fontWeight: '600',
+    marginBottom: 2,
   },
   chartBars: {
     flexDirection: 'row',
@@ -395,6 +410,12 @@ const styles = StyleSheet.create({
   chartBarCol: {
     flex: 1,
     alignItems: 'center',
+  },
+  chartDateLabel: {
+    fontSize: 7,
+    color: colors.textDim,
+    marginTop: 4,
+    textAlign: 'center',
   },
   chartHalfTop: {
     height: CHART_HALF,

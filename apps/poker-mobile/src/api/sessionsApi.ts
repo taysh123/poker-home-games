@@ -231,6 +231,7 @@ export type JoinSessionByTokenResponse = {
   sessionName: string;
   sessionStatus: string;
   sessionPlayerId: string;
+  groupId: string | null;
 };
 
 export async function generateSessionInviteToken(
