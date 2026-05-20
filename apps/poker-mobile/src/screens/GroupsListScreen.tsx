@@ -6,13 +6,25 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
+  Modal,
+  Share,
+  Platform,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
-import { getMyGroups, getMyInvitations, MyGroupDto } from '../api/groupsApi';
+import {
+  getMyGroups,
+  getMyInvitations,
+  MyGroupDto,
+  generateGroupInviteLink,
+  leaveGroup,
+  deleteGroup,
+} from '../api/groupsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import ActionSheet, { ActionSheetOption } from '../components/ActionSheet';
+import { showToast } from '../utils/toast';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -22,6 +34,14 @@ export default function GroupsListScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [invitationCount, setInvitationCount] = useState(0);
+
+  // Action sheet state
+  const [actionSheetGroup, setActionSheetGroup] = useState<MyGroupDto | null>(null);
+
+  // Delete confirm modal state
+  const [deleteConfirmGroup, setDeleteConfirmGroup] = useState<MyGroupDto | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   const loadGroups = useCallback(async () => {
     setLoading(true);
@@ -86,6 +106,105 @@ export default function GroupsListScreen() {
     });
   }, [navigation, invitationCount]);
 
+  async function handleShareInvite(group: MyGroupDto) {
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!token) return;
+      const result = await generateGroupInviteLink(token, group.id);
+      const url = result.deepLinkUrl;
+      const message = `Join my poker group "${group.name}" on T Poker: ${url}`;
+      try {
+        await Share.share(Platform.OS === 'ios' ? { url, message } : { message });
+      } catch {
+        if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
+          await navigator.clipboard.writeText(url);
+          showToast('Invite link copied to clipboard!', 'success');
+        } else {
+          showToast('Could not share link.', 'error');
+        }
+      }
+    } catch {
+      showToast('Failed to generate invite link. Try again.', 'error');
+    }
+  }
+
+  async function handleLeave(group: MyGroupDto) {
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!token) return;
+      await leaveGroup(token, group.id);
+      setGroups(prev => prev.filter(g => g.id !== group.id));
+      showToast(`Left "${group.name}"`, 'success');
+    } catch {
+      showToast('Failed to leave group. Please try again.', 'error');
+    }
+  }
+
+  async function executeDelete() {
+    if (!deleteConfirmGroup) return;
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!token) return;
+      await deleteGroup(token, deleteConfirmGroup.id);
+      setGroups(prev => prev.filter(g => g.id !== deleteConfirmGroup.id));
+      setDeleteConfirmGroup(null);
+      showToast(`"${deleteConfirmGroup.name}" deleted`, 'success');
+    } catch {
+      setDeleteError('Failed to delete. Please try again.');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  function buildOptions(group: MyGroupDto): ActionSheetOption[] {
+    const isOwner = group.role === 'Owner';
+    const isAdmin = group.role === 'Admin';
+    const canManage = isOwner || isAdmin;
+
+    const opts: ActionSheetOption[] = [
+      {
+        label: 'Open Group',
+        onPress: () => navigation.navigate('GroupDetail', { groupId: group.id, groupName: group.name }),
+      },
+    ];
+
+    if (canManage) {
+      opts.push({
+        label: 'Share Invite Link',
+        onPress: () => handleShareInvite(group),
+      });
+      opts.push({
+        label: 'Edit Group',
+        onPress: () => navigation.navigate('EditGroup', {
+          groupId: group.id,
+          groupName: group.name,
+          description: group.description,
+        }),
+      });
+    }
+
+    if (!isOwner) {
+      opts.push({
+        label: 'Leave Group',
+        style: 'destructive' as const,
+        onPress: () => handleLeave(group),
+      });
+    }
+
+    if (isOwner) {
+      opts.push({
+        label: 'Delete Group',
+        style: 'destructive' as const,
+        onPress: () => { setDeleteError(''); setDeleteConfirmGroup(group); },
+      });
+    }
+
+    opts.push({ label: 'Cancel', style: 'cancel' as const, onPress: () => {} });
+    return opts;
+  }
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -122,37 +241,93 @@ export default function GroupsListScreen() {
     );
   }
 
+  const actionGroup = actionSheetGroup;
+
   return (
-    <FlatList
-      style={styles.list}
-      contentContainerStyle={styles.listContent}
-      data={groups}
-      keyExtractor={(item) => item.id}
-      renderItem={({ item }) => (
-        <TouchableOpacity
-          style={styles.card}
-          onPress={() => navigation.navigate('GroupDetail', { groupId: item.id, groupName: item.name })}
-          activeOpacity={0.75}
-        >
-          <View style={styles.cardLeft}>
-            <Text style={styles.groupName}>{item.name}</Text>
-            {item.description ? (
-              <Text style={styles.groupDesc} numberOfLines={1}>
-                {item.description}
-              </Text>
-            ) : null}
-            <Text style={styles.memberCount}>{item.memberCount} member{item.memberCount !== 1 ? 's' : ''}</Text>
+    <View style={styles.flex}>
+      <FlatList
+        style={styles.list}
+        contentContainerStyle={styles.listContent}
+        data={groups}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <View style={styles.cardRow}>
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => navigation.navigate('GroupDetail', { groupId: item.id, groupName: item.name })}
+              activeOpacity={0.75}
+            >
+              <View style={styles.cardLeft}>
+                <Text style={styles.groupName}>{item.name}</Text>
+                {item.description ? (
+                  <Text style={styles.groupDesc} numberOfLines={1}>
+                    {item.description}
+                  </Text>
+                ) : null}
+                <Text style={styles.memberCount}>{item.memberCount} member{item.memberCount !== 1 ? 's' : ''}</Text>
+              </View>
+              <RoleBadge role={item.role} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.moreBtn}
+              onPress={() => setActionSheetGroup(item)}
+              hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+            >
+              <Text style={styles.moreBtnText}>···</Text>
+            </TouchableOpacity>
           </View>
-          <View style={styles.cardRight}>
-            <RoleBadge role={item.role} />
-            {(item.role === 'Owner' || item.role === 'Admin') && (
-              <Text style={styles.manageLabel}>Manage ›</Text>
-            )}
+        )}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
+      />
+
+      {/* ── Action sheet ── */}
+      <ActionSheet
+        visible={actionSheetGroup !== null}
+        onClose={() => setActionSheetGroup(null)}
+        title={actionGroup?.name}
+        subtitle={actionGroup ? `${actionGroup.memberCount} member${actionGroup.memberCount !== 1 ? 's' : ''}` : undefined}
+        options={actionGroup ? buildOptions(actionGroup) : [{ label: 'Cancel', style: 'cancel', onPress: () => {} }]}
+      />
+
+      {/* ── Delete confirmation modal ── */}
+      <Modal
+        visible={deleteConfirmGroup !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !deleting && setDeleteConfirmGroup(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Delete Group</Text>
+            <Text style={styles.deleteBody}>
+              Permanently delete "{deleteConfirmGroup?.name}"?{'\n'}
+              All sessions, settlements, and history will be removed. This cannot be undone.
+            </Text>
+            {deleteError ? <Text style={styles.inlineError}>{deleteError}</Text> : null}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancel}
+                onPress={() => setDeleteConfirmGroup(null)}
+                disabled={deleting}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.deleteBtn, deleting && styles.deleteBtnDisabled]}
+                onPress={executeDelete}
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <ActivityIndicator size="small" color={colors.text} />
+                ) : (
+                  <Text style={styles.deleteBtnText}>Delete</Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
-        </TouchableOpacity>
-      )}
-      ItemSeparatorComponent={() => <View style={styles.separator} />}
-    />
+        </View>
+      </Modal>
+    </View>
   );
 }
 
@@ -169,6 +344,7 @@ function RoleBadge({ role }: { role: string }) {
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1, backgroundColor: colors.background },
   center: {
     flex: 1,
     backgroundColor: colors.background,
@@ -185,15 +361,21 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 40,
   },
-  card: {
+  // ── Card row ─────────────────────────────────────────────────────────────
+  cardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 14,
-    padding: 16,
+  },
+  card: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    padding: 16,
   },
   cardLeft: {
     flex: 1,
@@ -216,15 +398,14 @@ const styles = StyleSheet.create({
   separator: {
     height: 10,
   },
-  cardRight: {
-    alignItems: 'flex-end',
-    gap: 6,
-    marginLeft: 12,
+  moreBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 16,
   },
-  manageLabel: {
-    fontSize: 12,
-    color: colors.gold,
-    fontWeight: '600',
+  moreBtnText: {
+    fontSize: 18,
+    color: colors.textMuted,
+    letterSpacing: 2,
   },
   badge: {
     paddingHorizontal: 10,
@@ -342,4 +523,42 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+
+  // ── Modals ─────────────────────────────────────────────────────────────
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: colors.bgOverlay,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  modalCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    padding: 24,
+    gap: 16,
+  },
+  modalTitle: { fontSize: 17, fontWeight: '700', color: colors.text },
+  inlineError: { fontSize: 13, color: colors.error, textAlign: 'center' },
+  modalActions: { flexDirection: 'row', gap: 10 },
+  modalCancel: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  modalCancelText: { fontSize: 15, fontWeight: '600', color: colors.textMuted },
+  deleteBody: { fontSize: 14, color: colors.textMuted, lineHeight: 20 },
+  deleteBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 10,
+    backgroundColor: colors.error,
+    alignItems: 'center',
+  },
+  deleteBtnDisabled: { opacity: 0.5 },
+  deleteBtnText: { fontSize: 15, fontWeight: '700', color: colors.text },
 });

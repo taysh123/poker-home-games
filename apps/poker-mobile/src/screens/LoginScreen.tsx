@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
   header: { alignItems: 'center', marginBottom: 44 },
   logoRing: {
     borderWidth: 1.5,
-    borderColor: 'rgba(201,168,76,0.4)',
+    borderColor: colors.goldMuted,
     borderRadius: 28,
     padding: 4,
     marginBottom: 12,

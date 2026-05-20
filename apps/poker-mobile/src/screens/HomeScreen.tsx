@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(231,76,60,0.4)',
+    borderColor: colors.errorMuted,
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,

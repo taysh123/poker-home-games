@@ -17,6 +17,7 @@ export const colors = {
   textDim: '#3A4A5A',
   error: '#E74C3C',
   errorFaint: 'rgba(231,76,60,0.08)',
+  errorMuted: 'rgba(231,76,60,0.35)',
   success: '#27AE60',
   warning: '#F39C12',
   bgOverlay: 'rgba(15,25,35,0.6)',

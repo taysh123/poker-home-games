@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   StyleSheet,
   RefreshControl,
-  Alert,
   Modal,
   TextInput,
   KeyboardAvoidingView,
@@ -41,6 +40,12 @@ export default function AllSessionsScreen() {
   const [renameState, setRenameState] = useState<{ sessionId: string; name: string } | null>(null);
   const [renameInput, setRenameInput] = useState('');
   const [renaming, setRenaming] = useState(false);
+  const [renameError, setRenameError] = useState('');
+
+  // Delete confirm modal state
+  const [deleteConfirmSession, setDeleteConfirmSession] = useState<RecentSessionDto | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   const load = useCallback(async (isRefresh = false) => {
     if (!isRefresh) setLoading(true);
@@ -66,28 +71,26 @@ export default function AllSessionsScreen() {
     navigation.navigate('Session', { sessionId: s.sessionId, groupId: s.groupId ?? '' });
   }
 
-  function confirmDelete(s: RecentSessionDto) {
-    Alert.alert(
-      'Delete Session',
-      `Permanently remove "${s.sessionName}"? All buy-ins, cash-outs, and history will be deleted. This cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const token = await SecureStore.getItemAsync('accessToken');
-              if (!token) return;
-              await deleteSession(token, s.sessionId);
-              setSessions(prev => prev.filter(x => x.sessionId !== s.sessionId));
-            } catch {
-              Alert.alert('Error', 'Failed to delete session. Please try again.');
-            }
-          },
-        },
-      ],
-    );
+  function promptDelete(s: RecentSessionDto) {
+    setDeleteError('');
+    setDeleteConfirmSession(s);
+  }
+
+  async function executeDelete() {
+    if (!deleteConfirmSession) return;
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!token) return;
+      await deleteSession(token, deleteConfirmSession.sessionId);
+      setSessions(prev => prev.filter(x => x.sessionId !== deleteConfirmSession.sessionId));
+      setDeleteConfirmSession(null);
+    } catch {
+      setDeleteError('Failed to delete. Please try again.');
+    } finally {
+      setDeleting(false);
+    }
   }
 
   async function handleRename() {
@@ -95,6 +98,7 @@ export default function AllSessionsScreen() {
     const trimmed = renameInput.trim();
     if (!trimmed || trimmed === renameState.name) { setRenameState(null); return; }
     setRenaming(true);
+    setRenameError('');
     try {
       const token = await SecureStore.getItemAsync('accessToken');
       if (!token) return;
@@ -104,7 +108,7 @@ export default function AllSessionsScreen() {
       );
       setRenameState(null);
     } catch {
-      Alert.alert('Error', 'Failed to rename session. Please try again.');
+      setRenameError('Failed to rename. Please try again.');
     } finally {
       setRenaming(false);
     }
@@ -219,7 +223,7 @@ export default function AllSessionsScreen() {
         )}
       </ScrollView>
 
-      {/* ── Action sheet — outside ScrollView so it renders at root level ── */}
+      {/* ── Action sheet — outside ScrollView ── */}
       <ActionSheet
         visible={actionSheetSession !== null}
         onClose={() => setActionSheetSession(null)}
@@ -241,13 +245,13 @@ export default function AllSessionsScreen() {
           {
             label: 'Delete Session',
             style: 'destructive',
-            onPress: () => actionSession && confirmDelete(actionSession),
+            onPress: () => actionSession && promptDelete(actionSession),
           },
           { label: 'Cancel', style: 'cancel', onPress: () => {} },
         ]}
       />
 
-      {/* ── Rename modal — outside ScrollView ── */}
+      {/* ── Rename modal ── */}
       <Modal
         visible={renameState !== null}
         transparent
@@ -271,6 +275,7 @@ export default function AllSessionsScreen() {
               returnKeyType="done"
               onSubmitEditing={handleRename}
             />
+            {renameError ? <Text style={styles.inlineError}>{renameError}</Text> : null}
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.modalCancel}
@@ -293,6 +298,45 @@ export default function AllSessionsScreen() {
             </View>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ── Delete confirmation modal ── */}
+      <Modal
+        visible={deleteConfirmSession !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !deleting && setDeleteConfirmSession(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Delete Session</Text>
+            <Text style={styles.deleteBody}>
+              Permanently remove "{deleteConfirmSession?.sessionName}"?{'\n'}
+              All buy-ins, cash-outs, and history will be deleted. This cannot be undone.
+            </Text>
+            {deleteError ? <Text style={styles.inlineError}>{deleteError}</Text> : null}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancel}
+                onPress={() => setDeleteConfirmSession(null)}
+                disabled={deleting}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.deleteBtn, deleting && styles.modalSaveDisabled]}
+                onPress={executeDelete}
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <ActivityIndicator size="small" color={colors.text} />
+                ) : (
+                  <Text style={styles.deleteBtnText}>Delete</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -395,6 +439,7 @@ const styles = StyleSheet.create({
   retryBtn:   { borderWidth: 1, borderColor: colors.gold, borderRadius: 8, paddingHorizontal: 20, paddingVertical: 8 },
   retryText:  { color: colors.gold, fontWeight: '600' },
 
+  // ── Modals ─────────────────────────────────────────────────────────────
   modalOverlay: {
     flex: 1,
     backgroundColor: colors.bgOverlay,
@@ -420,6 +465,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.text,
   },
+  inlineError: { fontSize: 13, color: colors.error, textAlign: 'center' },
   modalActions:      { flexDirection: 'row', gap: 10 },
   modalCancel: {
     flex: 1,
@@ -439,4 +485,14 @@ const styles = StyleSheet.create({
   },
   modalSaveDisabled: { opacity: 0.5 },
   modalSaveText:     { fontSize: 15, fontWeight: '700', color: colors.background },
+
+  deleteBody: { fontSize: 14, color: colors.textMuted, lineHeight: 20 },
+  deleteBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 10,
+    backgroundColor: colors.error,
+    alignItems: 'center',
+  },
+  deleteBtnText: { fontSize: 15, fontWeight: '700', color: colors.text },
 });
