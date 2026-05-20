@@ -22,6 +22,7 @@ import { getMyStats, RecentSessionDto } from '../api/statsApi';
 import { deleteSession, updateSessionName } from '../api/sessionsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { formatPL, formatDate, formatDuration } from '../utils/formatters';
+import ActionSheet from '../components/ActionSheet';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -32,6 +33,11 @@ export default function AllSessionsScreen() {
   const [loading, setLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError]       = useState<string | null>(null);
+
+  // Action sheet state
+  const [actionSheetSession, setActionSheetSession] = useState<RecentSessionDto | null>(null);
+
+  // Rename modal state
   const [renameState, setRenameState] = useState<{ sessionId: string; name: string } | null>(null);
   const [renameInput, setRenameInput] = useState('');
   const [renaming, setRenaming] = useState(false);
@@ -58,30 +64,6 @@ export default function AllSessionsScreen() {
 
   function openSession(s: RecentSessionDto) {
     navigation.navigate('Session', { sessionId: s.sessionId, groupId: s.groupId ?? '' });
-  }
-
-  function promptActions(s: RecentSessionDto) {
-    Alert.alert(
-      s.sessionName,
-      s.groupName || undefined,
-      [
-        { text: 'Open Session', onPress: () => openSession(s) },
-        {
-          text: 'Rename Session',
-          onPress: () => {
-            setRenameState({ sessionId: s.sessionId, name: s.sessionName });
-            setRenameInput(s.sessionName);
-          },
-        },
-        {
-          text: 'Delete Session',
-          style: 'destructive',
-          onPress: () => confirmDelete(s),
-        },
-        { text: 'Cancel', style: 'cancel' },
-      ],
-      { cancelable: true },
-    );
   }
 
   function confirmDelete(s: RecentSessionDto) {
@@ -150,89 +132,122 @@ export default function AllSessionsScreen() {
     );
   }
 
-  return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={[styles.container, { paddingTop: insets.top + 16 }]}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />}
-    >
-      {/* ── Active ── */}
-      <Text style={styles.sectionLabel}>Active Now</Text>
-      {active.length === 0 ? (
-        <TouchableOpacity
-          style={styles.newGameCta}
-          onPress={() => navigation.navigate('NewGame', {})}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.newGameCtaText}>♠  Start New Game</Text>
-          <Text style={styles.newGameCtaChevron}>›</Text>
-        </TouchableOpacity>
-      ) : (
-        <View style={styles.activeCard}>
-          {active.map((s, i) => (
-            <React.Fragment key={s.sessionId}>
-              {i > 0 && <View style={styles.divider} />}
-              <TouchableOpacity style={styles.activeRow} onPress={() => openSession(s)} activeOpacity={0.7}>
-                <View style={styles.liveDot} />
-                <View style={styles.rowLeft}>
-                  <Text style={styles.sessionName}>{s.sessionName}</Text>
-                  <Text style={styles.groupName}>{s.groupName}</Text>
-                </View>
-                <Text style={styles.chevron}>›</Text>
-              </TouchableOpacity>
-            </React.Fragment>
-          ))}
-        </View>
-      )}
+  const actionSession = actionSheetSession;
 
-      {/* ── Recent ── */}
-      <Text style={[styles.sectionLabel, { marginTop: 28 }]}>Recent Sessions</Text>
-      {finished.length === 0 ? (
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyCardIcon}>🃏</Text>
-          <Text style={styles.emptyText}>No sessions yet</Text>
-          <Text style={styles.emptySubtext}>Finished games will appear here</Text>
-        </View>
-      ) : (
-        <View style={styles.card}>
-          {finished.map((s, i) => {
-            const pl = s.profitLoss;
-            const plColor = pl != null && pl > 0 ? colors.success : pl != null && pl < 0 ? colors.error : colors.textMuted;
-            const canManage = s.userRole === 'Admin' || s.userRole === 'Owner';
-            return (
+  return (
+    <View style={styles.flex}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.container, { paddingTop: insets.top + 16 }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />}
+      >
+        {/* ── Active ── */}
+        <Text style={styles.sectionLabel}>Active Now</Text>
+        {active.length === 0 ? (
+          <TouchableOpacity
+            style={styles.newGameCta}
+            onPress={() => navigation.navigate('NewGame', {})}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.newGameCtaText}>♠  Start New Game</Text>
+            <Text style={styles.newGameCtaChevron}>›</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.activeCard}>
+            {active.map((s, i) => (
               <React.Fragment key={s.sessionId}>
                 {i > 0 && <View style={styles.divider} />}
-                <View style={styles.rowWrapper}>
-                  <TouchableOpacity style={styles.row} onPress={() => openSession(s)} activeOpacity={0.7}>
-                    <View style={styles.rowLeft}>
-                      <Text style={styles.sessionName}>{s.sessionName}</Text>
-                      <Text style={styles.groupName}>
-                        {s.groupName}  ·  {formatDate(s.createdAt)}
-                        {s.startedAt && s.endedAt ? `  ·  ${formatDuration(s.startedAt, s.endedAt)}` : ''}
-                      </Text>
-                    </View>
-                    {pl != null ? (
-                      <Text style={[styles.plValue, { color: plColor }]}>{formatPL(pl)}</Text>
-                    ) : (
-                      <Text style={styles.chevron}>›</Text>
-                    )}
-                  </TouchableOpacity>
-                  {canManage && (
-                    <TouchableOpacity
-                      style={styles.moreBtn}
-                      onPress={() => promptActions(s)}
-                      hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
-                    >
-                      <Text style={styles.moreBtnText}>···</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
+                <TouchableOpacity style={styles.activeRow} onPress={() => openSession(s)} activeOpacity={0.7}>
+                  <View style={styles.liveDot} />
+                  <View style={styles.rowLeft}>
+                    <Text style={styles.sessionName}>{s.sessionName}</Text>
+                    <Text style={styles.groupName}>{s.groupName}</Text>
+                  </View>
+                  <Text style={styles.chevron}>›</Text>
+                </TouchableOpacity>
               </React.Fragment>
-            );
-          })}
-        </View>
-      )}
-      {/* Rename modal */}
+            ))}
+          </View>
+        )}
+
+        {/* ── Recent ── */}
+        <Text style={[styles.sectionLabel, { marginTop: 28 }]}>Recent Sessions</Text>
+        {finished.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyCardIcon}>🃏</Text>
+            <Text style={styles.emptyText}>No sessions yet</Text>
+            <Text style={styles.emptySubtext}>Finished games will appear here</Text>
+          </View>
+        ) : (
+          <View style={styles.card}>
+            {finished.map((s, i) => {
+              const pl = s.profitLoss;
+              const plColor = pl != null && pl > 0 ? colors.success : pl != null && pl < 0 ? colors.error : colors.textMuted;
+              const canManage = s.userRole === 'Admin' || s.userRole === 'Owner';
+              return (
+                <React.Fragment key={s.sessionId}>
+                  {i > 0 && <View style={styles.divider} />}
+                  <View style={styles.rowWrapper}>
+                    <TouchableOpacity style={styles.row} onPress={() => openSession(s)} activeOpacity={0.7}>
+                      <View style={styles.rowLeft}>
+                        <Text style={styles.sessionName}>{s.sessionName}</Text>
+                        <Text style={styles.groupName}>
+                          {s.groupName}  ·  {formatDate(s.createdAt)}
+                          {s.startedAt && s.endedAt ? `  ·  ${formatDuration(s.startedAt, s.endedAt)}` : ''}
+                        </Text>
+                      </View>
+                      {pl != null ? (
+                        <Text style={[styles.plValue, { color: plColor }]}>{formatPL(pl)}</Text>
+                      ) : (
+                        <Text style={styles.chevron}>›</Text>
+                      )}
+                    </TouchableOpacity>
+                    {canManage && (
+                      <TouchableOpacity
+                        style={styles.moreBtn}
+                        onPress={() => setActionSheetSession(s)}
+                        hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                      >
+                        <Text style={styles.moreBtnText}>···</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </React.Fragment>
+              );
+            })}
+          </View>
+        )}
+      </ScrollView>
+
+      {/* ── Action sheet — outside ScrollView so it renders at root level ── */}
+      <ActionSheet
+        visible={actionSheetSession !== null}
+        onClose={() => setActionSheetSession(null)}
+        title={actionSession?.sessionName}
+        subtitle={actionSession?.groupName || undefined}
+        options={[
+          {
+            label: 'Open Session',
+            onPress: () => actionSession && openSession(actionSession),
+          },
+          {
+            label: 'Rename Session',
+            onPress: () => {
+              if (!actionSession) return;
+              setRenameState({ sessionId: actionSession.sessionId, name: actionSession.sessionName });
+              setRenameInput(actionSession.sessionName);
+            },
+          },
+          {
+            label: 'Delete Session',
+            style: 'destructive',
+            onPress: () => actionSession && confirmDelete(actionSession),
+          },
+          { label: 'Cancel', style: 'cancel', onPress: () => {} },
+        ]}
+      />
+
+      {/* ── Rename modal — outside ScrollView ── */}
       <Modal
         visible={renameState !== null}
         transparent
@@ -279,11 +294,12 @@ export default function AllSessionsScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1, backgroundColor: colors.background },
   container: { padding: 20, paddingBottom: 48 },
   center: { flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', gap: 12 },
@@ -330,6 +346,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     overflow: 'hidden',
   },
+  rowWrapper: { flexDirection: 'row', alignItems: 'center' },
   row: {
     flex: 1,
     flexDirection: 'row',
@@ -342,11 +359,10 @@ const styles = StyleSheet.create({
   groupName:   { fontSize: 12, color: colors.textMuted },
   plValue:     { fontSize: 14, fontWeight: '700' },
   chevron:     { fontSize: 20, color: colors.textDim, fontWeight: '300' },
-  moreBtn:     { paddingHorizontal: 6, paddingVertical: 4, marginLeft: 4 },
-  moreBtnText: { fontSize: 16, color: colors.textMuted, letterSpacing: 1 },
+  moreBtn:     { paddingHorizontal: 12, paddingVertical: 14 },
+  moreBtnText: { fontSize: 18, color: colors.textMuted, letterSpacing: 2 },
 
-  divider: { height: 1, backgroundColor: colors.border, marginHorizontal: 16 },
-  rowWrapper: { flexDirection: 'row', alignItems: 'center' },
+  divider: { height: 1, backgroundColor: colors.border },
 
   newGameCta: {
     flexDirection: 'row',
@@ -361,8 +377,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 5,
   },
-  newGameCtaText: { flex: 1, fontSize: 16, fontWeight: '800', color: colors.background },
-  newGameCtaChevron: { fontSize: 24, color: 'rgba(15,25,35,0.6)', fontWeight: '300' },
+  newGameCtaText:    { flex: 1, fontSize: 16, fontWeight: '800', color: colors.background },
+  newGameCtaChevron: { fontSize: 24, color: colors.bgOverlay, fontWeight: '300' },
+
   emptyCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -372,11 +389,11 @@ const styles = StyleSheet.create({
     alignItems: 'center' as const,
   },
   emptyCardIcon: { fontSize: 28, marginBottom: 4 },
-  emptyText: { fontSize: 14, fontWeight: '600', color: colors.textMuted },
-  emptySubtext: { fontSize: 12, color: colors.textDim, marginTop: 2 },
-  errorText: { fontSize: 15, color: colors.error, textAlign: 'center', marginHorizontal: 24 },
-  retryBtn:  { borderWidth: 1, borderColor: colors.gold, borderRadius: 8, paddingHorizontal: 20, paddingVertical: 8 },
-  retryText: { color: colors.gold, fontWeight: '600' },
+  emptyText:     { fontSize: 14, fontWeight: '600', color: colors.textMuted },
+  emptySubtext:  { fontSize: 12, color: colors.textDim, marginTop: 2 },
+  errorText:  { fontSize: 15, color: colors.error, textAlign: 'center', marginHorizontal: 24 },
+  retryBtn:   { borderWidth: 1, borderColor: colors.gold, borderRadius: 8, paddingHorizontal: 20, paddingVertical: 8 },
+  retryText:  { color: colors.gold, fontWeight: '600' },
 
   modalOverlay: {
     flex: 1,
@@ -403,7 +420,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.text,
   },
-  modalActions: { flexDirection: 'row', gap: 10 },
+  modalActions:      { flexDirection: 'row', gap: 10 },
   modalCancel: {
     flex: 1,
     paddingVertical: 13,
@@ -412,7 +429,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     alignItems: 'center',
   },
-  modalCancelText: { fontSize: 15, fontWeight: '600', color: colors.textMuted },
+  modalCancelText:   { fontSize: 15, fontWeight: '600', color: colors.textMuted },
   modalSave: {
     flex: 1,
     paddingVertical: 13,
@@ -421,5 +438,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalSaveDisabled: { opacity: 0.5 },
-  modalSaveText: { fontSize: 15, fontWeight: '700', color: colors.background },
+  modalSaveText:     { fontSize: 15, fontWeight: '700', color: colors.background },
 });

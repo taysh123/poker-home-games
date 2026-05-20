@@ -9,7 +9,9 @@ import {
   Alert,
   TextInput,
   Share,
+  Platform,
 } from 'react-native';
+import { showToast } from '../utils/toast';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import * as SecureStore from '../utils/storage';
@@ -224,9 +226,9 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
               const token = await SecureStore.getItemAsync('accessToken');
               if (!token) return;
               await deleteGroup(token, groupId);
-              navigation.navigate('GroupsList');
+              navigation.goBack();
             } catch {
-              Alert.alert('Error', 'Failed to delete group.');
+              Alert.alert('Error', 'Failed to delete group. Please try again.');
             }
           },
         },
@@ -240,12 +242,22 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
       const token = await SecureStore.getItemAsync('accessToken');
       if (!token) return;
       const result = await generateGroupInviteLink(token, groupId);
-      await Share.share({
-        message: `Join "${group?.name ?? groupName}" on T Poker: ${result.deepLinkUrl}`,
-        url: result.deepLinkUrl,
-      });
+      const url = result.deepLinkUrl;
+      const message = `Join "${group?.name ?? groupName}" on T Poker: ${url}`;
+
+      try {
+        await Share.share({ message, url });
+      } catch {
+        // Web desktop fallback: use Clipboard API
+        if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
+          await navigator.clipboard.writeText(url);
+          showToast('Invite link copied to clipboard!', 'success');
+        } else {
+          showToast('Could not open share sheet.', 'error');
+        }
+      }
     } catch {
-      Alert.alert('Error', 'Failed to generate invite link.');
+      Alert.alert('Error', 'Failed to generate invite link. Please try again.');
     } finally {
       setShareLoading(false);
     }

@@ -1,9 +1,13 @@
 import { useEffect, useRef } from 'react';
 import * as Google from 'expo-auth-session/providers/google';
 
-// OAuth client IDs — set EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID in .env for production Android
+// OAuth client IDs
+// - EXPO_CLIENT_ID: for Expo Go (both platforms, proxy auth through auth.expo.io)
+// - IOS_CLIENT_ID / ANDROID_CLIENT_ID: for production standalone builds
+//   Override with env vars for production; falls back to Expo proxy for Expo Go
 const EXPO_CLIENT_ID    = '12435044751-jdh0dldfhkn2h8hqs3ssegbjflhvcmfi.apps.googleusercontent.com';
-const IOS_CLIENT_ID     = '12435044751-jap7j5prc6vm0eh0mj517nv0phrlu8mr.apps.googleusercontent.com';
+const IOS_CLIENT_ID     = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
+                          ?? '12435044751-jap7j5prc6vm0eh0mj517nv0phrlu8mr.apps.googleusercontent.com';
 const WEB_CLIENT_ID     = '12435044751-eruvq9uduc9sk5mietg9eiab2epddsp6.apps.googleusercontent.com';
 const ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? EXPO_CLIENT_ID;
 

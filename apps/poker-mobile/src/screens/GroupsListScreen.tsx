@@ -232,14 +232,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   badgeOwner: {
-    backgroundColor: 'rgba(201,168,76,0.15)',
+    backgroundColor: colors.goldSubtle,
     borderWidth: 1,
     borderColor: colors.gold,
   },
   badgeAdmin: {
-    backgroundColor: 'rgba(201,168,76,0.08)',
+    backgroundColor: colors.goldFaint,
     borderWidth: 1,
-    borderColor: 'rgba(201,168,76,0.4)',
+    borderColor: colors.goldMuted,
   },
   badgeMember: {
     backgroundColor: colors.surfaceHigh,

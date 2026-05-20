@@ -21,6 +21,15 @@ export default function JoinGroupScreen({ route, navigation }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Auto-navigate to the group after a short delay once join succeeds
+  useEffect(() => {
+    if (status !== 'success') return;
+    const timer = setTimeout(() => {
+      navigation.replace('GroupDetail', { groupId, groupName });
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [status, groupId, groupName, navigation]);
+
   async function join() {
     setStatus('joining');
     try {
