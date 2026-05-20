@@ -211,13 +211,16 @@ export default function SessionScreen({ route, navigation }: Props) {
     load();
   }, [load]));
 
-  // Timer for active sessions
+  // Timer for active sessions — ticks every 30s (updates duration display + reloads data)
   useEffect(() => {
     if (isActive) {
-      timerRef.current = setInterval(() => setTick(t => t + 1), 30000);
+      timerRef.current = setInterval(() => {
+        setTick(t => t + 1);
+        load(true);
+      }, 30000);
     }
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [isActive]);
+  }, [isActive, load]);
 
   // Header
   useEffect(() => {

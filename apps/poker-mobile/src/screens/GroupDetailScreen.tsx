@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -28,6 +28,7 @@ import {
 import { getGroupActivity, ActivityLogDto } from '../api/activityApi';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { searchUsers, UserSearchResultDto } from '../api/usersApi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupDetail'>;
 
@@ -44,6 +45,9 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   const [inviteUsername, setInviteUsername] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<UserSearchResultDto[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isAdminOrOwner = group?.myRole === 'Admin' || group?.myRole === 'Owner';
   const isOwner = group?.myRole === 'Owner';
@@ -99,11 +103,12 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
     });
   }, [navigation, groupId, groupName, group, isAdminOrOwner]);
 
-  const handleInvite = async () => {
-    const username = inviteUsername.trim();
+  const handleInvite = async (usernameOverride?: string) => {
+    const username = (usernameOverride ?? inviteUsername).trim();
     if (!username) return;
     try {
       setInviteLoading(true);
+      setSearchResults([]);
       const token = await SecureStore.getItemAsync('accessToken');
       if (!token) return;
       await sendGroupInvitation(token, groupId, username);
@@ -118,6 +123,25 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
     } finally {
       setInviteLoading(false);
     }
+  };
+
+  const handleInviteSearch = (text: string) => {
+    setInviteUsername(text);
+    if (searchDebounce.current) clearTimeout(searchDebounce.current);
+    if (text.trim().length < 2) { setSearchResults([]); return; }
+    searchDebounce.current = setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const token = await SecureStore.getItemAsync('accessToken');
+        if (!token) return;
+        const results = await searchUsers(token, text.trim());
+        setSearchResults(results.slice(0, 5));
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
   };
 
   const handleRemoveMember = (member: GroupMemberDto) => {
@@ -275,13 +299,13 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                 <TextInput
                   style={styles.inviteInput}
                   value={inviteUsername}
-                  onChangeText={setInviteUsername}
-                  placeholder="Username"
+                  onChangeText={handleInviteSearch}
+                  placeholder="Search by username..."
                   placeholderTextColor={colors.textDim}
                   autoCapitalize="none"
                   autoCorrect={false}
                   returnKeyType="send"
-                  onSubmitEditing={handleInvite}
+                  onSubmitEditing={() => handleInvite()}
                   editable={!inviteLoading}
                 />
                 <TouchableOpacity
@@ -289,7 +313,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                     styles.inviteButton,
                     (!inviteUsername.trim() || inviteLoading) && styles.inviteButtonDisabled,
                   ]}
-                  onPress={handleInvite}
+                  onPress={() => handleInvite()}
                   disabled={!inviteUsername.trim() || inviteLoading}
                 >
                   {inviteLoading ? (
@@ -299,6 +323,33 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                   )}
                 </TouchableOpacity>
               </View>
+              {/* Search results dropdown */}
+              {(searchLoading || searchResults.length > 0) && (
+                <View style={styles.searchDropdown}>
+                  {searchLoading ? (
+                    <View style={styles.searchDropdownItem}>
+                      <ActivityIndicator size="small" color={colors.gold} />
+                    </View>
+                  ) : (
+                    searchResults.map(r => (
+                      <TouchableOpacity
+                        key={r.userId}
+                        style={styles.searchDropdownItem}
+                        onPress={() => handleInvite(r.username)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.searchDropdownAvatar}>
+                          <Text style={styles.searchDropdownAvatarText}>
+                            {r.username[0]?.toUpperCase() ?? '?'}
+                          </Text>
+                        </View>
+                        <Text style={styles.searchDropdownName}>{r.username}</Text>
+                        <Text style={styles.searchDropdownInvite}>Invite →</Text>
+                      </TouchableOpacity>
+                    ))
+                  )}
+                </View>
+              )}
             </View>
           )}
 
@@ -531,6 +582,37 @@ const styles = StyleSheet.create({
   },
   inviteButtonDisabled: { opacity: 0.4 },
   inviteButtonText: { color: colors.background, fontSize: 14, fontWeight: '700' },
+
+  searchDropdown: {
+    marginTop: 6,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  searchDropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  searchDropdownAvatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(201,168,76,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(201,168,76,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchDropdownAvatarText: { fontSize: 13, fontWeight: '700', color: colors.gold },
+  searchDropdownName: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.text },
+  searchDropdownInvite: { fontSize: 12, color: colors.gold, fontWeight: '600' },
 
   sectionTitle: {
     fontSize: 12,

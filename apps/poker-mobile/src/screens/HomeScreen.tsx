@@ -17,6 +17,7 @@ import { colors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import { getMyGroups, getMyInvitations, MyGroupDto, PendingInvitationDto } from '../api/groupsApi';
 import { getMyStats, MyStatsDto, RecentSessionDto } from '../api/statsApi';
+import { getMyPendingSettlements, MyPendingSettlementDto } from '../api/settlementsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import SkeletonCard from '../components/SkeletonCard';
 
@@ -42,6 +43,7 @@ export default function HomeScreen() {
   const [stats, setStats] = useState<MyStatsDto | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
   const [invitations, setInvitations] = useState<PendingInvitationDto[]>([]);
+  const [pendingSettlements, setPendingSettlements] = useState<MyPendingSettlementDto[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
   // Pulse animation for the LIVE badge
@@ -62,14 +64,16 @@ export default function HomeScreen() {
     try {
       const token = await SecureStore.getItemAsync('accessToken');
       if (!token) return;
-      const [groupsData, statsData, invData] = await Promise.all([
+      const [groupsData, statsData, invData, pendingData] = await Promise.all([
         getMyGroups(token),
         getMyStats(token),
         getMyInvitations(token),
+        getMyPendingSettlements(token).catch(() => [] as MyPendingSettlementDto[]),
       ]);
       setGroups(groupsData);
       setStats(statsData);
       setInvitations(invData);
+      setPendingSettlements(pendingData);
     } catch {
       // silent — home screen degrades gracefully
     } finally {
@@ -167,6 +171,26 @@ export default function HomeScreen() {
           <Text style={styles.liveBannerChevron}>›</Text>
         </TouchableOpacity>
       ))}
+
+      {/* ── Pending Settlements Alert (shown only when user has pending payments) ── */}
+      {pendingSettlements.length > 0 && (
+        <TouchableOpacity
+          style={styles.settlementsAlert}
+          onPress={() => navigation.navigate('PendingSettlements')}
+          activeOpacity={0.8}
+        >
+          <View style={styles.settlementsAlertLeft}>
+            <Text style={styles.settlementsAlertIcon}>💸</Text>
+            <View>
+              <Text style={styles.settlementsAlertTitle}>
+                {pendingSettlements.length} pending settlement{pendingSettlements.length !== 1 ? 's' : ''}
+              </Text>
+              <Text style={styles.settlementsAlertSub}>Tap to view and mark as paid</Text>
+            </View>
+          </View>
+          <Text style={styles.settlementsAlertChevron}>›</Text>
+        </TouchableOpacity>
+      )}
 
       {/* ── New Game CTA ── */}
       <TouchableOpacity
@@ -442,6 +466,25 @@ const styles = StyleSheet.create({
   liveBannerName: { fontSize: 17, fontWeight: '700', color: colors.text },
   liveBannerMeta: { fontSize: 12, color: colors.textMuted },
   liveBannerChevron: { fontSize: 28, color: colors.gold, fontWeight: '300', marginLeft: 8 },
+
+  // ── Settlements Alert ────────────────────────────────────────────────────
+  settlementsAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: 'rgba(231,76,60,0.4)',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 16,
+    gap: 12,
+  },
+  settlementsAlertLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  settlementsAlertIcon: { fontSize: 22 },
+  settlementsAlertTitle: { fontSize: 14, fontWeight: '700', color: colors.text },
+  settlementsAlertSub: { fontSize: 12, color: colors.textMuted, marginTop: 1 },
+  settlementsAlertChevron: { fontSize: 22, color: colors.textDim, fontWeight: '300' },
 
   // ── New Game Card ────────────────────────────────────────────────────────
   newGameCard: {

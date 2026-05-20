@@ -16,12 +16,12 @@ import GroupDetailScreen from '../screens/GroupDetailScreen';
 import InvitationsScreen from '../screens/InvitationsScreen';
 import EditGroupScreen from '../screens/EditGroupScreen';
 import SessionsListScreen from '../screens/SessionsListScreen';
-import CreateSessionScreen from '../screens/CreateSessionScreen';
 import SessionScreen from '../screens/SessionScreen';
 import SettlementScreen from '../screens/SettlementScreen';
 import StatsScreen from '../screens/StatsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import NewGameScreen from '../screens/NewGameScreen';
+import PendingSettlementsScreen from '../screens/PendingSettlementsScreen';
 import Toast from '../components/Toast';
 
 export type RootStackParamList = {
@@ -34,10 +34,10 @@ export type RootStackParamList = {
   Invitations: undefined;
   EditGroup: { groupId: string; groupName: string; description?: string };
   SessionsList: { groupId: string; groupName: string; userRole: string };
-  CreateSession: { groupId: string; groupName: string };
   Session: { sessionId: string; groupId: string };
   Settlement: { sessionId: string; sessionName: string };
   NewGame: { groupId?: string; groupName?: string };
+  PendingSettlements: undefined;
   // Kept for TypeScript compat on existing screens that navigate to these by name
   Home: undefined;
   AllSessions: undefined;
@@ -150,11 +150,11 @@ export default function AppNavigator() {
             <Stack.Screen name="Invitations"   component={InvitationsScreen}     options={{ title: 'Invitations' }} />
             <Stack.Screen name="EditGroup"     component={EditGroupScreen}       options={{ presentation: 'modal', title: 'Edit Group' }} />
             <Stack.Screen name="SessionsList"  component={SessionsListScreen} />
-            <Stack.Screen name="CreateSession" component={CreateSessionScreen}   options={{ presentation: 'modal' }} />
             <Stack.Screen name="Session"       component={SessionScreen}         options={{ headerShown: false }} />
             <Stack.Screen name="Settlement"    component={SettlementScreen}      options={{ title: 'Settle Up' }} />
             <Stack.Screen name="Profile"       component={ProfileScreen}         options={{ title: 'My Profile' }} />
-            <Stack.Screen name="NewGame"       component={NewGameScreen}         options={{ headerShown: false }} />
+            <Stack.Screen name="NewGame"            component={NewGameScreen}            options={{ headerShown: false }} />
+            <Stack.Screen name="PendingSettlements" component={PendingSettlementsScreen}  options={{ title: 'Pending Settlements' }} />
           </>
         )}
       </Stack.Navigator>
