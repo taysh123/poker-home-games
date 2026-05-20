@@ -8,8 +8,8 @@ import {
   StyleSheet,
   RefreshControl,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
@@ -29,6 +29,7 @@ function formatDate(dateStr: string): string {
 
 export default function AllSessionsScreen() {
   const navigation = useNavigation<Nav>();
+  const insets = useSafeAreaInsets();
   const [sessions, setSessions] = useState<RecentSessionDto[]>([]);
   const [loading, setLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -83,17 +84,20 @@ export default function AllSessionsScreen() {
   return (
     <ScrollView
       style={styles.scroll}
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[styles.container, { paddingTop: insets.top + 16 }]}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />}
     >
       {/* ── Active ── */}
       <Text style={styles.sectionLabel}>Active Now</Text>
       {active.length === 0 ? (
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyCardIcon}>♠</Text>
-          <Text style={styles.emptyText}>No active sessions</Text>
-          <Text style={styles.emptySubtext}>Start a new game from the Home tab</Text>
-        </View>
+        <TouchableOpacity
+          style={styles.newGameCta}
+          onPress={() => navigation.navigate('NewGame', {})}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.newGameCtaText}>♠  Start New Game</Text>
+          <Text style={styles.newGameCtaChevron}>›</Text>
+        </TouchableOpacity>
       ) : (
         <View style={styles.activeCard}>
           {active.map((s, i) => (
@@ -150,7 +154,7 @@ export default function AllSessionsScreen() {
 
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: colors.background },
-  container: { padding: 20, paddingTop: 16, paddingBottom: 48 },
+  container: { padding: 20, paddingBottom: 48 },
   center: { flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', gap: 12 },
 
   sectionLabel: {
@@ -209,6 +213,21 @@ const styles = StyleSheet.create({
 
   divider: { height: 1, backgroundColor: colors.border, marginHorizontal: 16 },
 
+  newGameCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.gold,
+    borderRadius: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    shadowColor: colors.gold,
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 5,
+  },
+  newGameCtaText: { flex: 1, fontSize: 16, fontWeight: '800', color: colors.background },
+  newGameCtaChevron: { fontSize: 24, color: 'rgba(15,25,35,0.6)', fontWeight: '300' },
   emptyCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,

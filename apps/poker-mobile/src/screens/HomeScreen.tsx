@@ -8,10 +8,9 @@ import {
   ActivityIndicator,
   RefreshControl,
   Animated,
-  Platform,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
@@ -36,6 +35,7 @@ function formatDate(dateStr: string): string {
 export default function HomeScreen() {
   const { user, logout } = useAuth();
   const navigation = useNavigation<HomeNav>();
+  const insets = useSafeAreaInsets();
 
   const [loggingOut, setLoggingOut] = useState(false);
   const [groups, setGroups] = useState<MyGroupDto[]>([]);
@@ -107,7 +107,7 @@ export default function HomeScreen() {
   return (
     <ScrollView
       style={styles.scroll}
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[styles.container, { paddingTop: insets.top + 16 }]}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />}
     >
       {/* ── Header ── */}
@@ -349,7 +349,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: colors.background },
-  container: { padding: 20, paddingTop: Platform.OS === 'ios' ? 16 : 12, paddingBottom: 48 },
+  container: { padding: 20, paddingBottom: 48 },
 
   // ── Header ──────────────────────────────────────────────────────────────
   header: {

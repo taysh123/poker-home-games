@@ -184,30 +184,34 @@ export default function StatsScreen() {
   );
 }
 
+const CHART_HALF = 52;
+
 function PLBarChart({ sessions }: { sessions: RecentSessionDto[] }) {
   const values = sessions.map(s => s.profitLoss ?? 0);
   const maxAbs = Math.max(...values.map(Math.abs), 1);
-  const CHART_H = 90;
 
   return (
     <View style={styles.chartCard}>
-      <View style={styles.chartArea}>
-        {/* Zero line */}
-        <View style={styles.chartZeroLine} />
-        {/* Bars */}
-        <View style={styles.chartBars}>
-          {values.map((v, i) => {
-            const ratio = Math.abs(v) / maxAbs;
-            const barH = Math.max(Math.round(ratio * (CHART_H / 2)), 3);
-            const isPos = v >= 0;
-            return (
-              <View key={i} style={styles.chartBarCol}>
-                <View style={[styles.chartBarTop, { height: isPos ? barH : 0 }, isPos && styles.chartBarWin]} />
-                <View style={[styles.chartBarBot, { height: isPos ? 0 : barH }, !isPos && styles.chartBarLoss]} />
+      <View style={styles.chartBars}>
+        {values.map((v, i) => {
+          const ratio = Math.abs(v) / maxAbs;
+          const barH = Math.max(Math.round(ratio * CHART_HALF), 3);
+          const isPos = v >= 0;
+          return (
+            <View key={i} style={styles.chartBarCol}>
+              {/* Upper half — positive bars anchor to bottom */}
+              <View style={styles.chartHalfTop}>
+                {isPos && <View style={[styles.chartBarFill, styles.chartBarWin, { height: barH }]} />}
               </View>
-            );
-          })}
-        </View>
+              {/* Zero line */}
+              <View style={styles.chartZeroLine} />
+              {/* Lower half — negative bars anchor to top */}
+              <View style={styles.chartHalfBot}>
+                {!isPos && <View style={[styles.chartBarFill, styles.chartBarLoss, { height: barH }]} />}
+              </View>
+            </View>
+          );
+        })}
       </View>
     </View>
   );
@@ -366,43 +370,39 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 14,
-    padding: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 16,
     marginBottom: 20,
-  },
-  chartArea: {
-    height: 90,
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  chartZeroLine: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: '50%',
-    height: 1,
-    backgroundColor: colors.border,
   },
   chartBars: {
     flexDirection: 'row',
-    alignItems: 'center',
-    height: 90,
+    alignItems: 'stretch',
     gap: 4,
   },
   chartBarCol: {
     flex: 1,
-    height: 90,
-    justifyContent: 'center',
     alignItems: 'center',
   },
-  chartBarTop: {
-    width: '80%',
-    borderTopLeftRadius: 3,
-    borderTopRightRadius: 3,
+  chartHalfTop: {
+    height: CHART_HALF,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
-  chartBarBot: {
-    width: '80%',
-    borderBottomLeftRadius: 3,
-    borderBottomRightRadius: 3,
+  chartHalfBot: {
+    height: CHART_HALF,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+  chartZeroLine: {
+    width: '100%',
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  chartBarFill: {
+    width: '70%',
+    borderRadius: 3,
   },
   chartBarWin: { backgroundColor: colors.success },
   chartBarLoss: { backgroundColor: colors.error },
