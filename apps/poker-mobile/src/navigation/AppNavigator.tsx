@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +22,7 @@ import StatsScreen from '../screens/StatsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import NewGameScreen from '../screens/NewGameScreen';
 import PendingSettlementsScreen from '../screens/PendingSettlementsScreen';
+import JoinSessionScreen from '../screens/JoinSessionScreen';
 import Toast from '../components/Toast';
 
 export type RootStackParamList = {
@@ -38,6 +39,7 @@ export type RootStackParamList = {
   Settlement: { sessionId: string; sessionName: string };
   NewGame: { groupId?: string; groupName?: string };
   PendingSettlements: undefined;
+  JoinSession: { inviteToken: string };
   // Kept for TypeScript compat on existing screens that navigate to these by name
   Home: undefined;
   AllSessions: undefined;
@@ -122,7 +124,11 @@ function TabNavigator() {
   );
 }
 
-export default function AppNavigator() {
+type AppNavigatorProps = {
+  navigationRef?: React.RefObject<NavigationContainerRef<RootStackParamList> | null>;
+};
+
+export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
@@ -134,7 +140,7 @@ export default function AppNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Toast />
       <Stack.Navigator screenOptions={stackScreenOptions}>
         {user === null ? (
@@ -155,6 +161,7 @@ export default function AppNavigator() {
             <Stack.Screen name="Profile"       component={ProfileScreen}         options={{ title: 'My Profile' }} />
             <Stack.Screen name="NewGame"            component={NewGameScreen}            options={{ headerShown: false }} />
             <Stack.Screen name="PendingSettlements" component={PendingSettlementsScreen}  options={{ title: 'Pending Settlements' }} />
+            <Stack.Screen name="JoinSession"        component={JoinSessionScreen}         options={{ title: 'Joining Session', headerShown: false }} />
           </>
         )}
       </Stack.Navigator>

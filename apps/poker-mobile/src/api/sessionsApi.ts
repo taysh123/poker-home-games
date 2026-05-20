@@ -218,3 +218,40 @@ export async function exportSessionCsv(token: string, sessionId: string): Promis
   );
   return data;
 }
+
+export type GenerateInviteTokenResponse = {
+  token: string;
+  deepLinkUrl: string;
+  expiresAt: string;
+};
+
+export type JoinSessionByTokenResponse = {
+  sessionId: string;
+  sessionName: string;
+  sessionStatus: string;
+  sessionPlayerId: string;
+};
+
+export async function generateSessionInviteToken(
+  token: string,
+  sessionId: string,
+): Promise<GenerateInviteTokenResponse> {
+  const { data } = await api.post<GenerateInviteTokenResponse>(
+    `/api/sessions/${sessionId}/invite`,
+    {},
+    { headers: authHeader(token) },
+  );
+  return data;
+}
+
+export async function joinSessionByToken(
+  token: string,
+  inviteToken: string,
+): Promise<JoinSessionByTokenResponse> {
+  const { data } = await api.post<JoinSessionByTokenResponse>(
+    `/api/sessions/join/${inviteToken}`,
+    {},
+    { headers: authHeader(token) },
+  );
+  return data;
+}

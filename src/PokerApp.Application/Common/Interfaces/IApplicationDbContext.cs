@@ -20,6 +20,7 @@ public interface IApplicationDbContext
     DbSet<SessionPlayer> SessionPlayers { get; }
     DbSet<HandRecord> HandRecords { get; }
     DbSet<ActivityLog> ActivityLogs { get; }
+    DbSet<SessionInviteToken> SessionInviteTokens { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -13,6 +13,7 @@ import {
   Platform,
   FlatList,
   RefreshControl,
+  Share,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -30,6 +31,7 @@ import {
   removePlayer,
   endSession,
   deleteSession,
+  generateSessionInviteToken,
   SessionDetailDto,
   SessionPlayerDto,
   PlayerBalanceDto,
@@ -139,6 +141,7 @@ export default function SessionScreen({ route, navigation }: Props) {
   // Export
   const [exporting, setExporting] = useState(false);
   const [sharing, setSharing]     = useState(false);
+  const [sharingInvite, setSharingInvite] = useState(false);
 
   // Delete session
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -498,6 +501,27 @@ export default function SessionScreen({ route, navigation }: Props) {
     }
   }
 
+  // ── Invite Link ──
+
+  async function handleShareInvite() {
+    setSharingInvite(true);
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!token) return;
+      const result = await generateSessionInviteToken(token, sessionId);
+      await Share.share({
+        message: `Join my poker session "${session?.name}"!\n\n${result.deepLinkUrl}`,
+        url: result.deepLinkUrl,
+      });
+    } catch (e: any) {
+      if (e?.message !== 'The user did not share') {
+        Alert.alert('Error', e?.response?.data?.message ?? 'Failed to generate invite link.');
+      }
+    } finally {
+      setSharingInvite(false);
+    }
+  }
+
   // ── Delete Session ──
 
   function handleDeleteSession() {
@@ -608,6 +632,13 @@ export default function SessionScreen({ route, navigation }: Props) {
           {isFinished && balances.length > 0 && (
             <TouchableOpacity onPress={handleShareCard} style={styles.exportBtn} disabled={sharing}>
               {sharing ? <ActivityIndicator color={colors.gold} size="small" /> : <Text style={styles.exportText}>Share</Text>}
+            </TouchableOpacity>
+          )}
+          {isAdminOrOwner && (isActive || isDraft) && (
+            <TouchableOpacity onPress={handleShareInvite} style={styles.exportBtn} disabled={sharingInvite} hitSlop={8}>
+              {sharingInvite
+                ? <ActivityIndicator color={colors.gold} size="small" />
+                : <Text style={styles.exportText}>Invite</Text>}
             </TouchableOpacity>
           )}
           {isAdminOrOwner && !isActive && (

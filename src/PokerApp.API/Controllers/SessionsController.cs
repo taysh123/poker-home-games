@@ -13,6 +13,8 @@ using PokerApp.Application.Features.Sessions.Commands.AddCashOut;
 using PokerApp.Application.Features.Sessions.Commands.AddHandRecord;
 using PokerApp.Application.Features.Sessions.Commands.DeleteHandRecord;
 using PokerApp.Application.Features.Sessions.Commands.UpdateSessionNotes;
+using PokerApp.Application.Features.Sessions.Commands.GenerateSessionInviteToken;
+using PokerApp.Application.Features.Sessions.Commands.JoinSessionByToken;
 using PokerApp.Application.Features.Sessions.Queries.GetGroupSessions;
 using PokerApp.Application.Features.Sessions.Queries.GetSessionBalances;
 using PokerApp.Application.Features.Sessions.Queries.GetSessionById;
@@ -220,6 +222,30 @@ public class SessionsController(IMediator mediator) : ControllerBase
     {
         await mediator.Send(new DeleteHandRecordCommand(id, handId), cancellationToken);
         return NoContent();
+    }
+
+    /// <summary>Generates a single-use 24h invite link for a Draft or Active session. Requires Admin or Owner.</summary>
+    [HttpPost("api/sessions/{id:guid}/invite")]
+    [ProducesResponseType(typeof(GenerateSessionInviteTokenResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> GenerateInviteToken(Guid id, CancellationToken cancellationToken)
+    {
+        var response = await mediator.Send(new GenerateSessionInviteTokenCommand(id), cancellationToken);
+        return StatusCode(StatusCodes.Status201Created, response);
+    }
+
+    /// <summary>Joins a session using a valid invite token. Adds the caller as a registered player.</summary>
+    [HttpPost("api/sessions/join/{token}")]
+    [ProducesResponseType(typeof(JoinSessionByTokenResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> JoinByToken(string token, CancellationToken cancellationToken)
+    {
+        var response = await mediator.Send(new JoinSessionByTokenCommand(token), cancellationToken);
+        return Ok(response);
     }
 
     /// <summary>Exports the session results as a CSV file.</summary>
