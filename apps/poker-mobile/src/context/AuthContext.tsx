@@ -8,7 +8,7 @@ import { registerUnauthenticatedCallback } from '../api/apiClient';
 type AuthContextType = {
   user: AuthUser | null;   // null = not logged in
   isLoading: boolean;      // true while reading stored session on startup
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   register: (username: string, email: string, password: string) => Promise<void>;
   googleLogin: (idToken: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -79,10 +79,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }
 
-  async function login(email: string, password: string) {
+  async function login(email: string, password: string, rememberMe = true) {
+    SecureStore.setSessionMode(!rememberMe);
     const response = await loginApi(email, password);
     await saveSession(response);
-    // Setting user here causes AppNavigator to automatically show Home
   }
 
   async function register(username: string, email: string, password: string) {

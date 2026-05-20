@@ -25,6 +25,7 @@ export default function LoginScreen({ navigation }: Props) {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -50,7 +51,7 @@ export default function LoginScreen({ navigation }: Props) {
     setError('');
     setLoading(true);
     try {
-      await login(email.trim(), password);
+      await login(email.trim(), password, rememberMe);
     } catch (err) {
       setError(parseAuthError(err, 'login'));
     } finally {
@@ -98,6 +99,17 @@ export default function LoginScreen({ navigation }: Props) {
             loading={loading}
             style={styles.buttonTop}
           />
+
+          <TouchableOpacity
+            style={styles.rememberRow}
+            onPress={() => setRememberMe(v => !v)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+              {rememberMe && <Text style={styles.checkmark}>✓</Text>}
+            </View>
+            <Text style={styles.rememberLabel}>Remember me</Text>
+          </TouchableOpacity>
         </View>
 
         {googleReady !== false && (
@@ -131,6 +143,11 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 15, color: colors.textMuted },
   form: { gap: 20 },
   buttonTop: { marginTop: 8 },
+  rememberRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
+  checkbox: { width: 18, height: 18, borderRadius: 4, borderWidth: 1.5, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  checkboxChecked: { backgroundColor: colors.gold, borderColor: colors.gold },
+  checkmark: { color: '#000', fontSize: 12, fontWeight: '700' },
+  rememberLabel: { fontSize: 14, color: colors.textMuted },
   dividerRow: { flexDirection: 'row', alignItems: 'center', marginTop: 24, gap: 12 },
   dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
   dividerText: { color: colors.textMuted, fontSize: 13 },
