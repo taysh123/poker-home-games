@@ -2,13 +2,11 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -16,6 +14,8 @@ import { colors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import { useGoogleAuth } from '../hooks/useGoogleAuth';
 import GoogleAuthButton from '../components/GoogleAuthButton';
+import PrimaryButton from '../components/PrimaryButton';
+import AppTextInput from '../components/AppTextInput';
 import { parseAuthError } from '../utils/parseAuthError';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
@@ -74,45 +74,30 @@ export default function LoginScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              placeholder="your@email.com"
-              placeholderTextColor={colors.textDim}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
+          <AppTextInput
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            placeholder="your@email.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <AppTextInput
+            label="Password"
+            value={password}
+            onChangeText={setPassword}
+            placeholder="••••••••"
+            secureTextEntry
+            error={error || undefined}
+          />
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="••••••••"
-              placeholderTextColor={colors.textDim}
-              secureTextEntry
-            />
-          </View>
-
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+          <PrimaryButton
+            label="Sign In"
             onPress={handleLogin}
-            activeOpacity={0.8}
-            disabled={loading}
-          >
-            {loading
-              ? <ActivityIndicator color={colors.background} />
-              : <Text style={styles.buttonText}>Sign In</Text>
-            }
-          </TouchableOpacity>
+            loading={loading}
+            style={styles.buttonTop}
+          />
         </View>
 
         {googleReady !== false && (
@@ -138,104 +123,18 @@ export default function LoginScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    flexGrow: 1,
-    padding: 24,
-    justifyContent: 'center',
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  suit: {
-    fontSize: 52,
-    color: colors.gold,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: colors.textMuted,
-  },
-  form: {
-    gap: 20,
-  },
-  inputGroup: {
-    gap: 8,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  input: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: colors.text,
-  },
-  error: {
-    fontSize: 14,
-    color: '#E05C5C',
-    textAlign: 'center',
-  },
-  button: {
-    backgroundColor: colors.gold,
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.background,
-  },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 24,
-    gap: 12,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  dividerText: {
-    color: colors.textMuted,
-    fontSize: 13,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 36,
-  },
-  footerText: {
-    color: colors.textMuted,
-    fontSize: 15,
-  },
-  link: {
-    color: colors.gold,
-    fontSize: 15,
-    fontWeight: '600',
-  },
+  flex: { flex: 1, backgroundColor: colors.background },
+  container: { flexGrow: 1, padding: 24, justifyContent: 'center' },
+  header: { alignItems: 'center', marginBottom: 40 },
+  suit: { fontSize: 52, color: colors.gold, marginBottom: 16 },
+  title: { fontSize: 28, fontWeight: '700', color: colors.text, marginBottom: 6 },
+  subtitle: { fontSize: 15, color: colors.textMuted },
+  form: { gap: 20 },
+  buttonTop: { marginTop: 8 },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', marginTop: 24, gap: 12 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
+  dividerText: { color: colors.textMuted, fontSize: 13 },
+  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 36 },
+  footerText: { color: colors.textMuted, fontSize: 15 },
+  link: { color: colors.gold, fontSize: 15, fontWeight: '600' },
 });
