@@ -37,7 +37,8 @@ var app = builder.Build();
 
 app.UseResponseCompression();
 
-// Enable CORS
+app.UseRouting();
+
 app.UseCors("AllowFrontend");
 
 // Health endpoint
