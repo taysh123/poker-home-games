@@ -1,13 +1,25 @@
+# Frontend app — not part of the backend image
 apps/
+
+# IDE and local tooling
 **/.vs/
 **/.idea/
+**/.vscode/
+.expo/
+.claude/
+
+# Build artifacts
 **/bin/
 **/obj/
 **/out/
+**/out2/
 **/publish/
+
+# Docs / config that the container doesn't need
 *.md
 LICENSE
 .git/
 .gitignore
 vercel.json
 railway.toml
+eas.json
