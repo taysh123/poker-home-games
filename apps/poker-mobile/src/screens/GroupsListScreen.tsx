@@ -5,12 +5,14 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  Animated,
   StyleSheet,
   Modal,
   Share,
   Platform,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useScreenEntrance } from '../hooks/useScreenEntrance';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from '../utils/storage';
@@ -28,6 +30,7 @@ import {
 import { RootStackParamList } from '../navigation/AppNavigator';
 import ActionSheet, { ActionSheetOption } from '../components/ActionSheet';
 import { showToast } from '../utils/toast';
+import SkeletonCard from '../components/SkeletonCard';
 
 const AVATAR_COLORS = [
   '#7C6EE8', '#4EAADC', '#50C878', '#E8965E', '#E86E8A',
@@ -43,6 +46,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function GroupsListScreen() {
   const navigation = useNavigation<Nav>();
+  const entrance = useScreenEntrance();
   const [groups, setGroups] = useState<MyGroupDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -224,9 +228,25 @@ export default function GroupsListScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator color={colors.gold} size="large" />
-      </View>
+      <Animated.View style={[styles.flex, entrance.style]}>
+        {[0, 1, 2, 3].map((i) => (
+          <View
+            key={i}
+            style={[
+              styles.cardRow,
+              { marginHorizontal: 16, marginTop: i === 0 ? 16 : 0, marginBottom: 10 },
+            ]}
+          >
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 }}>
+              <SkeletonCard height={44} borderRadius={13} style={{ width: 44, flexShrink: 0 }} />
+              <View style={{ flex: 1, gap: 8 }}>
+                <SkeletonCard height={14} borderRadius={4} style={{ width: '60%' }} />
+                <SkeletonCard height={10} borderRadius={4} style={{ width: '40%' }} />
+              </View>
+            </View>
+          </View>
+        ))}
+      </Animated.View>
     );
   }
 
@@ -264,7 +284,7 @@ export default function GroupsListScreen() {
   const actionGroup = actionSheetGroup;
 
   return (
-    <View style={styles.flex}>
+    <Animated.View style={[styles.flex, entrance.style]}>
       <FlatList
         style={styles.list}
         contentContainerStyle={styles.listContent}
@@ -365,7 +385,7 @@ export default function GroupsListScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </Animated.View>
   );
 }
 

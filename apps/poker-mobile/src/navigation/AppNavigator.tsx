@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, Platform, Animated } from 'react-native';
 import { NavigationContainer, NavigationContainerRef, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp, createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -26,9 +26,12 @@ import PendingSettlementsScreen from '../screens/PendingSettlementsScreen';
 import JoinSessionScreen from '../screens/JoinSessionScreen';
 import JoinGroupScreen from '../screens/JoinGroupScreen';
 import PlayerProfileScreen from '../screens/PlayerProfileScreen';
+import OnboardingScreen from '../screens/OnboardingScreen';
 import Toast from '../components/Toast';
+import * as storage from '../utils/storage';
 
 export type RootStackParamList = {
+  Onboarding: undefined;
   Login: undefined;
   Register: undefined;
   MainTabs: undefined;
@@ -219,8 +222,15 @@ type AppNavigatorProps = {
 
 export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
   const { user, isLoading } = useAuth();
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | undefined>(undefined);
 
-  if (isLoading) {
+  useEffect(() => {
+    storage.getItemAsync('hasSeenOnboarding').then((val) => {
+      setHasSeenOnboarding(!!val);
+    });
+  }, []);
+
+  if (isLoading || hasSeenOnboarding === undefined) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator color={colors.gold} size="large" />
@@ -234,6 +244,9 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
       <Stack.Navigator screenOptions={stackScreenOptions}>
         {user === null ? (
           <>
+            {!hasSeenOnboarding && (
+              <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false, gestureEnabled: false }} />
+            )}
             <Stack.Screen name="Login"    component={LoginScreen}    options={{ headerShown: false }} />
             <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
           </>

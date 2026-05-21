@@ -8,6 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddResponseCompression(opts => opts.EnableForHttps = true);
 
 // Database
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -18,6 +19,8 @@ var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 var app = builder.Build();
+
+app.UseResponseCompression();
 
 // Health endpoint
 app.MapGet("/health", () => Results.Ok("Healthy"));

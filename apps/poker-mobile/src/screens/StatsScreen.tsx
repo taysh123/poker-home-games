@@ -1,9 +1,8 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
   ScrollView,
-  ActivityIndicator,
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
@@ -18,8 +17,11 @@ import { typography } from '../theme/typography';
 import { shadows } from '../theme/shadows';
 import { fadeIn, slideUp, pulse } from '../theme/motion';
 import { getMyStats, MyStatsDto, RecentSessionDto } from '../api/statsApi';
+import { getMyAchievements, AchievementDto, MyAchievementsDto } from '../api/achievementsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import SessionListItem from '../components/SessionListItem';
+import SkeletonCard from '../components/SkeletonCard';
+import SkeletonRow from '../components/SkeletonRow';
 import { formatPL, formatDate, formatDuration } from '../utils/formatters';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -29,6 +31,7 @@ const CHART_HEIGHT = 80;
 export default function StatsScreen() {
   const navigation = useNavigation<Nav>();
   const [stats, setStats] = useState<MyStatsDto | null>(null);
+  const [achievements, setAchievements] = useState<MyAchievementsDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,8 +55,12 @@ export default function StatsScreen() {
     try {
       const token = await SecureStore.getItemAsync('accessToken');
       if (!token) throw new Error('Not authenticated');
-      const data = await getMyStats(token);
+      const [data, achData] = await Promise.all([
+        getMyStats(token),
+        getMyAchievements(token).catch(() => null),
+      ]);
       setStats(data);
+      setAchievements(achData);
     } catch {
       setError('Failed to load stats.');
     } finally {
@@ -71,9 +78,27 @@ export default function StatsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator color={colors.gold} size="large" />
-      </View>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <SkeletonCard height={180} borderRadius={20} style={{ marginBottom: 24 }} />
+        <View style={{ marginBottom: 24 }}>
+          <SkeletonCard height={12} borderRadius={6} style={{ width: '40%', marginBottom: 12 }} />
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <SkeletonCard height={90} borderRadius={14} style={{ flex: 1 }} />
+            <SkeletonCard height={90} borderRadius={14} style={{ flex: 1 }} />
+            <SkeletonCard height={90} borderRadius={14} style={{ flex: 1 }} />
+          </View>
+        </View>
+        <SkeletonCard height={190} borderRadius={16} style={{ marginBottom: 24 }} />
+        <View style={{ marginBottom: 24 }}>
+          <SkeletonCard height={12} borderRadius={6} style={{ width: '50%', marginBottom: 12 }} />
+          <View style={styles.listCard}>
+            <SkeletonRow isFirst />
+            <SkeletonRow />
+            <SkeletonRow />
+            <SkeletonRow />
+          </View>
+        </View>
+      </ScrollView>
     );
   }
 
@@ -195,6 +220,33 @@ export default function StatsScreen() {
           </View>
         </View>
 
+        {/* ── Streak ── */}
+        {(stats.currentStreak !== 0 || stats.longestWinStreak > 0) && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Streak</Text>
+            <View style={streakStyles.row}>
+              {stats.currentStreak !== 0 && (
+                <View style={[streakStyles.card, stats.currentStreak > 0 ? streakStyles.cardWin : streakStyles.cardLoss]}>
+                  <Text style={streakStyles.emoji}>{stats.currentStreak > 0 ? '🔥' : '❄️'}</Text>
+                  <Text style={[streakStyles.value, { color: stats.currentStreak > 0 ? colors.success : colors.error }]}>
+                    {Math.abs(stats.currentStreak)}
+                  </Text>
+                  <Text style={streakStyles.label}>
+                    {stats.currentStreak > 0 ? 'WIN STREAK' : 'LOSS STREAK'}
+                  </Text>
+                </View>
+              )}
+              {stats.longestWinStreak > 0 && (
+                <View style={streakStyles.card}>
+                  <Text style={streakStyles.emoji}>🏆</Text>
+                  <Text style={[streakStyles.value, { color: colors.goldLight }]}>{stats.longestWinStreak}</Text>
+                  <Text style={streakStyles.label}>BEST STREAK</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
         {/* ── P&L Trend ── */}
         {finishedSessions.length >= 2 && (
           <View style={styles.section}>
@@ -244,6 +296,36 @@ export default function StatsScreen() {
                 />
               ))}
             </View>
+          </View>
+        )}
+
+        {/* ── Achievements ── */}
+        {achievements && (achievements.earned.length > 0 || achievements.locked.length > 0) && (
+          <View style={[styles.section, styles.lastSection]}>
+            <View style={achStyles.headerRow}>
+              <Text style={styles.sectionTitle}>Achievements</Text>
+              {achievements.earned.length > 0 && (
+                <Text style={achStyles.earnedCount}>{achievements.earned.length} earned</Text>
+              )}
+            </View>
+            {achievements.earned.length > 0 && (
+              <View style={achStyles.grid}>
+                {achievements.earned.map((a) => (
+                  <AchievementBadge key={a.key} achievement={a} earned />
+                ))}
+              </View>
+            )}
+            {achievements.locked.length > 0 && (
+              <>
+                {achievements.earned.length > 0 && <View style={achStyles.divider} />}
+                <Text style={achStyles.lockedLabel}>Locked</Text>
+                <View style={achStyles.grid}>
+                  {achievements.locked.map((a) => (
+                    <AchievementBadge key={a.key} achievement={a} earned={false} />
+                  ))}
+                </View>
+              </>
+            )}
           </View>
         )}
 
@@ -449,6 +531,82 @@ const chartStyles = StyleSheet.create({
     color: colors.textDim,
     fontSize: 9,
   },
+});
+
+const streakStyles = StyleSheet.create({
+  row: { flexDirection: 'row', gap: 10 },
+  card: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    padding: 16,
+    alignItems: 'center',
+    gap: 4,
+  },
+  cardWin: { borderColor: colors.success + '44', backgroundColor: colors.surface },
+  cardLoss: { borderColor: colors.error + '44', backgroundColor: colors.surface },
+  emoji: { fontSize: 24, marginBottom: 2 },
+  value: { fontSize: 28, fontWeight: '800', fontVariant: ['tabular-nums'] as const },
+  label: { fontSize: 9, fontWeight: '700' as const, color: colors.textMuted, letterSpacing: 0.8, textTransform: 'uppercase' as const },
+});
+
+const RARITY_COLORS: Record<string, string> = {
+  Common: colors.textMuted,
+  Rare: '#4EAADC',
+  Epic: '#C46EE8',
+  Legendary: colors.gold,
+};
+
+function AchievementBadge({ achievement, earned }: { achievement: AchievementDto; earned: boolean }) {
+  const rarityColor = RARITY_COLORS[achievement.rarity] ?? colors.textMuted;
+  return (
+    <View style={[achStyles.badge, !earned && achStyles.badgeLocked]}>
+      <View style={[achStyles.iconCircle, { borderColor: earned ? rarityColor + '66' : colors.border }]}>
+        <Ionicons
+          name={achievement.iconKey as any}
+          size={20}
+          color={earned ? rarityColor : colors.textDim}
+        />
+      </View>
+      <Text style={[achStyles.badgeName, !earned && achStyles.badgeNameLocked]} numberOfLines={1}>
+        {achievement.name}
+      </Text>
+    </View>
+  );
+}
+
+const achStyles = StyleSheet.create({
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  earnedCount: { fontSize: 11, fontWeight: '600', color: colors.gold },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  badge: {
+    width: '30%',
+    minWidth: 90,
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    gap: 6,
+  },
+  badgeLocked: { opacity: 0.45 },
+  iconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeName: { fontSize: 10, fontWeight: '700', color: colors.textHigh, textAlign: 'center' },
+  badgeNameLocked: { color: colors.textMuted },
+  divider: { height: 1, backgroundColor: colors.border, marginVertical: 12 },
+  lockedLabel: { fontSize: 10, fontWeight: '600', color: colors.textDim, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },
 });
 
 const styles = StyleSheet.create({

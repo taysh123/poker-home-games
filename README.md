@@ -40,6 +40,17 @@ a real modern poker product.
 - Per-session history with P&L and duration
 - P&L trend chart (last 10 sessions)
 - Group leaderboard with avg P&L and win rate
+- Current win/loss streak + all-time longest win streak
+
+### Achievements & Badges
+- 14 achievements unlocked automatically when sessions end (First Blood, Hot Streak, High Roller, Comeback Kid, Marathon, and more)
+- Rarity tiers: Common, Rare, Epic, Legendary
+- Full achievements grid on Stats screen — earned (color) and locked (dimmed) with criteria
+- New achievements evaluated on every session end via `AchievementEvaluator`
+
+### Onboarding
+- First-run 3-slide carousel for new users (skip-able, progress dots)
+- Stores completion flag in device storage — never shown again after first launch
 
 ### Player Profiles & Rivalries (V2)
 - Tap any player in a session or group to view their full career profile
@@ -321,8 +332,12 @@ Railway shows the exact string under your PostgreSQL plugin → **Connect** tab.
 | ✅ | CSV export + PDF share card |
 | ✅ | Player profiles + H2H stats |
 | ✅ | Session recaps with narrative highlights |
+| ✅ | Streak tracking (current + longest win streak) |
+| ✅ | Achievements & badge system (14 achievements) |
+| ✅ | Skeleton loading on all screens |
+| ✅ | Onboarding first-run carousel |
+| ✅ | Response compression (Brotli/gzip) |
 | 🔜 | Period-based stats (week/month) |
-| 🔜 | Achievements & badge system |
 | 🔜 | Push notifications |
 | 🔜 | Native iOS/Android release (EAS) |
 

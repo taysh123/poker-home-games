@@ -1,19 +1,29 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import PrimaryButton from './PrimaryButton';
 
 type Props = {
-  icon: string;
+  /** Emoji string fallback — ignored when ionicon is provided */
+  icon?: string;
+  /** Ionicons icon name — renders in a styled circle */
+  ionicon?: React.ComponentProps<typeof Ionicons>['name'];
   title: string;
   subtitle?: string;
   action?: { label: string; onPress: () => void };
 };
 
-export default function EmptyState({ icon, title, subtitle, action }: Props) {
+export default function EmptyState({ icon, ionicon, title, subtitle, action }: Props) {
   return (
     <View style={styles.container}>
-      <Text style={styles.icon}>{icon}</Text>
+      {ionicon ? (
+        <View style={styles.iconCircle}>
+          <Ionicons name={ionicon} size={32} color={colors.textDim} />
+        </View>
+      ) : icon ? (
+        <Text style={styles.emoji}>{icon}</Text>
+      ) : null}
       <Text style={styles.title}>{title}</Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       {action ? (
@@ -36,7 +46,16 @@ const styles = StyleSheet.create({
     padding: 32,
     gap: 10,
   },
-  icon: { fontSize: 52, marginBottom: 4 },
+  iconCircle: {
+    width: 68,
+    height: 68,
+    borderRadius: 20,
+    backgroundColor: colors.surfaceHigh,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  emoji: { fontSize: 52, marginBottom: 4 },
   title: { fontSize: 20, fontWeight: '700', color: colors.text, textAlign: 'center' },
   subtitle: { fontSize: 14, color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
   button: { marginTop: 8 },

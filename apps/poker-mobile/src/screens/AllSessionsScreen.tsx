@@ -14,6 +14,7 @@ import {
   Animated,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useScreenEntrance } from '../hooks/useScreenEntrance';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,12 +29,15 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import SessionListItem from '../components/SessionListItem';
 import { formatPL, formatDate, formatDuration } from '../utils/formatters';
 import ActionSheet from '../components/ActionSheet';
+import SkeletonCard from '../components/SkeletonCard';
+import SkeletonRow from '../components/SkeletonRow';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function AllSessionsScreen() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
+  const entrance = useScreenEntrance();
   const [sessions, setSessions] = useState<RecentSessionDto[]>([]);
   const [loading, setLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -132,8 +136,27 @@ export default function AllSessionsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator color={colors.gold} size="large" />
+      <View style={styles.flex}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[styles.container, { paddingTop: insets.top + 20 }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.screenTitle}>Sessions</Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Active Now</Text>
+            <SkeletonCard height={64} borderRadius={16} />
+          </View>
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Recent Sessions</Text>
+            <View style={[styles.card, { overflow: 'hidden' }]}>
+              <SkeletonRow isFirst />
+              <SkeletonRow />
+              <SkeletonRow />
+              <SkeletonRow />
+            </View>
+          </View>
+        </ScrollView>
       </View>
     );
   }
@@ -167,6 +190,7 @@ export default function AllSessionsScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
+        <Animated.View style={entrance.style}>
         {/* ── Screen title ── */}
         <Text style={styles.screenTitle}>Sessions</Text>
 
@@ -257,6 +281,7 @@ export default function AllSessionsScreen() {
             </View>
           )}
         </View>
+        </Animated.View>
       </ScrollView>
 
       {/* ── Action sheet — outside ScrollView ── */}

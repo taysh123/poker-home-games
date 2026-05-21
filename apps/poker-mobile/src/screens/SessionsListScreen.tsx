@@ -17,6 +17,7 @@ import { colors } from '../theme/colors';
 import { shadows } from '../theme/shadows';
 import { getGroupSessions, SessionSummaryDto } from '../api/sessionsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import SkeletonCard from '../components/SkeletonCard';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SessionsList'>;
 
@@ -84,8 +85,18 @@ export default function SessionsListScreen({ route, navigation }: Props) {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator color={colors.gold} size="large" />
+      <View style={styles.listWrap}>
+        <View style={[styles.listContent, { gap: 10 }]}>
+          {[0, 1, 2, 3].map((i) => (
+            <View key={i} style={styles.card}>
+              <View style={styles.cardAccent} />
+              <View style={styles.cardInner}>
+                <SkeletonCard height={16} borderRadius={6} style={{ width: '60%', marginBottom: 10 }} />
+                <SkeletonCard height={11} borderRadius={4} style={{ width: '40%' }} />
+              </View>
+            </View>
+          ))}
+        </View>
       </View>
     );
   }

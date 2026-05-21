@@ -200,9 +200,21 @@ export default function HomeScreen() {
           {statsLoading ? (
             <SkeletonCard height={14} borderRadius={4} style={{ marginTop: 10, width: '40%' }} />
           ) : (
-            <Text style={styles.heroSub}>
-              {plValue > 0 ? 'You\'re in the green' : plValue < 0 ? 'Keep grinding' : 'Break even'}
-            </Text>
+            <>
+              <Text style={styles.heroSub}>
+                {plValue > 0 ? 'You\'re in the green' : plValue < 0 ? 'Keep grinding' : 'Break even'}
+              </Text>
+              {stats?.currentStreak !== 0 && stats?.currentStreak != null && (
+                <View style={styles.streakChip}>
+                  <Text style={styles.streakEmoji}>
+                    {stats.currentStreak > 0 ? '🔥' : '❄️'}
+                  </Text>
+                  <Text style={styles.streakText}>
+                    {Math.abs(stats.currentStreak)}-game {stats.currentStreak > 0 ? 'win' : 'loss'} streak
+                  </Text>
+                </View>
+              )}
+            </>
           )}
         </View>
         {/* decorative corner element */}
@@ -556,6 +568,25 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     color: colors.textMuted,
     marginTop: 6,
+  },
+  streakChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 10,
+    alignSelf: 'flex-start',
+    backgroundColor: colors.goldFaint,
+    borderWidth: 1,
+    borderColor: colors.goldMuted,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  streakEmoji: { fontSize: 14 },
+  streakText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.goldLight,
   },
   heroCorner: {
     position: 'absolute',

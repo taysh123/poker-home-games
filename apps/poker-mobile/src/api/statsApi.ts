@@ -24,6 +24,8 @@ export type MyStatsDto = {
   lossesCount: number;
   breakEvenCount: number;
   averageProfitLoss: number;
+  currentStreak: number;
+  longestWinStreak: number;
   recentSessions: RecentSessionDto[];
 };
 

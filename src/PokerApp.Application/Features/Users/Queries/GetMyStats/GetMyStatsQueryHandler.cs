@@ -22,7 +22,7 @@ public sealed class GetMyStatsQueryHandler(
         var sessionIds = sessionPlayers.Select(x => x.SessionId).ToList();
 
         if (sessionIds.Count == 0)
-            return new MyStatsDto(0, 0m, null, null, 0, 0, 0, 0m, []);
+            return new MyStatsDto(0, 0m, null, null, 0, 0, 0, 0m, 0, 0, []);
 
         var spIdBySession = sessionPlayers.ToDictionary(x => x.SessionId, x => x.Id);
 
@@ -88,6 +88,28 @@ public sealed class GetMyStatsQueryHandler(
         var breakEvenCount  = finishedProfits.Count(p => p == 0);
         var avgProfitLoss   = finishedProfits.Count > 0 ? totalProfitLoss / finishedProfits.Count : 0m;
 
+        // Streak computation — finishedProfits[0] is the most recent finished session
+        var currentStreak = 0;
+        var longestWinStreak = 0;
+        if (finishedProfits.Count > 0)
+        {
+            for (var i = 0; i < finishedProfits.Count; i++)
+            {
+                var p = finishedProfits[i];
+                if (p == 0) break;
+                if (i == 0) { currentStreak = p > 0 ? 1 : -1; }
+                else if (currentStreak > 0 && p > 0) currentStreak++;
+                else if (currentStreak < 0 && p < 0) currentStreak--;
+                else break;
+            }
+            var tempStreak = 0;
+            for (var i = finishedProfits.Count - 1; i >= 0; i--)
+            {
+                if (finishedProfits[i] > 0) { if (++tempStreak > longestWinStreak) longestWinStreak = tempStreak; }
+                else tempStreak = 0;
+            }
+        }
+
         var allSessions = sessions.Select(s =>
         {
             var profit    = s.Status == SessionStatus.Finished ? GetProfit(s.Id) : (decimal?)null;
@@ -97,6 +119,6 @@ public sealed class GetMyStatsQueryHandler(
         }).ToList();
 
         return new MyStatsDto(finishedSessions.Count, totalProfitLoss, biggestWin, biggestLoss,
-            winsCount, lossesCount, breakEvenCount, avgProfitLoss, allSessions);
+            winsCount, lossesCount, breakEvenCount, avgProfitLoss, currentStreak, longestWinStreak, allSessions);
     }
 }

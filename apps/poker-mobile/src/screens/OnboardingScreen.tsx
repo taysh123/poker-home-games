@@ -1,0 +1,198 @@
+import React, { useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  ScrollView,
+  Platform,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { colors } from '../theme/colors';
+import { typography } from '../theme/typography';
+import * as storage from '../utils/storage';
+import { RootStackParamList } from '../navigation/AppNavigator';
+
+type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
+
+const { width } = Dimensions.get('window');
+
+const SLIDES = [
+  {
+    icon: 'layers' as const,
+    title: 'Track Every Game',
+    subtitle: 'Buy-ins, cash-outs, and settlements recorded in real time. No spreadsheets, no arguments.',
+  },
+  {
+    icon: 'people' as const,
+    title: 'Play With Your Crew',
+    subtitle: 'Create private groups, invite friends, and track your home game across every session.',
+  },
+  {
+    icon: 'bar-chart' as const,
+    title: 'Know Your Numbers',
+    subtitle: 'Lifetime P&L, win rate, head-to-head stats, and session recaps — all in one place.',
+  },
+];
+
+export default function OnboardingScreen({ navigation }: Props) {
+  const scrollRef = useRef<ScrollView>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  async function markSeenAndNavigate() {
+    await storage.setItemAsync('hasSeenOnboarding', 'true');
+    navigation.replace('Login');
+  }
+
+  function goNext() {
+    if (currentIndex < SLIDES.length - 1) {
+      const next = currentIndex + 1;
+      scrollRef.current?.scrollTo({ x: next * width, animated: true });
+      setCurrentIndex(next);
+    } else {
+      markSeenAndNavigate();
+    }
+  }
+
+  return (
+    <View style={styles.container}>
+      {/* Skip button */}
+      {currentIndex < SLIDES.length - 1 && (
+        <TouchableOpacity style={styles.skipBtn} onPress={markSeenAndNavigate} activeOpacity={0.7}>
+          <Text style={styles.skipText}>Skip</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Slides */}
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        scrollEnabled={false}
+        style={styles.slideScroll}
+      >
+        {SLIDES.map((slide, i) => (
+          <View key={i} style={styles.slide}>
+            <View style={styles.iconWrap}>
+              <Ionicons name={slide.icon} size={40} color={colors.gold} />
+            </View>
+            <Text style={styles.slideTitle}>{slide.title}</Text>
+            <Text style={styles.slideSubtitle}>{slide.subtitle}</Text>
+          </View>
+        ))}
+      </ScrollView>
+
+      {/* Dots + CTA */}
+      <View style={styles.footer}>
+        <View style={styles.dots}>
+          {SLIDES.map((_, i) => (
+            <View
+              key={i}
+              style={[styles.dot, i === currentIndex && styles.dotActive]}
+            />
+          ))}
+        </View>
+
+        <TouchableOpacity style={styles.nextBtn} onPress={goNext} activeOpacity={0.85}>
+          <Text style={styles.nextBtnText}>
+            {currentIndex < SLIDES.length - 1 ? 'Next' : 'Get Started'}
+          </Text>
+          {currentIndex < SLIDES.length - 1 && (
+            <Ionicons name="arrow-forward" size={16} color={colors.background} />
+          )}
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: Platform.OS === 'ios' ? 48 : 32,
+  },
+  skipBtn: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 56 : 36,
+    right: 24,
+    zIndex: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  skipText: {
+    ...typography.bodySmall,
+    color: colors.textMuted,
+    fontWeight: '600',
+  },
+  slideScroll: { flex: 1 },
+  slide: {
+    width,
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 40,
+    gap: 20,
+  },
+  iconWrap: {
+    width: 96,
+    height: 96,
+    borderRadius: 28,
+    backgroundColor: colors.goldFaint,
+    borderWidth: 1,
+    borderColor: colors.goldMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  slideTitle: {
+    ...typography.h1,
+    color: colors.text,
+    textAlign: 'center',
+  },
+  slideSubtitle: {
+    ...typography.body,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  footer: {
+    paddingHorizontal: 24,
+    gap: 24,
+    alignItems: 'center',
+  },
+  dots: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.surfaceHigh,
+  },
+  dotActive: {
+    width: 24,
+    backgroundColor: colors.gold,
+  },
+  nextBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.gold,
+    borderRadius: 16,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+  },
+  nextBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.background,
+  },
+});

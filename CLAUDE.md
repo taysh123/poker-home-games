@@ -324,6 +324,96 @@ All of these override the empty values in `appsettings.Production.json` at runti
 
 ---
 
+## V2 Features (Phase B — Premium UX)
+
+### Streak Tracking (B/C2)
+
+- `MyStatsDto` now includes `CurrentStreak: int` and `LongestWinStreak: int`.
+  - `CurrentStreak` > 0 = active win streak; < 0 = active loss streak; 0 = broken or no sessions.
+  - `LongestWinStreak` = all-time best consecutive wins.
+- `statsApi.ts` `MyStatsDto` type updated with `currentStreak` and `longestWinStreak` fields.
+- `HomeScreen`: streak chip (🔥 win / ❄️ loss) appears below the hero P&L card when `currentStreak !== 0`.
+- `StatsScreen`: dedicated streak section between Key Numbers and P&L Trend showing current streak + best streak cards.
+
+### Skeleton Loading System (B1)
+
+- `SkeletonRow` component (`components/SkeletonRow.tsx`) — reusable animated shimmer row with left accent strip, content area, and right value placeholder.
+- All screens now render structured skeleton layouts on load instead of a bare `ActivityIndicator`:
+  - `StatsScreen` — hero card, 3-col stats row, chart block, session rows
+  - `AllSessionsScreen` — title + active card + session list rows
+  - `GroupsListScreen` — 4 group rows
+  - `SessionsListScreen` — 4 session cards
+
+### Entrance Animations (B3)
+
+- `useScreenEntrance` hook (`hooks/useScreenEntrance.ts`) — triggers a fade-in + slide-up on every screen focus via `useFocusEffect`. Returns `{ opacity, translateY, style }`.
+- Applied to `AllSessionsScreen`, `GroupsListScreen`. Use `<Animated.View style={entrance.style}>` to wrap screen content.
+
+### EmptyState Enhancement (B2)
+
+- `EmptyState` component now supports an optional `ionicon` prop (`React.ComponentProps<typeof Ionicons>['name']`). When provided, renders an Ionicons icon in a styled circle instead of an emoji. Falls back to the original `icon: string` prop if no `ionicon` is passed.
+
+### Onboarding First-Run (B5)
+
+- `OnboardingScreen` (`screens/OnboardingScreen.tsx`) — 3-slide horizontal carousel shown to new users on first launch. Slides: "Track Every Game" / "Play With Your Crew" / "Know Your Numbers". Skip button on slides 0–1. On complete, stores `hasSeenOnboarding = 'true'` in `utils/storage` and navigates to Login.
+- `AppNavigator` reads `hasSeenOnboarding` on startup and renders `<Stack.Screen name="Onboarding">` first if not set. Delays all rendering until both `isLoading === false` AND `hasSeenOnboarding !== undefined`.
+
+### Response Compression (D3)
+
+- `Program.cs` now wires `AddResponseCompression(opts => opts.EnableForHttps = true)` and `app.UseResponseCompression()` — applies Brotli/gzip compression to all responses including HTTPS.
+
+---
+
+## V2 Features (Phase C — Social & Retention)
+
+### Achievements & Badges System (C1)
+
+**New domain entities:**
+- `Achievement` (`Domain/Entities/Achievement.cs`) — static catalog entity (does NOT extend `BaseEntity`). Properties: `Id`, `Key`, `Name`, `Description`, `IconKey`, `AchievementRarity`.
+- `UserAchievement` (`Domain/Entities/UserAchievement.cs`) — extends `BaseEntity`. Properties: `UserId`, `AchievementKey`, `UnlockedAt`. Factory: `UserAchievement.Create(userId, key)`.
+- `AchievementRarity` enum (`Domain/Enums/AchievementRarity.cs`): `Common=0, Rare=1, Epic=2, Legendary=3`.
+
+**EF configuration:**
+- `AchievementConfiguration.cs` — unique index on `Key`, seed data for 14 achievements via `HasData()` with stable GUIDs (`10000000-0000-0000-0000-00000000000x`).
+- `UserAchievementConfiguration.cs` — FK to User (cascade delete), unique composite index on `(UserId, AchievementKey)`.
+- Migration: `Phase38_AchievementsAndStreaks`.
+
+**Achievement catalog (seeded):**
+
+| Key | Criteria |
+|-----|----------|
+| `first_session` | Complete first session |
+| `ten_sessions` | Play 10 sessions |
+| `fifty_sessions` | Play 50 sessions |
+| `first_win` | Win first session |
+| `five_win_streak` | Win 5 in a row |
+| `profit_100` | Reach $100 total P&L |
+| `profit_1000` | Reach $1,000 total P&L |
+| `profit_5000` | Reach $5,000 total P&L |
+| `comeback` | Lose $200+, win the next session |
+| `marathon` | Session lasting 4+ hours |
+| `triple_rebuy` | 3+ buy-ins in a single session |
+| `cash_out_even` | Cash out exactly break-even |
+| `hand_historian` | Log 10+ hand records |
+| `first_group` | Join or create a group |
+
+**Application layer:**
+- `IAchievementEvaluator` (`Application/Common/Interfaces/IAchievementEvaluator.cs`) — `EvaluateAsync(userId, sessionId, cancellationToken)` returns newly unlocked keys.
+- `AchievementEvaluator` (`Infrastructure/Services/AchievementEvaluator.cs`) — evaluates all unearned achievements after a session ends. Called from `EndSessionCommandHandler` after `SaveChangesAsync`.
+- `GetMyAchievementsQuery` + handler + DTO in `Application/Features/Users/Queries/GetMyAchievements/`.
+
+**API endpoint:**
+- `GET /api/users/me/achievements` → `MyAchievementsDto { Earned: AchievementDto[], Locked: AchievementDto[] }`.
+
+**Frontend:**
+- `achievementsApi.ts` (`api/achievementsApi.ts`) — `getMyAchievements(token)`.
+- `StatsScreen` — achievements section below the P&L trend. Earned badges full-color (rarity tint), locked at 45% opacity. Rarity colors: Common=textMuted, Rare=#4EAADC, Epic=#C46EE8, Legendary=gold. Sorted: earned (desc by unlockedAt) then locked, separated by a divider.
+- Loaded alongside stats via `Promise.all` with `.catch(() => null)` fallback so a cold DB (pre-migration) doesn't break the screen.
+
+**Important implementation note:** EF Core does NOT have `ToHashSetAsync`. Use `.ToListAsync(ct).ToHashSet()` instead.
+
+---
+
 ## Out of Scope (decided, not returning)
 
 - i18n / Hebrew / RTL — English only

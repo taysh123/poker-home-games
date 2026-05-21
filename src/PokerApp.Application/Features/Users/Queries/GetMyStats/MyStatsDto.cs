@@ -9,6 +9,8 @@ public sealed record MyStatsDto(
     int LossesCount,
     int BreakEvenCount,
     decimal AverageProfitLoss,
+    int CurrentStreak,
+    int LongestWinStreak,
     List<RecentSessionDto> RecentSessions
 );
 

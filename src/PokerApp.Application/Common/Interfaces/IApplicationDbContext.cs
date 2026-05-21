@@ -22,6 +22,8 @@ public interface IApplicationDbContext
     DbSet<ActivityLog> ActivityLogs { get; }
     DbSet<SessionInviteToken> SessionInviteTokens { get; }
     DbSet<GroupInviteLink> GroupInviteLinks { get; }
+    DbSet<Achievement> Achievements { get; }
+    DbSet<UserAchievement> UserAchievements { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

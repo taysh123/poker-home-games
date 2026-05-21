@@ -42,6 +42,8 @@ public static class DependencyInjection
         services.AddSingleton<IWebSettings>(sp =>
             sp.GetRequiredService<IOptions<WebSettings>>().Value);
 
+        services.AddScoped<IAchievementEvaluator, AchievementEvaluator>();
+
         return services;
     }
 }

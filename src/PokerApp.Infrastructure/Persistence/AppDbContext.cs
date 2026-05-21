@@ -21,6 +21,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
     public DbSet<SessionInviteToken> SessionInviteTokens => Set<SessionInviteToken>();
     public DbSet<GroupInviteLink> GroupInviteLinks => Set<GroupInviteLink>();
+    public DbSet<Achievement> Achievements => Set<Achievement>();
+    public DbSet<UserAchievement> UserAchievements => Set<UserAchievement>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

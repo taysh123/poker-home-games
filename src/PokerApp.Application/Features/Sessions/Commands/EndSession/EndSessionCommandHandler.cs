@@ -9,7 +9,8 @@ namespace PokerApp.Application.Features.Sessions.Commands.EndSession;
 
 public sealed class EndSessionCommandHandler(
     IApplicationDbContext context,
-    ICurrentUserService currentUserService) : IRequestHandler<EndSessionCommand>
+    ICurrentUserService currentUserService,
+    IAchievementEvaluator achievementEvaluator) : IRequestHandler<EndSessionCommand>
 {
     public async Task Handle(EndSessionCommand request, CancellationToken cancellationToken)
     {
@@ -67,5 +68,8 @@ public sealed class EndSessionCommandHandler(
         }
 
         await context.SaveChangesAsync(cancellationToken);
+
+        // Award any newly-earned achievements for the session creator
+        await achievementEvaluator.EvaluateAsync(userId, request.SessionId, cancellationToken);
     }
 }
