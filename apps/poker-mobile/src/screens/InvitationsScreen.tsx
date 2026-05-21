@@ -11,8 +11,10 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
+import { shadows } from '../theme/shadows';
 import {
   getMyInvitations,
   acceptInvitation,
@@ -143,7 +145,9 @@ export default function InvitationsScreen({ navigation }: Props) {
       }
       ListEmptyComponent={
         <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>✉</Text>
+          <View style={styles.emptyIconWrap}>
+            <Ionicons name="mail-outline" size={36} color={colors.textDim} />
+          </View>
           <Text style={styles.emptyTitle}>No pending invitations</Text>
           <Text style={styles.emptySubtitle}>
             When someone invites you to a group, it will appear here.
@@ -154,26 +158,42 @@ export default function InvitationsScreen({ navigation }: Props) {
         const isActing = actionLoading === item.invitationId;
         return (
           <View style={styles.card}>
-            <Text style={styles.groupName}>{item.groupName}</Text>
-            <Text style={styles.invitedBy}>Invited by {item.invitedByUsername}</Text>
-            <Text style={styles.expiry}>{formatExpiry(item.expiresAt)}</Text>
+            <View style={styles.cardHeader}>
+              <View style={styles.groupAvatar}>
+                <Text style={styles.groupAvatarText}>{item.groupName[0]?.toUpperCase() ?? '?'}</Text>
+              </View>
+              <View style={styles.cardHeaderText}>
+                <Text style={styles.groupName} numberOfLines={1}>{item.groupName}</Text>
+                <Text style={styles.invitedBy}>Invited by {item.invitedByUsername}</Text>
+              </View>
+            </View>
+            <View style={styles.expiryRow}>
+              <Ionicons name="time-outline" size={12} color={colors.textDim} />
+              <Text style={styles.expiry}>{formatExpiry(item.expiresAt)}</Text>
+            </View>
             <View style={styles.actions}>
               <TouchableOpacity
                 style={[styles.acceptBtn, (!!actionLoading) && styles.btnDisabled]}
                 onPress={() => handleAccept(item)}
                 disabled={!!actionLoading}
+                activeOpacity={0.8}
               >
                 {isActing ? (
                   <ActivityIndicator size="small" color={colors.background} />
                 ) : (
-                  <Text style={styles.acceptBtnText}>Accept</Text>
+                  <>
+                    <Ionicons name="checkmark-circle-outline" size={16} color={colors.background} />
+                    <Text style={styles.acceptBtnText}>Accept</Text>
+                  </>
                 )}
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.declineBtn, (!!actionLoading) && styles.btnDisabled]}
                 onPress={() => handleDecline(item)}
                 disabled={!!actionLoading}
+                activeOpacity={0.8}
               >
+                <Ionicons name="close-circle-outline" size={16} color={colors.textMuted} />
                 <Text style={styles.declineBtnText}>Decline</Text>
               </TouchableOpacity>
             </View>
@@ -208,40 +228,71 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 80,
-    gap: 12,
+    gap: 14,
     paddingHorizontal: 32,
   },
-  emptyIcon: { fontSize: 40, color: colors.textMuted },
+  emptyIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 22,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
   emptySubtitle: { fontSize: 14, color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
   card: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    gap: 6,
+    gap: 10,
+    ...shadows.sm,
   },
-  groupName: { fontSize: 17, fontWeight: '700', color: colors.gold },
-  invitedBy: { fontSize: 13, color: colors.textMuted },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  groupAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 13,
+    backgroundColor: colors.goldSubtle,
+    borderWidth: 1,
+    borderColor: colors.goldMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  groupAvatarText: { fontSize: 18, fontWeight: '800', color: colors.gold },
+  cardHeaderText: { flex: 1, gap: 3 },
+  groupName: { fontSize: 16, fontWeight: '700', color: colors.text },
+  invitedBy: { fontSize: 12, color: colors.textMuted },
+  expiryRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   expiry: { fontSize: 12, color: colors.textDim },
-  actions: { flexDirection: 'row', gap: 10, marginTop: 8 },
+  actions: { flexDirection: 'row', gap: 10, marginTop: 2 },
   acceptBtn: {
     flex: 1,
-    backgroundColor: colors.gold,
-    borderRadius: 10,
-    paddingVertical: 11,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    backgroundColor: colors.gold,
+    borderRadius: 11,
+    paddingVertical: 12,
+    ...shadows.goldSm,
   },
   acceptBtnText: { color: colors.background, fontSize: 14, fontWeight: '700' },
   declineBtn: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 10,
-    paddingVertical: 11,
-    alignItems: 'center',
+    borderRadius: 11,
+    paddingVertical: 12,
   },
   declineBtnText: { color: colors.textMuted, fontSize: 14, fontWeight: '600' },
   btnDisabled: { opacity: 0.5 },

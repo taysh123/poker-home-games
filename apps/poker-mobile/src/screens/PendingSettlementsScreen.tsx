@@ -10,9 +10,11 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
+import { shadows } from '../theme/shadows';
 import { useAuth } from '../context/AuthContext';
 import {
   getMyPendingSettlements,
@@ -102,7 +104,9 @@ export default function PendingSettlementsScreen() {
   if (settlements.length === 0) {
     return (
       <View style={styles.center}>
-        <Text style={styles.emptyIcon}>✓</Text>
+        <View style={styles.emptyIconWrap}>
+          <Ionicons name="checkmark-circle-outline" size={40} color={colors.success} />
+        </View>
         <Text style={styles.emptyTitle}>All settled up!</Text>
         <Text style={styles.emptySubtitle}>No pending payments across any session.</Text>
       </View>
@@ -138,7 +142,7 @@ export default function PendingSettlementsScreen() {
               <Text style={styles.sessionName} numberOfLines={1}>{group.sessionName}</Text>
               {group.groupName && <Text style={styles.sessionMeta}>{group.groupName}</Text>}
             </View>
-            <Text style={styles.sessionChevron}>›</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.gold} />
           </TouchableOpacity>
 
           <View style={styles.settlementList}>
@@ -160,7 +164,7 @@ export default function PendingSettlementsScreen() {
                         </Text>
                       </View>
                       <View style={styles.flowCenter}>
-                        <Text style={styles.flowArrow}>→</Text>
+                        <Ionicons name="arrow-forward" size={14} color={colors.textDim} />
                         <Text style={styles.flowAmount}>{formatMoney(s.amount)}</Text>
                       </View>
                       <View style={styles.party}>
@@ -182,7 +186,12 @@ export default function PendingSettlementsScreen() {
                       >
                         {markingId === s.id
                           ? <ActivityIndicator size="small" color={colors.background} />
-                          : <Text style={styles.markPaidText}>Mark Paid</Text>}
+                          : (
+                            <>
+                              <Ionicons name="checkmark-circle-outline" size={14} color={colors.background} />
+                              <Text style={styles.markPaidText}>Mark Paid</Text>
+                            </>
+                          )}
                       </TouchableOpacity>
                     )}
                     {!iAmPayer && (
@@ -217,7 +226,16 @@ const styles = StyleSheet.create({
   errorText: { color: colors.error, fontSize: 15, textAlign: 'center' },
   retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: colors.border },
   retryText: { color: colors.textMuted, fontSize: 14, fontWeight: '600' },
-  emptyIcon: { fontSize: 40, color: colors.success },
+  emptyIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 22,
+    backgroundColor: 'rgba(39,174,96,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(39,174,96,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   emptyTitle: { ...typography.h3, color: colors.text },
   emptySubtitle: { fontSize: 14, color: colors.textMuted, textAlign: 'center' },
 
@@ -287,10 +305,14 @@ const styles = StyleSheet.create({
 
   markPaidBtn: {
     alignSelf: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: colors.gold,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 7,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    ...shadows.goldSm,
   },
   markPaidText: { fontSize: 13, fontWeight: '700', color: colors.background },
   awaitingBadge: {
