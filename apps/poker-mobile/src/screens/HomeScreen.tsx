@@ -293,14 +293,14 @@ export default function HomeScreen() {
               <StatWidget
                 label="Sessions"
                 value={String(stats?.totalSessionsPlayed ?? 0)}
-                icon="♠"
+                ionicon="layers-outline"
                 accentColor={colors.gold}
                 delay={0}
               />
               <StatWidget
                 label="Win Rate"
                 value={winRate != null ? `${winRate}%` : '—'}
-                icon="◆"
+                ionicon="trophy-outline"
                 accentColor={winRateColor}
                 valueColor={winRateColor}
                 delay={80}
@@ -308,7 +308,7 @@ export default function HomeScreen() {
               <StatWidget
                 label="Avg Session"
                 value={stats?.averageProfitLoss != null ? formatPL(stats.averageProfitLoss) : '—'}
-                icon="≈"
+                ionicon="stats-chart-outline"
                 accentColor={
                   (stats?.averageProfitLoss ?? 0) > 0
                     ? colors.success

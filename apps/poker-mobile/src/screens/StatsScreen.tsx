@@ -24,7 +24,7 @@ import { formatPL, formatDate, formatDuration } from '../utils/formatters';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-const CHART_HEIGHT = 64;
+const CHART_HEIGHT = 80;
 
 export default function StatsScreen() {
   const navigation = useNavigation<Nav>();
@@ -131,29 +131,37 @@ export default function StatsScreen() {
               </View>
             </View>
 
-            {/* Win rate bar */}
+            {/* W/L/E segmented breakdown */}
             {stats.totalSessionsPlayed > 0 && (
               <View style={styles.winRateSection}>
                 <View style={styles.winRateLabelRow}>
-                  <Text style={styles.winRateLabel}>Win rate</Text>
-                  <Text style={[styles.winRatePct, { color: winRateColor }]}>{winRate}%</Text>
+                  <Text style={styles.winRateLabel}>Record</Text>
+                  <Text style={[styles.winRatePct, { color: winRateColor }]}>{winRate}% win rate</Text>
                 </View>
-                <View style={styles.winRateTrack}>
-                  <Animated.View
-                    style={[
-                      styles.winRateFill,
-                      { width: `${winRate}%` as any, backgroundColor: winRateColor },
-                    ]}
-                  />
+                <View style={styles.breakdownTrack}>
+                  {stats.winsCount > 0 && (
+                    <View style={[styles.breakdownSegW, { flex: stats.winsCount }]} />
+                  )}
+                  {stats.breakEvenCount > 0 && (
+                    <View style={[styles.breakdownSegE, { flex: stats.breakEvenCount }]} />
+                  )}
+                  {stats.lossesCount > 0 && (
+                    <View style={[styles.breakdownSegL, { flex: stats.lossesCount }]} />
+                  )}
                 </View>
-                <View style={styles.winRateRow}>
-                  <Text style={styles.winRateStat}>
-                    <Text style={{ color: colors.success }}>{stats.winsCount}W</Text>
-                    {'  '}
-                    <Text style={{ color: colors.error }}>{stats.lossesCount}L</Text>
-                    {'  '}
-                    <Text style={{ color: colors.textMuted }}>{stats.breakEvenCount}E</Text>
-                  </Text>
+                <View style={styles.breakdownLegend}>
+                  <View style={styles.breakdownLegendItem}>
+                    <View style={[styles.breakdownDot, { backgroundColor: colors.success }]} />
+                    <Text style={styles.breakdownLegendText}>{stats.winsCount} W</Text>
+                  </View>
+                  <View style={styles.breakdownLegendItem}>
+                    <View style={[styles.breakdownDot, { backgroundColor: colors.textDim }]} />
+                    <Text style={styles.breakdownLegendText}>{stats.breakEvenCount} E</Text>
+                  </View>
+                  <View style={styles.breakdownLegendItem}>
+                    <View style={[styles.breakdownDot, { backgroundColor: colors.error }]} />
+                    <Text style={styles.breakdownLegendText}>{stats.lossesCount} L</Text>
+                  </View>
                 </View>
               </View>
             )}
@@ -302,9 +310,17 @@ const hlStyles = StyleSheet.create({
 
 function PLBarChart({ sessions }: { sessions: RecentSessionDto[] }) {
   const maxAbs = Math.max(...sessions.map(s => Math.abs(s.profitLoss ?? 0)), 1);
+  const periodNet = sessions.reduce((sum, s) => sum + (s.profitLoss ?? 0), 0);
+  const periodColor = periodNet > 0 ? colors.success : periodNet < 0 ? colors.error : colors.textMuted;
 
   return (
     <View style={chartStyles.card}>
+      <View style={chartStyles.cardHeader}>
+        <Text style={chartStyles.cardHeaderTitle}>Last {sessions.length} sessions</Text>
+        <Text style={[chartStyles.cardHeaderNet, { color: periodColor }]}>
+          {periodNet > 0 ? '+' : ''}{formatPL(periodNet)}
+        </Text>
+      </View>
       <View style={chartStyles.bars}>
         {sessions.map((session, i) => {
           const v = session.profitLoss ?? 0;
@@ -314,13 +330,27 @@ function PLBarChart({ sessions }: { sessions: RecentSessionDto[] }) {
             <View key={i} style={chartStyles.col}>
               <View style={chartStyles.halfTop}>
                 {isPos && (
-                  <View style={[chartStyles.bar, { height: barH, backgroundColor: colors.success + 'CC' }]} />
+                  <View style={[chartStyles.bar, {
+                    height: barH,
+                    backgroundColor: colors.success + 'CC',
+                    borderTopLeftRadius: 4,
+                    borderTopRightRadius: 4,
+                    borderBottomLeftRadius: 0,
+                    borderBottomRightRadius: 0,
+                  }]} />
                 )}
               </View>
               <View style={chartStyles.zeroLine} />
               <View style={chartStyles.halfBot}>
                 {!isPos && (
-                  <View style={[chartStyles.bar, { height: barH, backgroundColor: colors.error + 'CC' }]} />
+                  <View style={[chartStyles.bar, {
+                    height: barH,
+                    backgroundColor: colors.error + 'CC',
+                    borderTopLeftRadius: 0,
+                    borderTopRightRadius: 0,
+                    borderBottomLeftRadius: 4,
+                    borderBottomRightRadius: 4,
+                  }]} />
                 )}
               </View>
             </View>
@@ -328,9 +358,14 @@ function PLBarChart({ sessions }: { sessions: RecentSessionDto[] }) {
         })}
       </View>
       <View style={chartStyles.labelRow}>
-        <Text style={chartStyles.axisLabel}>Loss</Text>
-        <Text style={chartStyles.axisCenter}>P&L per session</Text>
-        <Text style={chartStyles.axisLabel}>Win</Text>
+        <View style={chartStyles.axisLegend}>
+          <View style={[chartStyles.legendDot, { backgroundColor: colors.success }]} />
+          <Text style={chartStyles.axisLabel}>Win</Text>
+        </View>
+        <View style={chartStyles.axisLegend}>
+          <View style={[chartStyles.legendDot, { backgroundColor: colors.error }]} />
+          <Text style={chartStyles.axisLabel}>Loss</Text>
+        </View>
       </View>
     </View>
   );
@@ -343,9 +378,27 @@ const chartStyles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 16,
     paddingHorizontal: 16,
-    paddingTop: 20,
+    paddingTop: 16,
     paddingBottom: 12,
     ...shadows.sm,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  cardHeaderTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  cardHeaderNet: {
+    fontSize: 14,
+    fontWeight: '800',
+    fontVariant: ['tabular-nums'],
   },
   bars: {
     flexDirection: 'row',
@@ -373,22 +426,27 @@ const chartStyles = StyleSheet.create({
   },
   bar: {
     width: '75%',
-    borderRadius: 3,
   },
   labelRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 16,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 12,
+  },
+  axisLegend: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  legendDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
   },
   axisLabel: {
     ...typography.caps,
     color: colors.textDim,
-    fontSize: 9,
-  },
-  axisCenter: {
-    ...typography.caps,
-    color: colors.textMuted,
     fontSize: 9,
   },
 });
@@ -461,7 +519,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // Win rate
+  // Win rate / breakdown
   winRateSection: { gap: 8 },
   winRateLabelRow: {
     flexDirection: 'row',
@@ -476,19 +534,34 @@ const styles = StyleSheet.create({
     ...typography.labelSmall,
     fontVariant: ['tabular-nums'],
   },
-  winRateTrack: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.border,
+  // segmented breakdown track
+  breakdownTrack: {
+    height: 8,
+    borderRadius: 4,
+    flexDirection: 'row',
     overflow: 'hidden',
+    gap: 2,
   },
-  winRateFill: {
-    height: 6,
-    borderRadius: 3,
+  breakdownSegW: { height: 8, backgroundColor: colors.success + 'AA', borderRadius: 4 },
+  breakdownSegL: { height: 8, backgroundColor: colors.error + 'AA', borderRadius: 4 },
+  breakdownSegE: { height: 8, backgroundColor: colors.textDim + 'AA', borderRadius: 4 },
+  breakdownLegend: {
+    flexDirection: 'row',
+    gap: 14,
   },
-  winRateRow: { marginTop: 2 },
-  winRateStat: {
-    ...typography.caption,
+  breakdownLegendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  breakdownDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+  },
+  breakdownLegendText: {
+    fontSize: 12,
+    fontWeight: '600',
     color: colors.textMuted,
   },
   heroCorner: {

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { shadows } from '../theme/shadows';
@@ -12,6 +13,7 @@ type Props = {
   valueColor?: string;
   accentColor?: string;
   icon?: string;
+  ionicon?: React.ComponentProps<typeof Ionicons>['name'];
   delay?: number;
 };
 
@@ -22,6 +24,7 @@ export default function StatWidget({
   valueColor = colors.text,
   accentColor = colors.gold,
   icon,
+  ionicon,
   delay = 0,
 }: Props) {
   const opacity = useRef(new Animated.Value(0)).current;
@@ -42,7 +45,11 @@ export default function StatWidget({
         { borderTopColor: accentColor },
       ]}
     >
-      {icon ? (
+      {ionicon ? (
+        <View style={[styles.iconWrap, { backgroundColor: accentColor + '18' }]}>
+          <Ionicons name={ionicon} size={16} color={accentColor} />
+        </View>
+      ) : icon ? (
         <Text style={[styles.icon, { color: accentColor }]}>{icon}</Text>
       ) : (
         <View style={[styles.accentDot, { backgroundColor: accentColor }]} />
@@ -67,6 +74,14 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 4,
     ...shadows.md,
+  },
+  iconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
   },
   icon: {
     fontSize: 18,
