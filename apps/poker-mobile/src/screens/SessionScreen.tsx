@@ -147,6 +147,7 @@ export default function SessionScreen({ route, navigation }: Props) {
   // Export
   const [exporting, setExporting] = useState(false);
   const [sharing, setSharing]     = useState(false);
+  const [sharingSummary, setSharingSummary] = useState(false);
   const [sharingInvite, setSharingInvite] = useState(false);
 
   // Delete session
@@ -492,10 +493,44 @@ export default function SessionScreen({ route, navigation }: Props) {
       await markSettlementPaid(token, settlementId);
       setSettlements(s => s.map(x => x.id === settlementId ? { ...x, status: 'Confirmed' } : x));
       lightTap();
+      showToast('Payment confirmed', 'success');
     } catch {
       Alert.alert('Error', 'Failed to mark as paid.');
     } finally {
       setMarkingPaidId(null);
+    }
+  }
+
+  function confirmMarkPaid(settlementId: string, payerName: string, receiverName: string, amount: number) {
+    Alert.alert(
+      'Confirm Payment',
+      `${payerName} paid ${formatMoney(amount)} to ${receiverName}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Confirm', onPress: () => handleMarkPaid(settlementId) },
+      ],
+    );
+  }
+
+  async function handleShareSettlements() {
+    if (settlements.length === 0 || !session) return;
+    setSharingSummary(true);
+    try {
+      const lines = settlements.map(s => {
+        const tag = s.status === 'Confirmed' ? ' ✓' : '';
+        return `${s.payerName} → ${s.receiverName}: ${formatMoney(s.amount)}${tag}`;
+      });
+      const text = `${session.name} — Settlements:\n\n${lines.join('\n')}`;
+      try {
+        await Share.share({ message: text });
+      } catch {
+        if (Platform.OS === 'web' && (navigator as any)?.clipboard) {
+          await (navigator as any).clipboard.writeText(text);
+          showToast('Copied to clipboard!', 'success');
+        }
+      }
+    } finally {
+      setSharingSummary(false);
     }
   }
 
@@ -835,11 +870,20 @@ export default function SessionScreen({ route, navigation }: Props) {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Settlements</Text>
-              <TouchableOpacity onPress={handleCalculateSettlements} disabled={calcLoading}>
-                {calcLoading
-                  ? <ActivityIndicator color={colors.gold} size="small" />
-                  : <Text style={styles.seeAll}>Recalculate</Text>}
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                {settlements.length > 0 && (
+                  <TouchableOpacity onPress={handleShareSettlements} disabled={sharingSummary} hitSlop={8}>
+                    {sharingSummary
+                      ? <ActivityIndicator color={colors.gold} size="small" />
+                      : <Ionicons name="share-outline" size={17} color={colors.gold} />}
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity onPress={handleCalculateSettlements} disabled={calcLoading}>
+                  {calcLoading
+                    ? <ActivityIndicator color={colors.gold} size="small" />
+                    : <Text style={styles.seeAll}>Recalculate</Text>}
+                </TouchableOpacity>
+              </View>
             </View>
 
             {settlements.length === 0 ? (
@@ -874,7 +918,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                             <Text style={styles.settlementPartyName} numberOfLines={1}>{s.payerName}</Text>
                           </View>
                           <View style={styles.settlementMiddle}>
-                            <Text style={styles.settlementArrowIcon}>→</Text>
+                            <Ionicons name="arrow-forward" size={16} color={colors.textDim} />
                             <Text style={styles.settlementAmount}>{formatMoney(s.amount)}</Text>
                           </View>
                           <View style={styles.settlementParty}>
@@ -893,12 +937,17 @@ export default function SessionScreen({ route, navigation }: Props) {
                           ) : isInvolved ? (
                             <TouchableOpacity
                               style={styles.markPaidBtn}
-                              onPress={() => handleMarkPaid(s.id)}
+                              onPress={() => confirmMarkPaid(s.id, s.payerName, s.receiverName, s.amount)}
                               disabled={markingPaidId === s.id}
                             >
                               {markingPaidId === s.id
                                 ? <ActivityIndicator color={colors.background} size="small" />
-                                : <Text style={styles.markPaidText}>Mark Paid</Text>}
+                                : (
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                    <Ionicons name="checkmark" size={14} color={colors.background} />
+                                    <Text style={styles.markPaidText}>Mark Paid</Text>
+                                  </View>
+                                )}
                             </TouchableOpacity>
                           ) : (
                             <View style={styles.badgePendingRow}>
@@ -1542,11 +1591,11 @@ export default function SessionScreen({ route, navigation }: Props) {
                     return (
                       <View key={s.id} style={styles.summarySettlementCard}>
                         <View style={styles.summarySettlementInfo}>
-                          <Text style={styles.summarySettlementLine}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
                             <Text style={styles.summarySettlementPayer}>{s.payerName}</Text>
-                            <Text style={{ color: colors.textDim }}>{' → '}</Text>
+                            <Ionicons name="arrow-forward" size={12} color={colors.textDim} />
                             <Text style={styles.summarySettlementReceiver}>{s.receiverName}</Text>
-                          </Text>
+                          </View>
                           <Text style={styles.summarySettlementAmount}>{formatMoney(s.amount)}</Text>
                         </View>
                         {!isPaid ? (

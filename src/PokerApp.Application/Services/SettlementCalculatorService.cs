@@ -35,8 +35,8 @@ public sealed class SettlementCalculatorService : ISettlementCalculator
             debtor.Balance += amount;
             creditor.Balance -= amount;
 
-            if (debtor.Balance == 0) d++;
-            if (creditor.Balance == 0) c++;
+            if (Math.Abs(debtor.Balance) < 0.01m) d++;
+            if (Math.Abs(creditor.Balance) < 0.01m) c++;
         }
 
         return settlements;
