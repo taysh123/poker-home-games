@@ -239,21 +239,20 @@ eas build --platform android
 
 ### Backend → Railway
 
-Railway auto-detects .NET projects and builds with `dotnet publish`. EF Core migrations run automatically on every startup (via `db.Database.Migrate()` in `Program.cs`).
+This repo uses a `Dockerfile` (at the repo root) so Railway always gets a clean, reproducible .NET 8 build — bypassing Nixpacks auto-detection which can misfire on monorepos that contain both `.sln` and `package.json` files.
+
+EF Core migrations run automatically on every startup (`db.Database.Migrate()` in `Program.cs`).
 
 **Step-by-step:**
 
 1. Create a new Railway project → **New Service → GitHub Repo** → select this repo
-2. Add a **PostgreSQL** plugin in Railway — it injects `DATABASE_URL` automatically
-3. Set a **custom start command** in Railway service settings:
-   ```
-   dotnet PokerApp.API.dll
-   ```
+2. Railway detects the `Dockerfile` automatically — no build command overrides needed
+3. Add a **PostgreSQL** plugin in Railway — it injects `DATABASE_URL` automatically
 4. Set these **environment variables** in Railway:
    ```
    ASPNETCORE_ENVIRONMENT=Production
    ConnectionStrings__DefaultConnection=<Railway PostgreSQL connection string>
-   JwtSettings__SecretKey=<min-32-char random string>
+   JwtSettings__SecretKey=<min-64-char random string>
    JwtSettings__Issuer=PokerApp
    JwtSettings__Audience=PokerApp
    JwtSettings__AccessTokenExpirationMinutes=15
@@ -261,7 +260,7 @@ Railway auto-detects .NET projects and builds with `dotnet publish`. EF Core mig
    GoogleSettings__ClientIds__0=<your-google-web-client-id.apps.googleusercontent.com>
    AllowedOrigins__0=https://your-app.vercel.app
    ```
-5. Deploy. Railway builds → migrations run automatically on startup → API is live.
+5. Deploy. Railway builds via Docker → migrations run on startup → API is live.
 
 **PostgreSQL connection string format (Railway):**
 ```
@@ -271,10 +270,12 @@ Railway shows the exact string under your PostgreSQL plugin → **Connect** tab.
 
 **Generate a JWT secret key:**
 ```powershell
-[Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+[Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(64))
 ```
 
-**Health check:** `GET /health` → `Healthy` (configure as Railway's health check path)
+**Health check:** Railway uses `railway.toml` → `healthcheckPath = "/health"`. The endpoint returns `Healthy` when the app is up.
+
+> **Linux/case-sensitivity note:** The Dockerfile resolves a class of CS0246 build errors that occur when Railway's Nixpacks tries to build a monorepo containing both `.sln` and `package.json`. The Dockerfile copies only `src/` and ignores `apps/` entirely, giving the compiler a clean dependency graph.
 
 ---
 

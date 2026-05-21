@@ -280,17 +280,25 @@ npx eas build --platform android
 
 ### Backend → Railway
 
+The repo root contains a `Dockerfile` that Railway uses automatically. This is necessary because Nixpacks auto-detection fails on monorepos that contain both a `.sln` and a `package.json` — it can misorder the NuGet restore step, causing CS0246 at compile time on Linux. The Dockerfile copies only `src/` and runs an explicit restore+publish against `PokerApp.API.csproj`.
+
 Railway env vars use `__` to separate nested keys. Required vars:
 ```
 ASPNETCORE_ENVIRONMENT=Production
 ConnectionStrings__DefaultConnection=<Railway PostgreSQL connection string>
-JwtSettings__SecretKey=<min-32-char secret>
+JwtSettings__SecretKey=<min-64-char secret>
 JwtSettings__Issuer=PokerApp
 JwtSettings__Audience=PokerApp
 GoogleSettings__ClientIds__0=<google-web-client-id>
 AllowedOrigins__0=https://<your-vercel-domain>.vercel.app
 ```
 All of these override the empty values in `appsettings.Production.json` at runtime.
+
+**Linux/case-sensitivity pitfalls (for future changes):**
+- C# namespaces are case-sensitive; always match `namespace` declarations exactly in `using` directives
+- SDK-style `.csproj` files auto-glob `**/*.cs` — file names must be an exact case-match of what the compiler expects; mismatches are silently ignored on Windows but cause CS0246 on Linux
+- Never run `dotnet publish --no-restore` on a fresh Linux environment without running `dotnet restore` first — the Dockerfile handles this correctly with explicit `RUN dotnet restore` before `RUN dotnet publish --no-restore`
+- The `out/` build artifact directory is gitignored — never commit it
 
 ---
 

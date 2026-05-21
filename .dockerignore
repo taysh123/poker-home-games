@@ -1,0 +1,13 @@
+apps/
+**/.vs/
+**/.idea/
+**/bin/
+**/obj/
+**/out/
+**/publish/
+*.md
+LICENSE
+.git/
+.gitignore
+vercel.json
+railway.toml

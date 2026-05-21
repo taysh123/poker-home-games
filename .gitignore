@@ -24,3 +24,4 @@ appsettings.Development.json
 
 ## Build outputs
 publish/
+out/
