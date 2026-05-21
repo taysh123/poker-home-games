@@ -414,6 +414,57 @@ All of these override the empty values in `appsettings.Production.json` at runti
 
 ---
 
+## V2 Features (Phase D — Platform & Scale)
+
+### Period-Based Stats (A3 / Phase 39)
+
+- `GetMyStatsQuery` now accepts an optional `Period` parameter: `"week" | "month" | "year"` (default = all-time).
+- `AuthController.GetMyStats` accepts `[FromQuery] string? period`.
+- Streak fields (`CurrentStreak`, `LongestWinStreak`) are always computed from all-time data — only aggregate stats and `RecentSessions` are period-filtered.
+- `statsApi.ts` `getMyStats(token, period?)` accepts an optional period param.
+- `StatsScreen` has a 3-tab period picker (This Week / This Month / All Time) at the top. Tabs trigger a re-fetch; hero label updates to match the period. All stat cards, the chart, and session list reflect the selected period.
+- `HomeScreen` computes "this week" P&L client-side from already-loaded `recentSessions` and displays it as a color-coded chip below the hero P&L when sessions exist in the last 7 days.
+
+### In-App Notifications (D1 / Phase 40)
+
+**New domain entity:**
+- `Notification` (`Domain/Entities/Notification.cs`) — extends `BaseEntity`. Properties: `UserId`, `Type` (NotificationType enum), `Title`, `Body`, `RelatedEntityId` (nullable), `IsRead`. Factory: `Notification.Create(userId, type, title, body, relatedEntityId?)`.
+- `NotificationType` enum (`Domain/Enums/NotificationType.cs`): `SessionEnded=0, SettlementCreated=1, SettlementPaid=2, GroupInviteReceived=3, AchievementUnlocked=4, GroupJoined=5, MemberRemoved=6`.
+- `NotificationConfiguration.cs` — composite index on `(UserId, IsRead)`, cascade delete on User FK.
+- Migration: `Phase39_Notifications`.
+
+**Application layer:**
+- `INotificationService` — `NotifyAsync(userId, type, title, body, relatedEntityId?)` and `NotifyManyAsync(userIds, ...)`.
+- `NotificationService` (`Infrastructure/Services/NotificationService.cs`) — stores in DB; registered as `INotificationService` in DI.
+- `GetMyNotificationsQuery` + handler returns `{ Notifications: NotificationDto[], UnreadCount: int }` (last 50, newest first).
+- `MarkAllNotificationsReadCommand` + handler — marks all user's unread notifications as read.
+- Wired into: `EndSessionCommandHandler` (notifies all other registered session players), `MarkSettlementPaidCommandHandler` (notifies the other party).
+
+**API endpoints:**
+- `GET /api/notifications` → `GetMyNotificationsResponse`.
+- `POST /api/notifications/read-all` → 204.
+
+**Frontend:**
+- `notificationsApi.ts` — `getMyNotifications(token)`, `markAllNotificationsRead(token)`.
+- `NotificationsScreen` (`screens/NotificationsScreen.tsx`) — shows notification list with type-specific icons, unread dot, "Mark all read" button, timeAgo labels. Gold bell for unread, empty state when all caught up.
+- `HomeScreen` — bell icon in header now navigates to `Notifications` screen. Unread badge (gold dot) appears when `unreadCount > 0` OR pending invitations exist. Also fetches unread count on focus via `getMyNotifications` in the existing `Promise.all`.
+- `AppNavigator` — added `Notifications: undefined` to `RootStackParamList` and `<Stack.Screen name="Notifications">`.
+
+### Group Rivals (Phase 41)
+
+**Backend:**
+- `GetGroupRivalsQuery` (`Application/Features/Groups/Queries/GetGroupRivals/`) — for a given group, computes the top 5 most-played player pairs. For each pair: sessions together, each player's net P&L across those shared sessions.
+- `GroupRivalryDto`: `Player1Id, Player1Username, Player1NetPL, Player2Id, Player2Username, Player2NetPL, SessionsTogether`.
+- Authorization: caller must be a group member.
+- `GET /api/groups/{id}/rivals` → `List<GroupRivalryDto>`.
+
+**Frontend:**
+- `groupsApi.ts` — added `GroupRivalryDto` type and `getGroupRivals(token, groupId)`.
+- `GroupDetailScreen` — new "Rivalries" section (above Activity feed) showing top 5 rivalries: "X sessions together", each player's net P&L with color coding. Section hidden when group has fewer than 2 players or no finished sessions.
+- `RivalryRow` component inline in `GroupDetailScreen`.
+
+---
+
 ## Out of Scope (decided, not returning)
 
 - i18n / Hebrew / RTL — English only

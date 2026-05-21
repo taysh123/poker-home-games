@@ -13,6 +13,7 @@ using PokerApp.Application.Features.Groups.Queries.GetGroupById;
 using PokerApp.Application.Features.Groups.Queries.GetGroupActivity;
 using PokerApp.Application.Features.Groups.Queries.GetGroupLeaderboard;
 using PokerApp.Application.Features.Groups.Queries.GetGroupMembers;
+using PokerApp.Application.Features.Groups.Queries.GetGroupRivals;
 using PokerApp.Application.Features.Groups.Queries.GetMyGroups;
 
 namespace PokerApp.API.Controllers;
@@ -127,6 +128,16 @@ public class GroupsController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> GetGroupLeaderboard(Guid id, CancellationToken cancellationToken)
     {
         var result = await mediator.Send(new GetGroupLeaderboardQuery(id), cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>Returns the top 5 most-played rivalries in the group (pairs with most sessions together).</summary>
+    [HttpGet("{id:guid}/rivals")]
+    [ProducesResponseType(typeof(List<GroupRivalryDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetGroupRivals(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GetGroupRivalsQuery(id), cancellationToken);
         return Ok(result);
     }
 

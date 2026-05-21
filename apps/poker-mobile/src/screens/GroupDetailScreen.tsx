@@ -23,9 +23,11 @@ import {
   getGroupById,
   getGroupMembers,
   getGroupLeaderboard,
+  getGroupRivals,
   GroupDetailResponse,
   GroupMemberDto,
   PlayerLeaderboardEntryDto,
+  GroupRivalryDto,
   sendGroupInvitation,
   removeGroupMember,
   leaveGroup,
@@ -55,6 +57,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<UserSearchResultDto[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [rivals, setRivals] = useState<GroupRivalryDto[]>([]);
   const [shareLoading, setShareLoading] = useState(false);
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -69,16 +72,18 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
     try {
       const token = await SecureStore.getItemAsync('accessToken');
       if (!token) throw new Error('Not authenticated');
-      const [groupData, membersData, leaderboardData, activityData] = await Promise.all([
+      const [groupData, membersData, leaderboardData, activityData, rivalsData] = await Promise.all([
         getGroupById(token, groupId),
         getGroupMembers(token, groupId),
         getGroupLeaderboard(token, groupId).catch(() => [] as PlayerLeaderboardEntryDto[]),
         getGroupActivity(token, groupId).catch(() => [] as ActivityLogDto[]),
+        getGroupRivals(token, groupId).catch(() => [] as GroupRivalryDto[]),
       ]);
       setGroup(groupData);
       setMembers(membersData);
       setLeaderboard(leaderboardData);
       setActivity(activityData);
+      setRivals(rivalsData);
     } catch {
       setError('Failed to load group details.');
     } finally {
@@ -483,6 +488,19 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
       }
       ListFooterComponent={
         <View>
+          {rivals.length > 0 && (
+            <View style={styles.activitySection}>
+              <Text style={styles.sectionTitle}>Rivalries</Text>
+              <View style={styles.activityCard}>
+                {rivals.map((r, i) => (
+                  <React.Fragment key={`${r.player1Id}-${r.player2Id}`}>
+                    {i > 0 && <View style={styles.activityDivider} />}
+                    <RivalryRow rivalry={r} />
+                  </React.Fragment>
+                ))}
+              </View>
+            </View>
+          )}
           {activity.length > 0 && (
             <View style={styles.activitySection}>
               <Text style={styles.sectionTitle}>Recent Activity</Text>
@@ -652,6 +670,38 @@ function ActivityRow({ item }: { item: ActivityLogDto }) {
       </View>
       <Text style={styles.activityDesc} numberOfLines={2}>{item.description}</Text>
       <Text style={styles.activityTime}>{ago}</Text>
+    </View>
+  );
+}
+
+function RivalryRow({ rivalry }: { rivalry: GroupRivalryDto }) {
+  const { formatPL } = require('../utils/formatters');
+  const leader = rivalry.player1NetPL >= rivalry.player2NetPL ? {
+    name: rivalry.player1Username, pl: rivalry.player1NetPL,
+    opName: rivalry.player2Username, opPl: rivalry.player2NetPL,
+  } : {
+    name: rivalry.player2Username, pl: rivalry.player2NetPL,
+    opName: rivalry.player1Username, opPl: rivalry.player1NetPL,
+  };
+  const plColor = leader.pl > 0 ? colors.success : leader.pl < 0 ? colors.error : colors.textMuted;
+  const opColor = leader.opPl > 0 ? colors.success : leader.opPl < 0 ? colors.error : colors.textMuted;
+  return (
+    <View style={styles.rivalryRow}>
+      <View style={styles.rivalryIconWrap}>
+        <Ionicons name="swap-horizontal" size={15} color={colors.gold} />
+      </View>
+      <View style={styles.rivalryContent}>
+        <Text style={styles.rivalrySession}>{rivalry.sessionsTogether} sessions together</Text>
+        <View style={styles.rivalryPlayers}>
+          <Text style={[styles.rivalryPlayer, { color: plColor }]} numberOfLines={1}>
+            {leader.name} {leader.pl > 0 ? '+' : ''}{formatPL(leader.pl)}
+          </Text>
+          <Text style={styles.rivalryVs}>vs</Text>
+          <Text style={[styles.rivalryPlayer, { color: opColor }]} numberOfLines={1}>
+            {leader.opName} {leader.opPl > 0 ? '+' : ''}{formatPL(leader.opPl)}
+          </Text>
+        </View>
+      </View>
     </View>
   );
 }
@@ -996,4 +1046,28 @@ const styles = StyleSheet.create({
   },
   activityDesc: { flex: 1, fontSize: 13, color: colors.text, lineHeight: 18 },
   activityTime: { fontSize: 11, color: colors.textMuted, flexShrink: 0 },
+  rivalryRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  rivalryIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: colors.goldFaint,
+    borderWidth: 1,
+    borderColor: colors.goldMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+    flexShrink: 0,
+  },
+  rivalryContent: { flex: 1, gap: 3 },
+  rivalrySession: { fontSize: 11, color: colors.textMuted, fontWeight: '500' },
+  rivalryPlayers: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  rivalryPlayer: { fontSize: 13, fontWeight: '600', flex: 1 },
+  rivalryVs: { fontSize: 11, color: colors.textDim, fontWeight: '500' },
 });

@@ -229,3 +229,21 @@ export async function getGroupLeaderboard(
   );
   return data;
 }
+
+export type GroupRivalryDto = {
+  player1Id: string;
+  player1Username: string;
+  player1NetPL: number;
+  player2Id: string;
+  player2Username: string;
+  player2NetPL: number;
+  sessionsTogether: number;
+};
+
+export async function getGroupRivals(token: string, groupId: string): Promise<GroupRivalryDto[]> {
+  const { data } = await api.get<GroupRivalryDto[]>(
+    `/api/groups/${groupId}/rivals`,
+    { headers: authHeader(token) },
+  );
+  return data;
+}

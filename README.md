@@ -41,12 +41,25 @@ a real modern poker product.
 - P&L trend chart (last 10 sessions)
 - Group leaderboard with avg P&L and win rate
 - Current win/loss streak + all-time longest win streak
+- **Period filter:** stats by This Week / This Month / All Time
+- "This week" P&L chip on the home screen hero card
 
 ### Achievements & Badges
 - 14 achievements unlocked automatically when sessions end (First Blood, Hot Streak, High Roller, Comeback Kid, Marathon, and more)
 - Rarity tiers: Common, Rare, Epic, Legendary
 - Full achievements grid on Stats screen — earned (color) and locked (dimmed) with criteria
 - New achievements evaluated on every session end via `AchievementEvaluator`
+
+### In-App Notifications
+- Session-end notifications sent to all registered players in the game
+- Settlement-paid notifications between payer and receiver
+- Notification inbox (bell icon in header) with type icons, unread badge, timeAgo labels
+- "Mark all read" action; graceful empty state
+
+### Group Rivalries
+- Tap any group to see the top 5 most-played player pairings
+- Each rivalry shows sessions together + each player's net P&L across those shared sessions
+- Sorted by sessions played together descending
 
 ### Onboarding
 - First-run 3-slide carousel for new users (skip-able, progress dots)
@@ -337,8 +350,10 @@ Railway shows the exact string under your PostgreSQL plugin → **Connect** tab.
 | ✅ | Skeleton loading on all screens |
 | ✅ | Onboarding first-run carousel |
 | ✅ | Response compression (Brotli/gzip) |
-| 🔜 | Period-based stats (week/month) |
-| 🔜 | Push notifications |
+| ✅ | Period-based stats (This Week / This Month / All Time) |
+| ✅ | In-app notification inbox (session end, settlement paid) |
+| ✅ | Group rivalries (top 5 most-played pairings per group) |
+| 🔜 | Push notifications (Expo push) |
 | 🔜 | Native iOS/Android release (EAS) |
 
 ---
