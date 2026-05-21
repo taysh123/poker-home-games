@@ -10,12 +10,15 @@ import {
   TextInput,
   Share,
   Platform,
+  Animated,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { showToast } from '../utils/toast';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
+import { shadows } from '../theme/shadows';
 import {
   getGroupById,
   getGroupMembers,
@@ -58,6 +61,9 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   const isAdminOrOwner = group?.myRole === 'Admin' || group?.myRole === 'Owner';
   const isOwner = group?.myRole === 'Owner';
 
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+
   const load = useCallback(async () => {
     setError(null);
     try {
@@ -82,8 +88,15 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
 
   useFocusEffect(
     useCallback(() => {
+      fadeAnim.setValue(0);
+      slideAnim.setValue(20);
       setLoading(true);
-      load();
+      load().then(() => {
+        Animated.parallel([
+          Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }),
+          Animated.spring(slideAnim, { toValue: 0, friction: 10, tension: 100, useNativeDriver: true }),
+        ]).start();
+      });
     }, [load]),
   );
 
@@ -108,6 +121,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
       headerRight: isAdminOrOwner
         ? () => (
             <TouchableOpacity
+              style={styles.headerEditBtn}
               onPress={() =>
                 navigation.navigate('EditGroup', {
                   groupId,
@@ -117,7 +131,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
               }
               hitSlop={8}
             >
-              <Text style={styles.editBtn}>Edit</Text>
+              <Ionicons name="settings-outline" size={20} color={colors.gold} />
             </TouchableOpacity>
           )
         : undefined,
@@ -285,6 +299,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   const ownerId = group.ownerId;
 
   return (
+    <Animated.View style={[styles.listWrap, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
     <FlatList
       style={styles.list}
       contentContainerStyle={styles.listContent}
@@ -318,17 +333,28 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                   userRole: group.myRole,
                 })
               }
+              activeOpacity={0.75}
             >
-              <Text style={styles.navButtonText}>Sessions</Text>
-              <Text style={styles.navChevron}>›</Text>
+              <View style={styles.navButtonInner}>
+                <View style={styles.navIconWrap}>
+                  <Ionicons name="layers-outline" size={18} color={colors.textMuted} />
+                </View>
+                <Text style={styles.navButtonText}>Sessions</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.gold} />
             </TouchableOpacity>
             {isAdminOrOwner && (
               <TouchableOpacity
                 style={[styles.navButton, styles.navButtonGold]}
                 onPress={() => navigation.navigate('NewGame', { groupId, groupName })}
+                activeOpacity={0.75}
               >
-                <Text style={styles.navButtonGoldText}>New Game</Text>
-                <Text style={styles.navChevronGold}>▶</Text>
+                <View style={styles.navButtonInner}>
+                  <View style={[styles.navIconWrap, styles.navIconWrapGold]}>
+                    <Ionicons name="add-circle-outline" size={18} color={colors.gold} />
+                  </View>
+                  <Text style={styles.navButtonGoldText}>New Game</Text>
+                </View>
               </TouchableOpacity>
             )}
           </View>
@@ -349,8 +375,8 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                   <ActivityIndicator size="small" color={colors.gold} />
                 ) : (
                   <>
+                    <Ionicons name="share-outline" size={17} color={colors.gold} />
                     <Text style={styles.shareInviteText}>Share Invite Link</Text>
-                    <Text style={styles.shareInviteIcon}>↗</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -470,18 +496,21 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
             </View>
           )}
           {!isOwner && (
-            <TouchableOpacity style={styles.leaveButton} onPress={handleLeaveGroup}>
+            <TouchableOpacity style={styles.leaveButton} onPress={handleLeaveGroup} activeOpacity={0.75}>
+              <Ionicons name="exit-outline" size={16} color={colors.error} />
               <Text style={styles.leaveButtonText}>Leave Group</Text>
             </TouchableOpacity>
           )}
           {isOwner && (
-            <TouchableOpacity style={styles.deleteGroupButton} onPress={handleDeleteGroup}>
+            <TouchableOpacity style={styles.deleteGroupButton} onPress={handleDeleteGroup} activeOpacity={0.75}>
+              <Ionicons name="trash-outline" size={16} color={colors.error} />
               <Text style={styles.deleteGroupButtonText}>Delete Group</Text>
             </TouchableOpacity>
           )}
         </View>
       }
     />
+    </Animated.View>
   );
 }
 
@@ -492,12 +521,24 @@ type MemberRowProps = {
   onRemove: () => void;
 };
 
+const AVATAR_COLORS = [
+  '#4A90E2', '#7B68EE', '#50C878', '#FF6B6B',
+  '#FFD93D', '#6BCB77', '#4D96FF', '#C9A84C',
+  '#E88C4A', '#A855F7',
+];
+function avatarColor(name: string) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff;
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+}
+
 function MemberRow({ member, canRemove, isRemoving, onRemove }: MemberRowProps) {
   const initial = (member.username?.[0] ?? '?').toUpperCase();
+  const bgColor = avatarColor(member.username ?? '?');
   return (
     <View style={styles.memberRow}>
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{initial}</Text>
+      <View style={[styles.avatar, { backgroundColor: bgColor + '22', borderColor: bgColor + '55' }]}>
+        <Text style={[styles.avatarText, { color: bgColor }]}>{initial}</Text>
       </View>
       <View style={styles.memberInfo}>
         <Text style={styles.memberName}>{member.username}</Text>
@@ -514,7 +555,9 @@ function MemberRow({ member, canRemove, isRemoving, onRemove }: MemberRowProps) 
           {isRemoving ? (
             <ActivityIndicator size="small" color={colors.error} />
           ) : (
-            <Text style={styles.removeText}>Remove</Text>
+            <View style={styles.removeIconWrap}>
+              <Ionicons name="person-remove-outline" size={15} color={colors.error} />
+            </View>
           )}
         </TouchableOpacity>
       )}
@@ -522,7 +565,11 @@ function MemberRow({ member, canRemove, isRemoving, onRemove }: MemberRowProps) 
   );
 }
 
-const RANK_MEDALS: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
+const RANK_COLORS: Record<number, string> = {
+  1: '#C9A84C',
+  2: '#8DA9C4',
+  3: '#B87333',
+};
 
 function LeaderboardRow({ entry, rank }: { entry: PlayerLeaderboardEntryDto; rank: number }) {
   const isPositive = entry.totalProfitLoss > 0;
@@ -535,20 +582,23 @@ function LeaderboardRow({ entry, rank }: { entry: PlayerLeaderboardEntryDto; ran
   const avgIsPos = entry.avgProfitLoss > 0;
   const avgIsNeg = entry.avgProfitLoss < 0;
   const avgColor = avgIsPos ? colors.success : avgIsNeg ? colors.error : colors.textMuted;
+  const rankColor = RANK_COLORS[rank] ?? colors.textDim;
+  const bgColor = avatarColor(entry.username ?? '?');
+  const initial = (entry.username?.[0] ?? '?').toUpperCase();
 
   return (
-    <View style={styles.leaderboardRow}>
-      <Text style={styles.lbMedal}>
-        {RANK_MEDALS[rank] ?? <Text style={[styles.lbRank, rank <= 3 && styles.lbRankTop]}>{rank}</Text>}
-      </Text>
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{(entry.username?.[0] ?? '?').toUpperCase()}</Text>
+    <View style={[styles.leaderboardRow, rank === 1 && styles.leaderboardRowFirst]}>
+      <View style={[styles.rankBadge, { backgroundColor: rankColor + '22', borderColor: rankColor + '55' }]}>
+        <Text style={[styles.lbRank, { color: rankColor }]}>{rank}</Text>
+      </View>
+      <View style={[styles.avatar, { backgroundColor: bgColor + '22', borderColor: bgColor + '55' }]}>
+        <Text style={[styles.avatarText, { color: bgColor }]}>{initial}</Text>
       </View>
       <View style={styles.lbInfo}>
         <Text style={styles.lbUsername}>{entry.username}</Text>
         <Text style={styles.lbSessions}>
           {entry.sessionsPlayed} game{entry.sessionsPlayed !== 1 ? 's' : ''}
-          {' · '}{winRate}% win rate
+          {' · '}{winRate}% win
         </Text>
       </View>
       <View style={styles.lbRight}>
@@ -563,18 +613,20 @@ function LeaderboardRow({ entry, rank }: { entry: PlayerLeaderboardEntryDto; ran
   );
 }
 
-function activityIcon(type: string): string {
+type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
+
+function activityIconName(type: string): { name: IoniconsName; color: string } {
   switch (type) {
-    case 'SessionCreated': return '🃏';
-    case 'SessionStarted': return '▶';
-    case 'SessionEnded':   return '■';
-    case 'PlayerJoined':   return '→';
-    case 'DebtCreated':    return '₪';
-    case 'DebtSettled':    return '✓';
-    case 'MemberJoined':   return '+';
-    case 'MemberLeft':     return '←';
-    case 'MemberRemoved':  return '✕';
-    default: return '·';
+    case 'SessionCreated': return { name: 'add-circle-outline', color: colors.gold };
+    case 'SessionStarted': return { name: 'play-circle-outline', color: colors.success };
+    case 'SessionEnded':   return { name: 'stop-circle-outline', color: colors.textMuted };
+    case 'PlayerJoined':   return { name: 'person-add-outline', color: colors.gold };
+    case 'DebtCreated':    return { name: 'cash-outline', color: colors.warning };
+    case 'DebtSettled':    return { name: 'checkmark-circle-outline', color: colors.success };
+    case 'MemberJoined':   return { name: 'enter-outline', color: colors.success };
+    case 'MemberLeft':     return { name: 'exit-outline', color: colors.textMuted };
+    case 'MemberRemoved':  return { name: 'person-remove-outline', color: colors.error };
+    default:               return { name: 'ellipse-outline', color: colors.textDim };
   }
 }
 
@@ -589,9 +641,13 @@ function ActivityRow({ item }: { item: ActivityLogDto }) {
     return `${Math.floor(hrs / 24)}d ago`;
   })();
 
+  const { name: iconName, color: iconColor } = activityIconName(item.type);
+
   return (
     <View style={styles.activityRow}>
-      <Text style={styles.activityIcon}>{activityIcon(item.type)}</Text>
+      <View style={[styles.activityIconWrap, { backgroundColor: iconColor + '18' }]}>
+        <Ionicons name={iconName} size={15} color={iconColor} />
+      </View>
       <Text style={styles.activityDesc} numberOfLines={2}>{item.description}</Text>
       <Text style={styles.activityTime}>{ago}</Text>
     </View>
@@ -618,8 +674,9 @@ function RoleBadge({ role }: { role: string }) {
 }
 
 const styles = StyleSheet.create({
-  list: { flex: 1, backgroundColor: colors.background },
-  listContent: { padding: 16, paddingBottom: 40 },
+  listWrap: { flex: 1, backgroundColor: colors.background },
+  list: { flex: 1 },
+  listContent: { padding: 16, paddingBottom: 60 },
   center: {
     flex: 1,
     backgroundColor: colors.background,
@@ -629,7 +686,16 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   headerSection: { marginBottom: 4 },
-  editBtn: { fontSize: 16, color: colors.gold, fontWeight: '600', paddingHorizontal: 4 },
+  headerEditBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   groupCard: {
     backgroundColor: colors.surface,
@@ -639,8 +705,9 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 12,
     gap: 8,
+    ...shadows.md,
   },
-  groupName: { fontSize: 20, fontWeight: '700', color: colors.text },
+  groupName: { fontSize: 22, fontWeight: '800', color: colors.text, letterSpacing: -0.3 },
   groupDesc: { fontSize: 14, color: colors.textMuted, lineHeight: 20 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
   metaText: { fontSize: 13, color: colors.textMuted },
@@ -654,14 +721,24 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    ...shadows.sm,
   },
+  navButtonInner: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  navIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 9,
+    backgroundColor: colors.surfaceHigh,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navIconWrapGold: { backgroundColor: colors.goldFaint },
   navButtonText: { fontSize: 15, fontWeight: '600', color: colors.text },
-  navChevron: { fontSize: 22, color: colors.gold, lineHeight: 24 },
-  navButtonGold: { backgroundColor: colors.goldFaint, borderColor: colors.gold },
+  navButtonGold: { backgroundColor: colors.goldFaint, borderColor: colors.goldMuted },
   navButtonGoldText: { fontSize: 15, fontWeight: '700', color: colors.gold },
-  navChevronGold: { fontSize: 13, color: colors.gold },
 
   manageSection: {
     backgroundColor: colors.surface,
@@ -671,28 +748,28 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 20,
     gap: 14,
+    ...shadows.sm,
   },
   shareInviteBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingVertical: 13,
+    borderRadius: 11,
     borderWidth: 1.5,
-    borderColor: colors.gold,
+    borderColor: colors.goldMuted,
     backgroundColor: colors.goldFaint,
-    minHeight: 46,
+    minHeight: 48,
   },
   shareInviteText: { fontSize: 14, fontWeight: '700', color: colors.gold },
-  shareInviteIcon: { fontSize: 16, color: colors.gold },
 
   inviteSection: { gap: 8 },
-  inviteLabel: { fontSize: 12, fontWeight: '600', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
+  inviteLabel: { fontSize: 11, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.8 },
   inviteRow: { flexDirection: 'row', gap: 10 },
   inviteInput: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceHigh,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 10,
@@ -707,6 +784,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 46,
   },
   inviteButtonDisabled: { opacity: 0.4 },
   inviteButtonText: { color: colors.background, fontSize: 14, fontWeight: '700' },
@@ -731,7 +809,7 @@ const styles = StyleSheet.create({
   searchDropdownAvatar: {
     width: 30,
     height: 30,
-    borderRadius: 15,
+    borderRadius: 9,
     backgroundColor: colors.goldSubtle,
     borderWidth: 1,
     borderColor: colors.goldMuted,
@@ -740,14 +818,14 @@ const styles = StyleSheet.create({
   },
   searchDropdownAvatarText: { fontSize: 13, fontWeight: '700', color: colors.gold },
   searchDropdownName: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.text },
-  searchDropdownInvite: { fontSize: 12, color: colors.gold, fontWeight: '600' },
+  searchDropdownInvite: { fontSize: 12, color: colors.gold, fontWeight: '700' },
 
   sectionTitle: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
     color: colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 1,
     marginBottom: 10,
   },
 
@@ -757,67 +835,82 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 12,
-    padding: 14,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     gap: 12,
+    ...shadows.sm,
   },
   avatar: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surfaceHigh,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontSize: 16, fontWeight: '700', color: colors.gold },
+  avatarText: { fontSize: 16, fontWeight: '800' },
   memberInfo: { flex: 1, gap: 2 },
-  memberName: { fontSize: 15, fontWeight: '600', color: colors.text },
+  memberName: { fontSize: 15, fontWeight: '700', color: colors.text },
   memberEmail: { fontSize: 12, color: colors.textMuted },
-  removeButton: { marginLeft: 4, paddingHorizontal: 8, paddingVertical: 4 },
-  removeText: { fontSize: 12, color: colors.error, fontWeight: '600' },
+  removeButton: { marginLeft: 4 },
+  removeIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    backgroundColor: colors.errorFaint,
+    borderWidth: 1,
+    borderColor: colors.errorMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   separator: { height: 8 },
 
   leaveButton: {
-    marginTop: 20,
-    borderWidth: 1,
-    borderColor: colors.error,
-    borderRadius: 12,
-    paddingVertical: 14,
+    marginTop: 24,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: colors.errorMuted,
+    borderRadius: 14,
+    paddingVertical: 14,
   },
   leaveButtonText: { fontSize: 15, fontWeight: '600', color: colors.error },
 
   deleteGroupButton: {
     marginTop: 12,
-    borderWidth: 1,
-    borderColor: colors.error,
-    borderRadius: 12,
-    paddingVertical: 14,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: colors.errorMuted,
+    borderRadius: 14,
+    paddingVertical: 14,
     backgroundColor: colors.errorFaint,
   },
   deleteGroupButtonText: { fontSize: 15, fontWeight: '700', color: colors.error },
 
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  badge: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 7 },
   badgeOwner: {
     backgroundColor: colors.goldSubtle,
     borderWidth: 1,
-    borderColor: colors.gold,
+    borderColor: colors.goldMuted,
   },
   badgeAdmin: {
     backgroundColor: colors.goldFaint,
     borderWidth: 1,
-    borderColor: colors.goldMuted,
+    borderColor: colors.border,
   },
   badgeMember: {
     backgroundColor: colors.surfaceHigh,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  badgeText: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  badgeText: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
   badgeTextOwner: { color: colors.gold },
   badgeTextMuted: { color: colors.textMuted },
 
@@ -825,11 +918,12 @@ const styles = StyleSheet.create({
   retryButton: {
     paddingHorizontal: 20,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.border,
   },
   retryText: { color: colors.textMuted, fontSize: 14, fontWeight: '600' },
+
   leaderboardSection: { marginBottom: 16 },
   leaderboardCard: {
     backgroundColor: colors.surface,
@@ -837,6 +931,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 14,
     overflow: 'hidden',
+    ...shadows.sm,
   },
   leaderboardRow: {
     flexDirection: 'row',
@@ -845,49 +940,58 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 10,
   },
-  lbMedal: { width: 24, fontSize: 18, textAlign: 'center' },
-  lbRank: {
-    width: 24,
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textMuted,
-    textAlign: 'center',
+  leaderboardRowFirst: { backgroundColor: colors.goldFaint },
+  rankBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  lbRankTop: { color: colors.gold },
+  lbRank: { fontSize: 12, fontWeight: '800' },
   lbInfo: { flex: 1, gap: 3 },
   lbUsername: { fontSize: 14, fontWeight: '700', color: colors.text },
   lbSessions: { fontSize: 11, color: colors.textMuted },
   lbRight: { alignItems: 'flex-end', gap: 3 },
-  lbPL: { fontSize: 15, fontWeight: '800' },
-  lbAvg: { fontSize: 11, fontWeight: '600' },
+  lbPL: { fontSize: 15, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  lbAvg: { fontSize: 11, fontWeight: '600', fontVariant: ['tabular-nums'] },
 
   emptyMembers: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 12,
-    padding: 24,
+    borderRadius: 14,
+    padding: 28,
     alignItems: 'center',
   },
   emptyMembersText: { fontSize: 14, color: colors.textMuted },
 
-  activitySection: { marginHorizontal: 16, marginBottom: 16 },
+  activitySection: { marginBottom: 16 },
   activityCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 14,
     overflow: 'hidden',
+    ...shadows.sm,
   },
   activityDivider: { height: 1, backgroundColor: colors.border, marginHorizontal: 14 },
   activityRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 11,
     gap: 10,
   },
-  activityIcon: { fontSize: 14, color: colors.gold, width: 18, textAlign: 'center', marginTop: 1 },
-  activityDesc: { flex: 1, fontSize: 13, color: colors.text },
-  activityTime: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  activityIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  activityDesc: { flex: 1, fontSize: 13, color: colors.text, lineHeight: 18 },
+  activityTime: { fontSize: 11, color: colors.textMuted, flexShrink: 0 },
 });
