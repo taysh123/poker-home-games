@@ -801,9 +801,15 @@ export default function SessionScreen({ route, navigation }: Props) {
                     </View>
                     <View style={styles.playerInfo}>
                       <View style={styles.playerNameRow}>
-                        <Text style={[styles.playerName, isFirst && styles.playerNameFirst]}>
-                          {player.username}
-                        </Text>
+                        <TouchableOpacity
+                          onPress={() => player.userId && navigation.navigate('PlayerProfile', { userId: player.userId, username: player.username })}
+                          disabled={!player.userId}
+                          activeOpacity={player.userId ? 0.6 : 1}
+                        >
+                          <Text style={[styles.playerName, isFirst && styles.playerNameFirst]}>
+                            {player.username}
+                          </Text>
+                        </TouchableOpacity>
                         {player.isGuest && <GuestBadge />}
                         {isFinished && rank > 0 && (
                           <Text style={styles.rankLabel}>{rankLabel(rank)}</Text>

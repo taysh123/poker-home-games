@@ -40,6 +40,10 @@ public class SessionPlayerConfiguration : IEntityTypeConfiguration<SessionPlayer
             .HasFilter("\"GuestName\" IS NOT NULL")
             .HasDatabaseName("IX_SessionPlayers_SessionId_GuestName");
 
+        builder.HasIndex(x => x.UserId)
+            .HasFilter("\"UserId\" IS NOT NULL")
+            .HasDatabaseName("IX_SessionPlayers_UserId");
+
         builder.ToTable("SessionPlayers");
     }
 }

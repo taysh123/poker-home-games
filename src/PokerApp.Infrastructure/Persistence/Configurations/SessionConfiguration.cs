@@ -64,6 +64,9 @@ public class SessionConfiguration : IEntityTypeConfiguration<Session>
         builder.HasIndex(s => new { s.GroupId, s.Status })
             .HasDatabaseName("IX_Sessions_GroupId_Status");
 
+        builder.HasIndex(s => s.CreatorId)
+            .HasDatabaseName("IX_Sessions_CreatorId");
+
         builder.ToTable("Sessions");
     }
 }

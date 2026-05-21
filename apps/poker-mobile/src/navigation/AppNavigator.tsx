@@ -25,6 +25,7 @@ import NewGameScreen from '../screens/NewGameScreen';
 import PendingSettlementsScreen from '../screens/PendingSettlementsScreen';
 import JoinSessionScreen from '../screens/JoinSessionScreen';
 import JoinGroupScreen from '../screens/JoinGroupScreen';
+import PlayerProfileScreen from '../screens/PlayerProfileScreen';
 import Toast from '../components/Toast';
 
 export type RootStackParamList = {
@@ -42,6 +43,7 @@ export type RootStackParamList = {
   PendingSettlements: undefined;
   JoinSession: { inviteToken: string };
   JoinGroup: { inviteToken: string };
+  PlayerProfile: { userId: string; username: string };
   // Kept for TypeScript compat on existing screens that navigate to these by name
   Home: undefined;
   AllSessions: undefined;
@@ -249,6 +251,7 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
             <Stack.Screen name="PendingSettlements" component={PendingSettlementsScreen}  options={{ title: 'Pending Settlements' }} />
             <Stack.Screen name="JoinSession"        component={JoinSessionScreen}         options={{ title: 'Joining Session', headerShown: false }} />
             <Stack.Screen name="JoinGroup"          component={JoinGroupScreen}           options={{ title: 'Joining Group', headerShown: false }} />
+            <Stack.Screen name="PlayerProfile"      component={PlayerProfileScreen}       options={{ title: 'Player Profile' }} />
           </>
         )}
       </Stack.Navigator>

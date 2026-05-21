@@ -471,6 +471,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
             canRemove={canRemove}
             isRemoving={actionLoading === item.userId}
             onRemove={() => handleRemoveMember(item)}
+            onPress={() => navigation.navigate('PlayerProfile', { userId: item.userId, username: item.username ?? '' })}
           />
         );
       }}
@@ -519,6 +520,7 @@ type MemberRowProps = {
   canRemove: boolean;
   isRemoving: boolean;
   onRemove: () => void;
+  onPress: () => void;
 };
 
 const AVATAR_COLORS = [
@@ -532,11 +534,11 @@ function avatarColor(name: string) {
   return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
 }
 
-function MemberRow({ member, canRemove, isRemoving, onRemove }: MemberRowProps) {
+function MemberRow({ member, canRemove, isRemoving, onRemove, onPress }: MemberRowProps) {
   const initial = (member.username?.[0] ?? '?').toUpperCase();
   const bgColor = avatarColor(member.username ?? '?');
   return (
-    <View style={styles.memberRow}>
+    <TouchableOpacity style={styles.memberRow} onPress={onPress} activeOpacity={0.7}>
       <View style={[styles.avatar, { backgroundColor: bgColor + '22', borderColor: bgColor + '55' }]}>
         <Text style={[styles.avatarText, { color: bgColor }]}>{initial}</Text>
       </View>
@@ -561,7 +563,7 @@ function MemberRow({ member, canRemove, isRemoving, onRemove }: MemberRowProps) 
           )}
         </TouchableOpacity>
       )}
-    </View>
+    </TouchableOpacity>
   );
 }
 
