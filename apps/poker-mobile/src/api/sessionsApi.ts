@@ -232,6 +232,40 @@ export async function exportSessionCsv(token: string, sessionId: string): Promis
   return data;
 }
 
+export type RecapPlayerDto = {
+  username: string;
+  profitLoss: number;
+  isGuest: boolean;
+};
+
+export type SessionRecapDto = {
+  sessionId: string;
+  sessionName: string;
+  groupName: string | null;
+  duration: string | null;
+  date: string;
+  totalPot: number;
+  playerCount: number;
+  handCount: number;
+  biggestWinner: RecapPlayerDto | null;
+  biggestLoser: RecapPlayerDto | null;
+  biggestPotAmount: number | null;
+  biggestPotWinner: string | null;
+  players: RecapPlayerDto[];
+  highlights: string[];
+};
+
+export async function getSessionRecap(
+  token: string,
+  sessionId: string,
+): Promise<SessionRecapDto> {
+  const { data } = await api.get<SessionRecapDto>(
+    `/api/sessions/${sessionId}/recap`,
+    { headers: authHeader(token) },
+  );
+  return data;
+}
+
 export type GenerateInviteTokenResponse = {
   token: string;
   deepLinkUrl: string;

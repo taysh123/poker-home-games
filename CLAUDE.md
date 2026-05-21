@@ -306,6 +306,24 @@ All of these override the empty values in `appsettings.Production.json` at runti
 
 ---
 
+## V2 Features (Phase A — implemented)
+
+### Player Profiles + Head-to-Head Stats (Phase A1)
+
+- `GET /api/users/{userId}/profile` — career stats (sessions, P&L, streaks, W/L, recent form). Requires shared group membership (privacy guard).
+- `GET /api/users/{userId}/head-to-head` — W/L record + net P&L in sessions where both users played. Requires shared group.
+- Frontend: `PlayerProfileScreen` — hero card, stat grid, W/L record, form dots, H2H card, recent sessions. Access via tap on member name in `GroupDetailScreen` or player name in `SessionScreen` (registered users only).
+- DB indexes added: `IX_SessionPlayers_UserId`, `IX_Sessions_CreatorId` (migration `Phase37_AddMissingIndexes`).
+
+### Session Recaps (Phase A2)
+
+- `GET /api/sessions/{id}/recap` — post-game recap computed on-demand from existing data. Only available for Finished sessions. Returns: duration, total pot, player count, hand count, biggest winner/loser, biggest pot from hand records, ordered leaderboard, and up to 6 narrative highlight strings.
+- Frontend: `RecapCard` component (`components/RecapCard.tsx`) — collapsible card with gold left-border accent, 4-stat row (Duration / Total Pot / Players / Hands), narrative highlights list, and "Share Recap" button. Inserted between Results and Settlements sections in `SessionScreen` when `isFinished`.
+- `shareSessionCard()` in `exportUtils.ts` now accepts optional `highlights?: string[]` which appear as a "Highlights" section in the shared PDF above the results table.
+- No new entities — everything computed from existing `BuyIn`, `CashOut`, `SessionPlayer`, and `HandRecord` tables.
+
+---
+
 ## Out of Scope (decided, not returning)
 
 - i18n / Hebrew / RTL — English only

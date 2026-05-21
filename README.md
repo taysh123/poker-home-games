@@ -41,6 +41,20 @@ a real modern poker product.
 - P&L trend chart (last 10 sessions)
 - Group leaderboard with avg P&L and win rate
 
+### Player Profiles & Rivalries (V2)
+- Tap any player in a session or group to view their full career profile
+- Career stats: total P&L, biggest win, average session, W/L/E record, streaks
+- Recent form dots (last 10 sessions: green/red/gray)
+- Head-to-head card: W/L record + net P&L against specific opponents
+- Privacy guard: profile only accessible if you share a group with the player
+
+### Session Recaps (V2)
+- Post-game recap auto-computed for every finished session
+- Collapsible recap card below the results leaderboard
+- Shows: duration, total pot, player count, hand count
+- Narrative highlights: "Alice was the big winner (+₪340)", "Bob reloaded 3 times", etc.
+- Highlights included in the shared PDF when using Share Recap
+
 ### Auth & Accounts
 - Email/password registration with strong validation
 - Google OAuth (native)
@@ -304,8 +318,11 @@ Railway shows the exact string under your PostgreSQL plugin → **Connect** tab.
 | ✅ | Hand history |
 | ✅ | Statistics & leaderboard |
 | ✅ | Session/group invite links |
-| ✅ | CSV export |
-| 🔜 | Tournament mode |
+| ✅ | CSV export + PDF share card |
+| ✅ | Player profiles + H2H stats |
+| ✅ | Session recaps with narrative highlights |
+| 🔜 | Period-based stats (week/month) |
+| 🔜 | Achievements & badge system |
 | 🔜 | Push notifications |
 | 🔜 | Native iOS/Android release (EAS) |
 

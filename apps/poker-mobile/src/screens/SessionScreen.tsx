@@ -35,10 +35,12 @@ import {
   endSession,
   deleteSession,
   generateSessionInviteToken,
+  getSessionRecap,
   SessionDetailDto,
   SessionPlayerDto,
   PlayerBalanceDto,
   FinalStackItem,
+  SessionRecapDto,
 } from '../api/sessionsApi';
 import { getGroupMembers, GroupMemberDto } from '../api/groupsApi';
 import {
@@ -56,6 +58,7 @@ import {
   HandRecordDto,
 } from '../api/handsApi';
 import { exportSessionCsv, shareSessionCard } from '../utils/exportUtils';
+import RecapCard from '../components/RecapCard';
 import { successNotification, errorNotification, lightTap } from '../utils/haptics';
 import { showToast } from '../utils/toast';
 import { formatMoney } from '../utils/formatters';
@@ -150,6 +153,10 @@ export default function SessionScreen({ route, navigation }: Props) {
   const [sharingSummary, setSharingSummary] = useState(false);
   const [sharingInvite, setSharingInvite] = useState(false);
 
+  // Session recap
+  const [recap, setRecap] = useState<SessionRecapDto | null>(null);
+  const [recapLoading, setRecapLoading] = useState(false);
+
   // Delete session
   const [deleteLoading, setDeleteLoading] = useState(false);
 
@@ -191,11 +198,17 @@ export default function SessionScreen({ route, navigation }: Props) {
         setHands(handsData);
 
         if (sessionData.status === 'Finished') {
-          const settData = await getSessionSettlements(token, sessionId).catch(() => null);
+          if (!recap) setRecapLoading(true);
+          const [settData, recapData] = await Promise.all([
+            getSessionSettlements(token, sessionId).catch(() => null),
+            getSessionRecap(token, sessionId).catch(() => null),
+          ]);
+          setRecapLoading(false);
           if (settData) {
             setSettlements(settData.settlements);
             setSettlementsLoaded(true);
           }
+          if (recapData) setRecap(recapData);
           // Derive unlinked guest balances from already-loaded player + balance data
           if (balData) {
             const computed = sessionData.players
@@ -558,7 +571,7 @@ export default function SessionScreen({ route, navigation }: Props) {
       const dur = session.startedAt && session.endedAt
         ? formatDuration(session.startedAt, session.endedAt)
         : '';
-      await shareSessionCard(session.name, session.groupName ?? '', date, dur, balances, settlements);
+      await shareSessionCard(session.name, session.groupName ?? '', date, dur, balances, settlements, recap?.highlights);
     } catch (e: any) {
       Alert.alert('Share Failed', e?.message ?? 'Could not generate share card.');
     } finally {
@@ -870,6 +883,16 @@ export default function SessionScreen({ route, navigation }: Props) {
           )}
         </View>
 
+
+        {/* ── Session Recap (Finished) ── */}
+        {isFinished && (
+          <RecapCard
+            recap={recap}
+            loading={recapLoading}
+            onShare={handleShareCard}
+            sharing={sharing}
+          />
+        )}
 
         {/* ── Settlements (Finished) ── */}
         {isFinished && (

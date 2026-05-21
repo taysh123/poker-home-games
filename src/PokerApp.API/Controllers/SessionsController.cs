@@ -20,6 +20,7 @@ using PokerApp.Application.Features.Sessions.Queries.GetGroupSessions;
 using PokerApp.Application.Features.Sessions.Queries.GetSessionBalances;
 using PokerApp.Application.Features.Sessions.Queries.GetSessionById;
 using PokerApp.Application.Features.Sessions.Queries.GetSessionHandHistory;
+using PokerApp.Application.Features.Sessions.Queries.GetSessionRecap;
 
 namespace PokerApp.API.Controllers;
 
@@ -277,6 +278,18 @@ public class SessionsController(IMediator mediator) : ControllerBase
         var bytes = Encoding.UTF8.GetBytes(sb.ToString());
         var fileName = $"session-{data.SessionName.Replace(" ", "-")}.csv";
         return File(bytes, "text/csv", fileName);
+    }
+
+    /// <summary>Returns a computed post-game recap: stats, highlights, and leaderboard for a Finished session.</summary>
+    [HttpGet("api/sessions/{id:guid}/recap")]
+    [ProducesResponseType(typeof(SessionRecapDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> GetRecap(Guid id, CancellationToken cancellationToken)
+    {
+        var response = await mediator.Send(new GetSessionRecapQuery(id), cancellationToken);
+        return Ok(response);
     }
 
     /// <summary>Returns live balances for all players: total invested, cashed out, and profit/loss.</summary>
