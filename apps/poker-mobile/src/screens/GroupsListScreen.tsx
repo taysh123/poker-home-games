@@ -12,8 +12,11 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
+import { typography } from '../theme/typography';
+import { shadows } from '../theme/shadows';
 import {
   getMyGroups,
   getMyInvitations,
@@ -25,6 +28,16 @@ import {
 import { RootStackParamList } from '../navigation/AppNavigator';
 import ActionSheet, { ActionSheetOption } from '../components/ActionSheet';
 import { showToast } from '../utils/toast';
+
+const AVATAR_COLORS = [
+  '#7C6EE8', '#4EAADC', '#50C878', '#E8965E', '#E86E8A',
+  '#6EC6E8', '#A8E860', '#E8C45E', '#C46EE8', '#5EC8A0',
+];
+function avatarColor(name: string) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h + name.charCodeAt(i)) % AVATAR_COLORS.length;
+  return AVATAR_COLORS[h];
+}
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -87,9 +100,9 @@ export default function GroupsListScreen() {
           <TouchableOpacity
             onPress={() => navigation.navigate('Invitations')}
             hitSlop={8}
-            style={styles.bellButton}
+            style={styles.headerBtn}
           >
-            <Text style={styles.bellIcon}>✉</Text>
+            <Ionicons name="mail-outline" size={20} color={invitationCount > 0 ? colors.gold : colors.textMuted} />
             {invitationCount > 0 && (
               <View style={styles.notifBadge}>
                 <Text style={styles.notifBadgeText}>
@@ -98,8 +111,12 @@ export default function GroupsListScreen() {
               </View>
             )}
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('CreateGroup')} hitSlop={8}>
-            <Text style={styles.headerPlus}>+</Text>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('CreateGroup')}
+            hitSlop={8}
+            style={styles.headerBtn}
+          >
+            <Ionicons name="add" size={22} color={colors.gold} />
           </TouchableOpacity>
         </View>
       ),
@@ -227,15 +244,18 @@ export default function GroupsListScreen() {
   if (groups.length === 0) {
     return (
       <View style={styles.center}>
-        <Text style={styles.emptyIcon}>♠</Text>
+        <View style={styles.emptyIconWrap}>
+          <Ionicons name="people-outline" size={36} color={colors.textDim} />
+        </View>
         <Text style={styles.emptyTitle}>No groups yet</Text>
-        <Text style={styles.emptySubtitle}>Create a group and invite your friends</Text>
+        <Text style={styles.emptySubtitle}>Create a group and invite your friends to start tracking games together</Text>
         <TouchableOpacity
           style={styles.createButton}
           onPress={() => navigation.navigate('CreateGroup')}
           activeOpacity={0.8}
         >
-          <Text style={styles.createButtonText}>+ Create Group</Text>
+          <Ionicons name="add" size={18} color={colors.background} />
+          <Text style={styles.createButtonText}>Create Group</Text>
         </TouchableOpacity>
       </View>
     );
@@ -250,33 +270,51 @@ export default function GroupsListScreen() {
         contentContainerStyle={styles.listContent}
         data={groups}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.cardRow}>
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => navigation.navigate('GroupDetail', { groupId: item.id, groupName: item.name })}
-              activeOpacity={0.75}
-            >
-              <View style={styles.cardLeft}>
-                <Text style={styles.groupName}>{item.name}</Text>
-                {item.description ? (
-                  <Text style={styles.groupDesc} numberOfLines={1}>
-                    {item.description}
+        renderItem={({ item }) => {
+          const bg = avatarColor(item.name);
+          const initial = item.name[0]?.toUpperCase() ?? '?';
+          const isOwner = item.role === 'Owner';
+          const isAdmin = item.role === 'Admin';
+          return (
+            <View style={styles.cardRow}>
+              <TouchableOpacity
+                style={styles.card}
+                onPress={() => navigation.navigate('GroupDetail', { groupId: item.id, groupName: item.name })}
+                activeOpacity={0.75}
+              >
+                <View style={[styles.avatar, { backgroundColor: bg + '22' }]}>
+                  <Text style={[styles.avatarText, { color: bg }]}>{initial}</Text>
+                </View>
+                <View style={styles.cardLeft}>
+                  <View style={styles.nameRow}>
+                    <Text style={styles.groupName} numberOfLines={1}>{item.name}</Text>
+                    {(isOwner || isAdmin) && (
+                      <View style={[styles.badge, isOwner && styles.badgeOwner]}>
+                        <Text style={[styles.badgeText, isOwner && styles.badgeTextOwner]}>
+                          {isOwner ? 'Owner' : 'Admin'}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  {item.description ? (
+                    <Text style={styles.groupDesc} numberOfLines={1}>{item.description}</Text>
+                  ) : null}
+                  <Text style={styles.memberCount}>
+                    {item.memberCount} member{item.memberCount !== 1 ? 's' : ''}
                   </Text>
-                ) : null}
-                <Text style={styles.memberCount}>{item.memberCount} member{item.memberCount !== 1 ? 's' : ''}</Text>
-              </View>
-              <RoleBadge role={item.role} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.moreBtn}
-              onPress={() => setActionSheetGroup(item)}
-              hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
-            >
-              <Text style={styles.moreBtnText}>···</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.moreBtn}
+                onPress={() => setActionSheetGroup(item)}
+                hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+              >
+                <Ionicons name="ellipsis-horizontal" size={18} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+          );
+        }}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
       />
 
@@ -331,17 +369,6 @@ export default function GroupsListScreen() {
   );
 }
 
-function RoleBadge({ role }: { role: string }) {
-  const isOwner = role === 'Owner';
-  const isAdmin = role === 'Admin';
-  return (
-    <View style={[styles.badge, isOwner ? styles.badgeOwner : isAdmin ? styles.badgeAdmin : styles.badgeMember]}>
-      <Text style={[styles.badgeText, isOwner ? styles.badgeTextOwner : styles.badgeTextMuted]}>
-        {role}
-      </Text>
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
@@ -368,163 +395,167 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 14,
+    borderRadius: 16,
+    ...shadows.sm,
   },
   card: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
+    gap: 12,
+    paddingLeft: 16,
+    paddingVertical: 14,
+    paddingRight: 4,
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  avatarText: {
+    fontSize: 18,
+    fontWeight: '800',
   },
   cardLeft: {
     flex: 1,
-    gap: 4,
+    gap: 3,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   groupName: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...typography.label,
     color: colors.text,
+    flex: 1,
   },
   groupDesc: {
-    fontSize: 13,
+    ...typography.caption,
     color: colors.textMuted,
   },
   memberCount: {
-    fontSize: 12,
+    ...typography.caption,
     color: colors.textDim,
-    marginTop: 2,
   },
   separator: {
     height: 10,
   },
   moreBtn: {
     paddingHorizontal: 14,
-    paddingVertical: 16,
-  },
-  moreBtnText: {
-    fontSize: 18,
-    color: colors.textMuted,
-    letterSpacing: 2,
+    paddingVertical: 20,
+    borderLeftWidth: 1,
+    borderLeftColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  badgeOwner: {
-    backgroundColor: colors.goldSubtle,
-    borderWidth: 1,
-    borderColor: colors.gold,
-  },
-  badgeAdmin: {
-    backgroundColor: colors.goldFaint,
-    borderWidth: 1,
-    borderColor: colors.goldMuted,
-  },
-  badgeMember: {
     backgroundColor: colors.surfaceHigh,
+    borderRadius: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderWidth: 1,
     borderColor: colors.border,
   },
+  badgeOwner: {
+    backgroundColor: colors.goldFaint,
+    borderColor: colors.goldMuted,
+  },
   badgeText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    color: colors.textMuted,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.3,
   },
   badgeTextOwner: {
     color: colors.gold,
   },
-  badgeTextMuted: {
-    color: colors.textMuted,
-  },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 4,
   },
-  bellButton: {
-    position: 'relative',
-    width: 28,
-    height: 28,
+  headerBtn: {
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  bellIcon: {
-    fontSize: 18,
-    color: colors.textMuted,
+    position: 'relative',
   },
   notifBadge: {
     position: 'absolute',
-    top: -4,
-    right: -6,
-    backgroundColor: colors.error,
-    borderRadius: 8,
-    minWidth: 16,
-    height: 16,
+    top: 4,
+    right: 4,
+    backgroundColor: colors.gold,
+    borderRadius: 6,
+    minWidth: 14,
+    height: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 3,
+    paddingHorizontal: 2,
   },
   notifBadgeText: {
-    color: colors.text,
-    fontSize: 9,
-    fontWeight: '700',
+    color: colors.background,
+    fontSize: 8,
+    fontWeight: '800',
   },
-  headerPlus: {
-    fontSize: 26,
-    color: colors.gold,
-    fontWeight: '300',
-    lineHeight: 28,
-    paddingHorizontal: 4,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    color: colors.gold,
+  emptyIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 22,
+    backgroundColor: colors.surfaceHigh,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...typography.h4,
     color: colors.text,
   },
   emptySubtitle: {
-    fontSize: 14,
+    ...typography.bodySmall,
     color: colors.textMuted,
     textAlign: 'center',
+    lineHeight: 20,
   },
   createButton: {
     marginTop: 8,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
     backgroundColor: colors.gold,
-    borderRadius: 10,
-    paddingHorizontal: 24,
+    borderRadius: 12,
+    paddingHorizontal: 22,
     paddingVertical: 12,
   },
   createButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
+    ...typography.labelSmall,
     color: colors.background,
   },
   errorText: {
-    fontSize: 15,
+    ...typography.body,
     color: colors.error,
     textAlign: 'center',
   },
   retryButton: {
     marginTop: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
   },
   retryText: {
+    ...typography.labelSmall,
     color: colors.textMuted,
-    fontSize: 14,
-    fontWeight: '600',
   },
 
-  // ── Modals ─────────────────────────────────────────────────────────────
+  // ── Modals ──────────────────────────────────────────────────────────────
   modalOverlay: {
     flex: 1,
     backgroundColor: colors.bgOverlay,

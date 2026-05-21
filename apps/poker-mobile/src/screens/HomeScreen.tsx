@@ -12,19 +12,25 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
+import { typography } from '../theme/typography';
+import { shadows } from '../theme/shadows';
+import { pulse, fadeIn, staggered, slideUp } from '../theme/motion';
 import { useAuth } from '../context/AuthContext';
 import { getMyGroups, getMyInvitations, MyGroupDto, PendingInvitationDto } from '../api/groupsApi';
 import { getMyStats, MyStatsDto, RecentSessionDto } from '../api/statsApi';
 import { getMyPendingSettlements, MyPendingSettlementDto } from '../api/settlementsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import SkeletonCard from '../components/SkeletonCard';
+import StatWidget from '../components/StatWidget';
+import SessionListItem from '../components/SessionListItem';
+import GroupListItem from '../components/GroupListItem';
 import { formatPL, formatDate, formatDuration } from '../utils/formatters';
 import { useActiveSession } from '../context/ActiveSessionContext';
 
 type HomeNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
-
 
 export default function HomeScreen() {
   const { user, logout } = useAuth();
@@ -40,17 +46,29 @@ export default function HomeScreen() {
   const [pendingSettlements, setPendingSettlements] = useState<MyPendingSettlementDto[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Pulse animation for the LIVE badge
+  // Entrance animations
+  const heroOpacity = useRef(new Animated.Value(0)).current;
+  const heroY = useRef(new Animated.Value(20)).current;
+  const contentOpacity = useRef(new Animated.Value(0)).current;
+
+  // Live pulse
   const pulseAnim = useRef(new Animated.Value(1)).current;
+
   useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 0.3, duration: 800, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
+    pulse(pulseAnim).start();
+  }, []);
+
+  const runEntranceAnimation = useCallback(() => {
+    heroOpacity.setValue(0);
+    heroY.setValue(20);
+    contentOpacity.setValue(0);
+    Animated.sequence([
+      Animated.parallel([
+        fadeIn(heroOpacity, { duration: 350 }),
+        slideUp(heroY, { duration: 350, from: 20 }),
+      ]),
+      fadeIn(contentOpacity, { duration: 300 }),
+    ]).start();
   }, []);
 
   const loadAll = useCallback(async (isRefresh = false) => {
@@ -76,7 +94,11 @@ export default function HomeScreen() {
     }
   }, []);
 
-  useFocusEffect(useCallback(() => { loadAll(); refreshActiveSession(); }, [loadAll, refreshActiveSession]));
+  useFocusEffect(useCallback(() => {
+    loadAll();
+    refreshActiveSession();
+    runEntranceAnimation();
+  }, [loadAll, refreshActiveSession, runEntranceAnimation]));
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -94,34 +116,47 @@ export default function HomeScreen() {
 
   const initial = user?.username?.[0]?.toUpperCase() ?? '?';
   const activeSessions = stats?.recentSessions.filter(s => s.status === 'Active') ?? [];
-  const recentSessions = stats?.recentSessions.filter(s => s.status === 'Finished').slice(0, 3) ?? [];
+  const recentSessions = stats?.recentSessions.filter(s => s.status === 'Finished').slice(0, 4) ?? [];
 
   const plValue = stats?.totalProfitLoss ?? 0;
   const plColor = plValue > 0 ? colors.success : plValue < 0 ? colors.error : colors.textMuted;
   const winRate = stats && stats.totalSessionsPlayed > 0
     ? Math.round((stats.winsCount / stats.totalSessionsPlayed) * 100)
     : null;
+  const winRateColor = winRate != null && winRate >= 50 ? colors.success : colors.textMuted;
+
+  const greetingHour = new Date().getHours();
+  const greeting = greetingHour < 12 ? 'Good morning' : greetingHour < 18 ? 'Good afternoon' : 'Good evening';
 
   return (
     <ScrollView
       style={styles.scroll}
-      contentContainerStyle={[styles.container, { paddingTop: insets.top + 16 }]}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />}
+      contentContainerStyle={[styles.container, { paddingTop: insets.top + 20 }]}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={colors.gold}
+          progressBackgroundColor={colors.surface}
+        />
+      }
+      showsVerticalScrollIndicator={false}
     >
       {/* ── Header ── */}
-      <View style={styles.header}>
+      <Animated.View style={[styles.header, { opacity: heroOpacity, transform: [{ translateY: heroY }] }]}>
         <View style={styles.headerLeft}>
-          <Text style={styles.brand}>♠ T Poker</Text>
+          <Text style={styles.greeting}>{greeting}</Text>
           <Text style={styles.username} numberOfLines={1}>{user?.username ?? 'Player'}</Text>
         </View>
         <View style={styles.headerRight}>
           {invitations.length > 0 && (
             <TouchableOpacity
-              style={styles.inviteBadge}
+              style={styles.notifBtn}
               onPress={() => navigation.navigate('Invitations')}
               activeOpacity={0.7}
             >
-              <Text style={styles.inviteBadgeText}>{invitations.length}</Text>
+              <Ionicons name="mail" size={18} color={colors.gold} />
+              <View style={styles.notifDot} />
             </TouchableOpacity>
           )}
           <TouchableOpacity
@@ -132,243 +167,284 @@ export default function HomeScreen() {
             <Text style={styles.avatarText}>{initial}</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.logoutBtn, loggingOut && { opacity: 0.5 }]}
+            style={[styles.iconBtn, loggingOut && { opacity: 0.5 }]}
             onPress={handleLogout}
             disabled={loggingOut}
             activeOpacity={0.7}
           >
             {loggingOut
               ? <ActivityIndicator color={colors.textMuted} size="small" />
-              : <Text style={styles.logoutBtnText}>→</Text>}
+              : <Ionicons name="log-out-outline" size={18} color={colors.textMuted} />}
           </TouchableOpacity>
         </View>
-      </View>
+      </Animated.View>
 
-      {/* ── Active Game Banner (shown only when a live game exists) ── */}
-      {activeSessions.map(s => (
-        <TouchableOpacity
-          key={s.sessionId}
-          style={styles.liveBanner}
-          onPress={() => openSession(s)}
-          activeOpacity={0.85}
-        >
-          <View style={styles.liveBannerLeft}>
-            <View style={styles.livePillRow}>
-              <Animated.View style={[styles.liveDot, { opacity: pulseAnim }]} />
-              <Text style={styles.livePillText}>LIVE</Text>
-            </View>
-            <Text style={styles.liveBannerName} numberOfLines={1}>{s.sessionName}</Text>
-            <Text style={styles.liveBannerMeta}>
-              {s.groupName ?? 'Solo Game'}  ·  Active now
-            </Text>
-          </View>
-          <Text style={styles.liveBannerChevron}>›</Text>
-        </TouchableOpacity>
-      ))}
-
-      {/* ── Pending Settlements Alert (shown only when user has pending payments) ── */}
-      {pendingSettlements.length > 0 && (
-        <TouchableOpacity
-          style={styles.settlementsAlert}
-          onPress={() => navigation.navigate('PendingSettlements')}
-          activeOpacity={0.8}
-        >
-          <View style={styles.settlementsAlertLeft}>
-            <Text style={styles.settlementsAlertIcon}>💸</Text>
-            <View>
-              <Text style={styles.settlementsAlertTitle}>
-                {pendingSettlements.length} pending settlement{pendingSettlements.length !== 1 ? 's' : ''}
+      {/* ── Hero P&L Card ── */}
+      <Animated.View style={[styles.heroCard, { opacity: heroOpacity, transform: [{ translateY: heroY }] }]}>
+        <View style={styles.heroCardInner}>
+          <View style={styles.heroTop}>
+            <Text style={styles.heroLabel}>Lifetime P&L</Text>
+            <View style={styles.heroBadge}>
+              <Text style={styles.heroBadgeText}>
+                {stats?.totalSessionsPlayed ?? 0} session{(stats?.totalSessionsPlayed ?? 0) !== 1 ? 's' : ''}
               </Text>
-              <Text style={styles.settlementsAlertSub}>Tap to view and mark as paid</Text>
             </View>
-          </View>
-          <Text style={styles.settlementsAlertChevron}>›</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* ── New Game CTA ── */}
-      <TouchableOpacity
-        style={styles.newGameCard}
-        onPress={() => navigation.navigate('NewGame', {})}
-        activeOpacity={0.85}
-      >
-        <View style={styles.newGameCardInner}>
-          <Text style={styles.newGameIcon}>♠</Text>
-          <View style={styles.newGameTextBlock}>
-            <Text style={styles.newGameTitle}>New Game</Text>
-            <Text style={styles.newGameSub}>Deal in your crew for tonight</Text>
-          </View>
-        </View>
-        <Text style={styles.newGameChevron}>›</Text>
-      </TouchableOpacity>
-
-      {/* ── Stats ── */}
-      <View style={styles.section}>
-        <View style={styles.sectionRow}>
-          <Text style={styles.sectionTitle}>Your Stats</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Stats')}>
-            <Text style={styles.seeAll}>View all →</Text>
-          </TouchableOpacity>
-        </View>
-
-        {statsLoading ? (
-          <View style={styles.statsGrid}>
-            {[0, 1, 2].map(i => (
-              <View key={i} style={styles.statCard}>
-                <SkeletonCard height={24} borderRadius={6} style={{ marginBottom: 6 }} />
-                <SkeletonCard height={11} borderRadius={4} />
-              </View>
-            ))}
-          </View>
-        ) : (
-          <View style={styles.statsGrid}>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{stats?.totalSessionsPlayed ?? 0}</Text>
-              <Text style={styles.statLabel}>Sessions</Text>
-            </View>
-            <View style={[styles.statCard, styles.statCardCenter]}>
-              <Text style={[styles.statValue, { color: plColor }]}>
-                {stats ? formatPL(plValue) : '—'}
-              </Text>
-              <Text style={styles.statLabel}>Lifetime P&L</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={[styles.statValue, winRate !== null && winRate >= 50 ? { color: colors.success } : {}]}>
-                {winRate !== null ? `${winRate}%` : '—'}
-              </Text>
-              <Text style={styles.statLabel}>Win Rate</Text>
-            </View>
-          </View>
-        )}
-      </View>
-
-      {/* ── Recent Sessions ── */}
-      {(statsLoading || recentSessions.length > 0) && (
-        <View style={styles.section}>
-          <View style={styles.sectionRow}>
-            <Text style={styles.sectionTitle}>Recent Sessions</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('AllSessions')}>
-              <Text style={styles.seeAll}>See all →</Text>
-            </TouchableOpacity>
           </View>
           {statsLoading ? (
-            <View style={styles.card}>
+            <SkeletonCard height={48} borderRadius={8} style={{ marginTop: 8, width: '60%' }} />
+          ) : (
+            <Text style={[styles.heroValue, { color: plColor }]} numberOfLines={1} adjustsFontSizeToFit>
+              {formatPL(plValue)}
+            </Text>
+          )}
+          {statsLoading ? (
+            <SkeletonCard height={14} borderRadius={4} style={{ marginTop: 10, width: '40%' }} />
+          ) : (
+            <Text style={styles.heroSub}>
+              {plValue > 0 ? 'You\'re in the green' : plValue < 0 ? 'Keep grinding' : 'Break even'}
+            </Text>
+          )}
+        </View>
+        {/* decorative corner element */}
+        <View style={styles.heroCorner} pointerEvents="none" />
+        <View style={styles.heroCorner2} pointerEvents="none" />
+      </Animated.View>
+
+      <Animated.View style={{ opacity: contentOpacity }}>
+
+        {/* ── Active Game Banner ── */}
+        {activeSessions.map(s => (
+          <TouchableOpacity
+            key={s.sessionId}
+            style={styles.liveBanner}
+            onPress={() => openSession(s)}
+            activeOpacity={0.85}
+          >
+            <View style={styles.liveBannerLeft}>
+              <View style={styles.livePillRow}>
+                <Animated.View style={[styles.liveDot, { opacity: pulseAnim }]} />
+                <Text style={styles.livePillText}>LIVE NOW</Text>
+              </View>
+              <Text style={styles.liveBannerName} numberOfLines={1}>{s.sessionName}</Text>
+              <Text style={styles.liveBannerMeta}>{s.groupName ?? 'Solo game'}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.gold} />
+          </TouchableOpacity>
+        ))}
+
+        {/* ── Pending Settlements Alert ── */}
+        {pendingSettlements.length > 0 && (
+          <TouchableOpacity
+            style={styles.settlementsAlert}
+            onPress={() => navigation.navigate('PendingSettlements')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.alertIconWrap}>
+              <Ionicons name="cash-outline" size={18} color={colors.error} />
+            </View>
+            <View style={styles.alertContent}>
+              <Text style={styles.alertTitle}>
+                {pendingSettlements.length} pending settlement{pendingSettlements.length !== 1 ? 's' : ''}
+              </Text>
+              <Text style={styles.alertSub}>Tap to view and settle up</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
+          </TouchableOpacity>
+        )}
+
+        {/* ── New Game CTA ── */}
+        <TouchableOpacity
+          style={styles.newGameCard}
+          onPress={() => navigation.navigate('NewGame', {})}
+          activeOpacity={0.88}
+        >
+          <View style={styles.newGameLeft}>
+            <View style={styles.newGameIconWrap}>
+              <Ionicons name="play" size={18} color={colors.background} />
+            </View>
+            <View>
+              <Text style={styles.newGameTitle}>Start a Game</Text>
+              <Text style={styles.newGameSub}>Deal in your crew for tonight</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="rgba(15,25,35,0.5)" />
+        </TouchableOpacity>
+
+        {/* ── Stats Widgets ── */}
+        <View style={styles.section}>
+          <View style={styles.sectionRow}>
+            <Text style={styles.sectionTitle}>Your Numbers</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Stats')}>
+              <Text style={styles.seeAll}>Full stats</Text>
+            </TouchableOpacity>
+          </View>
+
+          {statsLoading ? (
+            <View style={styles.statsGrid}>
               {[0, 1, 2].map(i => (
-                <View key={i} style={[styles.sessionRow, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
-                  <View style={{ flex: 1, gap: 6 }}>
-                    <SkeletonCard height={14} borderRadius={4} style={{ width: '60%' }} />
-                    <SkeletonCard height={11} borderRadius={4} style={{ width: '40%' }} />
-                  </View>
-                  <SkeletonCard height={14} borderRadius={4} style={{ width: 48 }} />
+                <View key={i} style={styles.statSkeletonCard}>
+                  <SkeletonCard height={28} borderRadius={6} style={{ marginBottom: 8 }} />
+                  <SkeletonCard height={10} borderRadius={4} style={{ width: '70%' }} />
                 </View>
               ))}
             </View>
           ) : (
-            <View style={styles.card}>
-              {recentSessions.map((s, i) => {
-                const pl = s.profitLoss;
-                const plC = pl != null && pl > 0 ? colors.success : pl != null && pl < 0 ? colors.error : colors.textMuted;
-                return (
-                  <TouchableOpacity
-                    key={s.sessionId}
-                    style={[styles.sessionRow, i > 0 && styles.sessionRowBorder]}
-                    onPress={() => openSession(s)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.sessionRowLeft}>
-                      <Text style={styles.sessionName} numberOfLines={1}>{s.sessionName}</Text>
-                      <Text style={styles.sessionMeta}>
-                        {s.groupName ?? 'Solo'}  ·  {formatDate(s.createdAt)}
-                        {s.startedAt && s.endedAt ? `  ·  ${formatDuration(s.startedAt, s.endedAt)}` : ''}
-                      </Text>
-                    </View>
-                    {pl != null && (
-                      <Text style={[styles.sessionPL, { color: plC }]}>{formatPL(pl)}</Text>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
+            <View style={styles.statsGrid}>
+              <StatWidget
+                label="Sessions"
+                value={String(stats?.totalSessionsPlayed ?? 0)}
+                icon="♠"
+                accentColor={colors.gold}
+                delay={0}
+              />
+              <StatWidget
+                label="Win Rate"
+                value={winRate != null ? `${winRate}%` : '—'}
+                icon="◆"
+                accentColor={winRateColor}
+                valueColor={winRateColor}
+                delay={80}
+              />
+              <StatWidget
+                label="Avg Session"
+                value={stats?.averageProfitLoss != null ? formatPL(stats.averageProfitLoss) : '—'}
+                icon="≈"
+                accentColor={
+                  (stats?.averageProfitLoss ?? 0) > 0
+                    ? colors.success
+                    : (stats?.averageProfitLoss ?? 0) < 0
+                      ? colors.error
+                      : colors.textMuted
+                }
+                valueColor={
+                  (stats?.averageProfitLoss ?? 0) > 0
+                    ? colors.success
+                    : (stats?.averageProfitLoss ?? 0) < 0
+                      ? colors.error
+                      : colors.text
+                }
+                delay={160}
+              />
             </View>
           )}
         </View>
-      )}
 
-      {/* ── My Groups ── */}
-      <View style={styles.section}>
-        <View style={styles.sectionRow}>
-          <Text style={styles.sectionTitle}>My Groups</Text>
-          {groups.length > 0 && (
-            <TouchableOpacity onPress={() => navigation.navigate('GroupsList')}>
-              <Text style={styles.seeAll}>See all →</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {statsLoading && groups.length === 0 ? (
-          <View style={styles.card}>
-            {[0, 1].map(i => (
-              <View key={i} style={[styles.groupRow, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
-                <View style={{ flex: 1, gap: 6 }}>
-                  <SkeletonCard height={14} borderRadius={4} style={{ width: '50%' }} />
-                  <SkeletonCard height={11} borderRadius={4} style={{ width: '30%' }} />
-                </View>
-              </View>
-            ))}
-          </View>
-        ) : groups.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>♣</Text>
-            <Text style={styles.emptyTitle}>No groups yet</Text>
-            <Text style={styles.emptySubtitle}>Create a group for your regular crew</Text>
-            <TouchableOpacity
-              style={styles.emptyBtn}
-              onPress={() => navigation.navigate('CreateGroup')}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.emptyBtnText}>+ Create Group</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.card}>
-            {groups.slice(0, 3).map((g, i) => (
-              <TouchableOpacity
-                key={g.id}
-                style={[styles.groupRow, i > 0 && styles.groupRowBorder]}
-                onPress={() => navigation.navigate('GroupDetail', { groupId: g.id, groupName: g.name })}
-                activeOpacity={0.7}
-              >
-                <View style={styles.groupAvatar}>
-                  <Text style={styles.groupAvatarText}>{g.name[0]?.toUpperCase() ?? '?'}</Text>
-                </View>
-                <View style={styles.groupRowContent}>
-                  <Text style={styles.groupName} numberOfLines={1}>{g.name}</Text>
-                  <Text style={styles.groupMeta}>
-                    {g.memberCount} member{g.memberCount !== 1 ? 's' : ''}
-                  </Text>
-                </View>
-                <Text style={styles.chevron}>›</Text>
+        {/* ── Recent Sessions ── */}
+        {(statsLoading || recentSessions.length > 0) && (
+          <View style={styles.section}>
+            <View style={styles.sectionRow}>
+              <Text style={styles.sectionTitle}>Recent Sessions</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('AllSessions')}>
+                <Text style={styles.seeAll}>See all</Text>
               </TouchableOpacity>
-            ))}
-            {groups.length > 3 && (
-              <TouchableOpacity
-                style={[styles.groupRow, styles.groupRowBorder]}
-                onPress={() => navigation.navigate('GroupsList')}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.moreText}>+{groups.length - 3} more groups</Text>
-                <Text style={styles.chevron}>›</Text>
+            </View>
+
+            <View style={styles.card}>
+              {statsLoading ? (
+                [0, 1, 2].map(i => (
+                  <View key={i} style={[styles.skeletonRow, i > 0 && styles.skeletonBorder]}>
+                    <View style={styles.skeletonAccent} />
+                    <View style={{ flex: 1, gap: 8, paddingLeft: 12 }}>
+                      <SkeletonCard height={14} borderRadius={4} style={{ width: '60%' }} />
+                      <SkeletonCard height={10} borderRadius={4} style={{ width: '40%' }} />
+                    </View>
+                    <SkeletonCard height={14} borderRadius={4} style={{ width: 48 }} />
+                  </View>
+                ))
+              ) : (
+                recentSessions.map((s, i) => (
+                  <SessionListItem
+                    key={s.sessionId}
+                    name={s.sessionName}
+                    meta={[
+                      s.groupName ?? 'Solo',
+                      formatDate(s.createdAt),
+                      s.startedAt && s.endedAt ? formatDuration(s.startedAt, s.endedAt) : null,
+                    ].filter(Boolean).join('  ·  ')}
+                    profitLoss={s.profitLoss}
+                    status={s.status}
+                    onPress={() => openSession(s)}
+                    isFirst={i === 0}
+                  />
+                ))
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* ── My Groups ── */}
+        <View style={[styles.section, styles.lastSection]}>
+          <View style={styles.sectionRow}>
+            <Text style={styles.sectionTitle}>My Groups</Text>
+            {groups.length > 0 && (
+              <TouchableOpacity onPress={() => navigation.navigate('GroupsList')}>
+                <Text style={styles.seeAll}>See all</Text>
               </TouchableOpacity>
             )}
           </View>
-        )}
-      </View>
+
+          {statsLoading && groups.length === 0 ? (
+            <View style={styles.card}>
+              {[0, 1].map(i => (
+                <View key={i} style={[styles.skeletonRow, i > 0 && styles.skeletonBorder]}>
+                  <SkeletonCard height={40} borderRadius={12} style={{ width: 40, flexShrink: 0 }} />
+                  <View style={{ flex: 1, gap: 8, paddingLeft: 4 }}>
+                    <SkeletonCard height={14} borderRadius={4} style={{ width: '50%' }} />
+                    <SkeletonCard height={10} borderRadius={4} style={{ width: '30%' }} />
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : groups.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <View style={styles.emptyIconWrap}>
+                <Ionicons name="people" size={28} color={colors.textDim} />
+              </View>
+              <Text style={styles.emptyTitle}>No groups yet</Text>
+              <Text style={styles.emptySubtitle}>Create a group to play with your regular crew</Text>
+              <TouchableOpacity
+                style={styles.emptyBtn}
+                onPress={() => navigation.navigate('CreateGroup')}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="add" size={16} color={colors.background} />
+                <Text style={styles.emptyBtnText}>Create Group</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.card}>
+              {groups.slice(0, 3).map((g, i) => (
+                <GroupListItem
+                  key={g.id}
+                  name={g.name}
+                  memberCount={g.memberCount}
+                  role={g.role}
+                  onPress={() => navigation.navigate('GroupDetail', { groupId: g.id, groupName: g.name })}
+                  isFirst={i === 0}
+                />
+              ))}
+              {groups.length > 3 && (
+                <TouchableOpacity
+                  style={[styles.moreRow]}
+                  onPress={() => navigation.navigate('GroupsList')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.moreText}>+{groups.length - 3} more groups</Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+        </View>
+
+      </Animated.View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: colors.background },
-  container: { padding: 20, paddingBottom: 48 },
+  container: { paddingHorizontal: 20, paddingBottom: 120 },
 
   // ── Header ──────────────────────────────────────────────────────────────
   header: {
@@ -378,20 +454,16 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   headerLeft: { flex: 1 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 
-  brand: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.gold,
-    letterSpacing: 0.5,
-    marginBottom: 2,
+  greeting: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginBottom: 3,
   },
   username: {
-    fontSize: 22,
-    fontWeight: '700',
+    ...typography.h2,
     color: colors.text,
-    letterSpacing: -0.3,
   },
 
   avatar: {
@@ -400,33 +472,109 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: colors.surfaceHigh,
     borderWidth: 2,
-    borderColor: colors.gold,
+    borderColor: colors.goldSubtle,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontSize: 16, fontWeight: '700', color: colors.gold },
+  avatarText: { fontSize: 16, fontWeight: '800', color: colors.gold },
 
-  inviteBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  notifBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.goldMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notifDot: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: colors.gold,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.background,
   },
-  inviteBadgeText: { fontSize: 12, fontWeight: '800', color: colors.background },
 
-  logoutBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoutBtnText: { fontSize: 17, color: colors.textMuted },
+
+  // ── Hero Card ───────────────────────────────────────────────────────────
+  heroCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 24,
+    marginBottom: 20,
+    overflow: 'hidden',
+    ...shadows.lg,
+  },
+  heroCardInner: {
+    zIndex: 1,
+  },
+  heroTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  heroLabel: {
+    ...typography.caps,
+    color: colors.textMuted,
+  },
+  heroBadge: {
+    backgroundColor: colors.surfaceHigh,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  heroBadgeText: {
+    ...typography.caption,
+    color: colors.textMuted,
+  },
+  heroValue: {
+    fontSize: 48,
+    fontWeight: '800',
+    letterSpacing: -2,
+    marginTop: 4,
+    fontVariant: ['tabular-nums'],
+  },
+  heroSub: {
+    ...typography.bodySmall,
+    color: colors.textMuted,
+    marginTop: 6,
+  },
+  heroCorner: {
+    position: 'absolute',
+    right: -30,
+    top: -30,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: colors.goldFaint,
+  },
+  heroCorner2: {
+    position: 'absolute',
+    right: 20,
+    bottom: -40,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+  },
 
   // ── Live Banner ──────────────────────────────────────────────────────────
   liveBanner: {
@@ -436,16 +584,13 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.gold,
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: colors.gold,
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 12,
+    ...shadows.gold,
   },
-  liveBannerLeft: { flex: 1, gap: 4 },
-  livePillRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  liveBannerLeft: { flex: 1, gap: 3 },
+  livePillRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
   liveDot: {
     width: 8,
     height: 8,
@@ -458,9 +603,8 @@ const styles = StyleSheet.create({
     color: colors.gold,
     letterSpacing: 1.5,
   },
-  liveBannerName: { fontSize: 17, fontWeight: '700', color: colors.text },
-  liveBannerMeta: { fontSize: 12, color: colors.textMuted },
-  liveBannerChevron: { fontSize: 28, color: colors.gold, fontWeight: '300', marginLeft: 8 },
+  liveBannerName: { ...typography.h4, color: colors.text },
+  liveBannerMeta: { ...typography.caption, color: colors.textMuted },
 
   // ── Settlements Alert ────────────────────────────────────────────────────
   settlementsAlert: {
@@ -470,147 +614,155 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.errorMuted,
     borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginBottom: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 12,
     gap: 12,
   },
-  settlementsAlertLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  settlementsAlertIcon: { fontSize: 22 },
-  settlementsAlertTitle: { fontSize: 14, fontWeight: '700', color: colors.text },
-  settlementsAlertSub: { fontSize: 12, color: colors.textMuted, marginTop: 1 },
-  settlementsAlertChevron: { fontSize: 22, color: colors.textDim, fontWeight: '300' },
+  alertIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: colors.errorFaint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  alertContent: { flex: 1, gap: 2 },
+  alertTitle: { ...typography.labelSmall, color: colors.text },
+  alertSub: { ...typography.caption, color: colors.textMuted },
 
-  // ── New Game Card ────────────────────────────────────────────────────────
+  // ── New Game CTA ─────────────────────────────────────────────────────────
   newGameCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.gold,
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 28,
-    shadowColor: colors.gold,
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    marginBottom: 32,
+    ...shadows.gold,
   },
-  newGameCardInner: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 16 },
-  newGameIcon: { fontSize: 28 },
-  newGameTextBlock: { gap: 2 },
-  newGameTitle: { fontSize: 18, fontWeight: '800', color: colors.background },
-  newGameSub: { fontSize: 13, color: 'rgba(15,25,35,0.65)', fontWeight: '500' },
-  newGameChevron: { fontSize: 28, color: 'rgba(15,25,35,0.6)', fontWeight: '300' },
+  newGameLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  newGameIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(15,25,35,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  newGameTitle: {
+    ...typography.h4,
+    color: colors.background,
+  },
+  newGameSub: {
+    ...typography.caption,
+    color: 'rgba(15,25,35,0.6)',
+    marginTop: 1,
+  },
 
-  // ── Sections ────────────────────────────────────────────────────────────
+  // ── Sections ─────────────────────────────────────────────────────────────
   section: { marginBottom: 28 },
+  lastSection: { marginBottom: 0 },
   sectionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 12,
+    paddingHorizontal: 2,
   },
   sectionTitle: {
-    fontSize: 11,
-    fontWeight: '600',
+    ...typography.caps,
     color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
   },
-  seeAll: { fontSize: 13, color: colors.gold, fontWeight: '600' },
+  seeAll: {
+    ...typography.caption,
+    color: colors.gold,
+    fontWeight: '600',
+  },
 
-  // ── Stats grid ──────────────────────────────────────────────────────────
+  // ── Stats grid ────────────────────────────────────────────────────────────
   statsGrid: { flexDirection: 'row', gap: 10 },
-  statCard: {
+  statSkeletonCard: {
     flex: 1,
     backgroundColor: colors.surface,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 14,
-    padding: 14,
-    alignItems: 'center',
-    gap: 5,
-  },
-  statCardCenter: {
-    borderColor: colors.border,
-  },
-  statValue: { fontSize: 20, fontWeight: '800', color: colors.text, letterSpacing: -0.5 },
-  statLabel: {
-    fontSize: 10,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    textAlign: 'center',
+    padding: 16,
   },
 
-  // ── Shared card container ────────────────────────────────────────────────
+  // ── Card container ────────────────────────────────────────────────────────
   card: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 16,
     overflow: 'hidden',
+    ...shadows.sm,
   },
 
-  // ── Session rows ─────────────────────────────────────────────────────────
-  sessionRow: {
+  // ── Skeleton rows ─────────────────────────────────────────────────────────
+  skeletonRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    padding: 16,
     gap: 12,
   },
-  sessionRowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
-  sessionRowLeft: { flex: 1, gap: 3 },
-  sessionName: { fontSize: 15, fontWeight: '600', color: colors.text },
-  sessionMeta: { fontSize: 12, color: colors.textMuted },
-  sessionPL: { fontSize: 14, fontWeight: '700' },
+  skeletonBorder: { borderTopWidth: 1, borderTopColor: colors.border },
+  skeletonAccent: {
+    width: 3,
+    height: 36,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+  },
 
-  // ── Group rows ───────────────────────────────────────────────────────────
-  groupRow: {
+  // ── More groups row ────────────────────────────────────────────────────────
+  moreRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 13,
-    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
-  groupRowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
-  groupAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: colors.surfaceHigh,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  groupAvatarText: { fontSize: 14, fontWeight: '700', color: colors.textMuted },
-  groupRowContent: { flex: 1, gap: 2 },
-  groupName: { fontSize: 15, fontWeight: '600', color: colors.text },
-  groupMeta: { fontSize: 12, color: colors.textMuted },
-  chevron: { fontSize: 20, color: colors.textDim, fontWeight: '300' },
-  moreText: { flex: 1, fontSize: 14, color: colors.textMuted },
+  moreText: { flex: 1, ...typography.bodySmall, color: colors.textMuted },
 
-  // ── Empty state ──────────────────────────────────────────────────────────
+  // ── Empty state ────────────────────────────────────────────────────────────
   emptyCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 16,
-    padding: 28,
+    padding: 32,
     alignItems: 'center',
     gap: 8,
   },
-  emptyIcon: { fontSize: 32, color: colors.textDim, marginBottom: 4 },
-  emptyTitle: { fontSize: 16, fontWeight: '600', color: colors.text },
-  emptySubtitle: { fontSize: 13, color: colors.textMuted, textAlign: 'center', lineHeight: 18 },
+  emptyIconWrap: {
+    width: 60,
+    height: 60,
+    borderRadius: 18,
+    backgroundColor: colors.surfaceHigh,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  emptyTitle: { ...typography.h4, color: colors.text },
+  emptySubtitle: { ...typography.bodySmall, color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
   emptyBtn: {
     marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: colors.gold,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingVertical: 11,
   },
-  emptyBtnText: { fontSize: 14, fontWeight: '700', color: colors.background },
+  emptyBtnText: { ...typography.labelSmall, color: colors.background },
 });

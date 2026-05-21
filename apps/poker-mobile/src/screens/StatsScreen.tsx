@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,17 +7,24 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
+  Animated,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
+import { shadows } from '../theme/shadows';
+import { fadeIn, slideUp, pulse } from '../theme/motion';
 import { getMyStats, MyStatsDto, RecentSessionDto } from '../api/statsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import SessionListItem from '../components/SessionListItem';
 import { formatPL, formatDate, formatDuration } from '../utils/formatters';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
+
+const CHART_HEIGHT = 64;
 
 export default function StatsScreen() {
   const navigation = useNavigation<Nav>();
@@ -25,6 +32,19 @@ export default function StatsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Entrance animation
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(20)).current;
+
+  const runEntrance = useCallback(() => {
+    opacity.setValue(0);
+    translateY.setValue(20);
+    Animated.parallel([
+      fadeIn(opacity, { duration: 350 }),
+      slideUp(translateY, { duration: 350, from: 20 }),
+    ]).start();
+  }, []);
 
   const load = useCallback(async (isRefresh = false) => {
     if (!isRefresh) setLoading(true);
@@ -42,7 +62,10 @@ export default function StatsScreen() {
     }
   }, []);
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useFocusEffect(useCallback(() => {
+    load();
+    runEntrance();
+  }, [load, runEntrance]));
 
   const onRefresh = useCallback(() => { setRefreshing(true); load(true); }, [load]);
 
@@ -57,210 +80,322 @@ export default function StatsScreen() {
   if (error || !stats) {
     return (
       <View style={styles.center}>
+        <Ionicons name="alert-circle-outline" size={40} color={colors.textDim} />
         <Text style={styles.errorText}>{error ?? 'Something went wrong.'}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={styles.retryText}>Try Again</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  const plColor = stats.totalProfitLoss > 0 ? colors.success : stats.totalProfitLoss < 0 ? colors.error : colors.gold;
+  const plColor = stats.totalProfitLoss > 0 ? colors.success : stats.totalProfitLoss < 0 ? colors.error : colors.textMuted;
   const avgColor = stats.averageProfitLoss > 0 ? colors.success : stats.averageProfitLoss < 0 ? colors.error : colors.textMuted;
   const winRate = stats.totalSessionsPlayed > 0
     ? Math.round((stats.winsCount / stats.totalSessionsPlayed) * 100)
     : 0;
+  const winRateColor = winRate >= 50 ? colors.success : colors.textMuted;
 
   const finishedSessions = stats.recentSessions.filter(s => s.status === 'Finished');
-  const activeSessions   = stats.recentSessions.filter(s => s.status !== 'Finished');
+  const activeSessions = stats.recentSessions.filter(s => s.status === 'Active');
 
   return (
     <ScrollView
       style={styles.scroll}
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={colors.gold}
+          progressBackgroundColor={colors.surface}
+        />
+      }
+      showsVerticalScrollIndicator={false}
     >
-      {/* ── Total P&L hero ── */}
-      <View style={styles.heroCard}>
-        <Text style={styles.heroLabel}>LIFETIME P&L</Text>
-        <Text style={[styles.heroAmount, { color: plColor }]}>
-          {formatPL(stats.totalProfitLoss)}
-        </Text>
-        <Text style={styles.heroSub}>{stats.totalSessionsPlayed} sessions played</Text>
-      </View>
+      <Animated.View style={{ opacity, transform: [{ translateY }] }}>
 
+        {/* ── Hero P&L ── */}
+        <View style={styles.heroCard}>
+          <View style={styles.heroInner}>
+            <View style={styles.heroTopRow}>
+              <View>
+                <Text style={styles.heroLabel}>Lifetime P&L</Text>
+                <Text style={[styles.heroAmount, { color: plColor }]} numberOfLines={1} adjustsFontSizeToFit>
+                  {formatPL(stats.totalProfitLoss)}
+                </Text>
+              </View>
+              <View style={styles.sessionCountBadge}>
+                <Text style={styles.sessionCountNum}>{stats.totalSessionsPlayed}</Text>
+                <Text style={styles.sessionCountLabel}>sessions</Text>
+              </View>
+            </View>
 
-      {/* ── Win / Loss record ── */}
-      <Text style={styles.sectionTitle}>RECORD</Text>
-      <View style={styles.recordCardWrapper}>
-        <View style={styles.recordCard}>
-          <RecordCell label="Wins" value={stats.winsCount} color={colors.success} />
-          <View style={styles.recordDivider} />
-          <RecordCell label="Losses" value={stats.lossesCount} color={colors.error} />
-          <View style={styles.recordDivider} />
-          <RecordCell label="Even" value={stats.breakEvenCount} color={colors.textMuted} />
-          <View style={styles.recordDivider} />
-          <RecordCell label="Win Rate" value={`${winRate}%`} color={winRate >= 50 ? colors.success : colors.textMuted} />
+            {/* Win rate bar */}
+            {stats.totalSessionsPlayed > 0 && (
+              <View style={styles.winRateSection}>
+                <View style={styles.winRateLabelRow}>
+                  <Text style={styles.winRateLabel}>Win rate</Text>
+                  <Text style={[styles.winRatePct, { color: winRateColor }]}>{winRate}%</Text>
+                </View>
+                <View style={styles.winRateTrack}>
+                  <Animated.View
+                    style={[
+                      styles.winRateFill,
+                      { width: `${winRate}%` as any, backgroundColor: winRateColor },
+                    ]}
+                  />
+                </View>
+                <View style={styles.winRateRow}>
+                  <Text style={styles.winRateStat}>
+                    <Text style={{ color: colors.success }}>{stats.winsCount}W</Text>
+                    {'  '}
+                    <Text style={{ color: colors.error }}>{stats.lossesCount}L</Text>
+                    {'  '}
+                    <Text style={{ color: colors.textMuted }}>{stats.breakEvenCount}E</Text>
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
+          {/* decorative */}
+          <View style={styles.heroCorner} pointerEvents="none" />
         </View>
-        {stats.totalSessionsPlayed > 0 && (
-          <View style={styles.winRateTrack}>
-            <View style={[styles.winRateFill, { width: `${winRate}%` as any }]} />
+
+        {/* ── Key numbers ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Key Numbers</Text>
+          <View style={styles.statsRow}>
+            <HighlightCard
+              label="Best Win"
+              value={stats.biggestWin != null ? formatPL(stats.biggestWin) : '—'}
+              valueColor={colors.success}
+              icon="trending-up"
+            />
+            <HighlightCard
+              label="Worst Loss"
+              value={stats.biggestLoss != null ? formatPL(stats.biggestLoss) : '—'}
+              valueColor={colors.error}
+              icon="trending-down"
+            />
+            <HighlightCard
+              label="Avg Session"
+              value={stats.totalSessionsPlayed > 0 ? formatPL(stats.averageProfitLoss) : '—'}
+              valueColor={avgColor}
+              icon="pulse"
+            />
+          </View>
+        </View>
+
+        {/* ── P&L Trend ── */}
+        {finishedSessions.length >= 2 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>P&L Trend</Text>
+            <PLBarChart sessions={finishedSessions.slice(-12)} />
           </View>
         )}
-      </View>
 
-      {/* ── Highlights ── */}
-      <Text style={styles.sectionTitle}>HIGHLIGHTS</Text>
-      <View style={styles.highlightsRow}>
-        <HighlightCard
-          label="Best Win"
-          value={stats.biggestWin != null ? `+₪${Math.round(stats.biggestWin).toLocaleString()}` : '—'}
-          valueColor={colors.success}
-        />
-        <HighlightCard
-          label="Worst Loss"
-          value={stats.biggestLoss != null ? `-₪${Math.abs(Math.round(stats.biggestLoss)).toLocaleString()}` : '—'}
-          valueColor={colors.error}
-        />
-        <HighlightCard
-          label="Avg Session"
-          value={stats.totalSessionsPlayed > 0 ? formatPL(stats.averageProfitLoss) : '—'}
-          valueColor={avgColor}
-        />
-      </View>
-
-      {/* ── P&L chart (only when there are finished sessions) ── */}
-      {finishedSessions.length >= 2 && (
-        <>
-          <Text style={styles.sectionTitle}>P&L TREND</Text>
-          <PLBarChart sessions={finishedSessions.slice(-10)} />
-        </>
-      )}
-
-      {/* ── Active sessions ── */}
-      {activeSessions.length > 0 && (
-        <>
-          <Text style={styles.sectionTitle}>ACTIVE</Text>
-          <View style={styles.listCard}>
-            {activeSessions.map((s, i) => (
-              <React.Fragment key={s.sessionId}>
-                {i > 0 && <View style={styles.divider} />}
-                <SessionRow session={s} onPress={() => navigation.navigate('Session', {
-                  sessionId: s.sessionId,
-                  groupId: s.groupId ?? '',
-                })} />
-              </React.Fragment>
-            ))}
+        {/* ── Active sessions ── */}
+        {activeSessions.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Live Now</Text>
+            <View style={styles.listCard}>
+              {activeSessions.map((s, i) => (
+                <SessionListItem
+                  key={s.sessionId}
+                  name={s.sessionName}
+                  meta={[s.groupName, formatDate(s.createdAt)].filter(Boolean).join('  ·  ')}
+                  profitLoss={s.profitLoss}
+                  status={s.status}
+                  onPress={() => navigation.navigate('Session', { sessionId: s.sessionId, groupId: s.groupId ?? '' })}
+                  isFirst={i === 0}
+                />
+              ))}
+            </View>
           </View>
-        </>
-      )}
+        )}
 
-      {/* ── Session history ── */}
-      {finishedSessions.length > 0 && (
-        <>
-          <Text style={styles.sectionTitle}>SESSION HISTORY</Text>
-          <View style={styles.listCard}>
-            {finishedSessions.map((s, i) => (
-              <React.Fragment key={s.sessionId}>
-                {i > 0 && <View style={styles.divider} />}
-                <SessionRow session={s} onPress={() => navigation.navigate('Session', {
-                  sessionId: s.sessionId,
-                  groupId: s.groupId ?? '',
-                })} />
-              </React.Fragment>
-            ))}
+        {/* ── Session history ── */}
+        {finishedSessions.length > 0 && (
+          <View style={[styles.section, styles.lastSection]}>
+            <Text style={styles.sectionTitle}>Session History</Text>
+            <View style={styles.listCard}>
+              {finishedSessions.map((s, i) => (
+                <SessionListItem
+                  key={s.sessionId}
+                  name={s.sessionName}
+                  meta={[
+                    s.groupName,
+                    formatDate(s.createdAt),
+                    s.startedAt && s.endedAt ? formatDuration(s.startedAt, s.endedAt) : null,
+                  ].filter(Boolean).join('  ·  ')}
+                  profitLoss={s.profitLoss}
+                  status={s.status}
+                  onPress={() => navigation.navigate('Session', { sessionId: s.sessionId, groupId: s.groupId ?? '' })}
+                  isFirst={i === 0}
+                />
+              ))}
+            </View>
           </View>
-        </>
-      )}
+        )}
 
-      {stats.totalSessionsPlayed === 0 && (
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyIcon}>♠</Text>
-          <Text style={styles.emptyTitle}>No sessions yet</Text>
-          <Text style={styles.emptySubtitle}>Play your first session to see stats here</Text>
-        </View>
-      )}
+        {stats.totalSessionsPlayed === 0 && (
+          <View style={styles.emptyCard}>
+            <View style={styles.emptyIconWrap}>
+              <Ionicons name="bar-chart-outline" size={32} color={colors.textDim} />
+            </View>
+            <Text style={styles.emptyTitle}>No sessions yet</Text>
+            <Text style={styles.emptySubtitle}>Play your first session to see stats here</Text>
+          </View>
+        )}
+
+      </Animated.View>
     </ScrollView>
   );
 }
 
-const CHART_HALF = 52;
+function HighlightCard({
+  label,
+  value,
+  valueColor,
+  icon,
+}: {
+  label: string;
+  value: string;
+  valueColor: string;
+  icon: string;
+}) {
+  return (
+    <View style={hlStyles.card}>
+      <Ionicons name={icon as any} size={16} color={valueColor} style={hlStyles.icon} />
+      <Text style={[hlStyles.value, { color: valueColor }]} numberOfLines={1} adjustsFontSizeToFit>
+        {value}
+      </Text>
+      <Text style={hlStyles.label}>{label}</Text>
+    </View>
+  );
+}
+
+const hlStyles = StyleSheet.create({
+  card: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    padding: 14,
+    alignItems: 'flex-start',
+    gap: 4,
+    ...shadows.sm,
+  },
+  icon: { marginBottom: 2 },
+  value: {
+    ...typography.amount,
+    letterSpacing: -0.5,
+  },
+  label: {
+    ...typography.caps,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+});
 
 function PLBarChart({ sessions }: { sessions: RecentSessionDto[] }) {
   const maxAbs = Math.max(...sessions.map(s => Math.abs(s.profitLoss ?? 0)), 1);
 
   return (
-    <View style={styles.chartCard}>
-      <Text style={styles.chartZeroLabel}>₪0</Text>
-      <View style={styles.chartBars}>
+    <View style={chartStyles.card}>
+      <View style={chartStyles.bars}>
         {sessions.map((session, i) => {
           const v = session.profitLoss ?? 0;
-          const barH = Math.max(Math.round((Math.abs(v) / maxAbs) * CHART_HALF), 3);
+          const barH = Math.max(Math.round((Math.abs(v) / maxAbs) * CHART_HEIGHT), 4);
           const isPos = v >= 0;
           return (
-            <View key={i} style={styles.chartBarCol}>
-              <View style={styles.chartHalfTop}>
-                {isPos && <View style={[styles.chartBarFill, styles.chartBarWin, { height: barH }]} />}
+            <View key={i} style={chartStyles.col}>
+              <View style={chartStyles.halfTop}>
+                {isPos && (
+                  <View style={[chartStyles.bar, { height: barH, backgroundColor: colors.success + 'CC' }]} />
+                )}
               </View>
-              <View style={styles.chartZeroLine} />
-              <View style={styles.chartHalfBot}>
-                {!isPos && <View style={[styles.chartBarFill, styles.chartBarLoss, { height: barH }]} />}
+              <View style={chartStyles.zeroLine} />
+              <View style={chartStyles.halfBot}>
+                {!isPos && (
+                  <View style={[chartStyles.bar, { height: barH, backgroundColor: colors.error + 'CC' }]} />
+                )}
               </View>
-              <Text style={styles.chartDateLabel} numberOfLines={1}>
-                {formatDate(session.createdAt)}
-              </Text>
             </View>
           );
         })}
       </View>
-    </View>
-  );
-}
-
-function RecordCell({ label, value, color }: { label: string; value: number | string; color: string }) {
-  return (
-    <View style={styles.recordCell}>
-      <Text style={[styles.recordValue, { color }]}>{value}</Text>
-      <Text style={styles.recordLabel}>{label}</Text>
-    </View>
-  );
-}
-
-function HighlightCard({ label, value, valueColor }: { label: string; value: string; valueColor: string }) {
-  return (
-    <View style={styles.highlightCard}>
-      <Text style={[styles.highlightValue, { color: valueColor }]}>{value}</Text>
-      <Text style={styles.highlightLabel}>{label}</Text>
-    </View>
-  );
-}
-
-function SessionRow({ session, onPress }: { session: RecentSessionDto; onPress: () => void }) {
-  const pl = session.profitLoss;
-  const plColor = pl != null && pl > 0 ? colors.success : pl != null && pl < 0 ? colors.error : colors.textMuted;
-  const duration = session.status === 'Finished' && session.startedAt && session.endedAt
-    ? formatDuration(session.startedAt, session.endedAt)
-    : null;
-  return (
-    <TouchableOpacity style={styles.sessionRow} onPress={onPress} activeOpacity={0.7}>
-      <View style={styles.sessionRowLeft}>
-        <Text style={styles.sessionName} numberOfLines={1}>{session.sessionName}</Text>
-        <Text style={styles.sessionMeta}>
-          {session.groupName}  ·  {formatDate(session.createdAt)}{duration ? `  ·  ${duration}` : ''}
-        </Text>
+      <View style={chartStyles.labelRow}>
+        <Text style={chartStyles.axisLabel}>Loss</Text>
+        <Text style={chartStyles.axisCenter}>P&L per session</Text>
+        <Text style={chartStyles.axisLabel}>Win</Text>
       </View>
-      {pl != null ? (
-        <Text style={[styles.sessionPL, { color: plColor }]}>{formatPL(pl)}</Text>
-      ) : (
-        <View style={styles.activeDot} />
-      )}
-    </TouchableOpacity>
+    </View>
   );
 }
+
+const chartStyles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 12,
+    ...shadows.sm,
+  },
+  bars: {
+    flexDirection: 'row',
+    gap: 4,
+    alignItems: 'stretch',
+  },
+  col: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  halfTop: {
+    height: CHART_HEIGHT,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  halfBot: {
+    height: CHART_HEIGHT,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+  zeroLine: {
+    width: '100%',
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  bar: {
+    width: '75%',
+    borderRadius: 3,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  axisLabel: {
+    ...typography.caps,
+    color: colors.textDim,
+    fontSize: 9,
+  },
+  axisCenter: {
+    ...typography.caps,
+    color: colors.textMuted,
+    fontSize: 9,
+  },
+});
 
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: colors.background },
-  content: { padding: 16, paddingBottom: 48 },
+  content: { padding: 16, paddingBottom: 120 },
 
   center: {
     flex: 1,
@@ -268,190 +403,144 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
-    gap: 12,
+    gap: 16,
   },
-  errorText: { color: colors.error, fontSize: 15, textAlign: 'center' },
+  errorText: { ...typography.body, color: colors.textMuted, textAlign: 'center' },
   retryBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  retryText: { color: colors.textMuted, fontSize: 14, fontWeight: '600' },
+  retryText: { ...typography.labelSmall, color: colors.textMuted },
 
+  // ── Hero Card ─────────────────────────────────────────────────────────────
   heroCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.gold,
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
+    borderRadius: 20,
+    marginBottom: 24,
+    overflow: 'hidden',
+    ...shadows.md,
+  },
+  heroInner: { padding: 24 },
+  heroTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
     marginBottom: 20,
-    gap: 6,
   },
   heroLabel: {
-    fontSize: 11,
-    fontWeight: '600',
+    ...typography.caps,
     color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    marginBottom: 6,
   },
-  heroAmount: { ...typography.hero },
-  heroSub: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
-
-  sectionTitle: {
-    fontSize: 11,
-    fontWeight: '600',
+  heroAmount: {
+    fontSize: 44,
+    fontWeight: '800',
+    letterSpacing: -2,
+    fontVariant: ['tabular-nums'],
+  },
+  sessionCountBadge: {
+    backgroundColor: colors.surfaceHigh,
+    borderRadius: 14,
+    padding: 12,
+    alignItems: 'center',
+    minWidth: 70,
+  },
+  sessionCountNum: {
+    ...typography.h2,
+    color: colors.text,
+  },
+  sessionCountLabel: {
+    ...typography.caps,
     color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 8,
+    marginTop: 2,
+  },
+
+  // Win rate
+  winRateSection: { gap: 8 },
+  winRateLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  winRateLabel: {
+    ...typography.caption,
+    color: colors.textMuted,
+  },
+  winRatePct: {
+    ...typography.labelSmall,
+    fontVariant: ['tabular-nums'],
+  },
+  winRateTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.border,
+    overflow: 'hidden',
+  },
+  winRateFill: {
+    height: 6,
+    borderRadius: 3,
+  },
+  winRateRow: { marginTop: 2 },
+  winRateStat: {
+    ...typography.caption,
+    color: colors.textMuted,
+  },
+  heroCorner: {
+    position: 'absolute',
+    right: -20,
+    top: -20,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.goldFaint,
+  },
+
+  // ── Sections ──────────────────────────────────────────────────────────────
+  section: { marginBottom: 24 },
+  lastSection: { marginBottom: 0 },
+  sectionTitle: {
+    ...typography.caps,
+    color: colors.textMuted,
+    marginBottom: 10,
     paddingHorizontal: 2,
   },
 
-  recordCardWrapper: {
-    marginBottom: 20,
-  },
-  recordCard: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 14,
-    flexDirection: 'row',
-    overflow: 'hidden',
-  },
-  winRateTrack: {
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: colors.border,
-    overflow: 'hidden',
-    marginTop: 6,
-    marginHorizontal: 2,
-  },
-  winRateFill: {
-    height: 3,
-    backgroundColor: colors.gold,
-  },
-  recordCell: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 16,
-    gap: 4,
-  },
-  recordDivider: { width: 1, backgroundColor: colors.border, marginVertical: 12 },
-  recordValue: { fontSize: 20, fontWeight: '700' },
-  recordLabel: { fontSize: 10, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
-
-  highlightsRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
-  highlightCard: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 14,
-    padding: 14,
-    alignItems: 'center',
-    gap: 6,
-  },
-  highlightValue: { fontSize: 16, fontWeight: '700' },
-  highlightLabel: { fontSize: 10, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
+  statsRow: { flexDirection: 'row', gap: 10 },
 
   listCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 14,
+    borderRadius: 16,
     overflow: 'hidden',
-    marginBottom: 20,
+    ...shadows.sm,
   },
-  divider: { height: 1, backgroundColor: colors.border, marginHorizontal: 16 },
-  sessionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-    gap: 10,
-  },
-  sessionRowLeft: { flex: 1, gap: 3 },
-  sessionName: { fontSize: 14, fontWeight: '600', color: colors.text },
-  sessionMeta: { fontSize: 11, color: colors.textMuted },
-  sessionPL: { fontSize: 14, fontWeight: '700' },
-  activeDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.gold,
-  },
-
-  chartCard: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingTop: 16,
-    paddingBottom: 8,
-    marginBottom: 20,
-  },
-  chartZeroLabel: {
-    fontSize: 8,
-    color: colors.textMuted,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  chartBars: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    gap: 4,
-  },
-  chartBarCol: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  chartDateLabel: {
-    fontSize: 7,
-    color: colors.textDim,
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  chartHalfTop: {
-    height: CHART_HALF,
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-  },
-  chartHalfBot: {
-    height: CHART_HALF,
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-  },
-  chartZeroLine: {
-    width: '100%',
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  chartBarFill: {
-    width: '70%',
-    borderRadius: 3,
-  },
-  chartBarWin: { backgroundColor: colors.success },
-  chartBarLoss: { backgroundColor: colors.error },
 
   emptyCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 16,
-    padding: 32,
+    padding: 40,
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     marginTop: 8,
   },
-  emptyIcon: { fontSize: 40, color: colors.gold, marginBottom: 4 },
-  emptyTitle: { fontSize: 17, fontWeight: '600', color: colors.text },
-  emptySubtitle: { fontSize: 14, color: colors.textMuted, textAlign: 'center' },
+  emptyIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: colors.surfaceHigh,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  emptyTitle: { ...typography.h4, color: colors.text },
+  emptySubtitle: { ...typography.bodySmall, color: colors.textMuted, textAlign: 'center' },
 });

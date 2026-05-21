@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, Platform, Animated } from 'react-native';
 import { NavigationContainer, NavigationContainerRef, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp, createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -61,10 +61,11 @@ const Tab = createBottomTabNavigator<TabParamList>();
 
 const stackScreenOptions = {
   contentStyle: { backgroundColor: colors.background },
-  animation: 'fade' as const,
+  animation: 'slide_from_right' as const,
   headerStyle: { backgroundColor: colors.background },
   headerTintColor: colors.text,
   headerTitleStyle: { fontWeight: '700' as const },
+  headerShadowVisible: false,
 };
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
@@ -76,26 +77,62 @@ function LiveGameBar() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
 
+  const translateY = React.useRef(new Animated.Value(80)).current;
+  const prevHasSession = React.useRef(false);
+
+  React.useEffect(() => {
+    const hasSession = activeSession != null;
+    if (hasSession !== prevHasSession.current) {
+      prevHasSession.current = hasSession;
+      Animated.spring(translateY, {
+        toValue: hasSession ? 0 : 80,
+        friction: 10,
+        tension: 120,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [activeSession]);
+
+  // Pulse animation for the dot
+  const pulseAnim = React.useRef(new Animated.Value(1)).current;
+  React.useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 0.2, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
+
   if (!activeSession) return null;
 
   return (
-    <TouchableOpacity
-      style={[liveBarStyles.bar, { bottom: TAB_BAR_HEIGHT + insets.bottom + 6 }]}
-      onPress={() => navigation.navigate('Session', {
-        sessionId: activeSession.sessionId,
-        groupId: activeSession.groupId ?? '',
-      })}
-      activeOpacity={0.9}
+    <Animated.View
+      style={[
+        liveBarStyles.barWrap,
+        { bottom: TAB_BAR_HEIGHT + insets.bottom + 8, transform: [{ translateY }] },
+      ]}
     >
-      <View style={liveBarStyles.dotWrapper}>
-        <View style={liveBarStyles.dot} />
-      </View>
-      <View style={liveBarStyles.textGroup}>
-        <Text style={liveBarStyles.title} numberOfLines={1}>{activeSession.sessionName}</Text>
-        <Text style={liveBarStyles.sub}>Live game · tap to return</Text>
-      </View>
-      <Text style={liveBarStyles.chevron}>›</Text>
-    </TouchableOpacity>
+      <TouchableOpacity
+        style={liveBarStyles.bar}
+        onPress={() => navigation.navigate('Session', {
+          sessionId: activeSession.sessionId,
+          groupId: activeSession.groupId ?? '',
+        })}
+        activeOpacity={0.9}
+      >
+        <View style={liveBarStyles.dotWrapper}>
+          <Animated.View style={[liveBarStyles.dot, { opacity: pulseAnim }]} />
+        </View>
+        <View style={liveBarStyles.textGroup}>
+          <Text style={liveBarStyles.title} numberOfLines={1}>{activeSession.sessionName}</Text>
+          <Text style={liveBarStyles.sub}>Live game · tap to return</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.gold} />
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 
@@ -111,12 +148,25 @@ function TabNavigator() {
             Stats:       { active: 'bar-chart', inactive: 'bar-chart-outline' },
           };
           return {
-            tabBarStyle: { backgroundColor: colors.background, borderTopColor: colors.border },
+            tabBarStyle: {
+              backgroundColor: colors.surface,
+              borderTopColor: colors.border,
+              borderTopWidth: 1,
+              height: TAB_BAR_HEIGHT + (Platform.OS === 'ios' ? 0 : 8),
+              paddingBottom: Platform.OS === 'ios' ? 0 : 4,
+              paddingTop: 4,
+            },
             tabBarActiveTintColor: colors.gold,
-            tabBarInactiveTintColor: colors.textMuted,
+            tabBarInactiveTintColor: colors.textDim,
+            tabBarLabelStyle: {
+              fontSize: 10,
+              fontWeight: '600' as const,
+              letterSpacing: 0.3,
+              marginTop: 2,
+            },
             tabBarIcon: ({ focused, color, size }: { focused: boolean; color: string; size: number }) => {
               const pair = icons[route.name] ?? { active: 'ellipse', inactive: 'ellipse-outline' };
-              return <Ionicons name={focused ? pair.active : pair.inactive} size={size} color={color} />;
+              return <Ionicons name={focused ? pair.active : pair.inactive} size={size - 2} color={color} />;
             },
           };
         }}
@@ -140,17 +190,19 @@ function TabNavigator() {
             headerStyle: { backgroundColor: colors.background },
             headerTintColor: colors.text,
             headerTitleStyle: { fontWeight: '700' },
+            headerShadowVisible: false,
           }}
         />
         <Tab.Screen
           name="Stats"
           component={StatsScreen}
           options={{
-            title: 'My Stats',
+            title: 'Stats',
             headerShown: true,
             headerStyle: { backgroundColor: colors.background },
             headerTintColor: colors.text,
             headerTitleStyle: { fontWeight: '700' },
+            headerShadowVisible: false,
           }}
         />
       </Tab.Navigator>
@@ -214,41 +266,45 @@ const styles = StyleSheet.create({
 });
 
 const liveBarStyles = StyleSheet.create({
-  bar: {
+  barWrap: {
     position: 'absolute',
     left: 12,
     right: 12,
+  },
+  bar: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.gold,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 10,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
     shadowColor: colors.gold,
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 8,
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 10,
   },
   dotWrapper: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: colors.goldFaint,
+    borderWidth: 1,
+    borderColor: colors.goldMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  dot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: colors.goldSubtle,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
     backgroundColor: colors.gold,
   },
-  textGroup: { flex: 1, gap: 1 },
+  textGroup: { flex: 1, gap: 2 },
   title: { fontSize: 14, fontWeight: '700', color: colors.text },
   sub: { fontSize: 11, color: colors.textMuted, fontWeight: '500' },
-  chevron: { fontSize: 22, color: colors.gold, fontWeight: '300' },
 });

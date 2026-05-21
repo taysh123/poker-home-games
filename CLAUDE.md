@@ -1,254 +1,216 @@
-# T Poker — Project Guide
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+---
 
 ## Product Vision
 
-T Poker is a **premium live poker home-game management platform**. It lets private
-friend groups run cash game sessions with full tracking of buy-ins, cash-outs,
-settlements, and lifetime statistics — feeling like a real modern poker product,
-not a student prototype.
+T Poker is a premium live poker home-game management platform for private friend groups. It tracks buy-ins, cash-outs, settlements, and lifetime statistics across sessions and groups.
 
-**Inspired by:** PokerStars / modern premium mobile poker apps  
-**Target users:** Regular home-game groups who play weekly  
-**Core differentiation:** Premium UX during live games — minimal taps, instant actions,
-multiplayer-aware design that works when six people are arguing over who owes what
+**Core principle:** The live session screen is the critical path — it must work flawlessly, with minimal taps and no blocking UI. Everything else is secondary.
 
 ---
 
-## Engineering Philosophy
+## Commands
 
-Act like a **senior engineer building a startup MVP**.
+### Backend
+```powershell
+# Run API (from repo root or src/PokerApp.API)
+cd src/PokerApp.API && dotnet run --launch-profile http
+# API: http://0.0.0.0:5062   Swagger: http://localhost:5062/swagger
 
-Prioritize:
-- **Scalability** — Clean Architecture, CQRS, no coupled layers
-- **Maintainability** — Clear naming, small focused files, shared utilities
-- **Production readiness** — Proper error handling, loading states, auth guards
-- **Strong TypeScript** — Typed API responses, typed navigation params, no `any`
-- **Secure patterns** — JWT best practices, hashed tokens, role-based access
-- **Smooth UX** — Optimistic updates where safe, haptic feedback, toast notifications
+# Build check (from repo root)
+dotnet build PokerApp.sln
 
-Do not: add features beyond what's asked, create unnecessary abstractions,
-write defensive code for impossible cases, or leave TODO comments.
+# Add a migration
+cd src/PokerApp.Infrastructure
+dotnet ef migrations add MyMigration --startup-project ../PokerApp.API
 
----
-
-## UX Philosophy
-
-The app must feel **premium and responsive during a live poker game**.
-
-Always optimize for:
-- **Minimal taps** — critical actions (buy-in, cash-out) reachable in 2 taps
-- **Fast player actions** — no loading spinners on local state changes
-- **Readable layouts** — large numbers, color-coded P&L, clear hierarchy
-- **Touch-friendly controls** — 48px+ tap targets, generous padding
-- **Mobile-first interactions** — thumb-reachable action bars, bottom sheets
-
-Never block the UI for non-critical operations. Error states should degrade
-gracefully. The live session screen is the core experience — it must be flawless.
-
----
-
-## Design System
-
-**Style direction:** Dark luxury, PokerStars-inspired
-
-| Token | Value | Usage |
-|-------|-------|-------|
-| `background` | `#0F1923` | Screen backgrounds (deep navy) |
-| `surface` | `#1A2535` | Cards, inputs, containers |
-| `surfaceHigh` | `#1E2D3D` | Elevated surfaces, focused inputs |
-| `border` | `#243447` | Card borders, dividers |
-| `gold` | `#C9A84C` | Primary accent — buttons, active states, key numbers |
-| `goldLight` | `#E8C97A` | Positive P&L, highlighted amounts |
-| `text` | `#FFFFFF` | Primary text |
-| `textMuted` | `#7A8A99` | Labels, secondary text |
-| `textDim` | `#3A4A5A` | Placeholders, disabled |
-| `error` | `#E74C3C` | Negative P&L, errors |
-| `success` | `#27AE60` | Positive outcomes, wins |
-
-**Typography:** See `apps/poker-mobile/src/theme/typography.ts` — do not hardcode font sizes.  
-**Icons:** Ionicons via `@expo/vector-icons`  
-**Animations:** `Animated` from React Native, `useNativeDriver: true` always
-
-Gold accents are used **sparingly** — only on primary CTAs, live indicators, and
-key financial numbers. Overusing gold degrades the premium feel.
-
----
-
-## Required Thinking
-
-Before implementing any feature, consider:
-
-- **Edge cases** — empty data, zero amounts, single player, deleted accounts
-- **Auth persistence** — what happens if token expires mid-action?
-- **Reload persistence** — does state survive app background/foreground?
-- **Broken navigation** — can every screen be reached and exited without getting stuck?
-- **Multiplayer sync** — two admins acting simultaneously on a session
-- **Real-world mistakes** — wrong buy-in amount, adding wrong player
-- **Accessibility** — minimum 48px touch targets, sufficient color contrast
-- **Responsive behavior** — does the layout work on small phones (iPhone SE)?
-- **Performance** — FlatList for long lists, no blocking renders
-- **Vercel deployment** — web bundle must build; no native-only APIs without platform guards
-
----
-
-## Technical Expectations
-
-- JWT with 15-min access token + 30-day refresh token rotation
-- Refresh tokens hashed (SHA-256) — never stored plain
-- All API calls read token from storage before each request (no context passing)
-- Rate limiting on auth endpoints (10/5/20 req/min per IP)
-- FluentValidation on all commands — validators throw before handlers run
-- `useFocusEffect` for data refresh on navigation return
-- `useCallback` + proper deps arrays — no stale closures
-- Every screen has: loading state, error state with retry, empty state with CTA
-- Haptic feedback on critical actions (successNotification, errorNotification)
-- Toast notifications for async results (never Alert for non-destructive feedback)
-- No `console.log` left in production code
-
----
-
-## Monorepo Structure
-
-```
-poker-app/
-├── apps/
-│   └── poker-mobile/            # Expo SDK 54 — iOS, Android, Web
-│       ├── src/
-│       │   ├── api/             # Typed Axios wrappers (one file per resource)
-│       │   ├── components/      # Shared UI: PrimaryButton, AppTextInput, Badge, Toast...
-│       │   ├── context/         # AuthContext, ActiveSessionContext
-│       │   ├── hooks/           # useGoogleAuth
-│       │   ├── navigation/      # AppNavigator (stack + bottom tabs)
-│       │   ├── screens/         # One file per screen
-│       │   ├── theme/           # colors.ts, typography.ts
-│       │   └── utils/           # formatters, storage, haptics, toast, parseAuthError
-│       └── assets/              # icon.png, splash-icon.png, adaptive-icon.png
-├── src/
-│   ├── PokerApp.API/            # ASP.NET Core 8 Web API
-│   ├── PokerApp.Application/    # CQRS: commands, queries, validators, DTOs
-│   ├── PokerApp.Domain/         # Entities, enums — no framework deps
-│   └── PokerApp.Infrastructure/ # EF Core, migrations, configs
-├── PokerApp.sln
-└── CLAUDE.md
+# Apply migrations
+dotnet ef database update --startup-project ../PokerApp.API
 ```
 
+### Frontend
+```powershell
+cd apps/poker-mobile
+npm run web        # Browser at http://localhost:8081
+npm start          # Expo Go (scan QR code)
+npm run tunnel     # ngrok for physical devices
+
+# Type check (must pass before committing)
+npx tsc --noEmit
+```
+
+**Mobile dev note:** When testing on a physical device, update the LAN IP in `apps/poker-mobile/src/api/config.ts`. It falls back to `localhost:5062` only on web.
+
 ---
 
-## Backend Architecture
+## Architecture Overview
 
-### Dependency Chain (strict — no violations)
+Monorepo: `apps/poker-mobile` (Expo SDK 54, iOS/Android/Web) + `src/` (.NET 8 backend).
+
+### Backend — Clean Architecture + CQRS
+
+Dependency direction — inner layers never import outer:
 ```
 Domain  ←  Application  ←  Infrastructure
                 ↑
                API
 ```
 
-- **Domain**: Pure C# — entities, enums, value objects. No EF, no MediatR.
-- **Application**: Business logic. Commands, queries, validators. Depends only on Domain + interfaces.
-- **Infrastructure**: EF Core implementation, migrations, repositories.
-- **API**: Controllers (thin), middleware, DI wiring. Calls MediatR only.
+Every mutation is a `Command`, every read is a `Query`. Each lives in `Application/Features/<Feature>/Commands/<Name>/` with:
+- `*Command.cs` — MediatR `IRequest<T>` record
+- `*CommandHandler.cs` — `IRequestHandler<T>`
+- `*CommandValidator.cs` — FluentValidation `AbstractValidator<T>` (commands only)
 
-### Pattern: CQRS with MediatR
-Every operation is a `Command` (mutating) or `Query` (read-only).
-Each has: `*Command.cs` / `*Query.cs` + `*Handler.cs` + `*Validator.cs` (commands only).
-Handlers are discovered by convention — register nothing manually.
+MediatR and FluentValidation scan by assembly convention — **register nothing manually**.
 
-### Auth Flow
-```
-POST /api/auth/login
-  → validate credentials → generate JWT (15 min) + refresh token (30 days, hashed in DB)
-  → return { accessToken, refreshToken, userId, username, email }
+Controllers are thin: extract `userId` from claims → build command → `await mediator.Send()` → return status code. All business logic belongs in handlers.
 
-POST /api/auth/refresh
-  → validate refresh token hash → rotate: revoke old, issue new pair
-  → return { accessToken, refreshToken }
+Exception → HTTP mapping is in `ExceptionHandlingMiddleware`:
 
-401 on any request
-  → frontend apiClient interceptor attempts refresh
-  → on refresh failure: clearSession() → setUser(null) → Login screen
-```
+| Exception | HTTP |
+|-----------|------|
+| `NotFoundException` | 404 |
+| `BadRequestException` | 400 |
+| `ValidationException` | 400 + field errors |
+| `ConflictException` | 409 |
+| `UnauthorizedException` | 401 |
+| `UnauthorizedAccessException` | 403 |
 
-### Role System
-- `AppRole`: Regular / Admin — user-level, currently unused for special powers
-- `GroupRole`: Member / Admin / Owner — group-level, enforced in all handlers
+**Middleware order in `Program.cs` matters:** `UseCors` must be before the exception middleware so CORS headers appear on error responses.
+
+### Frontend — Screen-owned data fetching
+
+Each screen owns its own state, token read, and API call. No global data store. Screens refresh on focus via `useFocusEffect`.
+
+There are **two Axios patterns** in use:
+- `api/apiClient.ts` — a shared Axios instance with a 401 interceptor that automatically refreshes the token and retries the request. Use this for any API call that should trigger auto-logout on refresh failure.
+- Individual API files (`sessionsApi.ts`, `groupsApi.ts`, etc.) — each creates its own Axios instance per call, taking an explicit `token` argument. Most screens use this pattern.
+
+Both read tokens from `utils/storage.ts`, never from context.
 
 ---
 
-## Frontend Architecture
+## Session Lifecycle
 
-### Navigation Structure
-```
-AppNavigator
-├── Auth stack (user === null)
-│   ├── Login
-│   └── Register
-└── App stack (user !== null)
-    ├── MainTabs (bottom tab navigator)
-    │   ├── Home
-    │   ├── AllSessions
-    │   ├── GroupsList
-    │   └── Stats
-    └── Deep screens (push above tabs, tab bar hides)
-        ├── GroupDetail, EditGroup (modal), SessionsList
-        ├── Session, NewGame, CreateGroup (modal)
-        ├── Profile, Invitations, PendingSettlements
-        └── JoinSession, JoinGroup (deep link entry points)
-```
+Sessions follow a strict state machine: **Draft → Active → Finished**
 
-`LiveGameBar` floats above the tab bar when an active session exists (provided by `ActiveSessionContext`).
+| State | What's allowed |
+|-------|---------------|
+| Draft | Add/remove players, configure chip ratio |
+| Active | Buy-ins, cash-outs, hand records; no player removal (guests only) |
+| Finished | Read-only; settlements can be calculated and marked paid |
 
-### Data Fetching Pattern
+Sessions can be standalone (no group) or group-scoped. `Session.GroupId` is nullable.
+
+### Guest Players
+
+`SessionPlayer` can represent either a registered user or a guest (non-account player):
+- `UserId` set → registered user
+- `GuestName` set → guest
+- `LinkedUserId` (optional) → links a guest to a registered user for settlement purposes
+
+`SessionPlayer.SettlementUserId` resolves to `LinkedUserId ?? UserId`. Guests with a `LinkedUserId` are settled as that user.
+
+### Invite Systems
+
+There are two separate invite mechanisms:
+
+| Type | Entity | Lifetime | Use |
+|------|--------|----------|-----|
+| Group invite link | `GroupInviteLink` | Permanent, regeneratable | Anyone with the link joins the group |
+| Session invite token | `SessionInviteToken` | Single-use, 24h | Joins a specific Draft/Active session |
+
+Group invite links are generated via `POST /api/groups/{id}/invite-link`. Session tokens via `POST /api/sessions/{id}/invite`.
+
+---
+
+## Active Session Context
+
+`ActiveSessionContext` drives the `LiveGameBar` (floats above tab bar when a game is in progress). It:
+- Polls `GET /api/auth/stats` every **30 seconds**
+- Refreshes on every `AppState → active` event (app foregrounded)
+- Finds the first session with `status === 'Active'` from recent sessions
+
+Call `refresh()` after starting/ending a session to update the bar immediately. Call `clear()` when navigating away from a finished session.
+
+---
+
+## Auth
+
+JWT: 15-min access token + 30-day refresh token (stored hashed SHA-256 in DB, never plain).
+
+`AuthContext` lifecycle:
+1. Startup: reads `user` from storage (SecureStore native, localStorage/sessionStorage web)
+2. Login: calls API → `saveSession()` sets state first (drives navigation), then persists async
+3. 401 on any request: `apiClient` interceptor attempts refresh; on failure calls `onUnauthenticated` → `clearSession()` → `setUser(null)`
+4. "Remember me = false" uses `sessionStorage` on web (session mode via `storage.setSessionMode(true)`)
+
+`AppNavigator` renders auth screens when `user === null`, app screens otherwise — no manual `navigation.replace()` needed.
+
+---
+
+## Design System
+
+All colors in `apps/poker-mobile/src/theme/colors.ts`. Never hardcode hex values.
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `background` | `#0F1923` | Screen backgrounds |
+| `surface` | `#1A2535` | Cards, inputs, containers |
+| `surfaceHigh` | `#1E2D3D` | Elevated/focused surfaces |
+| `surfaceAlt` | `#1C2A3A` | Alternate surface |
+| `surfaceOverlay` | `rgba(15,25,35,0.85)` | Modal overlays |
+| `border` | `#243447` | Borders, dividers |
+| `gold` | `#C9A84C` | Primary accent — CTAs, active states |
+| `goldLight` | `#E8C97A` | Positive P&L, highlighted amounts |
+| `goldDark` | `#A8872E` | Pressed/dark gold |
+| `goldFaint` | `rgba(201,168,76,0.08)` | Subtle gold tint background |
+| `goldSubtle` | `rgba(201,168,76,0.15)` | Live indicator wrapper |
+| `goldMuted` | `rgba(201,168,76,0.40)` | Inactive gold |
+| `text` | `#FFFFFF` | Primary text |
+| `textHigh` | `#E8EDF2` | Slightly dimmed primary text |
+| `textMuted` | `#7A8A99` | Labels, secondary text |
+| `textDim` | `#3A4A5A` | Placeholders, disabled |
+| `error` | `#E74C3C` | Negative P&L, errors |
+| `errorFaint` | `rgba(231,76,60,0.08)` | Error background tint |
+| `errorMuted` | `rgba(231,76,60,0.35)` | Error border |
+| `success` | `#27AE60` | Positive outcomes |
+| `warning` | `#F39C12` | Warnings |
+| `bgOverlay` | `rgba(15,25,35,0.6)` | Translucent overlays |
+
+Gold accents are used **sparingly** — only on primary CTAs, live indicators, and key financial numbers. Overusing gold degrades the premium feel.
+
+Typography: `apps/poker-mobile/src/theme/typography.ts` — never hardcode font sizes.  
+Icons: Ionicons via `@expo/vector-icons`.  
+Animations: `Animated` from React Native, `useNativeDriver: true` always.
+
+---
+
+## Cross-Platform Rules
+
+### Alert.alert()
+
+`Alert.alert()` with **3+ buttons** is broken on React Native Web. Use the `ActionSheet` component for any menu with 3+ options.
+
+`Alert.alert()` with exactly 2 buttons (Cancel + action) works on web via `window.confirm()`.
+
 ```typescript
-// Every screen owns its own fetch:
-const load = useCallback(async () => {
-  const token = await SecureStore.getItemAsync('accessToken');
-  if (!token) return;
-  const data = await someApi(token, ...args);
-  setState(data);
-}, [deps]);
-
-useFocusEffect(useCallback(() => { load(); }, [load]));
-```
-
-### Key Utilities
-| File | Purpose |
-|------|---------|
-| `utils/storage.ts` | Platform-aware token storage (localStorage web, SecureStore native) |
-| `utils/formatters.ts` | Shared: formatPL, formatMoney, formatDate, formatDuration |
-| `utils/haptics.ts` | Haptic feedback (native only, web-safe) |
-| `utils/toast.ts` | Global toast pub/sub |
-| `utils/parseAuthError.ts` | Converts axios errors → user-friendly messages |
-| `api/apiClient.ts` | Axios instance with 401 refresh interceptor |
-
-### Cross-platform Alert rule
-
-`Alert.alert()` with **3+ buttons** does NOT work on React Native Web — the browser
-has no API for multi-button native dialogs. Use the `ActionSheet` component instead
-for any action menu with 3+ options.
-
-`Alert.alert()` with exactly 2 buttons (Cancel + action) DOES work on web via
-`window.confirm()` and is fine for simple destructive confirmations.
-
-```typescript
-// ✓ Works on all platforms (2 buttons)
+// ✓ Works everywhere (2 buttons)
 Alert.alert('Delete?', 'This cannot be undone.', [
   { text: 'Cancel', style: 'cancel' },
   { text: 'Delete', style: 'destructive', onPress: doDelete },
 ]);
 
-// ✗ BROKEN on web — use ActionSheet component instead
-Alert.alert('Options', undefined, [
-  { text: 'Open', onPress: doOpen },
-  { text: 'Edit', onPress: doEdit },
-  { text: 'Delete', style: 'destructive', onPress: doDelete },
-  { text: 'Cancel', style: 'cancel' },
-]);
+// ✗ Broken on web — use <ActionSheet> instead
+Alert.alert('Options', undefined, [buttonA, buttonB, buttonC, cancelButton]);
 ```
 
-### Share + Clipboard pattern
+### Share + Clipboard
 
-`Share.share()` works on iOS/Android. On web desktop, the Web Share API is unavailable.
-Always add a clipboard fallback when sharing invite links:
+`Share.share()` works on iOS/Android only. Web desktop has no Web Share API. Always add a clipboard fallback:
 
 ```typescript
 try {
@@ -261,64 +223,28 @@ try {
 }
 ```
 
----
+### Storage
 
-## How to Run
-
-### Backend
-```powershell
-cd src/PokerApp.API
-dotnet run --launch-profile http
-# API: http://0.0.0.0:5062
-# Swagger: http://localhost:5062/swagger
-```
-
-### Frontend
-```powershell
-cd apps/poker-mobile
-npm start          # Expo Go on phone (scan QR code)
-npm run web        # Browser at http://localhost:8081
-npm run tunnel     # ngrok tunnel for physical devices
-```
-
-### Prerequisites
-- .NET 8 SDK
-- Node.js 18+
-- PostgreSQL running locally — database: `poker_app_dev`
-- Expo Go app for mobile testing
+Import from `utils/storage` (not `expo-secure-store` directly) — the wrapper handles web vs native:
+- Web: `localStorage` / `sessionStorage`
+- Native: encrypted `expo-secure-store`
 
 ---
 
-## Environment Variables
+## Environment
 
 ### Frontend (`apps/poker-mobile/.env` — gitignored)
-Copy `apps/poker-mobile/.env.example` → `.env` and fill in values.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `EXPO_PUBLIC_API_URL` | `http://localhost:5062` | Backend API URL |
-| `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` | Expo proxy client | Android OAuth client ID (production only) |
-| `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | Hardcoded Expo client | iOS OAuth client ID (production only) |
+| `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` | — | Android OAuth (production only) |
+| `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | — | iOS OAuth (production only) |
 
-### Google OAuth Setup
-
-**Expo Go (development)**: No env vars needed. The hardcoded `EXPO_CLIENT_ID` in
-`useGoogleAuth.ts` routes through `auth.expo.io`, which works for testing.
-
-**Production Android** (`EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID`):
-1. Google Cloud Console → APIs & Services → Credentials → Create OAuth 2.0 Client ID
-2. Application type: **Android**
-3. Package name: match `android.package` in `app.json`
-4. SHA-1: `keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android`
-5. For release builds, use the release keystore SHA-1 instead
-
-**Production iOS** (`EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`):
-1. Application type: **iOS**, Bundle ID: match `ios.bundleIdentifier` in `app.json`
-
-If OAuth shows "blocked" or "not configured", the redirect URI or SHA-1 is not registered.
-The app degrades gracefully — email/password auth still works.
+Copy `.env.example` → `.env`. Expo Go in development uses the hardcoded Expo proxy client — no env vars needed.
 
 ### Backend (`src/PokerApp.API/appsettings.Development.json` — gitignored)
+
 ```json
 {
   "ConnectionStrings": { "DefaultConnection": "Host=localhost;Database=poker_app_dev;..." },
@@ -331,9 +257,9 @@ The app degrades gracefully — email/password auth still works.
 
 ## Deployment
 
-### Web Frontend → Vercel
+### Web → Vercel
+
 ```json
-// vercel.json
 {
   "buildCommand": "cd apps/poker-mobile && npx expo export -p web",
   "outputDirectory": "apps/poker-mobile/dist",
@@ -342,39 +268,22 @@ The app degrades gracefully — email/password auth still works.
 ```
 Set `EXPO_PUBLIC_API_URL` in Vercel environment settings.
 
-### Mobile → EAS Build
+### Mobile → EAS
 ```powershell
 npx eas build --platform ios
 npx eas build --platform android
 ```
 
-### Backend → Any hosting (Railway, Azure, Fly.io)
+### Backend
 Set `AllowedOrigins` in `appsettings.Production.json` before deploying.
-Use environment variables for all secrets — never commit production values.
 
 ---
 
-## Build Checks
+## Out of Scope (decided, not returning)
 
-After any change:
-```powershell
-# Backend (from repo root)
-dotnet build PokerApp.sln
-
-# Frontend (from apps/poker-mobile)
-npx tsc --noEmit
-```
-
-Both must pass with 0 errors before committing.
-
----
-
-## What NOT to Build (decided)
-
-- ~~i18n / Hebrew / RTL~~ — English only
-- ~~WebSockets / SignalR~~ — 30s polling is sufficient
-- ~~Blind level tracking~~ — removed, not returning
-- ~~Debt system~~ — removed, not returning
-- ~~Push notifications~~ — post-MVP
-- ~~Offline-first caching~~ — network required; acceptable
-- ~~Payment integration~~ — settlements tracked digitally, cash settled offline
+- i18n / Hebrew / RTL — English only
+- WebSockets / SignalR — 30s polling is sufficient
+- Blind level tracking, debt system — removed
+- Push notifications — post-MVP
+- Offline-first caching — network required
+- Payment integration — cash settled offline
