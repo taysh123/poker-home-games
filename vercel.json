@@ -1,8 +1,0 @@
-{
-  "buildCommand": "npx expo export -p web",
-  "outputDirectory": "dist",
-  "framework": null,
-  "rewrites": [
-    { "source": "/join/:path*", "destination": "/index.html" }
-  ]
-}
