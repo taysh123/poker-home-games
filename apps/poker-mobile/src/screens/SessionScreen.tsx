@@ -819,7 +819,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                         style={styles.removeBtn}
                         hitSlop={8}
                       >
-                        <Text style={styles.removeBtnText}>✕</Text>
+                        <Ionicons name="close" size={14} color={colors.error} />
                       </TouchableOpacity>
                     ) : null}
                   </View>
@@ -844,7 +844,7 @@ export default function SessionScreen({ route, navigation }: Props) {
 
             {settlements.length === 0 ? (
               <View style={styles.evenCard}>
-                <Text style={styles.evenIcon}>✓</Text>
+                <Ionicons name="checkmark-circle" size={36} color={colors.success} />
                 <Text style={styles.evenTitle}>Everyone is even</Text>
                 <Text style={styles.evenSub}>No transfers needed — the math works out perfectly.</Text>
                 <TouchableOpacity onPress={handleCalculateSettlements} disabled={calcLoading}>
@@ -1008,7 +1008,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                     </View>
                     {h.createdByUserId === user?.userId && isActive && (
                       <TouchableOpacity onPress={() => handleDeleteHand(h.id)} hitSlop={8}>
-                        <Text style={styles.handDelete}>✕</Text>
+                        <View style={styles.handDeleteWrap}><Ionicons name="trash-outline" size={13} color={colors.error} /></View>
                       </TouchableOpacity>
                     )}
                   </View>
@@ -1032,7 +1032,12 @@ export default function SessionScreen({ route, navigation }: Props) {
           >
             {startLoading
               ? <ActivityIndicator color={colors.background} size="small" />
-              : <Text style={styles.startGameBtnText}>▶  START GAME</Text>}
+              : (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="play-circle-outline" size={18} color={colors.background} />
+                  <Text style={styles.startGameBtnText}>START GAME</Text>
+                </View>
+              )}
           </TouchableOpacity>
         </View>
       )}
@@ -1093,7 +1098,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                 {txModal.player && <Text style={styles.sheetSubtitle}>{txModal.player.username}</Text>}
               </View>
               <TouchableOpacity onPress={() => setTxModal({ visible: false, type: 'buyin', player: null, needsPlayerSelect: false })} hitSlop={8}>
-                <Text style={styles.closeBtn}>✕</Text>
+                <View style={styles.closeBtnWrap}><Ionicons name="close" size={16} color={colors.textMuted} /></View>
               </TouchableOpacity>
             </View>
 
@@ -1214,7 +1219,7 @@ export default function SessionScreen({ route, navigation }: Props) {
             <View style={styles.sheetTitleRow}>
               <Text style={styles.sheetTitle}>Add Player</Text>
               <TouchableOpacity onPress={() => setAddPlayerModal(false)} hitSlop={8}>
-                <Text style={styles.closeBtn}>✕</Text>
+                <View style={styles.closeBtnWrap}><Ionicons name="close" size={16} color={colors.textMuted} /></View>
               </TouchableOpacity>
             </View>
 
@@ -1288,12 +1293,12 @@ export default function SessionScreen({ route, navigation }: Props) {
             </View>
 
             <TouchableOpacity style={styles.endOptionBtn} onPress={() => setEndStep(2)} activeOpacity={0.8}>
-              <Text style={styles.endOptionIcon}>📋</Text>
+              <View style={styles.endOptionIconWrap}><Ionicons name="list-outline" size={18} color={colors.gold} /></View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.endOptionTitle}>Enter Final {session.chipRatio ? 'Chip Counts' : 'Cash Amounts'}</Text>
                 <Text style={styles.endOptionSub}>Recommended — most accurate results</Text>
               </View>
-              <Text style={styles.endOptionChevron}>›</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.gold} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -1306,12 +1311,12 @@ export default function SessionScreen({ route, navigation }: Props) {
                 <ActivityIndicator color={colors.textMuted} size="small" style={{ flex: 1 }} />
               ) : (
                 <>
-                  <Text style={styles.endOptionIcon}>⚡</Text>
+                  <View style={styles.endOptionIconWrap}><Ionicons name="flash-outline" size={18} color={colors.textMuted} /></View>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.endOptionTitle, { color: colors.textMuted }]}>Skip — Use Transaction Records</Text>
                     <Text style={styles.endOptionSub}>Calculate from recorded buy-ins and cash-outs</Text>
                   </View>
-                  <Text style={styles.endOptionChevron}>›</Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.gold} />
                 </>
               )}
             </TouchableOpacity>
@@ -1334,7 +1339,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                 <Text style={styles.endSubtitle}>Enter what each player has left at the table.</Text>
               </View>
               <TouchableOpacity onPress={() => setEndStep(1)} hitSlop={8}>
-                <Text style={styles.closeBtn}>✕</Text>
+                <View style={styles.closeBtnWrap}><Ionicons name="close" size={16} color={colors.textMuted} /></View>
               </TouchableOpacity>
             </View>
 
@@ -1413,7 +1418,12 @@ export default function SessionScreen({ route, navigation }: Props) {
                         <Text style={styles.chipCounterValue}>{fmt(expectedInUnits)} {unitLabel}</Text>
                       </View>
                       {isBalanced
-                        ? <Text style={styles.chipCounterMatch}>✓ Totals match</Text>
+                        ? (
+                          <View style={styles.chipCounterMatchRow}>
+                            <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                            <Text style={styles.chipCounterMatch}>Totals match</Text>
+                          </View>
+                        )
                         : <Text style={styles.chipCounterDiff}>
                             {diff > 0 ? '+' : ''}{fmt(Math.abs(diff))} {diff > 0 ? 'over' : 'short'}
                           </Text>
@@ -1428,7 +1438,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                       activeOpacity={0.7}
                     >
                       <View style={[styles.overrideCheckbox, overrideBalance && styles.overrideCheckboxChecked]}>
-                        {overrideBalance && <Text style={styles.overrideCheckmark}>✓</Text>}
+                        {overrideBalance && <Ionicons name="checkmark" size={12} color={colors.background} />}
                       </View>
                       <Text style={styles.overrideLabel}>Calculate anyway (totals don't balance)</Text>
                     </TouchableOpacity>
@@ -1561,8 +1571,9 @@ export default function SessionScreen({ route, navigation }: Props) {
               )}
             </ScrollView>
 
-            <TouchableOpacity style={styles.finishGameBtn} onPress={finishGame}>
-              <Text style={styles.finishGameBtnText}>✓  Save & View Session</Text>
+            <TouchableOpacity style={styles.finishGameBtn} onPress={finishGame} activeOpacity={0.85}>
+              <Ionicons name="checkmark-circle-outline" size={18} color={colors.background} />
+              <Text style={styles.finishGameBtnText}>Save & View Session</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1576,7 +1587,7 @@ export default function SessionScreen({ route, navigation }: Props) {
             <View style={styles.sheetTitleRow}>
               <Text style={styles.sheetTitle}>Log Hand</Text>
               <TouchableOpacity onPress={() => setHandModal(false)} hitSlop={8}>
-                <Text style={styles.closeBtn}>✕</Text>
+                <View style={styles.closeBtnWrap}><Ionicons name="close" size={16} color={colors.textMuted} /></View>
               </TouchableOpacity>
             </View>
 
@@ -1660,11 +1671,10 @@ function MetaChip({ label, gold }: { label: string; gold?: boolean }) {
 }
 
 function rankLabel(rank: number): string {
-  if (rank === 1) return '🥇';
-  if (rank === 2) return '🥈';
-  if (rank === 3) return '🥉';
   return `#${rank}`;
 }
+
+const RANK_COLORS: Record<number, string> = { 1: '#C9A84C', 2: '#8DA9C4', 3: '#B87333' };
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
@@ -1692,7 +1702,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backArrow: { fontSize: 28, color: colors.text, lineHeight: 32 },
   headerCenter: { flex: 1 },
   headerTitle: { ...typography.h3, color: colors.text },
   headerMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3 },
@@ -1837,7 +1846,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  removeBtnText: { fontSize: 14, color: colors.error },
 
   emptyPlayers: { padding: 28, alignItems: 'center', gap: 6 },
   emptyPlayersText: { ...typography.body, color: colors.textMuted, textAlign: 'center' },
@@ -2034,7 +2042,16 @@ const styles = StyleSheet.create({
   handWinner: { fontSize: 14, fontWeight: '600', color: colors.text },
   handPot: { fontSize: 12, color: colors.gold, fontWeight: '600' },
   handNote: { fontSize: 12, color: colors.textMuted, fontStyle: 'italic' },
-  handDelete: { fontSize: 14, color: colors.error },
+  handDeleteWrap: {
+    width: 26,
+    height: 26,
+    borderRadius: 7,
+    backgroundColor: colors.errorFaint,
+    borderWidth: 1,
+    borderColor: colors.errorMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   // FAB
   fab: {
@@ -2140,7 +2157,16 @@ const styles = StyleSheet.create({
   sheetTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
   sheetSubtitle: { fontSize: 13, color: colors.textMuted, fontWeight: '500', marginTop: 2 },
   sheetTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  closeBtn: { fontSize: 18, color: colors.textMuted },
+  closeBtnWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   subLabel: {
     fontSize: 12,
     fontWeight: '700',
@@ -2320,7 +2346,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gold,
     borderRadius: 12,
     paddingVertical: 14,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   finishGameBtnText: { fontSize: 15, fontWeight: '800', color: colors.background },
 
@@ -2443,7 +2472,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceHigh,
     borderColor: colors.border,
   },
-  endOptionIcon: { fontSize: 22 },
+  endOptionIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   endOptionTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
   endOptionSub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   endOptionChevron: { fontSize: 22, color: colors.textMuted, fontWeight: '300' },
@@ -2481,7 +2519,8 @@ const styles = StyleSheet.create({
   chipCounterValue: { fontSize: 13, fontWeight: '700', color: colors.text },
   chipCounterValueOk: { color: colors.success },
   chipCounterValueWarn: { color: colors.error },
-  chipCounterMatch: { fontSize: 12, color: colors.success, fontWeight: '700', textAlign: 'center' },
+  chipCounterMatchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+  chipCounterMatch: { fontSize: 12, color: colors.success, fontWeight: '700' },
   chipCounterDiff: { fontSize: 12, color: colors.error, fontWeight: '700', textAlign: 'center' },
 
   // Override balance checkbox row
