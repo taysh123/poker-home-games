@@ -20,6 +20,7 @@ import { shadows } from '../theme/shadows';
 import { pulse, fadeIn, staggered, slideUp } from '../theme/motion';
 import { useAuth } from '../context/AuthContext';
 import { getMyGroups, getMyInvitations, MyGroupDto, PendingInvitationDto } from '../api/groupsApi';
+import { getMyNotifications } from '../api/notificationsApi';
 import { getMyStats, MyStatsDto, RecentSessionDto } from '../api/statsApi';
 import { getMyPendingSettlements, MyPendingSettlementDto } from '../api/settlementsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -44,6 +45,7 @@ export default function HomeScreen() {
   const [statsLoading, setStatsLoading] = useState(true);
   const [invitations, setInvitations] = useState<PendingInvitationDto[]>([]);
   const [pendingSettlements, setPendingSettlements] = useState<MyPendingSettlementDto[]>([]);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
   // Entrance animations
@@ -76,16 +78,18 @@ export default function HomeScreen() {
     try {
       const token = await SecureStore.getItemAsync('accessToken');
       if (!token) return;
-      const [groupsData, statsData, invData, pendingData] = await Promise.all([
+      const [groupsData, statsData, invData, pendingData, notifData] = await Promise.all([
         getMyGroups(token),
         getMyStats(token),
         getMyInvitations(token),
         getMyPendingSettlements(token).catch(() => [] as MyPendingSettlementDto[]),
+        getMyNotifications(token).catch(() => null),
       ]);
       setGroups(groupsData);
       setStats(statsData);
       setInvitations(invData);
       setPendingSettlements(pendingData);
+      setUnreadNotifications(notifData?.unreadCount ?? 0);
     } catch {
       // silent — home screen degrades gracefully
     } finally {
@@ -118,6 +122,15 @@ export default function HomeScreen() {
   const activeSessions = stats?.recentSessions.filter(s => s.status === 'Active') ?? [];
   const recentSessions = stats?.recentSessions.filter(s => s.status === 'Finished').slice(0, 4) ?? [];
 
+  // "This week" P&L computed client-side from already-loaded sessions
+  const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const thisWeekPL = stats?.recentSessions
+    .filter(s => s.status === 'Finished' && s.profitLoss != null && new Date(s.createdAt) >= oneWeekAgo)
+    .reduce((sum, s) => sum + (s.profitLoss ?? 0), 0) ?? null;
+  const hasThisWeekData = thisWeekPL !== null && stats != null && stats.recentSessions.some(
+    s => s.status === 'Finished' && new Date(s.createdAt) >= oneWeekAgo
+  );
+
   const plValue = stats?.totalProfitLoss ?? 0;
   const plColor = plValue > 0 ? colors.success : plValue < 0 ? colors.error : colors.textMuted;
   const winRate = stats && stats.totalSessionsPlayed > 0
@@ -149,16 +162,16 @@ export default function HomeScreen() {
           <Text style={styles.username} numberOfLines={1}>{user?.username ?? 'Player'}</Text>
         </View>
         <View style={styles.headerRight}>
-          {invitations.length > 0 && (
-            <TouchableOpacity
-              style={styles.notifBtn}
-              onPress={() => navigation.navigate('Invitations')}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="mail" size={18} color={colors.gold} />
+          <TouchableOpacity
+            style={styles.notifBtn}
+            onPress={() => navigation.navigate('Notifications')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="notifications-outline" size={20} color={unreadNotifications > 0 ? colors.gold : colors.textMuted} />
+            {(unreadNotifications > 0 || invitations.length > 0) && (
               <View style={styles.notifDot} />
-            </TouchableOpacity>
-          )}
+            )}
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.avatar}
             onPress={() => navigation.navigate('Profile')}
@@ -204,6 +217,20 @@ export default function HomeScreen() {
               <Text style={styles.heroSub}>
                 {plValue > 0 ? 'You\'re in the green' : plValue < 0 ? 'Keep grinding' : 'Break even'}
               </Text>
+              {hasThisWeekData && thisWeekPL !== null && (
+                <View style={styles.weekChipRow}>
+                  <View style={[styles.weekChip, thisWeekPL >= 0 ? styles.weekChipGreen : styles.weekChipRed]}>
+                    <Ionicons
+                      name={thisWeekPL >= 0 ? 'trending-up' : 'trending-down'}
+                      size={12}
+                      color={thisWeekPL >= 0 ? colors.success : colors.error}
+                    />
+                    <Text style={[styles.weekChipText, { color: thisWeekPL >= 0 ? colors.success : colors.error }]}>
+                      {formatPL(thisWeekPL)} this week
+                    </Text>
+                  </View>
+                </View>
+              )}
               {stats?.currentStreak !== 0 && stats?.currentStreak != null && (
                 <View style={styles.streakChip}>
                   <Text style={styles.streakEmoji}>
@@ -569,11 +596,36 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginTop: 6,
   },
+  weekChipRow: {
+    marginTop: 8,
+  },
+  weekChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    borderRadius: 20,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderWidth: 1,
+  },
+  weekChipGreen: {
+    backgroundColor: 'rgba(39,174,96,0.08)',
+    borderColor: 'rgba(39,174,96,0.25)',
+  },
+  weekChipRed: {
+    backgroundColor: 'rgba(231,76,60,0.08)',
+    borderColor: 'rgba(231,76,60,0.25)',
+  },
+  weekChipText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
   streakChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    marginTop: 10,
+    marginTop: 8,
     alignSelf: 'flex-start',
     backgroundColor: colors.goldFaint,
     borderWidth: 1,

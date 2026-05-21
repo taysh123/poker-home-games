@@ -27,6 +27,7 @@ import JoinSessionScreen from '../screens/JoinSessionScreen';
 import JoinGroupScreen from '../screens/JoinGroupScreen';
 import PlayerProfileScreen from '../screens/PlayerProfileScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
 import Toast from '../components/Toast';
 import * as storage from '../utils/storage';
 
@@ -47,6 +48,7 @@ export type RootStackParamList = {
   JoinSession: { inviteToken: string };
   JoinGroup: { inviteToken: string };
   PlayerProfile: { userId: string; username: string };
+  Notifications: undefined;
   // Kept for TypeScript compat on existing screens that navigate to these by name
   Home: undefined;
   AllSessions: undefined;
@@ -265,6 +267,7 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
             <Stack.Screen name="JoinSession"        component={JoinSessionScreen}         options={{ title: 'Joining Session', headerShown: false }} />
             <Stack.Screen name="JoinGroup"          component={JoinGroupScreen}           options={{ title: 'Joining Group', headerShown: false }} />
             <Stack.Screen name="PlayerProfile"      component={PlayerProfileScreen}       options={{ title: 'Player Profile' }} />
+            <Stack.Screen name="Notifications"      component={NotificationsScreen}        options={{ headerShown: false }} />
           </>
         )}
       </Stack.Navigator>

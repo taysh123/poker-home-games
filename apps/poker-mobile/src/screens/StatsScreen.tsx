@@ -28,11 +28,20 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const CHART_HEIGHT = 80;
 
+type Period = 'week' | 'month' | 'all';
+const PERIODS: { key: Period; label: string }[] = [
+  { key: 'week',  label: 'This Week' },
+  { key: 'month', label: 'This Month' },
+  { key: 'all',   label: 'All Time' },
+];
+
 export default function StatsScreen() {
   const navigation = useNavigation<Nav>();
+  const [period, setPeriod] = useState<Period>('all');
   const [stats, setStats] = useState<MyStatsDto | null>(null);
   const [achievements, setAchievements] = useState<MyAchievementsDto | null>(null);
   const [loading, setLoading] = useState(true);
+  const [periodLoading, setPeriodLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,32 +58,45 @@ export default function StatsScreen() {
     ]).start();
   }, []);
 
-  const load = useCallback(async (isRefresh = false) => {
+  const load = useCallback(async (isRefresh = false, p: Period = 'all') => {
     if (!isRefresh) setLoading(true);
     setError(null);
     try {
       const token = await SecureStore.getItemAsync('accessToken');
       if (!token) throw new Error('Not authenticated');
       const [data, achData] = await Promise.all([
-        getMyStats(token),
-        getMyAchievements(token).catch(() => null),
+        getMyStats(token, p === 'all' ? undefined : p),
+        isRefresh || p !== 'all' ? Promise.resolve(achievements) : getMyAchievements(token).catch(() => null),
       ]);
       setStats(data);
-      setAchievements(achData);
+      if (!isRefresh && p === 'all') setAchievements(achData);
     } catch {
       setError('Failed to load stats.');
     } finally {
       setLoading(false);
+      setPeriodLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [achievements]);
 
   useFocusEffect(useCallback(() => {
-    load();
+    load(false, period);
     runEntrance();
-  }, [load, runEntrance]));
+  }, [load, runEntrance, period]));
 
-  const onRefresh = useCallback(() => { setRefreshing(true); load(true); }, [load]);
+  const onRefresh = useCallback(() => { setRefreshing(true); load(true, period); }, [load, period]);
+
+  const onPeriodChange = useCallback((p: Period) => {
+    setPeriod(p);
+    setPeriodLoading(true);
+    const token = SecureStore.getItemAsync('accessToken').then(t => {
+      if (!t) return;
+      getMyStats(t, p === 'all' ? undefined : p)
+        .then(data => { setStats(data); })
+        .catch(() => {})
+        .finally(() => setPeriodLoading(false));
+    });
+  }, []);
 
   if (loading) {
     return (
@@ -140,12 +162,30 @@ export default function StatsScreen() {
     >
       <Animated.View style={{ opacity, transform: [{ translateY }] }}>
 
+        {/* ── Period Picker ── */}
+        <View style={periodStyles.row}>
+          {PERIODS.map(p => (
+            <TouchableOpacity
+              key={p.key}
+              style={[periodStyles.tab, period === p.key && periodStyles.tabActive]}
+              onPress={() => onPeriodChange(p.key)}
+              activeOpacity={0.7}
+            >
+              <Text style={[periodStyles.tabText, period === p.key && periodStyles.tabTextActive]}>
+                {p.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         {/* ── Hero P&L ── */}
-        <View style={styles.heroCard}>
+        <View style={[styles.heroCard, periodLoading && { opacity: 0.6 }]}>
           <View style={styles.heroInner}>
             <View style={styles.heroTopRow}>
               <View>
-                <Text style={styles.heroLabel}>Lifetime P&L</Text>
+                <Text style={styles.heroLabel}>
+                  {period === 'week' ? 'This Week P&L' : period === 'month' ? 'This Month P&L' : 'Lifetime P&L'}
+                </Text>
                 <Text style={[styles.heroAmount, { color: plColor }]} numberOfLines={1} adjustsFontSizeToFit>
                   {formatPL(stats.totalProfitLoss)}
                 </Text>
@@ -576,6 +616,35 @@ function AchievementBadge({ achievement, earned }: { achievement: AchievementDto
     </View>
   );
 }
+
+const periodStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 10,
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  tabActive: {
+    backgroundColor: colors.goldFaint,
+    borderColor: colors.goldMuted,
+  },
+  tabText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  tabTextActive: {
+    color: colors.goldLight,
+  },
+});
 
 const achStyles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },

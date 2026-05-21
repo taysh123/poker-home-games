@@ -103,14 +103,14 @@ public class AuthController(IMediator mediator) : ControllerBase
         return Ok(response);
     }
 
-    /// <summary>Returns the authenticated user's lifetime stats and recent sessions.</summary>
+    /// <summary>Returns the authenticated user's stats and recent sessions. Optional period: week|month|year|all.</summary>
     [Authorize]
     [HttpGet("stats")]
     [ProducesResponseType(typeof(MyStatsDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetMyStats(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetMyStats([FromQuery] string? period = null, CancellationToken cancellationToken = default)
     {
-        var response = await mediator.Send(new GetMyStatsQuery(), cancellationToken);
+        var response = await mediator.Send(new GetMyStatsQuery(period), cancellationToken);
         return Ok(response);
     }
 

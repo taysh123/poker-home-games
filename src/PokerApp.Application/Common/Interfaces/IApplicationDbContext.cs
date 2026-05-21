@@ -24,6 +24,7 @@ public interface IApplicationDbContext
     DbSet<GroupInviteLink> GroupInviteLinks { get; }
     DbSet<Achievement> Achievements { get; }
     DbSet<UserAchievement> UserAchievements { get; }
+    DbSet<Notification> Notifications { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -43,6 +43,7 @@ public static class DependencyInjection
             sp.GetRequiredService<IOptions<WebSettings>>().Value);
 
         services.AddScoped<IAchievementEvaluator, AchievementEvaluator>();
+        services.AddScoped<INotificationService, NotificationService>();
 
         return services;
     }

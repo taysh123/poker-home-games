@@ -9,7 +9,8 @@ namespace PokerApp.Application.Features.Settlements.Commands.MarkSettlementPaid;
 
 public sealed class MarkSettlementPaidCommandHandler(
     IApplicationDbContext context,
-    ICurrentUserService currentUserService) : IRequestHandler<MarkSettlementPaidCommand>
+    ICurrentUserService currentUserService,
+    INotificationService notificationService) : IRequestHandler<MarkSettlementPaidCommand>
 {
     public async Task Handle(MarkSettlementPaidCommand request, CancellationToken cancellationToken)
     {
@@ -26,5 +27,27 @@ public sealed class MarkSettlementPaidCommandHandler(
 
         settlement.MarkAsPaid();
         await context.SaveChangesAsync(cancellationToken);
+
+        // Notify receiver that their debt was settled (best-effort)
+        try
+        {
+            var payerName = (await context.Users
+                .Where(u => u.Id == callerId)
+                .Select(u => u.Username)
+                .FirstOrDefaultAsync(cancellationToken)) ?? "Someone";
+
+            var notifyUserId = callerId == settlement.PayerUserId
+                ? settlement.ReceiverUserId
+                : settlement.PayerUserId;
+
+            await notificationService.NotifyAsync(
+                notifyUserId,
+                NotificationType.SettlementPaid,
+                "Settlement Paid",
+                $"{payerName} marked a settlement of {settlement.Amount:C0} as paid.",
+                settlement.Id,
+                cancellationToken);
+        }
+        catch { /* notifications are non-critical */ }
     }
 }

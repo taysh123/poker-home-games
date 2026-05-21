@@ -10,7 +10,8 @@ namespace PokerApp.Application.Features.Sessions.Commands.EndSession;
 public sealed class EndSessionCommandHandler(
     IApplicationDbContext context,
     ICurrentUserService currentUserService,
-    IAchievementEvaluator achievementEvaluator) : IRequestHandler<EndSessionCommand>
+    IAchievementEvaluator achievementEvaluator,
+    INotificationService notificationService) : IRequestHandler<EndSessionCommand>
 {
     public async Task Handle(EndSessionCommand request, CancellationToken cancellationToken)
     {
@@ -71,5 +72,27 @@ public sealed class EndSessionCommandHandler(
 
         // Award any newly-earned achievements for the session creator
         await achievementEvaluator.EvaluateAsync(userId, request.SessionId, cancellationToken);
+
+        // Notify all registered players that the session ended (best-effort)
+        try
+        {
+            var playerUserIds = await context.SessionPlayers
+                .Where(sp => sp.SessionId == request.SessionId && sp.UserId.HasValue && sp.UserId.Value != userId)
+                .Select(sp => sp.UserId!.Value)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            if (playerUserIds.Count > 0)
+            {
+                await notificationService.NotifyManyAsync(
+                    playerUserIds,
+                    NotificationType.SessionEnded,
+                    "Session Ended",
+                    $"\"{session.Name}\" has been wrapped up. Check your final results.",
+                    session.Id,
+                    cancellationToken);
+            }
+        }
+        catch { /* notifications are non-critical */ }
     }
 }

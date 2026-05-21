@@ -33,9 +33,10 @@ function authHeader(token: string) {
   return { Authorization: `Bearer ${token}` };
 }
 
-export async function getMyStats(token: string): Promise<MyStatsDto> {
+export async function getMyStats(token: string, period?: 'week' | 'month' | 'year' | 'all'): Promise<MyStatsDto> {
   const { data } = await api.get<MyStatsDto>('/api/auth/stats', {
     headers: authHeader(token),
+    params: period && period !== 'all' ? { period } : undefined,
   });
   return data;
 }

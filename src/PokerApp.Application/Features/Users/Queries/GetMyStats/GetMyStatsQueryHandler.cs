@@ -77,25 +77,42 @@ public sealed class GetMyStatsQueryHandler(
             return totalOut - totalIn;
         }
 
-        var finishedSessions = sessions.Where(s => s.Status == SessionStatus.Finished).ToList();
-        var finishedProfits  = finishedSessions.Select(s => GetProfit(s.Id)).ToList();
+        // All-time finished sessions — used for streak (streak is always lifetime)
+        var allFinishedSessions = sessions.Where(s => s.Status == SessionStatus.Finished).ToList();
+        var allFinishedProfits  = allFinishedSessions.Select(s => GetProfit(s.Id)).ToList();
+
+        // Period filter for aggregate stats
+        var cutoff = request.Period switch
+        {
+            "week"  => (DateTime?)DateTime.UtcNow.AddDays(-7),
+            "month" => DateTime.UtcNow.AddMonths(-1),
+            "year"  => DateTime.UtcNow.AddYears(-1),
+            _       => null
+        };
+
+        var finishedSessions = cutoff.HasValue
+            ? allFinishedSessions.Where(s => s.CreatedAt >= cutoff.Value).ToList()
+            : allFinishedSessions;
+        var finishedProfits = cutoff.HasValue
+            ? finishedSessions.Select(s => GetProfit(s.Id)).ToList()
+            : allFinishedProfits;
 
         var totalProfitLoss = finishedProfits.Sum();
         var biggestWin  = finishedProfits.Any(p => p > 0) ? finishedProfits.Where(p => p > 0).Max() : (decimal?)null;
         var biggestLoss = finishedProfits.Any(p => p < 0) ? finishedProfits.Where(p => p < 0).Min() : (decimal?)null;
-        var winsCount       = finishedProfits.Count(p => p > 0);
-        var lossesCount     = finishedProfits.Count(p => p < 0);
-        var breakEvenCount  = finishedProfits.Count(p => p == 0);
-        var avgProfitLoss   = finishedProfits.Count > 0 ? totalProfitLoss / finishedProfits.Count : 0m;
+        var winsCount      = finishedProfits.Count(p => p > 0);
+        var lossesCount    = finishedProfits.Count(p => p < 0);
+        var breakEvenCount = finishedProfits.Count(p => p == 0);
+        var avgProfitLoss  = finishedProfits.Count > 0 ? totalProfitLoss / finishedProfits.Count : 0m;
 
-        // Streak computation — finishedProfits[0] is the most recent finished session
+        // Streak always computed from all-time (it reflects current form, not period)
         var currentStreak = 0;
         var longestWinStreak = 0;
-        if (finishedProfits.Count > 0)
+        if (allFinishedProfits.Count > 0)
         {
-            for (var i = 0; i < finishedProfits.Count; i++)
+            for (var i = 0; i < allFinishedProfits.Count; i++)
             {
-                var p = finishedProfits[i];
+                var p = allFinishedProfits[i];
                 if (p == 0) break;
                 if (i == 0) { currentStreak = p > 0 ? 1 : -1; }
                 else if (currentStreak > 0 && p > 0) currentStreak++;
@@ -103,20 +120,24 @@ public sealed class GetMyStatsQueryHandler(
                 else break;
             }
             var tempStreak = 0;
-            for (var i = finishedProfits.Count - 1; i >= 0; i--)
+            for (var i = allFinishedProfits.Count - 1; i >= 0; i--)
             {
-                if (finishedProfits[i] > 0) { if (++tempStreak > longestWinStreak) longestWinStreak = tempStreak; }
+                if (allFinishedProfits[i] > 0) { if (++tempStreak > longestWinStreak) longestWinStreak = tempStreak; }
                 else tempStreak = 0;
             }
         }
 
-        var allSessions = sessions.Select(s =>
-        {
-            var profit    = s.Status == SessionStatus.Finished ? GetProfit(s.Id) : (decimal?)null;
-            var groupName = s.GroupId.HasValue ? groups.GetValueOrDefault(s.GroupId.Value, "Unknown") : "Personal";
-            var userRole  = s.GroupId.HasValue ? groupRoles.GetValueOrDefault(s.GroupId.Value, "Member") : "Owner";
-            return new RecentSessionDto(s.Id, s.Name, s.GroupId, groupName, userRole, s.Status.ToString(), profit, s.CreatedAt, s.StartedAt, s.EndedAt);
-        }).ToList();
+        // RecentSessions: active sessions always shown; finished sessions filtered by period
+        var periodFinishedIds = finishedSessions.Select(s => s.Id).ToHashSet();
+        var allSessions = sessions
+            .Where(s => s.Status != SessionStatus.Finished || periodFinishedIds.Contains(s.Id))
+            .Select(s =>
+            {
+                var profit    = s.Status == SessionStatus.Finished ? GetProfit(s.Id) : (decimal?)null;
+                var groupName = s.GroupId.HasValue ? groups.GetValueOrDefault(s.GroupId.Value, "Unknown") : "Personal";
+                var userRole  = s.GroupId.HasValue ? groupRoles.GetValueOrDefault(s.GroupId.Value, "Member") : "Owner";
+                return new RecentSessionDto(s.Id, s.Name, s.GroupId, groupName, userRole, s.Status.ToString(), profit, s.CreatedAt, s.StartedAt, s.EndedAt);
+            }).ToList();
 
         return new MyStatsDto(finishedSessions.Count, totalProfitLoss, biggestWin, biggestLoss,
             winsCount, lossesCount, breakEvenCount, avgProfitLoss, currentStreak, longestWinStreak, allSessions);
