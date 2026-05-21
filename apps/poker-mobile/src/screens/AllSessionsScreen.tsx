@@ -11,15 +11,21 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Animated,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
+import { typography } from '../theme/typography';
+import { shadows } from '../theme/shadows';
+import { pulse } from '../theme/motion';
 import { getMyStats, RecentSessionDto } from '../api/statsApi';
 import { deleteSession, updateSessionName } from '../api/sessionsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import SessionListItem from '../components/SessionListItem';
 import { formatPL, formatDate, formatDuration } from '../utils/formatters';
 import ActionSheet from '../components/ActionSheet';
 
@@ -117,6 +123,13 @@ export default function AllSessionsScreen() {
   const active   = sessions.filter(s => s.status === 'Active');
   const finished = sessions.filter(s => s.status === 'Finished');
 
+  // Pulse for live dot
+  const pulseAnim = React.useRef(new Animated.Value(1)).current;
+  React.useEffect(() => {
+    pulse(pulseAnim).start();
+    return () => pulseAnim.stopAnimation();
+  }, []);
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -128,9 +141,10 @@ export default function AllSessionsScreen() {
   if (error) {
     return (
       <View style={styles.center}>
+        <Ionicons name="alert-circle-outline" size={36} color={colors.textDim} />
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={styles.retryText}>Try Again</Text>
         </TouchableOpacity>
       </View>
     );
@@ -142,85 +156,107 @@ export default function AllSessionsScreen() {
     <View style={styles.flex}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.container, { paddingTop: insets.top + 16 }]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />}
+        contentContainerStyle={[styles.container, { paddingTop: insets.top + 20 }]}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.gold}
+            progressBackgroundColor={colors.surface}
+          />
+        }
+        showsVerticalScrollIndicator={false}
       >
+        {/* ── Screen title ── */}
+        <Text style={styles.screenTitle}>Sessions</Text>
+
         {/* ── Active ── */}
-        <Text style={styles.sectionLabel}>Active Now</Text>
-        {active.length === 0 ? (
-          <TouchableOpacity
-            style={styles.newGameCta}
-            onPress={() => navigation.navigate('NewGame', {})}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.newGameCtaText}>♠  Start New Game</Text>
-            <Text style={styles.newGameCtaChevron}>›</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.activeCard}>
-            {active.map((s, i) => (
-              <React.Fragment key={s.sessionId}>
-                {i > 0 && <View style={styles.divider} />}
-                <TouchableOpacity style={styles.activeRow} onPress={() => openSession(s)} activeOpacity={0.7}>
-                  <View style={styles.liveDot} />
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Active Now</Text>
+          {active.length === 0 ? (
+            <TouchableOpacity
+              style={styles.newGameCta}
+              onPress={() => navigation.navigate('NewGame', {})}
+              activeOpacity={0.88}
+            >
+              <View style={styles.newGameLeft}>
+                <View style={styles.newGameIconWrap}>
+                  <Ionicons name="play" size={16} color={colors.background} />
+                </View>
+                <View>
+                  <Text style={styles.newGameCtaText}>Start New Game</Text>
+                  <Text style={styles.newGameCtaSub}>Deal in your crew for tonight</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="rgba(15,25,35,0.5)" />
+            </TouchableOpacity>
+          ) : (
+            <View style={[styles.card, styles.activeCard]}>
+              {active.map((s, i) => (
+                <TouchableOpacity
+                  key={s.sessionId}
+                  style={[styles.activeRow, i > 0 && styles.divider]}
+                  onPress={() => openSession(s)}
+                  activeOpacity={0.7}
+                >
+                  <Animated.View style={[styles.liveDot, { opacity: pulseAnim }]} />
                   <View style={styles.rowLeft}>
                     <Text style={styles.sessionName}>{s.sessionName}</Text>
-                    <Text style={styles.groupName}>{s.groupName}</Text>
+                    <Text style={styles.groupName}>{s.groupName ?? 'Solo game'}</Text>
                   </View>
-                  <Text style={styles.chevron}>›</Text>
+                  <Ionicons name="chevron-forward" size={18} color={colors.gold} />
                 </TouchableOpacity>
-              </React.Fragment>
-            ))}
-          </View>
-        )}
+              ))}
+            </View>
+          )}
+        </View>
 
-        {/* ── Recent ── */}
-        <Text style={[styles.sectionLabel, { marginTop: 28 }]}>Recent Sessions</Text>
-        {finished.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyCardIcon}>🃏</Text>
-            <Text style={styles.emptyText}>No sessions yet</Text>
-            <Text style={styles.emptySubtext}>Finished games will appear here</Text>
-          </View>
-        ) : (
-          <View style={styles.card}>
-            {finished.map((s, i) => {
-              const pl = s.profitLoss;
-              const plColor = pl != null && pl > 0 ? colors.success : pl != null && pl < 0 ? colors.error : colors.textMuted;
-              const canManage = s.userRole === 'Admin' || s.userRole === 'Owner';
-              return (
-                <React.Fragment key={s.sessionId}>
-                  {i > 0 && <View style={styles.divider} />}
-                  <View style={styles.rowWrapper}>
-                    <TouchableOpacity style={styles.row} onPress={() => openSession(s)} activeOpacity={0.7}>
-                      <View style={styles.rowLeft}>
-                        <Text style={styles.sessionName}>{s.sessionName}</Text>
-                        <Text style={styles.groupName}>
-                          {s.groupName}  ·  {formatDate(s.createdAt)}
-                          {s.startedAt && s.endedAt ? `  ·  ${formatDuration(s.startedAt, s.endedAt)}` : ''}
-                        </Text>
-                      </View>
-                      {pl != null ? (
-                        <Text style={[styles.plValue, { color: plColor }]}>{formatPL(pl)}</Text>
-                      ) : (
-                        <Text style={styles.chevron}>›</Text>
-                      )}
-                    </TouchableOpacity>
+        {/* ── Recent Sessions ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Recent Sessions</Text>
+          {finished.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <View style={styles.emptyIconWrap}>
+                <Ionicons name="layers-outline" size={28} color={colors.textDim} />
+              </View>
+              <Text style={styles.emptyText}>No sessions yet</Text>
+              <Text style={styles.emptySubtext}>Finished games will appear here</Text>
+            </View>
+          ) : (
+            <View style={styles.card}>
+              {finished.map((s, i) => {
+                const canManage = s.userRole === 'Admin' || s.userRole === 'Owner';
+                return (
+                  <View key={s.sessionId} style={styles.rowWrapper}>
+                    <View style={{ flex: 1 }}>
+                      <SessionListItem
+                        name={s.sessionName}
+                        meta={[
+                          s.groupName ?? 'Solo',
+                          formatDate(s.createdAt),
+                          s.startedAt && s.endedAt ? formatDuration(s.startedAt, s.endedAt) : null,
+                        ].filter(Boolean).join('  ·  ')}
+                        profitLoss={s.profitLoss}
+                        status={s.status}
+                        onPress={() => openSession(s)}
+                        isFirst={i === 0}
+                      />
+                    </View>
                     {canManage && (
                       <TouchableOpacity
                         style={styles.moreBtn}
                         onPress={() => setActionSheetSession(s)}
                         hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
                       >
-                        <Text style={styles.moreBtnText}>···</Text>
+                        <Ionicons name="ellipsis-horizontal" size={16} color={colors.textMuted} />
                       </TouchableOpacity>
                     )}
                   </View>
-                </React.Fragment>
-              );
-            })}
-          </View>
-        )}
+                );
+              })}
+            </View>
+          )}
+        </View>
       </ScrollView>
 
       {/* ── Action sheet — outside ScrollView ── */}
@@ -345,30 +381,46 @@ export default function AllSessionsScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1, backgroundColor: colors.background },
-  container: { padding: 20, paddingBottom: 48 },
-  center: { flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', gap: 12 },
-
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 10,
+  container: { paddingHorizontal: 20, paddingBottom: 120 },
+  center: {
+    flex: 1,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 14,
+    padding: 32,
   },
 
-  activeCard: {
+  screenTitle: {
+    ...typography.h1,
+    color: colors.text,
+    marginBottom: 24,
+  },
+
+  section: { marginBottom: 28 },
+  sectionLabel: {
+    ...typography.caps,
+    color: colors.textMuted,
+    marginBottom: 10,
+    paddingHorizontal: 2,
+  },
+
+  card: {
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.gold,
-    borderRadius: 14,
+    borderColor: colors.border,
+    borderRadius: 16,
     overflow: 'hidden',
+    ...shadows.sm,
+  },
+  activeCard: {
+    borderColor: colors.goldMuted,
   },
   activeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 15,
     gap: 12,
   },
   liveDot: {
@@ -376,68 +428,71 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     backgroundColor: colors.gold,
-    shadowColor: colors.gold,
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 4,
-  },
-
-  card: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 14,
-    overflow: 'hidden',
-  },
-  rowWrapper: { flexDirection: 'row', alignItems: 'center' },
-  row: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
   },
   rowLeft: { flex: 1, gap: 3 },
-  sessionName: { fontSize: 15, fontWeight: '700', color: colors.text },
-  groupName:   { fontSize: 12, color: colors.textMuted },
-  plValue:     { fontSize: 14, fontWeight: '700' },
-  chevron:     { fontSize: 20, color: colors.textDim, fontWeight: '300' },
-  moreBtn:     { paddingHorizontal: 12, paddingVertical: 14 },
-  moreBtnText: { fontSize: 18, color: colors.textMuted, letterSpacing: 2 },
+  sessionName: { ...typography.label, color: colors.text },
+  groupName:   { ...typography.caption, color: colors.textMuted },
+  rowWrapper:  { flexDirection: 'row', alignItems: 'center' },
+  moreBtn:     { paddingHorizontal: 14, paddingVertical: 16 },
 
-  divider: { height: 1, backgroundColor: colors.border },
+  divider: { borderTopWidth: 1, borderTopColor: colors.border },
 
   newGameCta: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.gold,
-    borderRadius: 14,
-    paddingHorizontal: 20,
+    borderRadius: 16,
+    paddingHorizontal: 18,
     paddingVertical: 16,
-    shadowColor: colors.gold,
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 5,
+    ...shadows.gold,
   },
-  newGameCtaText:    { flex: 1, fontSize: 16, fontWeight: '800', color: colors.background },
-  newGameCtaChevron: { fontSize: 24, color: colors.bgOverlay, fontWeight: '300' },
+  newGameLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  newGameIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: 'rgba(15,25,35,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  newGameCtaText: { ...typography.label, color: colors.background },
+  newGameCtaSub:  { ...typography.caption, color: 'rgba(15,25,35,0.6)', marginTop: 1 },
 
   emptyCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 14,
-    padding: 24,
+    borderRadius: 16,
+    padding: 32,
     alignItems: 'center' as const,
+    gap: 8,
   },
-  emptyCardIcon: { fontSize: 28, marginBottom: 4 },
-  emptyText:     { fontSize: 14, fontWeight: '600', color: colors.textMuted },
-  emptySubtext:  { fontSize: 12, color: colors.textDim, marginTop: 2 },
-  errorText:  { fontSize: 15, color: colors.error, textAlign: 'center', marginHorizontal: 24 },
-  retryBtn:   { borderWidth: 1, borderColor: colors.gold, borderRadius: 8, paddingHorizontal: 20, paddingVertical: 8 },
-  retryText:  { color: colors.gold, fontWeight: '600' },
+  emptyIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceHigh,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  emptyText:    { ...typography.labelSmall, color: colors.textMuted },
+  emptySubtext: { ...typography.caption, color: colors.textDim },
+  errorText:  { ...typography.body, color: colors.textMuted, textAlign: 'center' },
+  retryBtn:   {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+  },
+  retryText:  { ...typography.labelSmall, color: colors.textMuted },
 
   // ── Modals ─────────────────────────────────────────────────────────────
   modalOverlay: {

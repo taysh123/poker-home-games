@@ -17,9 +17,11 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
+import { shadows } from '../theme/shadows';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import {
@@ -638,7 +640,7 @@ export default function SessionScreen({ route, navigation }: Props) {
         {/* ── Header ── */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={12}>
-            <Text style={styles.backArrow}>‹</Text>
+            <Ionicons name="chevron-back" size={20} color={colors.text} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle} numberOfLines={1}>{session.name}</Text>
@@ -659,21 +661,23 @@ export default function SessionScreen({ route, navigation }: Props) {
           )}
           {isFinished && balances.length > 0 && (
             <TouchableOpacity onPress={handleShareCard} style={styles.exportBtn} disabled={sharing}>
-              {sharing ? <ActivityIndicator color={colors.gold} size="small" /> : <Text style={styles.exportText}>Share</Text>}
+              {sharing
+                ? <ActivityIndicator color={colors.gold} size="small" />
+                : <Ionicons name="share-outline" size={16} color={colors.gold} />}
             </TouchableOpacity>
           )}
           {isAdminOrOwner && (isActive || isDraft) && (
             <TouchableOpacity onPress={handleShareInvite} style={styles.exportBtn} disabled={sharingInvite} hitSlop={8}>
               {sharingInvite
                 ? <ActivityIndicator color={colors.gold} size="small" />
-                : <Text style={styles.exportText}>Invite</Text>}
+                : <Ionicons name="person-add-outline" size={16} color={colors.gold} />}
             </TouchableOpacity>
           )}
           {isAdminOrOwner && !isActive && (
             <TouchableOpacity onPress={handleDeleteSession} style={styles.deleteBtn} disabled={deleteLoading} hitSlop={8}>
               {deleteLoading
                 ? <ActivityIndicator color={colors.error} size="small" />
-                : <Text style={styles.deleteBtnText}>🗑</Text>}
+                : <Ionicons name="trash-outline" size={16} color={colors.error} />}
             </TouchableOpacity>
           )}
         </View>
@@ -793,20 +797,18 @@ export default function SessionScreen({ route, navigation }: Props) {
                         {isActive && (
                           <View style={styles.txButtons}>
                             <TouchableOpacity
-                              style={styles.quickTxBtn}
+                              style={styles.txBtn}
                               onPress={() => openTransaction('buyin', player)}
                               activeOpacity={0.7}
                             >
-                              <Text style={styles.quickTxIcon}>↑</Text>
-                              <Text style={styles.quickTxLabel}>In</Text>
+                              <Text style={styles.txBtnText}>BUY</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                              style={[styles.quickTxBtn, styles.quickTxBtnOut]}
+                              style={[styles.txBtn, styles.txBtnCash]}
                               onPress={() => openTransaction('cashout', player)}
                               activeOpacity={0.7}
                             >
-                              <Text style={[styles.quickTxIcon, styles.quickTxIconOut]}>↓</Text>
-                              <Text style={[styles.quickTxLabel, styles.quickTxLabelOut]}>Out</Text>
+                              <Text style={[styles.txBtnText, { color: colors.success }]}>OUT</Text>
                             </TouchableOpacity>
                           </View>
                         )}
@@ -1674,35 +1676,58 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 56 : 20,
-    paddingBottom: 12,
+    paddingHorizontal: 12,
+    paddingTop: Platform.OS === 'ios' ? 56 : 24,
+    paddingBottom: 14,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    gap: 10,
+    gap: 8,
   },
-  backBtn: { padding: 4 },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: colors.surfaceHigh,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   backArrow: { fontSize: 28, color: colors.text, lineHeight: 32 },
   headerCenter: { flex: 1 },
   headerTitle: { ...typography.h3, color: colors.text },
-  headerMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
-  timer: { fontSize: 12, color: colors.textMuted, fontWeight: '600' },
+  headerMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3 },
+  timer: {
+    fontSize: 12,
+    color: colors.gold,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
   liveDot: {
-    width: 8,
-    height: 8,
+    width: 7,
+    height: 7,
     borderRadius: 4,
     backgroundColor: colors.gold,
-    shadowColor: colors.gold,
-    shadowOpacity: 0.9,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 4,
   },
-  exportBtn: { padding: 8 },
-  exportText: { color: colors.gold, fontSize: 14, fontWeight: '600' },
-  deleteBtn: { padding: 8 },
-  deleteBtnText: { fontSize: 18 },
+  exportBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  exportText: { color: colors.gold, fontSize: 12, fontWeight: '700' },
+  deleteBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    backgroundColor: colors.errorFaint,
+    borderWidth: 1,
+    borderColor: colors.errorMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteBtnText: { fontSize: 16 },
 
   // Meta chips
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingVertical: 12 },
@@ -1755,57 +1780,67 @@ const styles = StyleSheet.create({
   playerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
     gap: 12,
-    minHeight: 68,
+    minHeight: 72,
   },
   playerRowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
   playerRowFirst: {
-    backgroundColor: 'rgba(201,168,76,0.06)',
-    shadowColor: colors.gold,
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
+    backgroundColor: colors.goldFaint,
   },
   playerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 13,
     backgroundColor: colors.surfaceHigh,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
-  playerAvatarFirst: { backgroundColor: 'rgba(201,168,76,0.20)', borderWidth: 1, borderColor: colors.gold },
-  playerAvatarText: { fontSize: 16, fontWeight: '700', color: colors.textMuted },
-  playerInfo: { flex: 1, gap: 2 },
+  playerAvatarFirst: {
+    backgroundColor: colors.goldSubtle,
+    borderWidth: 1.5,
+    borderColor: colors.goldMuted,
+  },
+  playerAvatarText: { fontSize: 16, fontWeight: '800', color: colors.textMuted },
+  playerInfo: { flex: 1, gap: 3 },
   playerNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  playerName: { fontSize: 16, fontWeight: '700', color: colors.text },
+  playerName: { ...typography.label, color: colors.text },
   playerNameFirst: { color: colors.gold },
-  playerMeta: { fontSize: 12, color: colors.textMuted },
+  playerMeta: { ...typography.caption, color: colors.textMuted },
   rankLabel: { fontSize: 14 },
-  playerRight: { alignItems: 'flex-end', gap: 6 },
-  plValue: { fontSize: 18, fontWeight: '800' },
-  plValueFirst: { fontSize: 22 },
+  playerRight: { alignItems: 'flex-end', gap: 8 },
+  plValue: { ...typography.amount, letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
+  plValueFirst: { fontSize: 22, fontWeight: '800' },
   plPos: { color: colors.success },
   plNeg: { color: colors.error },
   plZero: { color: colors.textMuted },
   txButtons: { flexDirection: 'row', gap: 6 },
   txBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
     borderRadius: 8,
-    backgroundColor: 'rgba(201,168,76,0.15)',
+    backgroundColor: colors.goldFaint,
     borderWidth: 1,
-    borderColor: colors.gold,
+    borderColor: colors.goldMuted,
+    minWidth: 42,
+    alignItems: 'center',
   },
-  txBtnCash: { backgroundColor: 'rgba(39,174,96,0.12)', borderColor: colors.success },
-  txBtnText: { fontSize: 12, fontWeight: '700', color: colors.gold },
-  removeBtn: { padding: 4 },
-  removeBtnText: { fontSize: 16, color: colors.error },
+  txBtnCash: { backgroundColor: 'rgba(39,174,96,0.10)', borderColor: 'rgba(39,174,96,0.3)' },
+  txBtnText: { fontSize: 11, fontWeight: '800', color: colors.gold, letterSpacing: 0.3 },
+  removeBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: colors.errorFaint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeBtnText: { fontSize: 14, color: colors.error },
 
-  emptyPlayers: { padding: 24, alignItems: 'center' },
-  emptyPlayersText: { color: colors.textMuted, fontSize: 14 },
+  emptyPlayers: { padding: 28, alignItems: 'center', gap: 6 },
+  emptyPlayersText: { ...typography.body, color: colors.textMuted, textAlign: 'center' },
 
   // End Game sticky CTA bar
   endGameBar: {
