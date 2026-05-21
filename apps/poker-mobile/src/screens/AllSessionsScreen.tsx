@@ -124,8 +124,12 @@ export default function AllSessionsScreen() {
     }
   }
 
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+
   const active   = sessions.filter(s => s.status === 'Active');
-  const finished = sessions.filter(s => s.status === 'Finished');
+  const allFinished = sessions.filter(s => s.status === 'Finished');
+  const groupNames = Array.from(new Set(allFinished.map(s => s.groupName ?? 'Solo'))).sort();
+  const finished = selectedGroup ? allFinished.filter(s => (s.groupName ?? 'Solo') === selectedGroup) : allFinished;
 
   // Pulse for live dot
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
@@ -237,7 +241,32 @@ export default function AllSessionsScreen() {
 
         {/* ── Recent Sessions ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Recent Sessions</Text>
+          <View style={styles.sectionLabelRow}>
+            <Text style={styles.sectionLabel}>Recent Sessions</Text>
+            {selectedGroup && (
+              <TouchableOpacity onPress={() => setSelectedGroup(null)}>
+                <Text style={styles.clearFilter}>Clear filter</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {groupNames.length > 1 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterChips}
+            >
+              {groupNames.map(g => (
+                <TouchableOpacity
+                  key={g}
+                  style={[styles.filterChip, selectedGroup === g && styles.filterChipActive]}
+                  onPress={() => setSelectedGroup(prev => prev === g ? null : g)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.filterChipText, selectedGroup === g && styles.filterChipTextActive]}>{g}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
           {finished.length === 0 ? (
             <View style={styles.emptyCard}>
               <View style={styles.emptyIconWrap}>
@@ -423,10 +452,32 @@ const styles = StyleSheet.create({
   },
 
   section: { marginBottom: 28 },
+  sectionLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    paddingHorizontal: 2,
+  },
+  clearFilter: { fontSize: 12, color: colors.gold, fontWeight: '600' },
+  filterChips: { flexDirection: 'row', gap: 8, paddingBottom: 12 },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  filterChipActive: {
+    backgroundColor: colors.goldFaint,
+    borderColor: colors.goldMuted,
+  },
+  filterChipText: { fontSize: 12, fontWeight: '600', color: colors.textMuted },
+  filterChipTextActive: { color: colors.gold },
   sectionLabel: {
     ...typography.caps,
     color: colors.textMuted,
-    marginBottom: 10,
     paddingHorizontal: 2,
   },
 

@@ -9,7 +9,8 @@ namespace PokerApp.Application.Features.Groups.Commands.InviteUser;
 
 public sealed class InviteUserToGroupCommandHandler(
     IApplicationDbContext context,
-    ICurrentUserService currentUserService) : IRequestHandler<InviteUserToGroupCommand, InviteUserToGroupResponse>
+    ICurrentUserService currentUserService,
+    INotificationService notificationService) : IRequestHandler<InviteUserToGroupCommand, InviteUserToGroupResponse>
 {
     public async Task<InviteUserToGroupResponse> Handle(InviteUserToGroupCommand request, CancellationToken cancellationToken)
     {
@@ -45,6 +46,19 @@ public sealed class InviteUserToGroupCommandHandler(
 
         await context.GroupInvitations.AddAsync(invitation, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
+
+        try
+        {
+            var senderName = currentUserService.Username ?? "Someone";
+            await notificationService.NotifyAsync(
+                invitedUser.Id,
+                NotificationType.GroupInviteReceived,
+                "Group Invitation",
+                $"{senderName} invited you to join \"{group.Name}\"",
+                invitation.Id,
+                cancellationToken);
+        }
+        catch { /* notifications are non-critical */ }
 
         return new InviteUserToGroupResponse(invitation.Id, group.Name, invitedUser.Username);
     }
