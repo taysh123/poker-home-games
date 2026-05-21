@@ -1,6 +1,3 @@
-# Frontend app — not part of the backend image
-apps/
-
 # IDE and local tooling
 **/.vs/
 **/.idea/
@@ -15,11 +12,14 @@ apps/
 **/out2/
 **/publish/
 
-# Docs / config that the container doesn't need
+# Docs / config
 *.md
 LICENSE
 .git/
 .gitignore
 vercel.json
-railway.toml
 eas.json
+
+# Frontend app
+apps/poker-mobile/node_modules/
+apps/poker-mobile/.expo/
