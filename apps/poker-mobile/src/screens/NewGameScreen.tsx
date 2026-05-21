@@ -11,9 +11,11 @@ import {
   KeyboardAvoidingView,
   Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
+import { shadows } from '../theme/shadows';
 import { typography } from '../theme/typography';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -215,11 +217,16 @@ export default function NewGameScreen({ route, navigation }: Props) {
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => step > 1 ? goToStep(step - 1) : navigation.goBack()} hitSlop={12}>
-          <Text style={styles.backArrow}>‹</Text>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => step > 1 ? goToStep(step - 1) : navigation.goBack()}
+          hitSlop={12}
+          activeOpacity={0.75}
+        >
+          <Ionicons name="chevron-back" size={20} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>New Game</Text>
-        <View style={{ width: 32 }} />
+        <View style={{ width: 36 }} />
       </View>
 
       {/* Step indicator */}
@@ -233,9 +240,10 @@ export default function NewGameScreen({ route, navigation }: Props) {
               {i > 0 && <View style={[styles.stepConnector, (done || active) && styles.stepConnectorActive]} />}
               <View style={styles.stepItem}>
                 <View style={[styles.stepCircle, active && styles.stepCircleActive, done && styles.stepCircleDone]}>
-                  <Text style={[styles.stepCircleText, active && styles.stepCircleTextActive, done && styles.stepCircleTextDone]}>
-                    {done ? '✓' : String(n)}
-                  </Text>
+                  {done
+                    ? <Ionicons name="checkmark" size={13} color={colors.background} />
+                    : <Text style={[styles.stepCircleText, active && styles.stepCircleTextActive]}>{String(n)}</Text>
+                  }
                 </View>
                 <Text style={[styles.stepLabel, active && styles.stepLabelActive]}>{label}</Text>
               </View>
@@ -319,7 +327,7 @@ export default function NewGameScreen({ route, navigation }: Props) {
               </View>
             </View>
 
-            <PrimaryButton label="Next →" onPress={handleNextStep} style={styles.actionButton} />
+            <PrimaryButton label="Next" onPress={handleNextStep} style={styles.actionButton} />
           </View>
         )}
 
@@ -347,7 +355,7 @@ export default function NewGameScreen({ route, navigation }: Props) {
                             {m.username}
                             {m.userId === user?.userId ? ' (you)' : ''}
                           </Text>
-                          {selected && <Text style={styles.memberChipCheck}>✓</Text>}
+                          {selected && <Ionicons name="checkmark" size={12} color={colors.gold} />}
                         </TouchableOpacity>
                       );
                     })}
@@ -406,7 +414,7 @@ export default function NewGameScreen({ route, navigation }: Props) {
                       onPress={() => removeGuest((p as any).name)}
                     >
                       <Text style={styles.addedGuestChipText}>{(p as any).name}</Text>
-                      <Text style={styles.addedGuestRemove}> ✕</Text>
+                      <Ionicons name="close" size={12} color={colors.textMuted} style={{ marginLeft: 4 }} />
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -414,8 +422,8 @@ export default function NewGameScreen({ route, navigation }: Props) {
             )}
 
             <View style={styles.actionRow}>
-              <PrimaryButton label="← Back" onPress={() => goToStep(1)} variant="outline" fullWidth={false} style={styles.backBtn} />
-              <PrimaryButton label="Review →" onPress={handleNextStep} fullWidth={false} style={styles.nextBtn} />
+              <PrimaryButton label="Back" onPress={() => goToStep(1)} variant="outline" fullWidth={false} style={styles.stepBackBtn} />
+              <PrimaryButton label="Review" onPress={handleNextStep} fullWidth={false} style={styles.nextBtn} />
             </View>
           </View>
         )}
@@ -455,9 +463,9 @@ export default function NewGameScreen({ route, navigation }: Props) {
             </View>
 
             <View style={styles.actionRow}>
-              <PrimaryButton label="← Back" onPress={() => goToStep(2)} variant="outline" fullWidth={false} style={styles.backBtn} />
+              <PrimaryButton label="Back" onPress={() => goToStep(2)} variant="outline" fullWidth={false} style={styles.stepBackBtn} />
               <PrimaryButton
-                label="Start Game ▶"
+                label="Start Game"
                 onPress={handleStartGame}
                 loading={starting}
                 fullWidth={false}
@@ -481,14 +489,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'ios' ? 56 : 20,
-    paddingBottom: 12,
+    paddingBottom: 14,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     gap: 12,
   },
-  backArrow: { fontSize: 28, color: colors.text, lineHeight: 32 },
-  headerTitle: { flex: 1, ...typography.h3, color: colors.text },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: { flex: 1, ...typography.h3, color: colors.text, textAlign: 'center' },
 
   // Step indicator
   stepIndicator: {
@@ -626,16 +643,17 @@ const styles = StyleSheet.create({
 
   actionRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
   actionButton: { marginTop: 8 },
-  backBtn: { flex: 1 },
+  stepBackBtn: { flex: 1 },
   nextBtn: { flex: 2 },
 
   reviewCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.gold,
+    borderColor: colors.goldMuted,
     borderRadius: 16,
     padding: 20,
     gap: 8,
+    ...shadows.goldSm,
   },
   reviewName: { fontSize: 22, fontWeight: '800', color: colors.text },
   reviewMeta: { fontSize: 14, color: colors.textMuted },
