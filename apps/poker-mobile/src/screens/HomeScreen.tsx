@@ -19,7 +19,7 @@ import { typography } from '../theme/typography';
 import { shadows } from '../theme/shadows';
 import { pulse, fadeIn, staggered, slideUp } from '../theme/motion';
 import { useAuth } from '../context/AuthContext';
-import { getMyGroups, getMyInvitations, MyGroupDto, PendingInvitationDto } from '../api/groupsApi';
+import { getMyGroups, getMyInvitations, getCrossGroupActivity, MyGroupDto, PendingInvitationDto, CrossGroupActivityDto } from '../api/groupsApi';
 import { getMyNotifications } from '../api/notificationsApi';
 import { getMyStats, MyStatsDto, RecentSessionDto } from '../api/statsApi';
 import { getMyPendingSettlements, MyPendingSettlementDto } from '../api/settlementsApi';
@@ -28,7 +28,7 @@ import SkeletonCard from '../components/SkeletonCard';
 import StatWidget from '../components/StatWidget';
 import SessionListItem from '../components/SessionListItem';
 import GroupListItem from '../components/GroupListItem';
-import { formatPL, formatDate, formatDuration } from '../utils/formatters';
+import { formatPL, formatDate, formatDuration, timeAgo } from '../utils/formatters';
 import { useActiveSession } from '../context/ActiveSessionContext';
 
 type HomeNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -45,6 +45,7 @@ export default function HomeScreen() {
   const [statsLoading, setStatsLoading] = useState(true);
   const [invitations, setInvitations] = useState<PendingInvitationDto[]>([]);
   const [pendingSettlements, setPendingSettlements] = useState<MyPendingSettlementDto[]>([]);
+  const [crossGroupActivity, setCrossGroupActivity] = useState<CrossGroupActivityDto[]>([]);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -78,18 +79,20 @@ export default function HomeScreen() {
     try {
       const token = await SecureStore.getItemAsync('accessToken');
       if (!token) return;
-      const [groupsData, statsData, invData, pendingData, notifData] = await Promise.all([
+      const [groupsData, statsData, invData, pendingData, notifData, activityData] = await Promise.all([
         getMyGroups(token),
         getMyStats(token),
         getMyInvitations(token),
         getMyPendingSettlements(token).catch(() => [] as MyPendingSettlementDto[]),
         getMyNotifications(token).catch(() => null),
+        getCrossGroupActivity(token).catch(() => [] as CrossGroupActivityDto[]),
       ]);
       setGroups(groupsData);
       setStats(statsData);
       setInvitations(invData);
       setPendingSettlements(pendingData);
       setUnreadNotifications(notifData?.unreadCount ?? 0);
+      setCrossGroupActivity(activityData);
     } catch {
       // silent — home screen degrades gracefully
     } finally {
@@ -291,6 +294,26 @@ export default function HomeScreen() {
           </TouchableOpacity>
         )}
 
+        {/* ── Pending Invitations Banner ── */}
+        {invitations.length > 0 && (
+          <TouchableOpacity
+            style={styles.invitationsAlert}
+            onPress={() => navigation.navigate('Invitations')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.inviteIconWrap}>
+              <Ionicons name="mail-outline" size={18} color={colors.gold} />
+            </View>
+            <View style={styles.alertContent}>
+              <Text style={styles.alertTitle}>
+                {invitations.length} group invitation{invitations.length !== 1 ? 's' : ''}
+              </Text>
+              <Text style={styles.alertSub}>Tap to view and respond</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
+          </TouchableOpacity>
+        )}
+
         {/* ── New Game CTA ── */}
         <TouchableOpacity
           style={styles.newGameCard}
@@ -412,7 +435,7 @@ export default function HomeScreen() {
         )}
 
         {/* ── My Groups ── */}
-        <View style={[styles.section, styles.lastSection]}>
+        <View style={styles.section}>
           <View style={styles.sectionRow}>
             <Text style={styles.sectionTitle}>My Groups</Text>
             {groups.length > 0 && (
@@ -475,6 +498,47 @@ export default function HomeScreen() {
             </View>
           )}
         </View>
+
+        {/* ── Group Activity ── */}
+        {crossGroupActivity.length > 0 && (
+          <View style={[styles.section, styles.lastSection]}>
+            <View style={styles.sectionRow}>
+              <Text style={styles.sectionTitle}>Recent Activity</Text>
+            </View>
+            <View style={styles.card}>
+              {crossGroupActivity.slice(0, 5).map((item, i) => {
+                const iconMap: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
+                  SessionEnded:   'flag-outline',
+                  SessionStarted: 'play-circle-outline',
+                  SessionCreated: 'add-circle-outline',
+                  MemberJoined:   'person-add-outline',
+                  MemberLeft:     'person-remove-outline',
+                  MemberRemoved:  'close-circle-outline',
+                  PlayerJoined:   'people-outline',
+                };
+                const icon = iconMap[item.type] ?? 'ellipse-outline';
+                return (
+                  <View
+                    key={item.id}
+                    style={[styles.activityRow, i > 0 && styles.activityBorder]}
+                  >
+                    <View style={styles.activityIcon}>
+                      <Ionicons name={icon} size={15} color={colors.textMuted} />
+                    </View>
+                    <View style={styles.activityContent}>
+                      <Text style={styles.activityDesc} numberOfLines={1}>{item.description}</Text>
+                      <View style={styles.activityMeta}>
+                        <Text style={styles.activityGroup}>{item.groupName}</Text>
+                        <Text style={styles.activityDot}>·</Text>
+                        <Text style={styles.activityTime}>{timeAgo(item.createdAt)}</Text>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
 
       </Animated.View>
     </ScrollView>
@@ -714,6 +778,28 @@ const styles = StyleSheet.create({
   alertTitle: { ...typography.labelSmall, color: colors.text },
   alertSub: { ...typography.caption, color: colors.textMuted },
 
+  // ── Invitations Alert ────────────────────────────────────────────────────
+  invitationsAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.goldMuted,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 12,
+    gap: 12,
+  },
+  inviteIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: colors.goldFaint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
   // ── New Game CTA ─────────────────────────────────────────────────────────
   newGameCard: {
     flexDirection: 'row',
@@ -848,4 +934,29 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
   },
   emptyBtnText: { ...typography.labelSmall, color: colors.background },
+
+  // ── Group Activity ────────────────────────────────────────────────────────
+  activityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  activityBorder: { borderTopWidth: 1, borderTopColor: colors.border },
+  activityIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    backgroundColor: colors.surfaceHigh,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  activityContent: { flex: 1, gap: 3 },
+  activityDesc: { ...typography.bodySmall, color: colors.text },
+  activityMeta: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  activityGroup: { ...typography.caption, color: colors.gold, fontWeight: '600' },
+  activityDot: { ...typography.caption, color: colors.textDim },
+  activityTime: { ...typography.caption, color: colors.textMuted },
 });

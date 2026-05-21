@@ -247,3 +247,21 @@ export async function getGroupRivals(token: string, groupId: string): Promise<Gr
   );
   return data;
 }
+
+export type CrossGroupActivityDto = {
+  id: string;
+  groupId: string;
+  groupName: string;
+  actorName: string;
+  type: string;
+  description: string;
+  createdAt: string;
+};
+
+export async function getCrossGroupActivity(token: string): Promise<CrossGroupActivityDto[]> {
+  const { data } = await api.get<CrossGroupActivityDto[]>(
+    '/api/groups/activity',
+    { headers: authHeader(token) },
+  );
+  return data;
+}

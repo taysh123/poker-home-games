@@ -13,6 +13,7 @@ using PokerApp.Application.Features.Groups.Queries.GetGroupById;
 using PokerApp.Application.Features.Groups.Queries.GetGroupActivity;
 using PokerApp.Application.Features.Groups.Queries.GetGroupLeaderboard;
 using PokerApp.Application.Features.Groups.Queries.GetGroupMembers;
+using PokerApp.Application.Features.Groups.Queries.GetCrossGroupActivity;
 using PokerApp.Application.Features.Groups.Queries.GetGroupRivals;
 using PokerApp.Application.Features.Groups.Queries.GetMyGroups;
 
@@ -44,6 +45,16 @@ public class GroupsController(IMediator mediator) : ControllerBase
     {
         var response = await mediator.Send(new GetMyGroupsQuery(), cancellationToken);
         return Ok(response);
+    }
+
+    /// <summary>Returns the 10 most recent activity events across all groups the caller belongs to.</summary>
+    [HttpGet("activity")]
+    [ProducesResponseType(typeof(List<CrossGroupActivityDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetCrossGroupActivity(CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GetCrossGroupActivityQuery(), cancellationToken);
+        return Ok(result);
     }
 
     /// <summary>Returns group details. Only members can view.</summary>
