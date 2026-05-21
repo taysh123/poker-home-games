@@ -22,9 +22,21 @@ public sealed class GetGroupLeaderboardQueryHandler(
         if (!isMember)
             throw new UnauthorizedException("You are not a member of this group.");
 
-        var finishedSessionIds = await context.Sessions
+        var cutoff = request.Period switch
+        {
+            "week"  => (DateTime?)DateTime.UtcNow.AddDays(-7),
+            "month" => DateTime.UtcNow.AddMonths(-1),
+            _       => null
+        };
+
+        var finishedSessionQuery = context.Sessions
             .AsNoTracking()
-            .Where(s => s.GroupId == request.GroupId && s.Status == SessionStatus.Finished)
+            .Where(s => s.GroupId == request.GroupId && s.Status == SessionStatus.Finished);
+
+        if (cutoff.HasValue)
+            finishedSessionQuery = finishedSessionQuery.Where(s => s.CreatedAt >= cutoff.Value);
+
+        var finishedSessionIds = await finishedSessionQuery
             .Select(s => s.Id)
             .ToListAsync(cancellationToken);
 

@@ -222,10 +222,14 @@ export async function joinGroupByInviteLink(
 export async function getGroupLeaderboard(
   token: string,
   groupId: string,
+  period?: 'week' | 'month' | 'all',
 ): Promise<PlayerLeaderboardEntryDto[]> {
   const { data } = await api.get<PlayerLeaderboardEntryDto[]>(
     `/api/groups/${groupId}/leaderboard`,
-    { headers: authHeader(token) },
+    {
+      headers: authHeader(token),
+      params: period && period !== 'all' ? { period } : undefined,
+    },
   );
   return data;
 }

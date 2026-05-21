@@ -59,6 +59,8 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   const [searchLoading, setSearchLoading] = useState(false);
   const [rivals, setRivals] = useState<GroupRivalryDto[]>([]);
   const [shareLoading, setShareLoading] = useState(false);
+  const [lbPeriod, setLbPeriod] = useState<'week' | 'month' | 'all'>('all');
+  const [lbLoading, setLbLoading] = useState(false);
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isAdminOrOwner = group?.myRole === 'Admin' || group?.myRole === 'Owner';
@@ -88,6 +90,20 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
       setError('Failed to load group details.');
     } finally {
       setLoading(false);
+    }
+  }, [groupId]);
+
+  const loadLeaderboard = useCallback(async (period: 'week' | 'month' | 'all') => {
+    setLbLoading(true);
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!token) return;
+      const data = await getGroupLeaderboard(token, groupId, period);
+      setLeaderboard(data);
+    } catch {
+      // silent — leaderboard refresh failure is non-critical
+    } finally {
+      setLbLoading(false);
     }
   }, [groupId]);
 
@@ -449,9 +465,29 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
           )}
 
           {/* Leaderboard */}
-          {leaderboard.length > 0 && (
-            <View style={styles.leaderboardSection}>
+          <View style={styles.leaderboardSection}>
+            <View style={styles.lbHeader}>
               <Text style={styles.sectionTitle}>Leaderboard</Text>
+              {lbLoading && <ActivityIndicator size="small" color={colors.gold} />}
+            </View>
+            <View style={styles.lbPeriodRow}>
+              {(['week', 'month', 'all'] as const).map(p => (
+                <TouchableOpacity
+                  key={p}
+                  style={[styles.lbPeriodTab, lbPeriod === p && styles.lbPeriodTabActive]}
+                  onPress={() => {
+                    setLbPeriod(p);
+                    loadLeaderboard(p);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.lbPeriodText, lbPeriod === p && styles.lbPeriodTextActive]}>
+                    {p === 'week' ? 'Week' : p === 'month' ? 'Month' : 'All Time'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {leaderboard.length > 0 ? (
               <View style={styles.leaderboardCard}>
                 {leaderboard.map((entry, index) => (
                   <React.Fragment key={entry.userId}>
@@ -460,8 +496,14 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                   </React.Fragment>
                 ))}
               </View>
-            </View>
-          )}
+            ) : (
+              <View style={styles.lbEmpty}>
+                <Text style={styles.lbEmptyText}>
+                  {lbPeriod === 'all' ? 'No sessions recorded yet' : 'No sessions in this period'}
+                </Text>
+              </View>
+            )}
+          </View>
 
           <Text style={styles.sectionTitle}>Members</Text>
         </View>
@@ -977,6 +1019,24 @@ const styles = StyleSheet.create({
   retryText: { color: colors.textMuted, fontSize: 14, fontWeight: '600' },
 
   leaderboardSection: { marginBottom: 16 },
+  lbHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  lbPeriodRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  lbPeriodTab: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  lbPeriodTabActive: {
+    backgroundColor: colors.goldFaint,
+    borderColor: colors.goldMuted,
+  },
+  lbPeriodText: { fontSize: 12, fontWeight: '600', color: colors.textMuted },
+  lbPeriodTextActive: { color: colors.gold },
+  lbEmpty: { paddingVertical: 20, alignItems: 'center' },
+  lbEmptyText: { fontSize: 13, color: colors.textMuted },
   leaderboardCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,

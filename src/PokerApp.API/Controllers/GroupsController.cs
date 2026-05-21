@@ -131,14 +131,14 @@ public class GroupsController(IMediator mediator) : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>Returns lifetime P&L leaderboard for all registered players in the group (finished sessions only).</summary>
+    /// <summary>Returns P&L leaderboard for all registered players in the group (finished sessions only). Optional period: week|month|all.</summary>
     [HttpGet("{id:guid}/leaderboard")]
     [ProducesResponseType(typeof(List<PlayerLeaderboardEntryDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetGroupLeaderboard(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetGroupLeaderboard(Guid id, [FromQuery] string? period = null, CancellationToken cancellationToken = default)
     {
-        var result = await mediator.Send(new GetGroupLeaderboardQuery(id), cancellationToken);
+        var result = await mediator.Send(new GetGroupLeaderboardQuery(id, period), cancellationToken);
         return Ok(result);
     }
 
