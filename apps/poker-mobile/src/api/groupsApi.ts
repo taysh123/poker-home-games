@@ -9,6 +9,8 @@ export type MyGroupDto = {
   role: string;
   memberCount: number;
   createdAt: string;
+  myGroupPL: number | null;
+  myGroupSessions: number;
 };
 
 export type CreateGroupResponse = {

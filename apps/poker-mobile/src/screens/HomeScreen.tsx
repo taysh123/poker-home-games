@@ -481,6 +481,8 @@ export default function HomeScreen() {
                   name={g.name}
                   memberCount={g.memberCount}
                   role={g.role}
+                  myGroupPL={g.myGroupPL}
+                  myGroupSessions={g.myGroupSessions}
                   onPress={() => navigation.navigate('GroupDetail', { groupId: g.id, groupName: g.name })}
                   isFirst={i === 0}
                 />

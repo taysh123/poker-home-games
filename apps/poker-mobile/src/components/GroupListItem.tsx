@@ -2,11 +2,14 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
+import { formatPL } from '../utils/formatters';
 
 type Props = {
   name: string;
   memberCount: number;
   role?: string;
+  myGroupPL?: number | null;
+  myGroupSessions?: number;
   onPress: () => void;
   isFirst?: boolean;
 };
@@ -22,7 +25,7 @@ function avatarColor(name: string) {
   return AVATAR_COLORS[h];
 }
 
-export default function GroupListItem({ name, memberCount, role, onPress, isFirst }: Props) {
+export default function GroupListItem({ name, memberCount, role, myGroupPL, myGroupSessions, onPress, isFirst }: Props) {
   const bg = avatarColor(name);
   const initial = name[0]?.toUpperCase() ?? '?';
   const isOwner = role === 'Owner';
@@ -48,9 +51,17 @@ export default function GroupListItem({ name, memberCount, role, onPress, isFirs
             </View>
           )}
         </View>
-        <Text style={styles.meta}>
-          {memberCount} member{memberCount !== 1 ? 's' : ''}
-        </Text>
+        <View style={styles.metaRow}>
+          <Text style={styles.meta}>
+            {memberCount} member{memberCount !== 1 ? 's' : ''}
+            {myGroupSessions != null && myGroupSessions > 0 ? ` · ${myGroupSessions} sessions` : ''}
+          </Text>
+          {myGroupPL != null && (
+            <Text style={[styles.plChip, myGroupPL >= 0 ? styles.plPositive : styles.plNegative]}>
+              {formatPL(myGroupPL)}
+            </Text>
+          )}
+        </View>
       </View>
       <Text style={styles.chevron}>›</Text>
     </TouchableOpacity>
@@ -114,10 +125,24 @@ const styles = StyleSheet.create({
   roleTextOwner: {
     color: colors.gold,
   },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
   meta: {
     ...typography.caption,
     color: colors.textMuted,
+    flex: 1,
   },
+  plChip: {
+    fontSize: 12,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
+  plPositive: { color: colors.success },
+  plNegative: { color: colors.error },
   chevron: {
     fontSize: 18,
     color: colors.textDim,

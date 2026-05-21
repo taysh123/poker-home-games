@@ -27,6 +27,7 @@ import {
   leaveGroup,
   deleteGroup,
 } from '../api/groupsApi';
+import { formatPL } from '../utils/formatters';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import ActionSheet, { ActionSheetOption } from '../components/ActionSheet';
 import { showToast } from '../utils/toast';
@@ -319,9 +320,17 @@ export default function GroupsListScreen() {
                   {item.description ? (
                     <Text style={styles.groupDesc} numberOfLines={1}>{item.description}</Text>
                   ) : null}
-                  <Text style={styles.memberCount}>
-                    {item.memberCount} member{item.memberCount !== 1 ? 's' : ''}
-                  </Text>
+                  <View style={styles.memberRow}>
+                    <Text style={styles.memberCount}>
+                      {item.memberCount} member{item.memberCount !== 1 ? 's' : ''}
+                      {item.myGroupSessions > 0 ? ` · ${item.myGroupSessions} sessions` : ''}
+                    </Text>
+                    {item.myGroupPL != null && (
+                      <Text style={[styles.plText, item.myGroupPL >= 0 ? styles.plPositive : styles.plNegative]}>
+                        {formatPL(item.myGroupPL)}
+                      </Text>
+                    )}
+                  </View>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
               </TouchableOpacity>
@@ -457,10 +466,24 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textMuted,
   },
+  memberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
   memberCount: {
     ...typography.caption,
     color: colors.textDim,
+    flex: 1,
   },
+  plText: {
+    fontSize: 12,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
+  plPositive: { color: colors.success },
+  plNegative: { color: colors.error },
   separator: {
     height: 10,
   },
