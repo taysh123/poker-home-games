@@ -240,6 +240,7 @@ Import from `utils/storage` (not `expo-secure-store` directly) — the wrapper h
 | `EXPO_PUBLIC_API_URL` | `http://localhost:5062` | Backend API URL |
 | `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` | — | Android OAuth (production only) |
 | `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | — | iOS OAuth (production only) |
+| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | — | Web/Vercel OAuth (production only) |
 
 Copy `.env.example` → `.env`. Expo Go in development uses the hardcoded Expo proxy client — no env vars needed.
 
@@ -249,9 +250,11 @@ Copy `.env.example` → `.env`. Expo Go in development uses the hardcoded Expo p
 {
   "ConnectionStrings": { "DefaultConnection": "Host=localhost;Database=poker_app_dev;..." },
   "JwtSettings": { "Secret": "...", "Issuer": "TPoker", "Audience": "TPokerUsers" },
-  "GoogleAuth": { "ClientId": "your-google-web-client-id.apps.googleusercontent.com" }
+  "GoogleSettings": { "ClientIds": ["your-google-web-client-id.apps.googleusercontent.com"] }
 }
 ```
+
+**Important:** The config key is `GoogleSettings:ClientIds` (plural, string array), not `ClientId`. `GoogleAuthService` calls `configuration.GetSection("GoogleSettings:ClientIds").Get<IList<string>>()`. Production Railway env var: `GoogleSettings__ClientIds__0=<client-id>`.
 
 ---
 
@@ -259,6 +262,7 @@ Copy `.env.example` → `.env`. Expo Go in development uses the hardcoded Expo p
 
 ### Web → Vercel
 
+`vercel.json` is at the repo root:
 ```json
 {
   "buildCommand": "cd apps/poker-mobile && npx expo export -p web",
@@ -266,7 +270,7 @@ Copy `.env.example` → `.env`. Expo Go in development uses the hardcoded Expo p
   "framework": null
 }
 ```
-Set `EXPO_PUBLIC_API_URL` in Vercel environment settings.
+Set `EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` in Vercel environment settings.
 
 ### Mobile → EAS
 ```powershell
@@ -274,8 +278,19 @@ npx eas build --platform ios
 npx eas build --platform android
 ```
 
-### Backend
-Set `AllowedOrigins` in `appsettings.Production.json` before deploying.
+### Backend → Railway
+
+Railway env vars use `__` to separate nested keys. Required vars:
+```
+ASPNETCORE_ENVIRONMENT=Production
+ConnectionStrings__DefaultConnection=<Railway PostgreSQL connection string>
+JwtSettings__SecretKey=<min-32-char secret>
+JwtSettings__Issuer=PokerApp
+JwtSettings__Audience=PokerApp
+GoogleSettings__ClientIds__0=<google-web-client-id>
+AllowedOrigins__0=https://<your-vercel-domain>.vercel.app
+```
+All of these override the empty values in `appsettings.Production.json` at runtime.
 
 ---
 

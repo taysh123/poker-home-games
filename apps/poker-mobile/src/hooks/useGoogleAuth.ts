@@ -8,7 +8,8 @@ import * as Google from 'expo-auth-session/providers/google';
 const EXPO_CLIENT_ID    = '12435044751-jdh0dldfhkn2h8hqs3ssegbjflhvcmfi.apps.googleusercontent.com';
 const IOS_CLIENT_ID     = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
                           ?? '12435044751-jap7j5prc6vm0eh0mj517nv0phrlu8mr.apps.googleusercontent.com';
-const WEB_CLIENT_ID     = '12435044751-eruvq9uduc9sk5mietg9eiab2epddsp6.apps.googleusercontent.com';
+const WEB_CLIENT_ID     = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
+                          ?? '12435044751-eruvq9uduc9sk5mietg9eiab2epddsp6.apps.googleusercontent.com';
 const ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? EXPO_CLIENT_ID;
 
 type GoogleAuthResult =

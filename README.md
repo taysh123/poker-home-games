@@ -1,8 +1,14 @@
 # T Poker
 
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![.NET 8](https://img.shields.io/badge/.NET-8.0-purple.svg)](https://dotnet.microsoft.com/)
+[![Expo SDK 54](https://img.shields.io/badge/Expo-SDK%2054-black.svg)](https://expo.dev/)
+
 A **premium live poker home-game management platform** for private friend groups.
 Track buy-ins, cash-outs, settlements, and lifetime statistics — built to feel like
 a real modern poker product.
+
+> **Live demo:** _coming soon_ &nbsp;|&nbsp; **iOS/Android:** _EAS build in progress_
 
 ---
 
@@ -46,7 +52,7 @@ a real modern poker product.
 
 ## Screenshots
 
-> _Coming soon — app is in active development_
+> Screenshots will be added once the production deployment is live.
 
 ---
 
@@ -170,8 +176,9 @@ Copy `apps/poker-mobile/.env.example` → `.env`:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `EXPO_PUBLIC_API_URL` | Backend API base URL | `http://localhost:5062` |
-| `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` | Android OAuth client (production builds) | Expo proxy |
-| `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | iOS OAuth client (production builds) | Expo proxy |
+| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | Google OAuth Web client (Vercel/web) | Expo proxy |
+| `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` | Google OAuth Android client (EAS builds) | Expo proxy |
+| `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | Google OAuth iOS client (EAS builds) | Expo proxy |
 
 ### Backend (appsettings.json / environment variables)
 
@@ -183,7 +190,7 @@ ASP.NET Core maps env vars to config using `__` as the separator:
 | `JwtSettings__SecretKey` | `JwtSettings:SecretKey` | JWT signing key (min 32 chars) |
 | `JwtSettings__Issuer` | `JwtSettings:Issuer` | Token issuer (e.g. "PokerApp") |
 | `JwtSettings__Audience` | `JwtSettings:Audience` | Token audience |
-| `GoogleSettings__ClientId` | `GoogleSettings:ClientId` | Google OAuth **web** client ID |
+| `GoogleSettings__ClientIds__0` | `GoogleSettings:ClientIds[0]` | Google OAuth **web** client ID |
 | `AllowedOrigins__0` | `AllowedOrigins[0]` | First allowed CORS origin (Vercel URL) |
 | `ASPNETCORE_ENVIRONMENT` | — | Set to `Production` |
 
@@ -218,16 +225,9 @@ doesn't match the registered client. Email/password auth always works as fallbac
 
 ### Web Frontend → Vercel
 
-Add `vercel.json` to repo root:
-```json
-{
-  "buildCommand": "cd apps/poker-mobile && npx expo export -p web",
-  "outputDirectory": "apps/poker-mobile/dist",
-  "framework": null
-}
-```
-
-Set `EXPO_PUBLIC_API_URL` in Vercel project environment variables.
+`vercel.json` is already at the repo root. Connect the repo to Vercel and set:
+- `EXPO_PUBLIC_API_URL` → your Railway backend URL
+- `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` → your Google Web OAuth client ID
 
 ### Mobile → EAS
 
@@ -258,7 +258,7 @@ Railway auto-detects .NET projects and builds with `dotnet publish`. EF Core mig
    JwtSettings__Audience=PokerApp
    JwtSettings__AccessTokenExpirationMinutes=15
    JwtSettings__RefreshTokenExpirationDays=30
-   GoogleSettings__ClientId=<your-google-web-client-id.apps.googleusercontent.com>
+   GoogleSettings__ClientIds__0=<your-google-web-client-id.apps.googleusercontent.com>
    AllowedOrigins__0=https://your-app.vercel.app
    ```
 5. Deploy. Railway builds → migrations run automatically on startup → API is live.
@@ -283,10 +283,11 @@ Railway shows the exact string under your PostgreSQL plugin → **Connect** tab.
 - Refresh tokens are hashed (SHA-256) in the database — plain tokens never stored
 - JWT `ClockSkew = 0` — no tolerance for expired tokens
 - Rate limiting on auth endpoints: 10 login / 5 register / 20 refresh per minute per IP
-- CORS restricted to configured origins in production
+- CORS restricted to configured origins in production (`AllowedOrigins` env var)
 - All currency amounts validated: `0 < amount ≤ 1,000,000`
 - Role-based access enforced at handler level (not just controller)
 - Settlement modifications restricted to payer/receiver only
+- `appsettings.Development.json` is gitignored — never committed to source control
 
 ---
 
