@@ -173,16 +173,19 @@ Copy `apps/poker-mobile/.env.example` → `.env`:
 | `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` | Android OAuth client (production builds) | Expo proxy |
 | `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | iOS OAuth client (production builds) | Expo proxy |
 
-### Backend (appsettings.json)
+### Backend (appsettings.json / environment variables)
 
-| Key | Description |
-|-----|-------------|
-| `ConnectionStrings:DefaultConnection` | PostgreSQL connection string |
-| `JwtSettings:Secret` | JWT signing key (min 32 chars) |
-| `JwtSettings:Issuer` | Token issuer (e.g. "TPoker") |
-| `JwtSettings:Audience` | Token audience |
-| `GoogleAuth:ClientId` | Google OAuth **web** client ID |
-| `AllowedOrigins` | Comma-separated list (production CORS) |
+ASP.NET Core maps env vars to config using `__` as the separator:
+
+| Env var | Config key | Description |
+|---------|-----------|-------------|
+| `ConnectionStrings__DefaultConnection` | `ConnectionStrings:DefaultConnection` | PostgreSQL connection string |
+| `JwtSettings__SecretKey` | `JwtSettings:SecretKey` | JWT signing key (min 32 chars) |
+| `JwtSettings__Issuer` | `JwtSettings:Issuer` | Token issuer (e.g. "PokerApp") |
+| `JwtSettings__Audience` | `JwtSettings:Audience` | Token audience |
+| `GoogleSettings__ClientId` | `GoogleSettings:ClientId` | Google OAuth **web** client ID |
+| `AllowedOrigins__0` | `AllowedOrigins[0]` | First allowed CORS origin (Vercel URL) |
+| `ASPNETCORE_ENVIRONMENT` | — | Set to `Production` |
 
 ### Google OAuth — Production Setup
 
@@ -234,11 +237,44 @@ eas build --platform ios
 eas build --platform android
 ```
 
-### Backend → Railway / Azure / Fly.io
+### Backend → Railway
 
-1. Set all `JwtSettings` and `ConnectionStrings` as environment variables
-2. Set `AllowedOrigins` to your Vercel URL in production config
-3. Run `dotnet ef database update` against production DB on first deploy
+Railway auto-detects .NET projects and builds with `dotnet publish`. EF Core migrations run automatically on every startup (via `db.Database.Migrate()` in `Program.cs`).
+
+**Step-by-step:**
+
+1. Create a new Railway project → **New Service → GitHub Repo** → select this repo
+2. Add a **PostgreSQL** plugin in Railway — it injects `DATABASE_URL` automatically
+3. Set a **custom start command** in Railway service settings:
+   ```
+   dotnet PokerApp.API.dll
+   ```
+4. Set these **environment variables** in Railway:
+   ```
+   ASPNETCORE_ENVIRONMENT=Production
+   ConnectionStrings__DefaultConnection=<Railway PostgreSQL connection string>
+   JwtSettings__SecretKey=<min-32-char random string>
+   JwtSettings__Issuer=PokerApp
+   JwtSettings__Audience=PokerApp
+   JwtSettings__AccessTokenExpirationMinutes=15
+   JwtSettings__RefreshTokenExpirationDays=30
+   GoogleSettings__ClientId=<your-google-web-client-id.apps.googleusercontent.com>
+   AllowedOrigins__0=https://your-app.vercel.app
+   ```
+5. Deploy. Railway builds → migrations run automatically on startup → API is live.
+
+**PostgreSQL connection string format (Railway):**
+```
+Host=<host>;Port=<port>;Database=<db>;Username=<user>;Password=<password>;SSL Mode=Require;Trust Server Certificate=true
+```
+Railway shows the exact string under your PostgreSQL plugin → **Connect** tab.
+
+**Generate a JWT secret key:**
+```powershell
+[Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+```
+
+**Health check:** `GET /health` → `Healthy` (configure as Railway's health check path)
 
 ---
 
