@@ -1,10 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using PokerApp.Application.Common.Interfaces;
 using PokerApp.Infrastructure.Identity;
 using PokerApp.Infrastructure.Persistence;
 using PokerApp.Infrastructure.Services;
+using PokerApp.Infrastructure.Settings;
 
 namespace PokerApp.Infrastructure;
 
@@ -35,6 +37,10 @@ public static class DependencyInjection
         services.AddScoped<ICurrentUserService, CurrentUserService>();
 
         services.AddScoped<IGoogleAuthService, GoogleAuthService>();
+
+        services.Configure<WebSettings>(configuration.GetSection("AppSettings"));
+        services.AddSingleton<IWebSettings>(sp =>
+            sp.GetRequiredService<IOptions<WebSettings>>().Value);
 
         return services;
     }

@@ -9,7 +9,8 @@ namespace PokerApp.Application.Features.Sessions.Commands.GenerateSessionInviteT
 
 public sealed class GenerateSessionInviteTokenCommandHandler(
     IApplicationDbContext context,
-    ICurrentUserService currentUserService)
+    ICurrentUserService currentUserService,
+    IWebSettings webSettings)
     : IRequestHandler<GenerateSessionInviteTokenCommand, GenerateSessionInviteTokenResponse>
 {
     public async Task<GenerateSessionInviteTokenResponse> Handle(
@@ -50,8 +51,10 @@ public sealed class GenerateSessionInviteTokenCommandHandler(
         await context.SessionInviteTokens.AddAsync(inviteToken, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
 
-        var deepLinkUrl = $"tpoker://join/{inviteToken.Token}";
+        var baseUrl = string.IsNullOrEmpty(webSettings.WebBaseUrl)
+            ? "tpoker://join/session"
+            : $"{webSettings.WebBaseUrl}/join/session";
 
-        return new GenerateSessionInviteTokenResponse(inviteToken.Token, deepLinkUrl, inviteToken.ExpiresAt);
+        return new GenerateSessionInviteTokenResponse(inviteToken.Token, $"{baseUrl}/{inviteToken.Token}", inviteToken.ExpiresAt);
     }
 }

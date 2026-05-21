@@ -9,7 +9,8 @@ namespace PokerApp.Application.Features.Groups.Commands.GenerateGroupInviteLink;
 
 public sealed class GenerateGroupInviteLinkCommandHandler(
     IApplicationDbContext context,
-    ICurrentUserService currentUserService) : IRequestHandler<GenerateGroupInviteLinkCommand, GenerateGroupInviteLinkResponse>
+    ICurrentUserService currentUserService,
+    IWebSettings webSettings) : IRequestHandler<GenerateGroupInviteLinkCommand, GenerateGroupInviteLinkResponse>
 {
     public async Task<GenerateGroupInviteLinkResponse> Handle(
         GenerateGroupInviteLinkCommand request,
@@ -40,9 +41,13 @@ public sealed class GenerateGroupInviteLinkCommandHandler(
         await context.GroupInviteLinks.AddAsync(link, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
 
+        var baseUrl = string.IsNullOrEmpty(webSettings.WebBaseUrl)
+            ? "tpoker://group"
+            : $"{webSettings.WebBaseUrl}/join/group";
+
         return new GenerateGroupInviteLinkResponse(
             link.Token,
-            $"tpoker://group/{link.Token}",
+            $"{baseUrl}/{link.Token}",
             link.ExpiresAt);
     }
 }

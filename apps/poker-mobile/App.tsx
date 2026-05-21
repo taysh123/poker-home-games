@@ -11,9 +11,9 @@ import { RootStackParamList } from './src/navigation/AppNavigator';
 WebBrowser.maybeCompleteAuthSession();
 
 function extractDeepLink(url: string): { type: 'session' | 'group'; token: string } | null {
-  const s = url.match(/(?:tpoker:\/\/join\/|\/join\/)([A-Za-z0-9]+)/);
+  const s = url.match(/(?:tpoker:\/\/join\/session\/|\/join\/session\/)([A-Za-z0-9_-]+)/);
   if (s) return { type: 'session', token: s[1] };
-  const g = url.match(/(?:tpoker:\/\/group\/|\/group\/)([A-Za-z0-9]+)/);
+  const g = url.match(/(?:tpoker:\/\/group\/|tpoker:\/\/join\/group\/|\/join\/group\/)([A-Za-z0-9_-]+)/);
   if (g) return { type: 'group', token: g[1] };
   return null;
 }

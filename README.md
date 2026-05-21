@@ -259,6 +259,7 @@ EF Core migrations run automatically on every startup (`db.Database.Migrate()` i
    JwtSettings__RefreshTokenExpirationDays=30
    GoogleSettings__ClientIds__0=<your-google-web-client-id.apps.googleusercontent.com>
    AllowedOrigins__0=https://your-app.vercel.app
+   AppSettings__WebBaseUrl=https://your-app.vercel.app
    ```
 5. Deploy. Railway builds via Docker → migrations run on startup → API is live.
 

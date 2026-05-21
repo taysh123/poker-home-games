@@ -291,8 +291,12 @@ JwtSettings__Issuer=PokerApp
 JwtSettings__Audience=PokerApp
 GoogleSettings__ClientIds__0=<google-web-client-id>
 AllowedOrigins__0=https://<your-vercel-domain>.vercel.app
+AppSettings__WebBaseUrl=https://<your-vercel-domain>.vercel.app
 ```
 All of these override the empty values in `appsettings.Production.json` at runtime.
+
+**`IWebSettings` — invite link base URL:**
+`IWebSettings` is defined in `Application/Common/Interfaces/IWebSettings.cs` and implemented by `Infrastructure/Settings/WebSettings.cs` (bound from `AppSettings:WebBaseUrl`). It is injected into `GenerateGroupInviteLinkCommandHandler` and `GenerateSessionInviteTokenCommandHandler`. When `WebBaseUrl` is empty (local dev, Expo Go), invite URLs use the `tpoker://` deep-link scheme. When set, they use `https://<WebBaseUrl>/join/group/:token` and `https://<WebBaseUrl>/join/session/:token`.
 
 **Linux/case-sensitivity pitfalls (for future changes):**
 - C# namespaces are case-sensitive; always match `namespace` declarations exactly in `using` directives

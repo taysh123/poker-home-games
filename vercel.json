@@ -1,5 +1,8 @@
 {
   "buildCommand": "cd apps/poker-mobile && npx expo export -p web",
   "outputDirectory": "apps/poker-mobile/dist",
-  "framework": null
+  "framework": null,
+  "rewrites": [
+    { "source": "/join/:path*", "destination": "/index.html" }
+  ]
 }
