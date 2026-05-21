@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
@@ -62,7 +63,7 @@ export default function JoinGroupScreen({ route, navigation }: Props) {
   if (status === 'error') {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorIcon}>✕</Text>
+        <View style={styles.errorIconWrap}><Ionicons name="close-circle-outline" size={44} color={colors.error} /></View>
         <Text style={styles.errorTitle}>Couldn't join</Text>
         <Text style={styles.errorMsg}>{errorMsg}</Text>
         <TouchableOpacity style={styles.btn} onPress={() => navigation.goBack()}>
@@ -74,7 +75,7 @@ export default function JoinGroupScreen({ route, navigation }: Props) {
 
   return (
     <View style={styles.center}>
-      <Text style={styles.successIcon}>✓</Text>
+      <View style={styles.successIconWrap}><Ionicons name="checkmark-circle-outline" size={56} color={colors.success} /></View>
       <Text style={styles.successTitle}>You're in!</Text>
       <Text style={styles.successSub}>You've joined {groupName}.</Text>
       <TouchableOpacity
@@ -97,10 +98,10 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   joiningText: { ...typography.body, color: colors.textMuted, marginTop: 8 },
-  errorIcon: { fontSize: 48, color: colors.error },
+  errorIconWrap: { marginBottom: 4 },
   errorTitle: { ...typography.h2, color: colors.text },
   errorMsg: { fontSize: 14, color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
-  successIcon: { fontSize: 52, color: colors.success },
+  successIconWrap: { marginBottom: 4 },
   successTitle: { ...typography.h1, color: colors.text },
   successSub: { fontSize: 15, color: colors.textMuted },
   btn: {
