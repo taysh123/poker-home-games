@@ -132,8 +132,13 @@ builder.Services
 builder.Services.AddAuthorization();
 
 // ── Railway PORT binding ─────────────────────────────────────────────────────
-var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+// Only override when PORT is explicitly set (Railway/containers) so local
+// dev keeps using launchSettings.json (http://localhost:5062).
+var railwayPort = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(railwayPort))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{railwayPort}");
+}
 
 // ── Pipeline ─────────────────────────────────────────────────────────────────
 var app = builder.Build();

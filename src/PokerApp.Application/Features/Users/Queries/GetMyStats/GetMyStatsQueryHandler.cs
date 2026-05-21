@@ -22,7 +22,7 @@ public sealed class GetMyStatsQueryHandler(
         var sessionIds = sessionPlayers.Select(x => x.SessionId).ToList();
 
         if (sessionIds.Count == 0)
-            return new MyStatsDto(0, 0m, null, null, 0, 0, 0, 0m, 0, 0, []);
+            return new MyStatsDto(0, 0m, null, null, 0, 0, 0, 0m, 0, 0, [], 0L);
 
         var spIdBySession = sessionPlayers.ToDictionary(x => x.SessionId, x => x.Id);
 
@@ -139,7 +139,12 @@ public sealed class GetMyStatsQueryHandler(
                 return new RecentSessionDto(s.Id, s.Name, s.GroupId, groupName, userRole, s.Status.ToString(), profit, s.CreatedAt, s.StartedAt, s.EndedAt);
             }).ToList();
 
+        var totalMinutes = finishedSessions
+            .Where(s => s.StartedAt.HasValue && s.EndedAt.HasValue)
+            .Sum(s => (long)(s.EndedAt!.Value - s.StartedAt!.Value).TotalMinutes);
+
         return new MyStatsDto(finishedSessions.Count, totalProfitLoss, biggestWin, biggestLoss,
-            winsCount, lossesCount, breakEvenCount, avgProfitLoss, currentStreak, longestWinStreak, allSessions);
+            winsCount, lossesCount, breakEvenCount, avgProfitLoss, currentStreak, longestWinStreak, allSessions,
+            totalMinutes);
     }
 }

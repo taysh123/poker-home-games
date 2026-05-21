@@ -27,6 +27,7 @@ export type MyStatsDto = {
   currentStreak: number;
   longestWinStreak: number;
   recentSessions: RecentSessionDto[];
+  totalMinutesPlayed: number;
 };
 
 function authHeader(token: string) {

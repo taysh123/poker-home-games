@@ -463,6 +463,55 @@ All of these override the empty values in `appsettings.Production.json` at runti
 - `GroupDetailScreen` — new "Rivalries" section (above Activity feed) showing top 5 rivalries: "X sessions together", each player's net P&L with color coding. Section hidden when group has fewer than 2 players or no finished sessions.
 - `RivalryRow` component inline in `GroupDetailScreen`.
 
+### Cross-Group Activity Feed (Phase 42)
+
+**Backend:**
+- `GetCrossGroupActivityQuery` (`Application/Features/Groups/Queries/GetCrossGroupActivity/`) — returns the 10 most recent activity events across all groups the caller belongs to.
+- `CrossGroupActivityDto`: `Id, GroupId, GroupName, ActorName, Type, Description, CreatedAt`.
+- `GET /api/groups/activity` → `List<CrossGroupActivityDto>`. No route conflict with `GET /api/groups/{id:guid}/activity` (different path depth).
+
+**Frontend:**
+- `groupsApi.ts` — added `CrossGroupActivityDto` type and `getCrossGroupActivity(token)`.
+- `utils/formatters.ts` — added `timeAgo(dateStr)` utility (now shared; also used inline in `NotificationsScreen`).
+- `HomeScreen` — new "Recent Activity" section at the bottom showing the last 5 cross-group events, each with an icon (based on activity type), description, group name badge (gold), and time-ago label. Only rendered when the user has group activity.
+- `HomeScreen` — new "Pending Invitations" banner between the settlements alert and the New Game CTA. Shows when `invitations.length > 0` with a gold mail icon, taps to `Invitations` screen.
+
+### Group Leaderboard Period Filter (Phase 43)
+
+- `GetGroupLeaderboardQuery` now accepts `Period: string?` (`"week"`, `"month"`, or `null` for all-time).
+- `GetGroupLeaderboardQueryHandler` applies `CreatedAt >= cutoff` filter to finished sessions before computing rankings.
+- `GET /api/groups/{id}/leaderboard?period=week|month` — optional query param.
+- `groupsApi.ts` `getGroupLeaderboard(token, groupId, period?)` accepts optional period.
+- `GroupDetailScreen` leaderboard section now has 3-tab period picker (Week / Month / All Time) above the leaderboard. Changing tabs calls `loadLeaderboard(period)` (a separate async function from the main `load()`) without reloading the entire screen. Shows "No sessions in this period" empty state when filtered results are empty.
+
+### Invitation Notification + AllSessions Group Filter (Phase 44)
+
+- `InviteUserToGroupCommandHandler` now injects `INotificationService` and sends a `GroupInviteReceived` notification to the invited user after saving. Wrapped in try/catch (non-critical).
+- `AllSessionsScreen` — group filter chips above the "Recent Sessions" list. Unique group names extracted from loaded sessions; a "Clear filter" link appears when active. Chips are horizontal-scrollable. Filtering is entirely client-side.
+
+### Per-Group P&L in Group Lists (Phase 45)
+
+**Backend:**
+- `MyGroupDto` extended with `MyGroupPL: decimal?` (null if user has no finished sessions in the group) and `MyGroupSessions: int`.
+- `GetMyGroupsQueryHandler` now runs 3 additional queries after fetching memberships: user's session players in finished group sessions, buy-ins, and cash-outs. Computes per-group P&L and session count in-memory. Total queries: 4 (previously 1).
+
+**Frontend:**
+- `groupsApi.ts` `MyGroupDto` type updated with `myGroupPL: number | null` and `myGroupSessions: number`.
+- `GroupListItem` component — added `myGroupPL?` and `myGroupSessions?` props. The meta line now shows "X sessions" and a green/red P&L chip aligned right.
+- `HomeScreen` and `GroupsListScreen` both pass the new props to their group renderers.
+
+### Total Time Played stat (Phase 47)
+
+- `MyStatsDto` extended with `TotalMinutesPlayed: long` — sum of `(EndedAt - StartedAt)` minutes across finished sessions the user played. Reflects the active `period` filter.
+- `GetMyStatsQueryHandler` computes the total from in-memory finished sessions (no extra DB query).
+- Frontend: `statsApi.ts` `MyStatsDto` adds `totalMinutesPlayed`. `formatters.ts` adds `formatMinutes(totalMinutes)` returning `1h 23m` / `45m` / `—`. `StatsScreen` adds a "Time Played" `HighlightCard` in the Key Numbers row.
+
+### Production middleware restoration (Phase 46)
+
+- Restored `Program.cs` after Phase 33d stripped DI/auth/rate-limiter/exception-middleware. See commit `36b1e45` — all `[Authorize]`, `[EnableRateLimiting]`, and `IMediator`-using endpoints were 500-ing in production.
+- `Program.cs` now reads CORS allow-list from `AllowedOrigins` configuration (Railway: `AllowedOrigins__0=https://<vercel-domain>`) with a hardcoded fallback to the production Vercel domain.
+- **Critical pipeline order:** `UseCors` → `UseMiddleware<ExceptionHandlingMiddleware>` → `UseResponseCompression` → `UseRateLimiter` → `UseAuthentication` → `UseAuthorization` → `MapControllers`.
+
 ---
 
 ## Out of Scope (decided, not returning)

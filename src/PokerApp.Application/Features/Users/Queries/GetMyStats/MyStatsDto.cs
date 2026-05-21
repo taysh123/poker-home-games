@@ -11,7 +11,8 @@ public sealed record MyStatsDto(
     decimal AverageProfitLoss,
     int CurrentStreak,
     int LongestWinStreak,
-    List<RecentSessionDto> RecentSessions
+    List<RecentSessionDto> RecentSessions,
+    long TotalMinutesPlayed
 );
 
 public sealed record RecentSessionDto(

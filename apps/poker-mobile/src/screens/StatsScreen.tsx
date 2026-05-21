@@ -22,7 +22,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import SessionListItem from '../components/SessionListItem';
 import SkeletonCard from '../components/SkeletonCard';
 import SkeletonRow from '../components/SkeletonRow';
-import { formatPL, formatDate, formatDuration } from '../utils/formatters';
+import { formatPL, formatDate, formatDuration, formatMinutes } from '../utils/formatters';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -256,6 +256,12 @@ export default function StatsScreen() {
               value={stats.totalSessionsPlayed > 0 ? formatPL(stats.averageProfitLoss) : '—'}
               valueColor={avgColor}
               icon="pulse"
+            />
+            <HighlightCard
+              label="Time Played"
+              value={formatMinutes(stats.totalMinutesPlayed)}
+              valueColor={colors.textMuted}
+              icon="time-outline"
             />
           </View>
         </View>

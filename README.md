@@ -39,10 +39,12 @@ a real modern poker product.
 - Lifetime P&L, win/loss record, win rate
 - Per-session history with P&L and duration
 - P&L trend chart (last 10 sessions)
-- Group leaderboard with avg P&L and win rate
+- Group leaderboard with avg P&L and win rate — **period filter** (This Week / This Month / All Time)
 - Current win/loss streak + all-time longest win streak
-- **Period filter:** stats by This Week / This Month / All Time
+- **Period filter:** personal stats by This Week / This Month / All Time
 - "This week" P&L chip on the home screen hero card
+- Per-group P&L shown directly on group list items (home + groups tab)
+- Total time played stat reflects the active period filter
 
 ### Achievements & Badges
 - 14 achievements unlocked automatically when sessions end (First Blood, Hot Streak, High Roller, Comeback Kid, Marathon, and more)
@@ -53,13 +55,18 @@ a real modern poker product.
 ### In-App Notifications
 - Session-end notifications sent to all registered players in the game
 - Settlement-paid notifications between payer and receiver
+- Group invitation notification sent to invited user
 - Notification inbox (bell icon in header) with type icons, unread badge, timeAgo labels
 - "Mark all read" action; graceful empty state
 
-### Group Rivalries
+### Group Rivalries & Activity
 - Tap any group to see the top 5 most-played player pairings
 - Each rivalry shows sessions together + each player's net P&L across those shared sessions
-- Sorted by sessions played together descending
+- Cross-group activity feed on the home screen — recent events across all your groups
+- Pending invitations banner on the home screen when you have outstanding invites
+
+### Session Filtering
+- AllSessions tab: filter by group with tappable chips (client-side, instant)
 
 ### Onboarding
 - First-run 3-slide carousel for new users (skip-able, progress dots)
@@ -351,8 +358,14 @@ Railway shows the exact string under your PostgreSQL plugin → **Connect** tab.
 | ✅ | Onboarding first-run carousel |
 | ✅ | Response compression (Brotli/gzip) |
 | ✅ | Period-based stats (This Week / This Month / All Time) |
-| ✅ | In-app notification inbox (session end, settlement paid) |
+| ✅ | In-app notification inbox (session end, settlement paid, group invite) |
 | ✅ | Group rivalries (top 5 most-played pairings per group) |
+| ✅ | Cross-group activity feed on home screen |
+| ✅ | Group leaderboard period filter (week/month/all-time) |
+| ✅ | AllSessions group filter chips |
+| ✅ | Per-group P&L displayed on all group list items |
+| ✅ | Total time played stat (period-aware) |
+| ✅ | Production hardening — full middleware pipeline restored (JWT, rate limits, exception handling) |
 | 🔜 | Push notifications (Expo push) |
 | 🔜 | Native iOS/Android release (EAS) |
 
