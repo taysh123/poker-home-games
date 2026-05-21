@@ -11,9 +11,11 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
+import { shadows } from '../theme/shadows';
 import { useAuth } from '../context/AuthContext';
 import { updateProfile, changePassword, deleteAccount } from '../api/profileApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -140,19 +142,27 @@ export default function ProfileScreen({ navigation }: Props) {
 
         {/* Avatar */}
         <View style={styles.avatarWrap}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{avatarLetter}</Text>
+          <View style={styles.avatarOuter}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{avatarLetter}</Text>
+            </View>
           </View>
           <Text style={styles.avatarUsername}>{user?.username}</Text>
+          <Text style={styles.avatarEmail}>{user?.email}</Text>
         </View>
 
         {/* ── Profile section ─────────────────────────────────────────── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>PROFILE</Text>
+            <View style={styles.sectionTitleRow}>
+              <View style={styles.sectionIconWrap}>
+                <Ionicons name="person-outline" size={14} color={colors.gold} />
+              </View>
+              <Text style={styles.sectionTitle}>Profile</Text>
+            </View>
             {!editingProfile && (
-              <TouchableOpacity onPress={() => setEditingProfile(true)}>
-                <Text style={styles.editLink}>Edit</Text>
+              <TouchableOpacity style={styles.editIconBtn} onPress={() => setEditingProfile(true)} hitSlop={8}>
+                <Ionicons name="create-outline" size={16} color={colors.gold} />
               </TouchableOpacity>
             )}
           </View>
@@ -213,7 +223,14 @@ export default function ProfileScreen({ navigation }: Props) {
 
         {/* ── Change Password section ──────────────────────────────────── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>CHANGE PASSWORD</Text>
+          <View style={[styles.sectionHeader, { marginBottom: 14 }]}>
+            <View style={styles.sectionTitleRow}>
+              <View style={styles.sectionIconWrap}>
+                <Ionicons name="lock-closed-outline" size={14} color={colors.gold} />
+              </View>
+              <Text style={styles.sectionTitle}>Change Password</Text>
+            </View>
+          </View>
           <Text style={styles.fieldLabel}>CURRENT PASSWORD</Text>
           <TextInput
             style={styles.input}
@@ -257,7 +274,14 @@ export default function ProfileScreen({ navigation }: Props) {
 
         {/* ── Danger Zone ─────────────────────────────────────────────── */}
         <View style={[styles.section, styles.dangerSection]}>
-          <Text style={[styles.sectionTitle, { color: colors.error }]}>DANGER ZONE</Text>
+          <View style={[styles.sectionHeader, { marginBottom: 10 }]}>
+            <View style={styles.sectionTitleRow}>
+              <View style={[styles.sectionIconWrap, styles.sectionIconWrapDanger]}>
+                <Ionicons name="warning-outline" size={14} color={colors.error} />
+              </View>
+              <Text style={[styles.sectionTitle, { color: colors.error }]}>Danger Zone</Text>
+            </View>
+          </View>
           <Text style={styles.dangerDesc}>
             Permanently delete your account and all your data. This action cannot be undone.
           </Text>
@@ -265,10 +289,16 @@ export default function ProfileScreen({ navigation }: Props) {
             style={[styles.btn, styles.btnDanger, deletingAccount && { opacity: 0.6 }]}
             onPress={handleDeleteAccount}
             disabled={deletingAccount}
+            activeOpacity={0.75}
           >
             {deletingAccount
               ? <ActivityIndicator size="small" color={colors.error} />
-              : <Text style={styles.btnDangerText}>Delete Account</Text>}
+              : (
+                <>
+                  <Ionicons name="trash-outline" size={15} color={colors.error} />
+                  <Text style={styles.btnDangerText}>Delete Account</Text>
+                </>
+              )}
           </TouchableOpacity>
         </View>
 
@@ -281,39 +311,72 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   content: { padding: 20, paddingBottom: 48 },
 
-  avatarWrap: { alignItems: 'center', marginBottom: 28, marginTop: 8 },
+  avatarWrap: { alignItems: 'center', marginBottom: 28, marginTop: 8, gap: 6 },
+  avatarOuter: {
+    width: 86,
+    height: 86,
+    borderRadius: 24,
+    backgroundColor: colors.goldFaint,
+    borderWidth: 1.5,
+    borderColor: colors.goldMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+    ...shadows.goldSm,
+  },
   avatar: {
     width: 72,
     height: 72,
-    borderRadius: 36,
+    borderRadius: 20,
     backgroundColor: colors.surfaceHigh,
-    borderWidth: 2,
-    borderColor: colors.gold,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
   },
-  avatarText: { fontSize: 28, fontWeight: '700', color: colors.gold },
+  avatarText: { fontSize: 30, fontWeight: '800', color: colors.gold },
   avatarUsername: { fontSize: 18, fontWeight: '700', color: colors.text },
+  avatarEmail: { fontSize: 13, color: colors.textMuted },
 
   section: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 16,
-    padding: 16,
+    padding: 18,
     marginBottom: 16,
+    ...shadows.sm,
   },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  sectionIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: colors.goldFaint,
+    borderWidth: 1,
+    borderColor: colors.goldMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionIconWrapDanger: {
+    backgroundColor: colors.errorFaint,
+    borderColor: colors.errorMuted,
+  },
   sectionTitle: {
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: '700',
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 14,
+    color: colors.text,
+    marginBottom: 0,
   },
-  editLink: { fontSize: 13, fontWeight: '600', color: colors.gold },
+  editIconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 9,
+    backgroundColor: colors.goldFaint,
+    borderWidth: 1,
+    borderColor: colors.goldMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   fieldRow: { marginBottom: 12 },
   fieldLabel: {
@@ -345,8 +408,18 @@ const styles = StyleSheet.create({
   btnSecondary: { flex: 1, borderWidth: 1, borderColor: colors.border },
   btnSecondaryText: { fontSize: 14, fontWeight: '600', color: colors.textMuted },
 
-  dangerSection: { borderColor: 'rgba(231,76,60,0.3)' },
+  dangerSection: { borderColor: colors.errorMuted },
   dangerDesc: { fontSize: 13, color: colors.textMuted, marginBottom: 14, lineHeight: 18 },
-  btnDanger: { borderWidth: 1, borderColor: colors.error, paddingVertical: 11 },
+  btnDanger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: colors.errorMuted,
+    backgroundColor: colors.errorFaint,
+    paddingVertical: 13,
+    borderRadius: 12,
+  },
   btnDangerText: { fontSize: 14, fontWeight: '700', color: colors.error },
 });
