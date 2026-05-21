@@ -1,6 +1,6 @@
 {
   "buildCommand": "npx expo export -p web",
-  "outputDirectory": "apps/poker-mobile/dist",
+  "outputDirectory": "dist",
   "framework": null,
   "rewrites": [
     { "source": "/join/:path*", "destination": "/index.html" }
