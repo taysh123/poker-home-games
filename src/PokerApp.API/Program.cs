@@ -1,4 +1,4 @@
-using  PokerApp.Infrastructure.Persistence;
+using PokerApp.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using PokerApp.Infrastructure;
 
@@ -9,6 +9,21 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddResponseCompression(opts => opts.EnableForHttps = true);
+
+// CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend",
+        policy =>
+        {
+            policy
+                .WithOrigins(
+                    "https://poker-home-games-three.vercel.app"
+                )
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        });
+});
 
 // Database
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -21,6 +36,9 @@ builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 var app = builder.Build();
 
 app.UseResponseCompression();
+
+// Enable CORS
+app.UseCors("AllowFrontend");
 
 // Health endpoint
 app.MapGet("/health", () => Results.Ok("Healthy"));
