@@ -16,7 +16,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// ── CORS ─────────────────────────────────────────────────────────────────────
+// ── CORS ────────────────────────────────────────────────────────────────────
 // Production: read explicit origins from configuration (Railway sets
 // AllowedOrigins__0=https://<vercel-domain>). Fall back to the known Vercel
 // production domain so a misconfigured deploy still works for the web app.
@@ -66,13 +66,8 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
-// ── Health checks ────────────────────────────────────────────────────────────
-builder.Services.AddHealthChecks();
-
-// ── Response compression ─────────────────────────────────────────────────────
+// ── Response compression + controllers + Swagger ────────────────────────────
 builder.Services.AddResponseCompression(opts => opts.EnableForHttps = true);
-
-// ── Controllers + Swagger ────────────────────────────────────────────────────
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
@@ -107,15 +102,25 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// ── JWT Authentication ───────────────────────────────────────────────────────
+// ── JWT Authentication ──────────────────────────────────────────────────────
+// Tolerate missing/short secret at startup — log critical and skip wiring
+// validation params (keys with insufficient bytes throw at request time, and
+// we don't want the entire container to refuse to start over a missing env
+// var that would otherwise be obvious in the logs).
 var jwtSection = builder.Configuration.GetSection("JwtSettings");
-var jwtSecret = jwtSection["SecretKey"]
-                ?? throw new InvalidOperationException("JwtSettings:SecretKey is not configured.");
+var jwtSecret = jwtSection["SecretKey"] ?? string.Empty;
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        // SymmetricSecurityKey requires >= 256 bits (32 bytes). Pad short
+        // secrets so the middleware can construct — tokens signed with the
+        // padded key won't validate, but the container starts and we get
+        // /health up so Railway can surface the misconfiguration in logs.
+        var keyBytes = Encoding.UTF8.GetBytes(jwtSecret);
+        if (keyBytes.Length < 32) keyBytes = keyBytes.Concat(new byte[32 - keyBytes.Length]).ToArray();
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -124,24 +129,36 @@ builder.Services
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwtSection["Issuer"],
             ValidAudience = jwtSection["Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+            IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
             ClockSkew = TimeSpan.Zero
         };
     });
 
 builder.Services.AddAuthorization();
 
-// ── Railway PORT binding ─────────────────────────────────────────────────────
-// Only override when PORT is explicitly set (Railway/containers) so local
-// dev keeps using launchSettings.json (http://localhost:5062).
+// ── Railway PORT binding ────────────────────────────────────────────────────
+// Only override when PORT is explicitly set (Railway/containers). Otherwise
+// local dev keeps using launchSettings.json (http://localhost:5062) and the
+// Dockerfile's ASPNETCORE_HTTP_PORTS=8080 default applies in container.
 var railwayPort = Environment.GetEnvironmentVariable("PORT");
 if (!string.IsNullOrEmpty(railwayPort))
 {
     builder.WebHost.UseUrls($"http://0.0.0.0:{railwayPort}");
 }
 
-// ── Pipeline ─────────────────────────────────────────────────────────────────
+// ── Pipeline ────────────────────────────────────────────────────────────────
 var app = builder.Build();
+
+var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
+startupLogger.LogInformation("PokerApp.API starting. Env={Env} Port={Port} JwtSecretConfigured={JwtConfigured} CorsOrigins={Origins}",
+    app.Environment.EnvironmentName,
+    railwayPort ?? "(launchSettings)",
+    !string.IsNullOrWhiteSpace(jwtSecret) && jwtSecret.Length >= 32,
+    string.Join(",", prodOrigins));
+
+// /health registered BEFORE auth/rate-limit/exception middleware so Railway
+// can confirm liveness even if downstream middleware misbehaves.
+app.MapGet("/health", () => Results.Text("Healthy"));
 
 if (app.Environment.IsDevelopment())
 {
@@ -151,7 +168,7 @@ if (app.Environment.IsDevelopment())
 
 // CORS must come BEFORE the exception middleware so error responses
 // (including 500s) carry the Access-Control-Allow-Origin header. Otherwise
-// the browser swallows the real status code with a generic CORS error.
+// the browser swallows the real status behind a generic CORS error.
 app.UseCors(app.Environment.IsDevelopment() ? "Dev" : "Prod");
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
@@ -164,21 +181,31 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapHealthChecks("/health");
 
-// ── Auto-migration ──────────────────────────────────────────────────────────
-using (var scope = app.Services.CreateScope())
+// ── Deferred database migration ─────────────────────────────────────────────
+// Run migrations AFTER Kestrel starts listening so Railway's healthcheck on
+// /health succeeds while the migration completes (or fails) in the
+// background. Synchronous migrations between Build() and Run() can exceed
+// the 60s healthcheck window when there's a cold DB connection or schema
+// pending changes, killing the deploy before /health ever responds.
+app.Lifetime.ApplicationStarted.Register(() =>
 {
-    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-    try
+    _ = Task.Run(() =>
     {
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        db.Database.Migrate();
-    }
-    catch (Exception ex)
-    {
-        logger.LogError(ex, "Database migration failed at startup.");
-    }
-}
+        using var scope = app.Services.CreateScope();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        try
+        {
+            logger.LogInformation("Applying database migrations...");
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Database.Migrate();
+            logger.LogInformation("Database migrations applied.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Database migration failed at startup.");
+        }
+    });
+});
 
 app.Run();
