@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
+import { USE_NATIVE_DRIVER } from '../theme/motion';
 
 export type ActionSheetOption = {
   label: string;
@@ -34,13 +35,13 @@ export default function ActionSheet({ visible, onClose, title, subtitle, options
   useEffect(() => {
     if (visible) {
       Animated.parallel([
-        Animated.spring(translateY, { toValue: 0, useNativeDriver: true, bounciness: 0, speed: 20 }),
-        Animated.timing(backdropOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+        Animated.spring(translateY, { toValue: 0, useNativeDriver: USE_NATIVE_DRIVER, bounciness: 0, speed: 20 }),
+        Animated.timing(backdropOpacity, { toValue: 1, duration: 200, useNativeDriver: USE_NATIVE_DRIVER }),
       ]).start();
     } else {
       Animated.parallel([
-        Animated.timing(translateY, { toValue: 300, duration: 180, useNativeDriver: true }),
-        Animated.timing(backdropOpacity, { toValue: 0, duration: 180, useNativeDriver: true }),
+        Animated.timing(translateY, { toValue: 300, duration: 180, useNativeDriver: USE_NATIVE_DRIVER }),
+        Animated.timing(backdropOpacity, { toValue: 0, duration: 180, useNativeDriver: USE_NATIVE_DRIVER }),
       ]).start();
     }
   }, [visible, translateY, backdropOpacity]);

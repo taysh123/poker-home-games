@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { registerToastListener } from '../utils/toast';
 import { colors } from '../theme/colors';
+import { USE_NATIVE_DRIVER } from '../theme/motion';
 
 type Variant = 'success' | 'error' | 'info';
 
@@ -31,14 +32,14 @@ export default function Toast() {
       setVariant(v);
 
       Animated.parallel([
-        Animated.timing(opacity, { toValue: 1, duration: 220, useNativeDriver: true }),
-        Animated.timing(translateY, { toValue: 0, duration: 220, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: 220, useNativeDriver: USE_NATIVE_DRIVER }),
+        Animated.timing(translateY, { toValue: 0, duration: 220, useNativeDriver: USE_NATIVE_DRIVER }),
       ]).start();
 
       timer.current = setTimeout(() => {
         Animated.parallel([
-          Animated.timing(opacity, { toValue: 0, duration: 200, useNativeDriver: true }),
-          Animated.timing(translateY, { toValue: 20, duration: 200, useNativeDriver: true }),
+          Animated.timing(opacity, { toValue: 0, duration: 200, useNativeDriver: USE_NATIVE_DRIVER }),
+          Animated.timing(translateY, { toValue: 20, duration: 200, useNativeDriver: USE_NATIVE_DRIVER }),
         ]).start();
       }, 2500);
     });

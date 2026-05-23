@@ -6,6 +6,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { USE_NATIVE_DRIVER } from '../theme/motion';
 import { useAuth } from '../context/AuthContext';
 import { useActiveSession } from '../context/ActiveSessionContext';
 import LoginScreen from '../screens/LoginScreen';
@@ -95,7 +96,7 @@ function LiveGameBar() {
         toValue: hasSession ? 0 : 80,
         friction: 10,
         tension: 120,
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }).start();
     }
   }, [activeSession]);
@@ -105,8 +106,8 @@ function LiveGameBar() {
   React.useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 0.2, duration: 900, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 0.2, duration: 900, useNativeDriver: USE_NATIVE_DRIVER }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: USE_NATIVE_DRIVER }),
       ]),
     );
     loop.start();

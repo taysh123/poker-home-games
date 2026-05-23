@@ -1,4 +1,9 @@
-import { Animated, Easing } from 'react-native';
+import { Animated, Easing, Platform } from 'react-native';
+
+// React Native Web does not implement the native animated driver and emits a
+// console warning for every animation that requests it. Disable on web so the
+// console stays clean; animations still run via the JS driver.
+export const USE_NATIVE_DRIVER = Platform.OS !== 'web';
 
 export const durations = {
   instant:  80,
@@ -24,7 +29,7 @@ export function fadeIn(
     duration: options?.duration ?? durations.normal,
     delay: options?.delay ?? 0,
     easing: easings.decelerate,
-    useNativeDriver: true,
+    useNativeDriver: USE_NATIVE_DRIVER,
   });
 }
 
@@ -38,7 +43,7 @@ export function slideUp(
     duration: options?.duration ?? durations.slow,
     delay: options?.delay ?? 0,
     easing: easings.decelerate,
-    useNativeDriver: true,
+    useNativeDriver: USE_NATIVE_DRIVER,
   });
 }
 
@@ -50,7 +55,7 @@ export function springScale(
     toValue,
     friction: 8,
     tension: 100,
-    useNativeDriver: true,
+    useNativeDriver: USE_NATIVE_DRIVER,
   });
 }
 
@@ -61,13 +66,13 @@ export function pulse(value: Animated.Value) {
         toValue: 0.25,
         duration: 900,
         easing: Easing.inOut(Easing.ease),
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }),
       Animated.timing(value, {
         toValue: 1,
         duration: 900,
         easing: Easing.inOut(Easing.ease),
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }),
     ]),
   );

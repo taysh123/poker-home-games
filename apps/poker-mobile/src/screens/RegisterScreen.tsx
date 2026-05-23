@@ -13,6 +13,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { colors } from '../theme/colors';
+import { USE_NATIVE_DRIVER } from '../theme/motion';
 import { shadows } from '../theme/shadows';
 import { useAuth } from '../context/AuthContext';
 import { useGoogleAuth } from '../hooks/useGoogleAuth';
@@ -40,12 +41,12 @@ export default function RegisterScreen({ navigation }: Props) {
   useEffect(() => {
     Animated.sequence([
       Animated.parallel([
-        Animated.spring(logoScale, { toValue: 1, friction: 8, tension: 80, useNativeDriver: true }),
-        Animated.timing(logoOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.spring(logoScale, { toValue: 1, friction: 8, tension: 80, useNativeDriver: USE_NATIVE_DRIVER }),
+        Animated.timing(logoOpacity, { toValue: 1, duration: 400, useNativeDriver: USE_NATIVE_DRIVER }),
       ]),
       Animated.parallel([
-        Animated.timing(formOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
-        Animated.spring(formSlide, { toValue: 0, friction: 10, tension: 90, useNativeDriver: true }),
+        Animated.timing(formOpacity, { toValue: 1, duration: 300, useNativeDriver: USE_NATIVE_DRIVER }),
+        Animated.spring(formSlide, { toValue: 0, friction: 10, tension: 90, useNativeDriver: USE_NATIVE_DRIVER }),
       ]),
     ]).start();
   }, []);

@@ -13,12 +13,22 @@ public sealed class GetMyGroupsQueryHandler(
     {
         var callerId = currentUserService.UserId;
 
+        // Project to a flat shape so EF Core can translate m.Group.Members.Count
+        // to a SQL subquery. Materializing Group + Members under AsNoTracking
+        // throws because GroupMember -> Group -> Members forms a cycle.
         var memberships = await context.GroupMembers
             .AsNoTracking()
             .Where(m => m.UserId == callerId)
-            .Include(m => m.Group)
-                .ThenInclude(g => g.Members)
             .OrderBy(m => m.Group.Name)
+            .Select(m => new
+            {
+                m.GroupId,
+                Role = m.Role,
+                GroupName = m.Group.Name,
+                GroupDescription = m.Group.Description,
+                GroupCreatedAt = m.Group.CreatedAt,
+                MemberCount = m.Group.Members.Count(),
+            })
             .ToListAsync(cancellationToken);
 
         if (memberships.Count == 0) return [];
@@ -82,12 +92,12 @@ public sealed class GetMyGroupsQueryHandler(
         }
 
         return memberships.Select(m => new MyGroupDto(
-            m.Group.Id,
-            m.Group.Name,
-            m.Group.Description,
+            m.GroupId,
+            m.GroupName,
+            m.GroupDescription,
             m.Role.ToString(),
-            m.Group.Members.Count,
-            m.Group.CreatedAt,
+            m.MemberCount,
+            m.GroupCreatedAt,
             groupPL.TryGetValue(m.GroupId, out var pl) ? pl : null,
             groupSessions.GetValueOrDefault(m.GroupId, 0)
         )).ToList();

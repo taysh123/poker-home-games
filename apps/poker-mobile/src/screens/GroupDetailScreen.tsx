@@ -13,6 +13,7 @@ import {
   Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { USE_NATIVE_DRIVER } from '../theme/motion';
 import { showToast } from '../utils/toast';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -114,8 +115,8 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
       setLoading(true);
       load().then(() => {
         Animated.parallel([
-          Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }),
-          Animated.spring(slideAnim, { toValue: 0, friction: 10, tension: 100, useNativeDriver: true }),
+          Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: USE_NATIVE_DRIVER }),
+          Animated.spring(slideAnim, { toValue: 0, friction: 10, tension: 100, useNativeDriver: USE_NATIVE_DRIVER }),
         ]).start();
       });
     }, [load]),

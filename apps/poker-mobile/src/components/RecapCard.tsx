@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { USE_NATIVE_DRIVER } from '../theme/motion';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import SkeletonCard from './SkeletonCard';
@@ -34,7 +35,7 @@ export default function RecapCard({ recap, loading, onShare, sharing }: Props) {
     Animated.timing(chevronAnim, {
       toValue: next ? 1 : 0,
       duration: 220,
-      useNativeDriver: true,
+      useNativeDriver: USE_NATIVE_DRIVER,
     }).start();
     setExpanded(next);
   };

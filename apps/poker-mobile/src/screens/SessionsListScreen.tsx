@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { USE_NATIVE_DRIVER } from '../theme/motion';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
 import { shadows } from '../theme/shadows';
@@ -77,8 +78,8 @@ export default function SessionsListScreen({ route, navigation }: Props) {
     slideAnim.setValue(16);
     load().then(() => {
       Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-        Animated.spring(slideAnim, { toValue: 0, friction: 10, tension: 100, useNativeDriver: true }),
+        Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: USE_NATIVE_DRIVER }),
+        Animated.spring(slideAnim, { toValue: 0, friction: 10, tension: 100, useNativeDriver: USE_NATIVE_DRIVER }),
       ]).start();
     });
   }, [load]));
