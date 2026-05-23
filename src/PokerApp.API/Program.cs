@@ -160,50 +160,6 @@ startupLogger.LogInformation("PokerApp.API starting. Env={Env} Port={Port} JwtSe
 // can confirm liveness even if downstream middleware misbehaves.
 app.MapGet("/health", () => Results.Text("Healthy"));
 
-// /diag — readiness probe. Returns DB connectivity, pending migrations,
-// and config presence. No secrets leak (counts and bools only). Useful for
-// debugging Railway deploys without shelling into the container.
-app.MapGet("/diag", async (IServiceProvider sp) =>
-{
-    var googleIds = builder.Configuration.GetSection("GoogleSettings:ClientIds").Get<IList<string>>() ?? new List<string>();
-    var connStr = builder.Configuration.GetConnectionString("DefaultConnection") ?? string.Empty;
-    var canConnect = false;
-    var pendingMigrations = -1;
-    var appliedMigrations = -1;
-    string? dbError = null;
-    try
-    {
-        using var scope = sp.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        canConnect = await db.Database.CanConnectAsync();
-        if (canConnect)
-        {
-            pendingMigrations = (await db.Database.GetPendingMigrationsAsync()).Count();
-            appliedMigrations = (await db.Database.GetAppliedMigrationsAsync()).Count();
-        }
-    }
-    catch (Exception ex)
-    {
-        dbError = ex.GetType().Name + ": " + ex.Message;
-    }
-    return Results.Json(new
-    {
-        env = app.Environment.EnvironmentName,
-        port = railwayPort ?? "(launchSettings)",
-        jwtSecretConfigured = !string.IsNullOrWhiteSpace(jwtSecret) && jwtSecret.Length >= 32,
-        jwtSecretLength = jwtSecret.Length,
-        jwtIssuer = jwtSection["Issuer"],
-        jwtAudience = jwtSection["Audience"],
-        googleClientIdsCount = googleIds.Count,
-        corsOrigins = prodOrigins,
-        connectionStringConfigured = !string.IsNullOrWhiteSpace(connStr),
-        canConnect,
-        appliedMigrations,
-        pendingMigrations,
-        dbError,
-    });
-});
-
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
