@@ -39,6 +39,8 @@ import { getGroupActivity, ActivityLogDto } from '../api/activityApi';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { searchUsers, UserSearchResultDto } from '../api/usersApi';
+import SkeletonCard from '../components/SkeletonCard';
+import SkeletonRow from '../components/SkeletonRow';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupDetail'>;
 
@@ -301,8 +303,25 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator color={colors.gold} size="large" />
+      <View style={styles.listWrap}>
+        <View style={styles.listContent}>
+          {/* group card */}
+          <SkeletonCard height={88} borderRadius={16} style={{ marginBottom: 12 }} />
+          {/* nav buttons */}
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
+            <SkeletonCard height={52} borderRadius={14} style={{ flex: 1 }} />
+            <SkeletonCard height={52} borderRadius={14} style={{ flex: 1 }} />
+          </View>
+          {/* members header */}
+          <SkeletonCard height={14} borderRadius={4} style={{ width: '30%', marginBottom: 12 }} />
+          {/* member rows */}
+          <View style={{ backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
+            <SkeletonRow isFirst />
+            <SkeletonRow />
+            <SkeletonRow />
+            <SkeletonRow />
+          </View>
+        </View>
       </View>
     );
   }
