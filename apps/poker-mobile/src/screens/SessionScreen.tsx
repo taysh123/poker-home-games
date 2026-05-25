@@ -182,7 +182,9 @@ export default function SessionScreen({ route, navigation }: Props) {
 
       const [sessionData, membersData] = await Promise.all([
         getSessionById(token, sessionId),
-        getGroupMembers(token, groupId).catch(() => [] as GroupMemberDto[]),
+        groupId
+          ? getGroupMembers(token, groupId).catch(() => [] as GroupMemberDto[])
+          : Promise.resolve([] as GroupMemberDto[]),
       ]);
 
       setSession(sessionData);
@@ -223,17 +225,18 @@ export default function SessionScreen({ route, navigation }: Props) {
               .filter(g => g.netBalance !== 0);
             setGuestBalances(computed);
           }
-          // Auto-recalculate if no settlements are saved (e.g. prior calculation failed)
+          // Auto-recalculate if no settlements are saved (awaited so screen renders correct data first time)
           if (!settData || settData.settlements.length === 0) {
             const tok = await SecureStore.getItemAsync('accessToken');
             if (tok) {
-              calculateSettlements(tok, sessionId)
-                .then(r => {
-                  setSettlements(r.settlements);
-                  setGuestBalances(r.guestBalances);
-                  setSettlementsLoaded(true);
-                })
-                .catch(() => {});
+              try {
+                const recalc = await calculateSettlements(tok, sessionId);
+                setSettlements(recalc.settlements);
+                setGuestBalances(recalc.guestBalances);
+                setSettlementsLoaded(true);
+              } catch {
+                // silently fail — user can press Recalculate manually
+              }
             }
           }
         }
@@ -978,9 +981,19 @@ export default function SessionScreen({ route, navigation }: Props) {
 
             {settlements.length === 0 ? (
               <View style={styles.evenCard}>
-                <Ionicons name="checkmark-circle" size={36} color={colors.success} />
-                <Text style={styles.evenTitle}>Everyone is even</Text>
-                <Text style={styles.evenSub}>No transfers needed — the math works out perfectly.</Text>
+                <Ionicons
+                  name="checkmark-circle"
+                  size={36}
+                  color={guestBalances.length > 0 ? colors.textMuted : colors.success}
+                />
+                <Text style={styles.evenTitle}>
+                  {guestBalances.length > 0 ? 'No digital transfers' : 'Everyone is even'}
+                </Text>
+                <Text style={styles.evenSub}>
+                  {guestBalances.length > 0
+                    ? 'Registered players are square — guests settle in cash below.'
+                    : 'No transfers needed — the math works out perfectly.'}
+                </Text>
                 <TouchableOpacity onPress={handleCalculateSettlements} disabled={calcLoading}>
                   {calcLoading
                     ? <ActivityIndicator color={colors.gold} size="small" />
