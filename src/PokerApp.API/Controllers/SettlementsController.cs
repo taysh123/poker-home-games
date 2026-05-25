@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PokerApp.Application.Features.Settlements;
 using PokerApp.Application.Features.Settlements.Commands.CalculateSettlements;
+using PokerApp.Application.Features.Settlements.Commands.MarkAllMySettlementsPaid;
 using PokerApp.Application.Features.Settlements.Commands.MarkSettlementPaid;
 using PokerApp.Application.Features.Settlements.Queries.GetMyPendingSettlements;
 using PokerApp.Application.Features.Settlements.Queries.GetSessionSettlements;
@@ -48,6 +49,16 @@ public class SettlementsController(IMediator mediator) : ControllerBase
     {
         var result = await mediator.Send(new GetMyPendingSettlementsQuery(), cancellationToken);
         return Ok(result);
+    }
+
+    /// <summary>Marks all pending settlements where the caller is the payer as paid in one call.</summary>
+    [HttpPost("api/settlements/mark-all-mine-paid")]
+    [ProducesResponseType(typeof(int), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> MarkAllMySettlementsPaid(CancellationToken cancellationToken)
+    {
+        var count = await mediator.Send(new MarkAllMySettlementsPaidCommand(), cancellationToken);
+        return Ok(count);
     }
 
     /// <summary>Marks a settlement as paid. Only the payer or receiver can call this.</summary>

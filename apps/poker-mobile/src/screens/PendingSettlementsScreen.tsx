@@ -1,5 +1,6 @@
 import React, { useCallback, useLayoutEffect, useState } from 'react';
 import {
+  Alert,
   Animated,
   View,
   Text,
@@ -20,6 +21,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   getMyPendingSettlements,
   markSettlementPaid,
+  markAllMySettlementsPaid,
   MyPendingSettlementDto,
 } from '../api/settlementsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -39,6 +41,7 @@ export default function PendingSettlementsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [markingId, setMarkingId] = useState<string | null>(null);
+  const [settleAllLoading, setSettleAllLoading] = useState(false);
   const entrance = useScreenEntrance();
 
   const load = useCallback(async (isRefresh = false) => {
@@ -84,6 +87,38 @@ export default function PendingSettlementsScreen() {
     } finally {
       setMarkingId(null);
     }
+  }
+
+  function handleSettleAll() {
+    const myDebts = settlements.filter(s => s.payerUserId === user?.userId);
+    if (myDebts.length === 0) return;
+    const totalAmount = myDebts.reduce((sum, s) => sum + s.amount, 0);
+    Alert.alert(
+      'Settle All',
+      `Mark all ${myDebts.length} payment${myDebts.length !== 1 ? 's' : ''} (${formatMoney(totalAmount)} total) as paid?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Settle All',
+          onPress: async () => {
+            setSettleAllLoading(true);
+            try {
+              const token = await SecureStore.getItemAsync('accessToken');
+              if (!token) return;
+              const count = await markAllMySettlementsPaid(token);
+              successNotification();
+              showToast(`${count} settlement${count !== 1 ? 's' : ''} marked as paid`, 'success');
+              setSettlements(prev => prev.filter(s => s.payerUserId !== user?.userId));
+            } catch {
+              errorNotification();
+              showToast('Failed to settle all', 'error');
+            } finally {
+              setSettleAllLoading(false);
+            }
+          },
+        },
+      ],
+    );
   }
 
   if (loading) {
@@ -140,6 +175,24 @@ export default function PendingSettlementsScreen() {
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} tintColor={colors.gold} progressBackgroundColor={colors.surface} />}
     >
+      {settlements.some(s => s.payerUserId === user?.userId) && (
+        <TouchableOpacity
+          style={styles.settleAllBtn}
+          onPress={handleSettleAll}
+          disabled={settleAllLoading || !!markingId}
+          activeOpacity={0.8}
+        >
+          {settleAllLoading
+            ? <ActivityIndicator size="small" color={colors.background} />
+            : (
+              <>
+                <Ionicons name="checkmark-done-outline" size={16} color={colors.background} />
+                <Text style={styles.settleAllText}>Settle All My Debts</Text>
+              </>
+            )}
+        </TouchableOpacity>
+      )}
+
       {Object.entries(bySession).map(([sessionId, group]) => (
         <View key={sessionId} style={styles.sessionGroup}>
           <TouchableOpacity
@@ -247,6 +300,19 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { ...typography.h3, color: colors.text },
   emptySubtitle: { fontSize: 14, color: colors.textMuted, textAlign: 'center' },
+
+  settleAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.success,
+    borderRadius: 14,
+    paddingVertical: 14,
+    marginBottom: 20,
+    ...shadows.goldSm,
+  },
+  settleAllText: { fontSize: 15, fontWeight: '700', color: colors.background },
 
   sessionGroup: {
     marginBottom: 20,

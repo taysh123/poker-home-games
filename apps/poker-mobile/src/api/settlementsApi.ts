@@ -86,3 +86,12 @@ export async function getMyPendingSettlements(token: string): Promise<MyPendingS
   );
   return data;
 }
+
+export async function markAllMySettlementsPaid(token: string): Promise<number> {
+  const { data } = await api.post<number>(
+    '/api/settlements/mark-all-mine-paid',
+    {},
+    { headers: authHeader(token) },
+  );
+  return data;
+}
