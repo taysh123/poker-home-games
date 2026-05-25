@@ -130,7 +130,7 @@ builder.Services
             ValidIssuer = jwtSection["Issuer"],
             ValidAudience = jwtSection["Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
-            ClockSkew = TimeSpan.Zero
+            ClockSkew = TimeSpan.FromSeconds(30)
         };
     });
 
