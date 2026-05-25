@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Alert,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -43,8 +44,14 @@ export default function NewGameScreen({ route, navigation }: Props) {
   const [step, setStep] = useState(1);
   const STEP_LABELS = ['Details', 'Players', 'Review'];
 
+  const reviewAnim = useRef(new Animated.Value(0)).current;
+
   function goToStep(n: number) {
     setStep(n);
+    if (n === 3) {
+      reviewAnim.setValue(0);
+      Animated.timing(reviewAnim, { toValue: 1, duration: 320, useNativeDriver: true }).start();
+    }
   }
   const [starting, setStarting] = useState(false);
 
@@ -283,7 +290,7 @@ export default function NewGameScreen({ route, navigation }: Props) {
         {/* ── Step 1: Game Details ── */}
         {step === 1 && (
           <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>Game Details</Text>
+            <Text style={styles.stepTitle}>Set the Table</Text>
 
             <AppTextInput
               label="Session Name"
@@ -360,7 +367,7 @@ export default function NewGameScreen({ route, navigation }: Props) {
         {/* ── Step 2: Add Players ── */}
         {step === 2 && (
           <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>Add Players</Text>
+            <Text style={styles.stepTitle}>Assemble Your Crew</Text>
 
             {selectedGroupId && (
               <View style={styles.field}>
@@ -457,21 +464,28 @@ export default function NewGameScreen({ route, navigation }: Props) {
         {/* ── Step 3: Review ── */}
         {step === 3 && (
           <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>Review</Text>
+            <Text style={styles.stepTitle}>Ready to Play?</Text>
 
-            <View style={styles.reviewCard}>
-              <Text style={styles.reviewName}>{sessionName}</Text>
-              <Text style={styles.reviewMeta}>{selectedGroupName || 'No Group'}</Text>
-              <View style={styles.reviewMetaRow}>
-                {defaultBuyIn ? <Text style={styles.reviewChip}>₪{defaultBuyIn} buy-in</Text> : null}
-                {chipRatio ? <Text style={styles.reviewChip}>{chipRatio} chips/₪</Text> : null}
+            <Animated.View style={[styles.reviewCard, {
+              opacity: reviewAnim,
+              transform: [{ translateY: reviewAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }],
+            }]}>
+              <View style={styles.reviewAccent} />
+              <View style={styles.reviewCardBody}>
+                <Text style={styles.reviewName}>{sessionName}</Text>
+                <Text style={styles.reviewMeta}>{selectedGroupName || 'No Group'}</Text>
+                <Text style={styles.reviewPlayerCount}>
+                  {allSelectedPlayers.length} player{allSelectedPlayers.length !== 1 ? 's' : ''} at the table
+                </Text>
+                <View style={styles.reviewMetaRow}>
+                  {defaultBuyIn ? <Text style={styles.reviewChip}>₪{defaultBuyIn} buy-in</Text> : null}
+                  {chipRatio ? <Text style={styles.reviewChip}>{chipRatio} chips/₪</Text> : null}
+                </View>
               </View>
-            </View>
+            </Animated.View>
 
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>
-                Players ({(selectedMemberIds.size + addedPlayers.filter(p => p.type === 'guest').length) || allSelectedPlayers.length})
-              </Text>
+              <Text style={styles.fieldLabel}>Players</Text>
               {allSelectedPlayers.length === 0 ? (
                 <Text style={styles.noPlayers}>No players added — you can add them during the game.</Text>
               ) : (
@@ -491,7 +505,7 @@ export default function NewGameScreen({ route, navigation }: Props) {
             <View style={styles.actionRow}>
               <PrimaryButton label="Back" onPress={() => goToStep(2)} variant="outline" fullWidth={false} style={styles.stepBackBtn} />
               <PrimaryButton
-                label="Start Game"
+                label="Deal 'Em In 🃏"
                 onPress={handleStartGame}
                 loading={starting}
                 fullWidth={false}
@@ -676,12 +690,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.goldMuted,
     borderRadius: 16,
-    padding: 20,
-    gap: 8,
+    overflow: 'hidden',
+    flexDirection: 'row',
     ...shadows.goldSm,
   },
-  reviewName: { fontSize: 22, fontWeight: '800', color: colors.text },
+  reviewAccent: {
+    width: 4,
+    backgroundColor: colors.gold,
+    borderTopLeftRadius: 16,
+    borderBottomLeftRadius: 16,
+  },
+  reviewCardBody: {
+    flex: 1,
+    padding: 20,
+    gap: 6,
+  },
+  reviewName: { ...typography.h2, color: colors.text },
   reviewMeta: { fontSize: 14, color: colors.textMuted },
+  reviewPlayerCount: { fontSize: 13, color: colors.goldLight, fontWeight: '600' },
   reviewMetaRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
   reviewChip: {
     fontSize: 13,
