@@ -138,15 +138,21 @@ export default function AllSessionsScreen() {
     return () => pulseAnim.stopAnimation();
   }, []);
 
+  const stickyHeader = (
+    <View style={[styles.stickyHeader, { paddingTop: insets.top + 12 }]}>
+      <Text style={styles.screenTitle}>Sessions</Text>
+    </View>
+  );
+
   if (loading) {
     return (
       <View style={styles.flex}>
+        {stickyHeader}
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={[styles.container, { paddingTop: insets.top + 20 }]}
+          contentContainerStyle={styles.container}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.screenTitle}>Sessions</Text>
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Active Now</Text>
             <SkeletonCard height={64} borderRadius={16} />
@@ -167,12 +173,15 @@ export default function AllSessionsScreen() {
 
   if (error) {
     return (
-      <View style={styles.center}>
-        <Ionicons name="alert-circle-outline" size={36} color={colors.textDim} />
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
-          <Text style={styles.retryText}>Try Again</Text>
-        </TouchableOpacity>
+      <View style={styles.flex}>
+        {stickyHeader}
+        <View style={styles.center}>
+          <Ionicons name="alert-circle-outline" size={36} color={colors.textDim} />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
+            <Text style={styles.retryText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -181,9 +190,10 @@ export default function AllSessionsScreen() {
 
   return (
     <View style={styles.flex}>
+      {stickyHeader}
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.container, { paddingTop: insets.top + 20 }]}
+        contentContainerStyle={styles.container}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -195,8 +205,6 @@ export default function AllSessionsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={entrance.style}>
-        {/* ── Screen title ── */}
-        <Text style={styles.screenTitle}>Sessions</Text>
 
         {/* ── Active ── */}
         <View style={styles.section}>
@@ -435,7 +443,7 @@ export default function AllSessionsScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1, backgroundColor: colors.background },
-  container: { paddingHorizontal: 20, paddingBottom: 120 },
+  container: { paddingHorizontal: 20, paddingBottom: 120, paddingTop: 8 },
   center: {
     flex: 1,
     backgroundColor: colors.background,
@@ -445,10 +453,16 @@ const styles = StyleSheet.create({
     padding: 32,
   },
 
+  stickyHeader: {
+    paddingHorizontal: 20,
+    paddingBottom: 14,
+    backgroundColor: colors.background,
+  },
   screenTitle: {
-    ...typography.h1,
+    fontSize: 28,
+    fontWeight: '800',
     color: colors.text,
-    marginBottom: 24,
+    letterSpacing: -0.5,
   },
 
   section: { marginBottom: 28 },

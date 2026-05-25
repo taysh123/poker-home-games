@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { formatPL } from '../utils/formatters';
@@ -47,7 +48,7 @@ export default function SessionListItem({ name, meta, profitLoss, status, onPres
           {formatPL(pl)}
         </Text>
       )}
-      <Text style={styles.chevron}>›</Text>
+      <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
     </TouchableOpacity>
   );
 }
@@ -109,10 +110,5 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
     minWidth: 52,
     textAlign: 'right',
-  },
-  chevron: {
-    fontSize: 18,
-    color: colors.textDim,
-    marginLeft: 2,
   },
 });
