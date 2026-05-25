@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
 import { shadows } from '../theme/shadows';
@@ -35,6 +36,7 @@ type AddedPlayer =
 
 export default function NewGameScreen({ route, navigation }: Props) {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const { refresh: refreshActiveSession } = useActiveSession();
 
   // Step: 1 = Details, 2 = Players, 3 = Review
@@ -216,7 +218,7 @@ export default function NewGameScreen({ route, navigation }: Props) {
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
         <TouchableOpacity
           style={styles.backBtn}
           onPress={() => step > 1 ? goToStep(step - 1) : navigation.goBack()}
@@ -488,7 +490,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 56 : 20,
     paddingBottom: 14,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,

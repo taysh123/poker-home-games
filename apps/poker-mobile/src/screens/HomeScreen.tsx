@@ -17,7 +17,7 @@ import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { shadows } from '../theme/shadows';
-import { pulse, fadeIn, staggered, slideUp } from '../theme/motion';
+import { pulse, fadeIn, slideUp } from '../theme/motion';
 import { useAuth } from '../context/AuthContext';
 import { getMyGroups, getMyInvitations, getCrossGroupActivity, MyGroupDto, PendingInvitationDto, CrossGroupActivityDto } from '../api/groupsApi';
 import { getMyNotifications } from '../api/notificationsApi';

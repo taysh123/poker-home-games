@@ -9,6 +9,7 @@ import {
   Animated,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from '../utils/storage';
@@ -37,6 +38,7 @@ const PERIODS: { key: Period; label: string }[] = [
 
 export default function StatsScreen() {
   const navigation = useNavigation<Nav>();
+  const insets = useSafeAreaInsets();
   const [period, setPeriod] = useState<Period>('all');
   const [stats, setStats] = useState<MyStatsDto | null>(null);
   const [achievements, setAchievements] = useState<MyAchievementsDto | null>(null);
@@ -64,12 +66,11 @@ export default function StatsScreen() {
     try {
       const token = await SecureStore.getItemAsync('accessToken');
       if (!token) throw new Error('Not authenticated');
-      const [data, achData] = await Promise.all([
-        getMyStats(token, p === 'all' ? undefined : p),
-        isRefresh || p !== 'all' ? Promise.resolve(achievements) : getMyAchievements(token).catch(() => null),
-      ]);
+      const data = await getMyStats(token, p === 'all' ? undefined : p);
       setStats(data);
-      if (!isRefresh && p === 'all') setAchievements(achData);
+      if (!isRefresh && p === 'all') {
+        getMyAchievements(token).catch(() => null).then(setAchievements);
+      }
     } catch {
       setError('Failed to load stats.');
     } finally {
@@ -77,7 +78,7 @@ export default function StatsScreen() {
       setPeriodLoading(false);
       setRefreshing(false);
     }
-  }, [achievements]);
+  }, []);
 
   useFocusEffect(useCallback(() => {
     load(false, period);
@@ -98,9 +99,17 @@ export default function StatsScreen() {
     });
   }, []);
 
+  const customHeader = (
+    <View style={[statsHeaderStyles.header, { paddingTop: insets.top + 12 }]}>
+      <Text style={statsHeaderStyles.title}>Stats</Text>
+    </View>
+  );
+
   if (loading) {
     return (
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <View style={styles.scroll}>
+        {customHeader}
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <SkeletonCard height={180} borderRadius={20} style={{ marginBottom: 24 }} />
         <View style={{ marginBottom: 24 }}>
           <SkeletonCard height={12} borderRadius={6} style={{ width: '40%', marginBottom: 12 }} />
@@ -120,18 +129,22 @@ export default function StatsScreen() {
             <SkeletonRow />
           </View>
         </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
     );
   }
 
   if (error || !stats) {
     return (
-      <View style={styles.center}>
-        <Ionicons name="alert-circle-outline" size={40} color={colors.textDim} />
-        <Text style={styles.errorText}>{error ?? 'Something went wrong.'}</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
-          <Text style={styles.retryText}>Try Again</Text>
-        </TouchableOpacity>
+      <View style={styles.scroll}>
+        {customHeader}
+        <View style={styles.center}>
+          <Ionicons name="alert-circle-outline" size={40} color={colors.textDim} />
+          <Text style={styles.errorText}>{error ?? 'Something went wrong.'}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
+            <Text style={styles.retryText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -147,8 +160,9 @@ export default function StatsScreen() {
   const activeSessions = stats.recentSessions.filter(s => s.status === 'Active');
 
   return (
+    <View style={styles.scroll}>
+      {customHeader}
     <ScrollView
-      style={styles.scroll}
       contentContainerStyle={styles.content}
       refreshControl={
         <RefreshControl
@@ -387,6 +401,7 @@ export default function StatsScreen() {
 
       </Animated.View>
     </ScrollView>
+    </View>
   );
 }
 
@@ -682,6 +697,20 @@ const achStyles = StyleSheet.create({
   badgeNameLocked: { color: colors.textMuted },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: 12 },
   lockedLabel: { fontSize: 10, fontWeight: '600', color: colors.textDim, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },
+});
+
+const statsHeaderStyles = StyleSheet.create({
+  header: {
+    paddingHorizontal: 20,
+    paddingBottom: 8,
+    backgroundColor: colors.background,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: colors.text,
+    letterSpacing: -0.5,
+  },
 });
 
 const styles = StyleSheet.create({

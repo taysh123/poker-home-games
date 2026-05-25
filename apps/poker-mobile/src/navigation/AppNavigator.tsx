@@ -192,26 +192,12 @@ function TabNavigator() {
         <Tab.Screen
           name="GroupsList"
           component={GroupsListScreen}
-          options={{
-            title: 'Groups',
-            headerShown: true,
-            headerStyle: { backgroundColor: colors.background },
-            headerTintColor: colors.text,
-            headerTitleStyle: { fontWeight: '700' },
-            headerShadowVisible: false,
-          }}
+          options={{ title: 'Groups', headerShown: false }}
         />
         <Tab.Screen
           name="Stats"
           component={StatsScreen}
-          options={{
-            title: 'Stats',
-            headerShown: true,
-            headerStyle: { backgroundColor: colors.background },
-            headerTintColor: colors.text,
-            headerTitleStyle: { fontWeight: '700' },
-            headerShadowVisible: false,
-          }}
+          options={{ title: 'Stats', headerShown: false }}
         />
       </Tab.Navigator>
       <LiveGameBar />

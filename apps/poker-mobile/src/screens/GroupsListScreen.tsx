@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useScreenEntrance } from '../hooks/useScreenEntrance';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -48,6 +49,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export default function GroupsListScreen() {
   const navigation = useNavigation<Nav>();
   const entrance = useScreenEntrance();
+  const insets = useSafeAreaInsets();
   const [groups, setGroups] = useState<MyGroupDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -94,39 +96,6 @@ export default function GroupsListScreen() {
     }, [loadGroups, loadInvitationCount]),
   );
 
-  React.useLayoutEffect(() => {
-    navigation.setOptions({
-      title: 'My Groups',
-      headerStyle: { backgroundColor: colors.background },
-      headerTintColor: colors.text,
-      headerTitleStyle: { fontWeight: '700' },
-      headerRight: () => (
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Invitations')}
-            hitSlop={8}
-            style={styles.headerBtn}
-          >
-            <Ionicons name="mail-outline" size={20} color={invitationCount > 0 ? colors.gold : colors.textMuted} />
-            {invitationCount > 0 && (
-              <View style={styles.notifBadge}>
-                <Text style={styles.notifBadgeText}>
-                  {invitationCount > 9 ? '9+' : String(invitationCount)}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('CreateGroup')}
-            hitSlop={8}
-            style={styles.headerBtn}
-          >
-            <Ionicons name="add" size={22} color={colors.gold} />
-          </TouchableOpacity>
-        </View>
-      ),
-    });
-  }, [navigation, invitationCount]);
 
   async function handleShareInvite(group: MyGroupDto) {
     try {
@@ -227,57 +196,97 @@ export default function GroupsListScreen() {
     return opts;
   }
 
+  const customHeader = (
+    <View style={[styles.customHeader, { paddingTop: insets.top + 12 }]}>
+      <Text style={styles.customHeaderTitle}>My Groups</Text>
+      <View style={styles.customHeaderActions}>
+        <TouchableOpacity
+          style={styles.headerBtn}
+          onPress={() => navigation.navigate('Invitations')}
+          hitSlop={8}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="mail-outline" size={20} color={invitationCount > 0 ? colors.gold : colors.textMuted} />
+          {invitationCount > 0 && (
+            <View style={styles.notifBadge}>
+              <Text style={styles.notifBadgeText}>
+                {invitationCount > 9 ? '9+' : String(invitationCount)}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.headerBtn, styles.addBtn]}
+          onPress={() => navigation.navigate('CreateGroup')}
+          hitSlop={8}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="add" size={22} color={colors.gold} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   if (loading) {
     return (
-      <Animated.View style={[styles.flex, entrance.style]}>
-        {[0, 1, 2, 3].map((i) => (
-          <View
-            key={i}
-            style={[
-              styles.cardRow,
-              { marginHorizontal: 16, marginTop: i === 0 ? 16 : 0, marginBottom: 10 },
-            ]}
-          >
-            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 }}>
-              <SkeletonCard height={44} borderRadius={13} style={{ width: 44, flexShrink: 0 }} />
-              <View style={{ flex: 1, gap: 8 }}>
-                <SkeletonCard height={14} borderRadius={4} style={{ width: '60%' }} />
-                <SkeletonCard height={10} borderRadius={4} style={{ width: '40%' }} />
+      <View style={styles.flex}>
+        {customHeader}
+        <Animated.View style={[{ flex: 1 }, entrance.style]}>
+          {[0, 1, 2, 3].map((i) => (
+            <View
+              key={i}
+              style={[
+                styles.cardRow,
+                { marginHorizontal: 16, marginTop: i === 0 ? 16 : 0, marginBottom: 10 },
+              ]}
+            >
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 }}>
+                <SkeletonCard height={44} borderRadius={13} style={{ width: 44, flexShrink: 0 }} />
+                <View style={{ flex: 1, gap: 8 }}>
+                  <SkeletonCard height={14} borderRadius={4} style={{ width: '60%' }} />
+                  <SkeletonCard height={10} borderRadius={4} style={{ width: '40%' }} />
+                </View>
               </View>
             </View>
-          </View>
-        ))}
-      </Animated.View>
+          ))}
+        </Animated.View>
+      </View>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadGroups}>
-          <Text style={styles.retryText}>Retry</Text>
-        </TouchableOpacity>
+      <View style={styles.flex}>
+        {customHeader}
+        <View style={styles.center}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={loadGroups}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
 
   if (groups.length === 0) {
     return (
-      <View style={styles.center}>
-        <View style={styles.emptyIconWrap}>
-          <Ionicons name="people-outline" size={36} color={colors.textDim} />
+      <View style={styles.flex}>
+        {customHeader}
+        <View style={styles.center}>
+          <View style={styles.emptyIconWrap}>
+            <Ionicons name="people-outline" size={36} color={colors.textDim} />
+          </View>
+          <Text style={styles.emptyTitle}>No groups yet</Text>
+          <Text style={styles.emptySubtitle}>Create a group and invite your friends to start tracking games together</Text>
+          <TouchableOpacity
+            style={styles.createButton}
+            onPress={() => navigation.navigate('CreateGroup')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="add" size={18} color={colors.background} />
+            <Text style={styles.createButtonText}>Create Group</Text>
+          </TouchableOpacity>
         </View>
-        <Text style={styles.emptyTitle}>No groups yet</Text>
-        <Text style={styles.emptySubtitle}>Create a group and invite your friends to start tracking games together</Text>
-        <TouchableOpacity
-          style={styles.createButton}
-          onPress={() => navigation.navigate('CreateGroup')}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="add" size={18} color={colors.background} />
-          <Text style={styles.createButtonText}>Create Group</Text>
-        </TouchableOpacity>
       </View>
     );
   }
@@ -285,7 +294,9 @@ export default function GroupsListScreen() {
   const actionGroup = actionSheetGroup;
 
   return (
-    <Animated.View style={[styles.flex, entrance.style]}>
+    <View style={styles.flex}>
+      {customHeader}
+      <Animated.View style={[{ flex: 1 }, entrance.style]}>
       <FlatList
         style={styles.list}
         contentContainerStyle={styles.listContent}
@@ -394,7 +405,8 @@ export default function GroupsListScreen() {
           </View>
         </View>
       </Modal>
-    </Animated.View>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -409,6 +421,28 @@ const styles = StyleSheet.create({
     padding: 32,
     gap: 12,
   },
+
+  // ── Custom header ──────────────────────────────────────────────────────────
+  customHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 14,
+    backgroundColor: colors.background,
+  },
+  customHeaderTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: colors.text,
+    letterSpacing: -0.5,
+  },
+  customHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+
   list: {
     flex: 1,
     backgroundColor: colors.background,
@@ -517,17 +551,20 @@ const styles = StyleSheet.create({
   badgeTextOwner: {
     color: colors.gold,
   },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
   headerBtn: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+  },
+  addBtn: {
+    borderColor: colors.goldMuted,
+    backgroundColor: colors.goldFaint,
   },
   notifBadge: {
     position: 'absolute',
