@@ -1000,13 +1000,26 @@ export default function SessionScreen({ route, navigation }: Props) {
               </View>
             ) : (
               <View style={styles.settlementList}>
+                {(() => {
+                  const pending = settlements.filter(s => s.status !== 'Confirmed');
+                  const total = settlements.reduce((sum, s) => sum + s.amount, 0);
+                  return pending.length > 0 ? (
+                    <Text style={styles.settlementSummaryText}>
+                      {pending.length} transfer{pending.length !== 1 ? 's' : ''} needed · Total {formatMoney(total)}
+                    </Text>
+                  ) : null;
+                })()}
                 {settlements.map(s => {
                   const isInvolved = s.payerUserId === user?.userId || s.receiverUserId === user?.userId;
                   const isPaid = s.status === 'Confirmed';
                   const payerInitial = s.payerName[0]?.toUpperCase() ?? '?';
                   const receiverInitial = s.receiverName[0]?.toUpperCase() ?? '?';
                   return (
-                    <View key={s.id} style={[styles.settlementCard, isPaid && styles.settlementCardPaid]}>
+                    <View key={s.id} style={[
+                      styles.settlementCard,
+                      isPaid && styles.settlementCardPaid,
+                      isInvolved && !isPaid && styles.settlementCardInvolved,
+                    ]}>
                       {/* Left border accent */}
                       <View style={[styles.settlementAccent, isPaid && styles.settlementAccentPaid]} />
                       <View style={styles.settlementCardInner}>
@@ -2105,6 +2118,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   settlementCardPaid: { opacity: 0.55 },
+  settlementCardInvolved: { backgroundColor: colors.goldFaint },
+  settlementSummaryText: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginBottom: 10,
+    paddingHorizontal: 2,
+  },
   settlementAccent: { width: 4, backgroundColor: colors.gold },
   settlementAccentPaid: { backgroundColor: colors.success },
   settlementCardInner: { flex: 1, padding: 14, gap: 10 },
