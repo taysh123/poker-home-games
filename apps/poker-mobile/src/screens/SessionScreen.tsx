@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -84,6 +84,67 @@ function formatDuration(start: string, end?: string | null, _tick?: number): str
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+type CashTransferItem = { fromName: string; toName: string; amount: number };
+
+// Greedy debt-minimization for cash settlements.
+// After digital settlements handle registered-user transfers, each registered player
+// may still have a cash obligation to guests. Combine those remainders with unlinked
+// guest balances, then pair debtors→creditors to minimise the number of transfers.
+function computeCashTransfers(
+  allBalances: PlayerBalanceDto[],
+  players: SessionPlayerDto[],
+  digitalSettlements: SettlementDto[],
+  guestBals: GuestBalanceDto[],
+): CashTransferItem[] {
+  // Net digital movement per registered user (positive = received, negative = paid)
+  const digitalNet: Record<string, number> = {};
+  for (const s of digitalSettlements) {
+    if (s.payerUserId) digitalNet[s.payerUserId] = (digitalNet[s.payerUserId] ?? 0) - s.amount;
+    if (s.receiverUserId) digitalNet[s.receiverUserId] = (digitalNet[s.receiverUserId] ?? 0) + s.amount;
+  }
+
+  const positions: Array<{ name: string; bal: number }> = [];
+
+  // Registered players: remaining cash = P&L − what was already handled digitally
+  for (const p of players) {
+    if (!p.isGuest && p.userId) {
+      const pl = allBalances.find(b => b.sessionPlayerId === p.sessionPlayerId)?.profitLoss ?? 0;
+      const cash = pl - (digitalNet[p.userId] ?? 0);
+      if (Math.abs(cash) >= 0.01) positions.push({ name: p.username, bal: cash });
+    }
+  }
+
+  // Unlinked guests: their full P&L is settled in cash
+  for (const g of guestBals) {
+    if (Math.abs(g.netBalance) >= 0.01) positions.push({ name: g.guestName, bal: g.netBalance });
+  }
+
+  if (positions.length === 0) return [];
+
+  const debtors = positions.filter(p => p.bal < 0).sort((a, b) => a.bal - b.bal);
+  const creditors = positions.filter(p => p.bal > 0).sort((a, b) => b.bal - a.bal);
+  const dAmts = debtors.map(d => -d.bal);
+  const cAmts = creditors.map(c => c.bal);
+
+  const transfers: CashTransferItem[] = [];
+  let di = 0, ci = 0;
+  while (di < debtors.length && ci < creditors.length) {
+    const pay = Math.min(dAmts[di], cAmts[ci]);
+    if (pay >= 0.01) {
+      transfers.push({
+        fromName: debtors[di].name,
+        toName: creditors[ci].name,
+        amount: Math.round(pay * 100) / 100,
+      });
+    }
+    dAmts[di] -= pay;
+    cAmts[ci] -= pay;
+    if (dAmts[di] < 0.005) di++;
+    if (cAmts[ci] < 0.005) ci++;
+  }
+  return transfers;
 }
 
 export default function SessionScreen({ route, navigation }: Props) {
@@ -674,6 +735,11 @@ export default function SessionScreen({ route, navigation }: Props) {
       })
     : session?.players ?? [];
 
+  const cashTransfers = useMemo(() => {
+    if (!isFinished || balances.length === 0) return [];
+    return computeCashTransfers(balances, session?.players ?? [], settlements, guestBalances);
+  }, [isFinished, balances, session?.players, settlements, guestBalances]);
+
   // ── Render ──
 
   if (loading) {
@@ -1091,32 +1157,51 @@ export default function SessionScreen({ route, navigation }: Props) {
           </View>
         )}
 
-        {/* ── Guest Manual Settlements ── */}
-        {isFinished && guestBalances.length > 0 && (
+        {/* ── Cash Settlements ── */}
+        {isFinished && cashTransfers.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Handle Manually</Text>
-              <View style={styles.guestManualBadge}>
-                <Text style={styles.guestManualBadgeText}>GUEST PLAYERS</Text>
+              <Text style={styles.sectionTitle}>Cash Settlements</Text>
+              <View style={styles.cashBadgeHeader}>
+                <Ionicons name="cash-outline" size={11} color={colors.textDim} />
+                <Text style={styles.cashBadgeHeaderText}>CASH</Text>
               </View>
             </View>
-            <View style={styles.guestManualCard}>
-              <Text style={styles.guestManualSubtitle}>
-                These guest players are not in the app — settle with them directly in cash.
-              </Text>
-              {guestBalances.map(g => {
-                const owes = g.netBalance < 0;
-                const amount = formatMoney(Math.abs(g.netBalance));
+            <Text style={styles.cashSettleSubtitle}>
+              Guests can't receive digital transfers — settle these directly in cash.
+            </Text>
+            <View style={[styles.settlementList, { marginTop: 10 }]}>
+              {cashTransfers.map((ct, i) => {
+                const fromInitial = ct.fromName[0]?.toUpperCase() ?? '?';
+                const toInitial = ct.toName[0]?.toUpperCase() ?? '?';
                 return (
-                  <View key={g.sessionPlayerId} style={styles.guestManualRow}>
-                    <View style={[styles.guestManualAvatar, owes ? styles.guestManualAvatarOwes : styles.guestManualAvatarOwed]}>
-                      <Text style={styles.settlementAvatarText}>{g.guestName[0]?.toUpperCase() ?? '?'}</Text>
-                    </View>
-                    <View style={styles.guestManualInfo}>
-                      <Text style={styles.guestManualName}>{g.guestName}</Text>
-                      <Text style={[styles.guestManualAction, owes ? styles.guestManualOwes : styles.guestManualOwed]}>
-                        {owes ? `Owes ${amount} — collect cash` : `Is owed ${amount} — pay in cash`}
-                      </Text>
+                  <View key={i} style={[styles.settlementCard, styles.settlementCardCash]}>
+                    <View style={[styles.settlementAccent, styles.settlementAccentCash]} />
+                    <View style={styles.settlementCardInner}>
+                      <View style={styles.settlementFlow}>
+                        <View style={styles.settlementParty}>
+                          <View style={[styles.settlementAvatar, styles.settlementAvatarCash]}>
+                            <Text style={styles.settlementAvatarText}>{fromInitial}</Text>
+                          </View>
+                          <Text style={styles.settlementPartyName} numberOfLines={1}>{ct.fromName}</Text>
+                        </View>
+                        <View style={styles.settlementMiddle}>
+                          <Ionicons name="arrow-forward" size={16} color={colors.textDim} />
+                          <Text style={styles.settlementAmount}>{formatMoney(ct.amount)}</Text>
+                        </View>
+                        <View style={styles.settlementParty}>
+                          <View style={[styles.settlementAvatar, styles.settlementAvatarReceiver]}>
+                            <Text style={styles.settlementAvatarText}>{toInitial}</Text>
+                          </View>
+                          <Text style={styles.settlementPartyName} numberOfLines={1}>{ct.toName}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.settlementActionRow}>
+                        <View style={styles.badgeCashRow}>
+                          <Ionicons name="cash-outline" size={11} color={colors.textMuted} />
+                          <Text style={styles.cashBadgeText}>CASH</Text>
+                        </View>
+                      </View>
                     </View>
                   </View>
                 );
@@ -2226,6 +2311,39 @@ const styles = StyleSheet.create({
   guestManualAction: { fontSize: 12, fontWeight: '500' },
   guestManualOwes: { color: colors.error },
   guestManualOwed: { color: colors.success },
+
+  // Cash settlement cards
+  cashSettleSubtitle: { fontSize: 12, color: colors.textMuted, lineHeight: 17, marginBottom: 0 },
+  cashBadgeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  cashBadgeHeaderText: { fontSize: 9, fontWeight: '700', color: colors.textDim, textTransform: 'uppercase', letterSpacing: 0.5 },
+  settlementCardCash: { backgroundColor: colors.surfaceAlt },
+  settlementAccentCash: { backgroundColor: colors.textMuted },
+  settlementAvatarCash: {
+    backgroundColor: 'rgba(231,76,60,0.15)',
+    borderColor: 'rgba(231,76,60,0.4)',
+  },
+  badgeCashRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  cashBadgeText: { fontSize: 10, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
 
   // Notes
   notesText: { fontSize: 14, color: colors.text, lineHeight: 21 },
