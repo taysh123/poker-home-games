@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import {
+  Animated,
   View,
   Text,
   ScrollView,
@@ -20,6 +21,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import SkeletonCard from '../components/SkeletonCard';
 import SkeletonRow from '../components/SkeletonRow';
 import { timeAgo } from '../utils/formatters';
+import { useScreenEntrance } from '../hooks/useScreenEntrance';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -40,6 +42,7 @@ export default function NotificationsScreen() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const entrance = useScreenEntrance();
 
   const load = useCallback(async (isRefresh = false) => {
     if (!isRefresh) setLoading(true);
@@ -89,8 +92,8 @@ export default function NotificationsScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.screen}
+    <Animated.ScrollView
+      style={[styles.screen, entrance.style]}
       contentContainerStyle={[styles.content, { paddingTop: insets.top + 16 }]}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} progressBackgroundColor={colors.surface} />
@@ -141,7 +144,7 @@ export default function NotificationsScreen() {
           })}
         </View>
       )}
-    </ScrollView>
+    </Animated.ScrollView>
   );
 }
 
