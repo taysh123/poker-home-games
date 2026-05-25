@@ -499,6 +499,21 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
             </View>
           )}
 
+          {/* Rivalries — promoted above leaderboard so social/competitive content is visible first */}
+          {rivals.length > 0 && (
+            <View style={styles.activitySection}>
+              <Text style={styles.sectionTitle}>Rivalries</Text>
+              <View style={styles.activityCard}>
+                {rivals.map((r, i) => (
+                  <React.Fragment key={`${r.player1Id}-${r.player2Id}`}>
+                    {i > 0 && <View style={styles.activityDivider} />}
+                    <RivalryRow rivalry={r} />
+                  </React.Fragment>
+                ))}
+              </View>
+            </View>
+          )}
+
           {/* Leaderboard */}
           <View style={styles.leaderboardSection}>
             <View style={styles.lbHeader}>
@@ -579,25 +594,6 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
       }
       ListFooterComponent={
         <View>
-          <View style={styles.activitySection}>
-            <Text style={styles.sectionTitle}>Rivalries</Text>
-            {rivals.length > 0 ? (
-              <View style={styles.activityCard}>
-                {rivals.map((r, i) => (
-                  <React.Fragment key={`${r.player1Id}-${r.player2Id}`}>
-                    {i > 0 && <View style={styles.activityDivider} />}
-                    <RivalryRow rivalry={r} />
-                  </React.Fragment>
-                ))}
-              </View>
-            ) : (
-              <View style={styles.rivalryEmpty}>
-                <Ionicons name="people-outline" size={28} color={colors.textDim} />
-                <Text style={styles.rivalryEmptyTitle}>No rivalries yet</Text>
-                <Text style={styles.rivalryEmptySub}>Play more sessions together to see head-to-head records</Text>
-              </View>
-            )}
-          </View>
           {activity.length > 0 && (
             <View style={styles.activitySection}>
               <View style={styles.activityHeader}>
@@ -1143,9 +1139,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 10,
   },
-  leaderboardRowFirst: { backgroundColor: colors.goldFaint },
-  leaderboardRowSecond: { backgroundColor: 'rgba(192,192,192,0.06)' },
-  leaderboardRowThird: { backgroundColor: 'rgba(205,127,50,0.06)' },
+  leaderboardRowFirst: { backgroundColor: colors.goldFaint, borderLeftWidth: 3, borderLeftColor: colors.gold, paddingLeft: 11 },
+  leaderboardRowSecond: { backgroundColor: 'rgba(141,169,196,0.08)', borderLeftWidth: 3, borderLeftColor: '#8DA9C4', paddingLeft: 11 },
+  leaderboardRowThird: { backgroundColor: 'rgba(184,115,51,0.08)', borderLeftWidth: 3, borderLeftColor: '#B87333', paddingLeft: 11 },
   rankBadge: {
     width: 28,
     height: 28,
