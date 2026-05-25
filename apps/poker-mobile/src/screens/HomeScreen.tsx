@@ -33,6 +33,18 @@ import { useActiveSession } from '../context/ActiveSessionContext';
 
 type HomeNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
+const ACTIVITY_ICON_CFG: Record<string, { icon: React.ComponentProps<typeof Ionicons>['name']; bg: string; color: string }> = {
+  SessionEnded:        { icon: 'flag-outline',          bg: colors.errorFaint,              color: colors.error },
+  SessionStarted:      { icon: 'play-circle-outline',   bg: colors.goldFaint,               color: colors.gold },
+  SessionCreated:      { icon: 'add-circle-outline',    bg: colors.goldFaint,               color: colors.gold },
+  AchievementUnlocked: { icon: 'trophy-outline',        bg: colors.goldFaint,               color: colors.gold },
+  MemberJoined:        { icon: 'person-add-outline',    bg: 'rgba(39,174,96,0.10)',         color: colors.success },
+  PlayerJoined:        { icon: 'people-outline',        bg: 'rgba(39,174,96,0.10)',         color: colors.success },
+  MemberLeft:          { icon: 'person-remove-outline', bg: colors.errorFaint,              color: colors.textMuted },
+  MemberRemoved:       { icon: 'close-circle-outline',  bg: colors.errorFaint,              color: colors.textMuted },
+  _default:            { icon: 'ellipse-outline',       bg: colors.surfaceHigh,             color: colors.textMuted },
+};
+
 export default function HomeScreen() {
   const { user, logout } = useAuth();
   const navigation = useNavigation<HomeNav>();
@@ -470,6 +482,7 @@ export default function HomeScreen() {
                   status={s.status}
                   onPress={() => openSession(s)}
                   isFirst={i === 0}
+                  showResultBadge
                 />
               ))}
             </View>
@@ -544,45 +557,51 @@ export default function HomeScreen() {
         </View>
 
         {/* ── Group Activity ── */}
-        {crossGroupActivity.length > 0 && (
-          <View style={[styles.section, styles.lastSection]}>
-            <View style={styles.sectionRow}>
-              <Text style={styles.sectionTitle}>Recent Activity</Text>
-            </View>
-            <View style={styles.card}>
-              {crossGroupActivity.slice(0, 5).map((item, i) => {
-                const iconMap: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
-                  SessionEnded:   'flag-outline',
-                  SessionStarted: 'play-circle-outline',
-                  SessionCreated: 'add-circle-outline',
-                  MemberJoined:   'person-add-outline',
-                  MemberLeft:     'person-remove-outline',
-                  MemberRemoved:  'close-circle-outline',
-                  PlayerJoined:   'people-outline',
-                };
-                const icon = iconMap[item.type] ?? 'ellipse-outline';
-                return (
-                  <View
-                    key={item.id}
-                    style={[styles.activityRow, i > 0 && styles.activityBorder]}
-                  >
-                    <View style={styles.activityIcon}>
-                      <Ionicons name={icon} size={15} color={colors.textMuted} />
-                    </View>
-                    <View style={styles.activityContent}>
-                      <Text style={styles.activityDesc} numberOfLines={1}>{item.description}</Text>
-                      <View style={styles.activityMeta}>
-                        <Text style={styles.activityGroup}>{item.groupName}</Text>
-                        <Text style={styles.activityDot}>·</Text>
-                        <Text style={styles.activityTime}>{timeAgo(item.createdAt)}</Text>
-                      </View>
+        {crossGroupActivity.length > 0 && (() => {
+          const items = crossGroupActivity.slice(0, 8);
+          const todayStart = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
+          const weekAgo = todayStart - 6 * 24 * 60 * 60 * 1000;
+          const buckets: Array<{ label: string; data: typeof items }> = [
+            { label: 'TODAY',     data: items.filter(x => new Date(x.createdAt).getTime() >= todayStart) },
+            { label: 'THIS WEEK', data: items.filter(x => { const t = new Date(x.createdAt).getTime(); return t >= weekAgo && t < todayStart; }) },
+            { label: 'EARLIER',   data: items.filter(x => new Date(x.createdAt).getTime() < weekAgo) },
+          ].filter(b => b.data.length > 0);
+
+          return (
+            <View style={[styles.section, styles.lastSection]}>
+              <View style={styles.sectionRow}>
+                <Text style={styles.sectionTitle}>Recent Activity</Text>
+              </View>
+              <View style={{ gap: 12 }}>
+                {buckets.map(bucket => (
+                  <View key={bucket.label}>
+                    <Text style={styles.activityBucketLabel}>{bucket.label}</Text>
+                    <View style={styles.card}>
+                      {bucket.data.map((item, i) => {
+                        const cfg = ACTIVITY_ICON_CFG[item.type] ?? ACTIVITY_ICON_CFG._default;
+                        return (
+                          <View key={item.id} style={[styles.activityRow, i > 0 && styles.activityBorder]}>
+                            <View style={[styles.activityIcon, { backgroundColor: cfg.bg }]}>
+                              <Ionicons name={cfg.icon} size={15} color={cfg.color} />
+                            </View>
+                            <View style={styles.activityContent}>
+                              <Text style={styles.activityDesc} numberOfLines={1}>{item.description}</Text>
+                              <View style={styles.activityMeta}>
+                                <Text style={styles.activityGroup}>{item.groupName}</Text>
+                                <Text style={styles.activityDot}>·</Text>
+                                <Text style={styles.activityTime}>{timeAgo(item.createdAt)}</Text>
+                              </View>
+                            </View>
+                          </View>
+                        );
+                      })}
                     </View>
                   </View>
-                );
-              })}
+                ))}
+              </View>
             </View>
-          </View>
-        )}
+          );
+        })()}
 
       </Animated.View>
     </ScrollView>
@@ -1027,6 +1046,15 @@ const styles = StyleSheet.create({
   },
 
   // ── Group Activity ────────────────────────────────────────────────────────
+  activityBucketLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textDim,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 6,
+    paddingHorizontal: 2,
+  },
   activityRow: {
     flexDirection: 'row',
     alignItems: 'center',

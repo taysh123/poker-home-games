@@ -12,9 +12,10 @@ type Props = {
   status?: string;
   onPress: () => void;
   isFirst?: boolean;
+  showResultBadge?: boolean;
 };
 
-export default function SessionListItem({ name, meta, profitLoss, status, onPress, isFirst }: Props) {
+export default function SessionListItem({ name, meta, profitLoss, status, onPress, isFirst, showResultBadge }: Props) {
   const isActive = status === 'Active';
   const pl = profitLoss ?? null;
   const plColor = pl == null
@@ -38,6 +39,19 @@ export default function SessionListItem({ name, meta, profitLoss, status, onPres
           {isActive && (
             <View style={styles.livePill}>
               <Text style={styles.liveText}>LIVE</Text>
+            </View>
+          )}
+          {showResultBadge && !isActive && pl != null && (
+            <View style={[
+              styles.resultBadge,
+              pl > 0 ? styles.resultBadgeWin : pl < 0 ? styles.resultBadgeLoss : styles.resultBadgeEven,
+            ]}>
+              <Text style={[
+                styles.resultBadgeText,
+                pl > 0 ? styles.resultTextWin : pl < 0 ? styles.resultTextLoss : styles.resultTextEven,
+              ]}>
+                {pl > 0 ? 'WIN' : pl < 0 ? 'LOSS' : 'EVEN'}
+              </Text>
             </View>
           )}
         </View>
@@ -111,4 +125,17 @@ const styles = StyleSheet.create({
     minWidth: 52,
     textAlign: 'right',
   },
+  resultBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 5,
+    borderWidth: 1,
+  },
+  resultBadgeWin: { backgroundColor: 'rgba(39,174,96,0.12)', borderColor: 'rgba(39,174,96,0.4)' },
+  resultBadgeLoss: { backgroundColor: 'rgba(231,76,60,0.08)', borderColor: 'rgba(231,76,60,0.35)' },
+  resultBadgeEven: { backgroundColor: '#1E2D3D', borderColor: '#243447' },
+  resultBadgeText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
+  resultTextWin: { color: '#27AE60' },
+  resultTextLoss: { color: '#E74C3C' },
+  resultTextEven: { color: '#7A8A99' },
 });
