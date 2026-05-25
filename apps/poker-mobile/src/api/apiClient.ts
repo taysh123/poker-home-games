@@ -37,7 +37,7 @@ apiClient.interceptors.response.use(
           // Plain axios — must not go through the interceptor again
           const { data } = await axios.post(
             `${API_BASE_URL}/api/auth/refresh`,
-            { refreshToken },
+            { token: refreshToken },
             { headers: { 'Content-Type': 'application/json' } },
           );
 
