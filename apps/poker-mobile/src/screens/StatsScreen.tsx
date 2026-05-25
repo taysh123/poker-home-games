@@ -40,6 +40,7 @@ export default function StatsScreen() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
   const [period, setPeriod] = useState<Period>('all');
+  const periodRef = useRef<Period>('all');
   const [stats, setStats] = useState<MyStatsDto | null>(null);
   const [achievements, setAchievements] = useState<MyAchievementsDto | null>(null);
   const [loading, setLoading] = useState(true);
@@ -81,17 +82,18 @@ export default function StatsScreen() {
   }, []);
 
   useFocusEffect(useCallback(() => {
-    load(false, period);
+    load(false, periodRef.current);
     runEntrance();
-  }, [load, runEntrance, period]));
+  }, [load, runEntrance]));
 
   const onRefresh = useCallback(() => { setRefreshing(true); load(true, period); }, [load, period]);
 
   const onPeriodChange = useCallback((p: Period) => {
     setPeriod(p);
+    periodRef.current = p;
     setPeriodLoading(true);
-    const token = SecureStore.getItemAsync('accessToken').then(t => {
-      if (!t) return;
+    SecureStore.getItemAsync('accessToken').then(t => {
+      if (!t) { setPeriodLoading(false); return; }
       getMyStats(t, p === 'all' ? undefined : p)
         .then(data => { setStats(data); })
         .catch(() => {})
