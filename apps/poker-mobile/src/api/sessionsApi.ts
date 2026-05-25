@@ -11,6 +11,8 @@ export type SessionSummaryDto = {
   endedAt: string | null;
   createdAt: string;
   myProfitLoss?: number | null;
+  chipRatio?: number | null;
+  defaultBuyIn?: number | null;
 };
 
 export type SessionPlayerDto = {

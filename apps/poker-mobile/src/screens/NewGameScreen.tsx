@@ -21,7 +21,7 @@ import { typography } from '../theme/typography';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { getMyGroups, getGroupMembers, MyGroupDto, GroupMemberDto } from '../api/groupsApi';
-import { createSession, addPlayer, startSession } from '../api/sessionsApi';
+import { createSession, addPlayer, startSession, getGroupSessions } from '../api/sessionsApi';
 import AppTextInput from '../components/AppTextInput';
 import PrimaryButton from '../components/PrimaryButton';
 import { getRecentGuests, recordGuestName } from '../utils/guestHistory';
@@ -49,7 +49,11 @@ export default function NewGameScreen({ route, navigation }: Props) {
   const [starting, setStarting] = useState(false);
 
   // Step 1 state
-  const [sessionName, setSessionName] = useState('Game Night');
+  const defaultName = (() => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return `${days[new Date().getDay()]} Night`;
+  })();
+  const [sessionName, setSessionName] = useState(defaultName);
   const [nameError, setNameError] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(route.params?.groupId ?? null);
   const [selectedGroupName, setSelectedGroupName] = useState<string>(route.params?.groupName ?? '');
@@ -89,6 +93,26 @@ export default function NewGameScreen({ route, navigation }: Props) {
       }
     })();
   }, []);
+
+  // When a group is selected, pre-fill chip ratio + buy-in from the most recent session
+  useEffect(() => {
+    if (!selectedGroupId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = await SecureStore.getItemAsync('accessToken');
+        if (!token || cancelled) return;
+        const sessions = await getGroupSessions(token, selectedGroupId);
+        if (cancelled) return;
+        const last = sessions.find(s => s.chipRatio || s.defaultBuyIn);
+        if (!last) return;
+        if (last.chipRatio && !chipRatio) setChipRatio(String(last.chipRatio));
+        if (last.defaultBuyIn && !defaultBuyIn) setDefaultBuyIn(String(last.defaultBuyIn));
+      } catch { /* silent — pre-fill is best-effort */ }
+    })();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedGroupId]);
 
   // Load members when moving to step 2 with a group selected
   const loadMembers = useCallback(async (groupId: string) => {
@@ -265,7 +289,7 @@ export default function NewGameScreen({ route, navigation }: Props) {
               label="Session Name"
               value={sessionName}
               onChangeText={setSessionName}
-              placeholder="Game Night"
+              placeholder={defaultName}
               error={nameError}
               autoFocus
             />

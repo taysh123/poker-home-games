@@ -12,4 +12,6 @@ public sealed record SessionSummaryDto(
     DateTime? StartedAt,
     DateTime? EndedAt,
     DateTime CreatedAt,
-    decimal? MyProfitLoss);
+    decimal? MyProfitLoss,
+    decimal? ChipRatio = null,
+    decimal? DefaultBuyIn = null);

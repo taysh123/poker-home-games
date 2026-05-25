@@ -93,7 +93,9 @@ public sealed class GetGroupSessionsQueryHandler(
             s.StartedAt,
             s.EndedAt,
             s.CreatedAt,
-            GetMyProfitLoss(s.Id)))
+            GetMyProfitLoss(s.Id),
+            s.ChipRatio,
+            s.DefaultBuyIn))
             .ToList();
     }
 }
