@@ -14,6 +14,7 @@ import {
   FlatList,
   RefreshControl,
   Share,
+  Animated,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -23,6 +24,7 @@ import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { shadows } from '../theme/shadows';
+import { springScale, USE_NATIVE_DRIVER } from '../theme/motion';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import {
@@ -227,6 +229,17 @@ export default function SessionScreen({ route, navigation }: Props) {
   // Timer ticker for active sessions
   const [tick, setTick] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Winner spotlight animation (end-game summary step 3)
+  const winnerScaleAnim = useRef(new Animated.Value(0.9)).current;
+
+  useEffect(() => {
+    if (endStep === 3) {
+      setTimeout(() => springScale(winnerScaleAnim, 1.0).start(), 300);
+    } else {
+      winnerScaleAnim.setValue(0.9);
+    }
+  }, [endStep]);
 
   const isActive = session?.status === 'Active';
   const isDraft = session?.status === 'Draft';
@@ -1782,16 +1795,31 @@ export default function SessionScreen({ route, navigation }: Props) {
               <Text style={styles.summarySection}>Results</Text>
               {[...(endSummary?.players ?? [])]
                 .sort((a, b) => b.profitLoss - a.profitLoss)
-                .map((p, i) => (
-                  <View key={p.sessionPlayerId} style={styles.summaryPlayerRow}>
-                    <Text style={styles.summaryRank}>{rankLabel(i + 1)}</Text>
-                    <Text style={styles.summaryPlayerName}>{p.username}</Text>
-                    <Text style={[styles.summaryPL,
-                      p.profitLoss > 0 ? styles.plPos : p.profitLoss < 0 ? styles.plNeg : styles.plZero]}>
-                      {p.profitLoss > 0 ? '+' : ''}{formatMoney(p.profitLoss)}
-                    </Text>
-                  </View>
-                ))}
+                .map((p, i) => {
+                  const isWinner = i === 0 && p.profitLoss > 0;
+                  const rowStyle = [styles.summaryPlayerRow, isWinner && styles.summaryPlayerRowWinner];
+                  if (isWinner) {
+                    return (
+                      <Animated.View key={p.sessionPlayerId} style={[rowStyle, { transform: [{ scale: winnerScaleAnim }] }]}>
+                        <Text style={styles.summaryRank}>{rankLabel(i + 1)}</Text>
+                        <Text style={styles.summaryPlayerName}>{p.username}</Text>
+                        <Text style={[styles.summaryPL, styles.plPos]}>
+                          +{formatMoney(p.profitLoss)}
+                        </Text>
+                      </Animated.View>
+                    );
+                  }
+                  return (
+                    <View key={p.sessionPlayerId} style={rowStyle}>
+                      <Text style={styles.summaryRank}>{rankLabel(i + 1)}</Text>
+                      <Text style={styles.summaryPlayerName}>{p.username}</Text>
+                      <Text style={[styles.summaryPL,
+                        p.profitLoss > 0 ? styles.plPos : p.profitLoss < 0 ? styles.plNeg : styles.plZero]}>
+                        {p.profitLoss > 0 ? '+' : ''}{formatMoney(p.profitLoss)}
+                      </Text>
+                    </View>
+                  );
+                })}
 
               {/* Settlements with inline Mark Paid */}
               {(endSummary?.settlements ?? []).length > 0 && (
@@ -2113,8 +2141,9 @@ const styles = StyleSheet.create({
     minWidth: 80,
   },
   standingChipLeader: {
-    borderColor: colors.goldMuted,
+    borderColor: colors.gold,
     backgroundColor: colors.goldFaint,
+    ...shadows.goldSm,
   },
   standingChipTrailing: {
     borderColor: 'rgba(231,76,60,0.25)',
@@ -2673,6 +2702,15 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  summaryPlayerRowWinner: {
+    backgroundColor: colors.goldFaint,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.gold,
+    paddingLeft: 8,
+    marginHorizontal: -4,
+    paddingHorizontal: 4,
+    borderRadius: 6,
   },
   summaryRank: { fontSize: 18, width: 30, textAlign: 'center' },
   summaryPlayerName: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.text },
