@@ -23,8 +23,9 @@ a real modern poker product.
 - Session notes and CSV export
 
 ### Settlement Engine
-- Greedy two-pointer algorithm minimizes the number of payments
-- "Who pays whom" — clear settlement chains
+- Greedy two-pointer debt-minimization algorithm computes explicit payer → receiver transfer pairs
+- Handles mixed sessions (registered users + guests): cash remainders after digital settlements are paired separately
+- "Cash Settlements" card shows "Alice pays Bob ₪40" with silver accent — no manual calculation needed
 - Mark settlements as paid with confirmation
 - Cross-session pending settlement dashboard
 
@@ -37,14 +38,16 @@ a real modern poker product.
 
 ### Statistics & Analytics
 - Lifetime P&L, win/loss record, win rate
-- Per-session history with P&L and duration
+- Per-session history with P&L, duration, and W/L/E result badge
 - P&L trend chart (last 10 sessions)
 - Group leaderboard with avg P&L and win rate — **period filter** (This Week / This Month / All Time)
+- Top-3 leaderboard rows get gold/silver/bronze medal accents
 - Current win/loss streak + all-time longest win streak
 - **Period filter:** personal stats by This Week / This Month / All Time
 - "This week" P&L chip on the home screen hero card
 - Per-group P&L shown directly on group list items (home + groups tab)
 - Total time played stat reflects the active period filter
+- Locked achievement progress shown inline ("7/10 sessions")
 
 ### Achievements & Badges
 - 14 achievements unlocked automatically when sessions end (First Blood, Hot Streak, High Roller, Comeback Kid, Marathon, and more)
@@ -60,9 +63,10 @@ a real modern poker product.
 - "Mark all read" action; graceful empty state
 
 ### Group Rivalries & Activity
-- Tap any group to see the top 5 most-played player pairings
+- Tap any group to see the top 5 most-played player pairings — promoted to position 2, above the full member list
 - Each rivalry shows sessions together + each player's net P&L across those shared sessions
-- Cross-group activity feed on the home screen — recent events across all your groups
+- Cross-group activity feed on the home screen — date-bucketed into TODAY / THIS WEEK / EARLIER
+- Activity icons color-tinted by event type (gold for session start, red for session end, green for joins)
 - Pending invitations banner on the home screen when you have outstanding invites
 
 ### Session Filtering
@@ -75,7 +79,10 @@ a real modern poker product.
 ### Player Profiles & Rivalries (V2)
 - Tap any player in a session or group to view their full career profile
 - Career stats: total P&L, biggest win, average session, W/L/E record, streaks
-- Recent form dots (last 10 sessions: green/red/gray)
+- P&L hero number displayed prominently in the profile header
+- Avatar ring: gold border for profitable players, subtle error tint for losing players
+- H2H verdict badge: "YOU LEAD" / "THEY LEAD" / "TIED" shown above head-to-head stats
+- Recent form dots (last 10 sessions: green/red/gray) with staggered entrance animation
 - Head-to-head card: W/L record + net P&L against specific opponents
 - Privacy guard: profile only accessible if you share a group with the player
 
@@ -85,6 +92,11 @@ a real modern poker product.
 - Shows: duration, total pot, player count, hand count
 - Narrative highlights: "Alice was the big winner (+₪340)", "Bob reloaded 3 times", etc.
 - Highlights included in the shared PDF when using Share Recap
+
+### Session UX — Premium Atmosphere
+- End-game winner row gets gold spotlight: springScale entrance animation + gold background
+- Live standings leader chip glows with gold shadow and gold border
+- W/L/E result badge on session items across all screens (HomeScreen, StatsScreen)
 
 ### Auth & Accounts
 - Email/password registration with strong validation
@@ -366,8 +378,31 @@ Railway shows the exact string under your PostgreSQL plugin → **Connect** tab.
 | ✅ | Per-group P&L displayed on all group list items |
 | ✅ | Total time played stat (period-aware) |
 | ✅ | Production hardening — full middleware pipeline restored (JWT, rate limits, exception handling) |
+| ✅ | Cash transfer engine — greedy debt-minimization for guest + mixed sessions |
+| ✅ | Social home feed — date-bucketed activity + colored icon tinting |
+| ✅ | W/L/E result badges on session list items across all screens |
+| ✅ | Group rivalries promoted + leaderboard top-3 medal accents |
+| ✅ | Player profile identity: P&L hero, performance avatar ring, H2H verdict badge |
+| ✅ | Session winner spotlight (spring animation + gold glow) + live leader chip glow |
+| ✅ | Achievement progress text for locked achievements |
 | 🔜 | Push notifications (Expo push) |
 | 🔜 | Native iOS/Android release (EAS) |
+
+---
+
+## Phase History
+
+70 phases shipped from blank canvas to production:
+
+| Phases | Focus |
+|--------|-------|
+| 1–10 | Project scaffold, auth (JWT + Google OAuth), session CRUD, buy-in/cash-out |
+| 11–20 | Group management, roles, invitations, settlements, hand history |
+| 21–30 | CSV export, PDF share card, player profiles, H2H stats, session recaps |
+| 31–40 | Streak tracking, skeleton loaders, entrance animations, onboarding, achievements |
+| 41–50 | Notifications, rivalries, cross-group activity feed, leaderboard periods, per-group P&L |
+| 51–60 | Production hardening, Railway deployment fixes, healthcheck, middleware pipeline |
+| 61–70 | Cash transfer engine, social home feed, leaderboard medals, profile identity polish, session winner spotlight, achievement progress |
 
 ---
 
