@@ -541,6 +541,15 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                 <Text style={styles.lbEmptyText}>
                   {lbPeriod === 'all' ? 'No sessions recorded yet' : 'No sessions in this period'}
                 </Text>
+                {lbPeriod === 'all' && (
+                  <TouchableOpacity
+                    style={styles.lbEmptyCta}
+                    onPress={() => navigation.navigate('NewGame', { groupId, groupName })}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.lbEmptyCtaText}>Start a Game →</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             )}
           </View>
@@ -570,9 +579,9 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
       }
       ListFooterComponent={
         <View>
-          {rivals.length > 0 && (
-            <View style={styles.activitySection}>
-              <Text style={styles.sectionTitle}>Rivalries</Text>
+          <View style={styles.activitySection}>
+            <Text style={styles.sectionTitle}>Rivalries</Text>
+            {rivals.length > 0 ? (
               <View style={styles.activityCard}>
                 {rivals.map((r, i) => (
                   <React.Fragment key={`${r.player1Id}-${r.player2Id}`}>
@@ -581,11 +590,22 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                   </React.Fragment>
                 ))}
               </View>
-            </View>
-          )}
+            ) : (
+              <View style={styles.rivalryEmpty}>
+                <Ionicons name="people-outline" size={28} color={colors.textDim} />
+                <Text style={styles.rivalryEmptyTitle}>No rivalries yet</Text>
+                <Text style={styles.rivalryEmptySub}>Play more sessions together to see head-to-head records</Text>
+              </View>
+            )}
+          </View>
           {activity.length > 0 && (
             <View style={styles.activitySection}>
-              <Text style={styles.sectionTitle}>Recent Activity</Text>
+              <View style={styles.activityHeader}>
+                <Text style={styles.sectionTitle}>Recent Activity</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('SessionsList', { groupId, groupName, userRole: group?.myRole ?? 'Member' })} hitSlop={8}>
+                  <Text style={styles.seeAllLink}>See all →</Text>
+                </TouchableOpacity>
+              </View>
               <View style={styles.activityCard}>
                 {activity.slice(0, 15).map((item, i) => (
                   <React.Fragment key={item.id}>
@@ -689,7 +709,12 @@ function LeaderboardRow({ entry, rank }: { entry: PlayerLeaderboardEntryDto; ran
   const initial = (entry.username?.[0] ?? '?').toUpperCase();
 
   return (
-    <View style={[styles.leaderboardRow, rank === 1 && styles.leaderboardRowFirst]}>
+    <View style={[
+      styles.leaderboardRow,
+      rank === 1 && styles.leaderboardRowFirst,
+      rank === 2 && styles.leaderboardRowSecond,
+      rank === 3 && styles.leaderboardRowThird,
+    ]}>
       <View style={[styles.rankBadge, { backgroundColor: rankColor + '22', borderColor: rankColor + '55' }]}>
         <Text style={[styles.lbRank, { color: rankColor }]}>{rank}</Text>
       </View>
@@ -1091,8 +1116,18 @@ const styles = StyleSheet.create({
   },
   lbPeriodText: { fontSize: 12, fontWeight: '600', color: colors.textMuted },
   lbPeriodTextActive: { color: colors.gold },
-  lbEmpty: { paddingVertical: 20, alignItems: 'center' },
+  lbEmpty: { paddingVertical: 20, alignItems: 'center', gap: 8 },
   lbEmptyText: { fontSize: 13, color: colors.textMuted },
+  lbEmptyCta: {
+    marginTop: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: colors.goldFaint,
+    borderWidth: 1,
+    borderColor: colors.goldMuted,
+  },
+  lbEmptyCtaText: { fontSize: 13, fontWeight: '700', color: colors.gold },
   leaderboardCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -1109,6 +1144,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   leaderboardRowFirst: { backgroundColor: colors.goldFaint },
+  leaderboardRowSecond: { backgroundColor: 'rgba(192,192,192,0.06)' },
+  leaderboardRowThird: { backgroundColor: 'rgba(205,127,50,0.06)' },
   rankBadge: {
     width: 28,
     height: 28,
@@ -1136,6 +1173,20 @@ const styles = StyleSheet.create({
   emptyMembersText: { fontSize: 14, color: colors.textMuted },
 
   activitySection: { marginBottom: 16 },
+  activityHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  seeAllLink: { fontSize: 12, fontWeight: '600', color: colors.gold },
+  rivalryEmpty: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    gap: 6,
+  },
+  rivalryEmptyTitle: { fontSize: 14, fontWeight: '700', color: colors.textMuted, marginTop: 4 },
+  rivalryEmptySub: { fontSize: 12, color: colors.textDim, textAlign: 'center', lineHeight: 17 },
   activityCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
