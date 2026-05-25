@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import {
+  Animated,
   View,
   Text,
   FlatList,
@@ -22,6 +23,8 @@ import {
   PendingInvitationDto,
 } from '../api/groupsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { useScreenEntrance } from '../hooks/useScreenEntrance';
+import SkeletonCard from '../components/SkeletonCard';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Invitations'>;
 
@@ -40,6 +43,7 @@ export default function InvitationsScreen({ navigation }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const entrance = useScreenEntrance();
 
   const load = useCallback(async () => {
     try {
@@ -111,8 +115,12 @@ export default function InvitationsScreen({ navigation }: Props) {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.gold} />
+      <View style={styles.list}>
+        <View style={{ padding: 16, gap: 12 }}>
+          <SkeletonCard height={140} borderRadius={16} />
+          <SkeletonCard height={140} borderRadius={16} />
+          <SkeletonCard height={140} borderRadius={16} />
+        </View>
       </View>
     );
   }
@@ -135,13 +143,14 @@ export default function InvitationsScreen({ navigation }: Props) {
   }
 
   return (
+    <Animated.View style={[{ flex: 1 }, entrance.style]}>
     <FlatList
       style={styles.list}
       contentContainerStyle={styles.listContent}
       data={invitations}
       keyExtractor={(item) => item.invitationId}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} progressBackgroundColor={colors.surface} />
       }
       ListEmptyComponent={
         <View style={styles.emptyState}>
@@ -201,6 +210,7 @@ export default function InvitationsScreen({ navigation }: Props) {
         );
       }}
     />
+    </Animated.View>
   );
 }
 

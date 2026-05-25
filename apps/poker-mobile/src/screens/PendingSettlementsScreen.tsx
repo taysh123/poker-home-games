@@ -1,5 +1,6 @@
 import React, { useCallback, useLayoutEffect, useState } from 'react';
 import {
+  Animated,
   View,
   Text,
   ScrollView,
@@ -25,6 +26,8 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { successNotification, errorNotification } from '../utils/haptics';
 import { showToast } from '../utils/toast';
 import { formatMoney } from '../utils/formatters';
+import { useScreenEntrance } from '../hooks/useScreenEntrance';
+import SkeletonCard from '../components/SkeletonCard';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -36,6 +39,7 @@ export default function PendingSettlementsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [markingId, setMarkingId] = useState<string | null>(null);
+  const entrance = useScreenEntrance();
 
   const load = useCallback(async (isRefresh = false) => {
     if (!isRefresh) setLoading(true);
@@ -84,8 +88,13 @@ export default function PendingSettlementsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator color={colors.gold} size="large" />
+      <View style={styles.scroll}>
+        <View style={{ padding: 16, gap: 20 }}>
+          <SkeletonCard height={50} borderRadius={14} />
+          <SkeletonCard height={100} borderRadius={14} />
+          <SkeletonCard height={50} borderRadius={14} />
+          <SkeletonCard height={170} borderRadius={14} />
+        </View>
       </View>
     );
   }
@@ -126,10 +135,10 @@ export default function PendingSettlementsScreen() {
   );
 
   return (
-    <ScrollView
-      style={styles.scroll}
+    <Animated.ScrollView
+      style={[styles.scroll, entrance.style]}
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} tintColor={colors.gold} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} tintColor={colors.gold} progressBackgroundColor={colors.surface} />}
     >
       {Object.entries(bySession).map(([sessionId, group]) => (
         <View key={sessionId} style={styles.sessionGroup}>
@@ -208,7 +217,7 @@ export default function PendingSettlementsScreen() {
       ))}
 
       <View style={{ height: 40 }} />
-    </ScrollView>
+    </Animated.ScrollView>
   );
 }
 
