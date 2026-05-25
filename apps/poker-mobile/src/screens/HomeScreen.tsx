@@ -28,7 +28,7 @@ import SkeletonCard from '../components/SkeletonCard';
 import StatWidget from '../components/StatWidget';
 import SessionListItem from '../components/SessionListItem';
 import GroupListItem from '../components/GroupListItem';
-import { formatPL, formatDate, formatDuration, timeAgo } from '../utils/formatters';
+import { formatPL, formatMoney, formatDate, formatDuration, timeAgo } from '../utils/formatters';
 import { useActiveSession } from '../context/ActiveSessionContext';
 
 type HomeNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -133,6 +133,13 @@ export default function HomeScreen() {
   const hasThisWeekData = thisWeekPL !== null && stats != null && stats.recentSessions.some(
     s => s.status === 'Finished' && new Date(s.createdAt) >= oneWeekAgo
   );
+
+  const topGroup = groups.length > 0
+    ? groups.reduce((best, g) =>
+        (g.myGroupPL ?? -Infinity) > (best.myGroupPL ?? -Infinity) ? g : best
+      )
+    : null;
+  const showTopGroup = topGroup != null && topGroup.myGroupPL != null && topGroup.myGroupPL !== 0;
 
   const plValue = stats?.totalProfitLoss ?? 0;
   const plColor = plValue > 0 ? colors.success : plValue < 0 ? colors.error : colors.textMuted;
@@ -244,6 +251,19 @@ export default function HomeScreen() {
                   </Text>
                 </View>
               )}
+              {showTopGroup && topGroup && topGroup.myGroupPL != null && (
+                <TouchableOpacity
+                  style={styles.topGroupChip}
+                  onPress={() => navigation.navigate('GroupDetail', { groupId: topGroup.id, groupName: topGroup.name })}
+                  activeOpacity={0.75}
+                >
+                  <Ionicons name="trophy-outline" size={12} color={colors.gold} />
+                  <Text style={styles.topGroupText} numberOfLines={1}>
+                    Top group: {topGroup.name} {topGroup.myGroupPL > 0 ? '+' : ''}{formatMoney(topGroup.myGroupPL)}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={11} color={colors.goldMuted} />
+                </TouchableOpacity>
+              )}
             </>
           )}
         </View>
@@ -288,7 +308,16 @@ export default function HomeScreen() {
               <Text style={styles.alertTitle}>
                 {pendingSettlements.length} pending settlement{pendingSettlements.length !== 1 ? 's' : ''}
               </Text>
-              <Text style={styles.alertSub}>Tap to view and settle up</Text>
+              <Text style={styles.alertSub}>
+                {(() => {
+                  const owes = pendingSettlements.filter(s => s.payerUserId === user?.userId).reduce((sum, s) => sum + s.amount, 0);
+                  const owed = pendingSettlements.filter(s => s.receiverUserId === user?.userId).reduce((sum, s) => sum + s.amount, 0);
+                  if (owes > 0 && owed > 0) return `You owe ${formatMoney(owes)} · Owed ${formatMoney(owed)}`;
+                  if (owes > 0) return `You owe ${formatMoney(owes)}`;
+                  if (owed > 0) return `You're owed ${formatMoney(owed)}`;
+                  return 'Tap to view and settle up';
+                })()}
+              </Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
           </TouchableOpacity>
@@ -392,47 +421,60 @@ export default function HomeScreen() {
         </View>
 
         {/* ── Recent Sessions ── */}
-        {(statsLoading || recentSessions.length > 0) && (
-          <View style={styles.section}>
-            <View style={styles.sectionRow}>
-              <Text style={styles.sectionTitle}>Recent Sessions</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('AllSessions')}>
-                <Text style={styles.seeAll}>See all</Text>
+        <View style={styles.section}>
+          <View style={styles.sectionRow}>
+            <Text style={styles.sectionTitle}>Recent Sessions</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('AllSessions')}>
+              <Text style={styles.seeAll}>See all</Text>
+            </TouchableOpacity>
+          </View>
+
+          {statsLoading ? (
+            <View style={styles.card}>
+              {[0, 1, 2].map(i => (
+                <View key={i} style={[styles.skeletonRow, i > 0 && styles.skeletonBorder]}>
+                  <View style={styles.skeletonAccent} />
+                  <View style={{ flex: 1, gap: 8, paddingLeft: 12 }}>
+                    <SkeletonCard height={14} borderRadius={4} style={{ width: '60%' }} />
+                    <SkeletonCard height={10} borderRadius={4} style={{ width: '40%' }} />
+                  </View>
+                  <SkeletonCard height={14} borderRadius={4} style={{ width: 48 }} />
+                </View>
+              ))}
+            </View>
+          ) : recentSessions.length === 0 ? (
+            <View style={styles.sessionsEmptyCard}>
+              <Ionicons name="game-controller-outline" size={28} color={colors.textDim} />
+              <Text style={styles.sessionsEmptyTitle}>No games yet</Text>
+              <Text style={styles.sessionsEmptySub}>Start one with your crew and track every hand</Text>
+              <TouchableOpacity
+                style={styles.sessionsEmptyCta}
+                onPress={() => navigation.navigate('NewGame', {})}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.sessionsEmptyCtaText}>Start a Game</Text>
               </TouchableOpacity>
             </View>
-
+          ) : (
             <View style={styles.card}>
-              {statsLoading ? (
-                [0, 1, 2].map(i => (
-                  <View key={i} style={[styles.skeletonRow, i > 0 && styles.skeletonBorder]}>
-                    <View style={styles.skeletonAccent} />
-                    <View style={{ flex: 1, gap: 8, paddingLeft: 12 }}>
-                      <SkeletonCard height={14} borderRadius={4} style={{ width: '60%' }} />
-                      <SkeletonCard height={10} borderRadius={4} style={{ width: '40%' }} />
-                    </View>
-                    <SkeletonCard height={14} borderRadius={4} style={{ width: 48 }} />
-                  </View>
-                ))
-              ) : (
-                recentSessions.map((s, i) => (
-                  <SessionListItem
-                    key={s.sessionId}
-                    name={s.sessionName}
-                    meta={[
-                      s.groupName ?? 'Solo',
-                      formatDate(s.createdAt),
-                      s.startedAt && s.endedAt ? formatDuration(s.startedAt, s.endedAt) : null,
-                    ].filter(Boolean).join('  ·  ')}
-                    profitLoss={s.profitLoss}
-                    status={s.status}
-                    onPress={() => openSession(s)}
-                    isFirst={i === 0}
-                  />
-                ))
-              )}
+              {recentSessions.map((s, i) => (
+                <SessionListItem
+                  key={s.sessionId}
+                  name={s.sessionName}
+                  meta={[
+                    s.groupName ?? 'Solo',
+                    formatDate(s.createdAt),
+                    s.startedAt && s.endedAt ? formatDuration(s.startedAt, s.endedAt) : null,
+                  ].filter(Boolean).join('  ·  ')}
+                  profitLoss={s.profitLoss}
+                  status={s.status}
+                  onPress={() => openSession(s)}
+                  isFirst={i === 0}
+                />
+              ))}
             </View>
-          </View>
-        )}
+          )}
+        </View>
 
         {/* ── My Groups ── */}
         <View style={styles.section}>
@@ -936,6 +978,53 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
   },
   emptyBtnText: { ...typography.labelSmall, color: colors.background },
+
+  // ── Sessions empty state ─────────────────────────────────────────────────
+  sessionsEmptyCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    padding: 28,
+    alignItems: 'center',
+    gap: 6,
+  },
+  sessionsEmptyTitle: { ...typography.h4, color: colors.text, marginTop: 6 },
+  sessionsEmptySub: {
+    ...typography.bodySmall,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  sessionsEmptyCta: {
+    marginTop: 14,
+    backgroundColor: colors.gold,
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  sessionsEmptyCtaText: { ...typography.labelSmall, color: colors.background },
+
+  // ── Top group chip ────────────────────────────────────────────────────────
+  topGroupChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    backgroundColor: colors.goldFaint,
+    borderWidth: 1,
+    borderColor: colors.goldMuted,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  topGroupText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.goldLight,
+    maxWidth: 200,
+  },
 
   // ── Group Activity ────────────────────────────────────────────────────────
   activityRow: {
