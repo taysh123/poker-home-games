@@ -29,6 +29,8 @@ export type GroupDetailResponse = {
   memberCount: number;
   myRole: string;
   createdAt: string;
+  totalSessions: number;
+  totalMoneyMoved: number;
 };
 
 export type GroupMemberDto = {

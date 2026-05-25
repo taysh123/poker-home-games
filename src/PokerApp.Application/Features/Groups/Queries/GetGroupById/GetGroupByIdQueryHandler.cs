@@ -27,6 +27,19 @@ public sealed class GetGroupByIdQueryHandler(
             .FirstOrDefaultAsync(g => g.Id == request.GroupId, cancellationToken)
             ?? throw new NotFoundException(nameof(Group), request.GroupId);
 
+        var finishedSessionIds = await context.Sessions
+            .AsNoTracking()
+            .Where(s => s.GroupId == request.GroupId && s.Status == Domain.Enums.SessionStatus.Finished)
+            .Select(s => s.Id)
+            .ToListAsync(cancellationToken);
+
+        var totalMoneyMoved = finishedSessionIds.Count > 0
+            ? await context.BuyIns
+                .AsNoTracking()
+                .Where(b => finishedSessionIds.Contains(b.SessionId))
+                .SumAsync(b => b.Amount, cancellationToken)
+            : 0;
+
         return new GetGroupByIdResponse(
             group.Id,
             group.Name,
@@ -34,6 +47,8 @@ public sealed class GetGroupByIdQueryHandler(
             group.OwnerId,
             group.Owner.Username,
             group.Members.Count,
-            group.CreatedAt);
+            group.CreatedAt,
+            finishedSessionIds.Count,
+            totalMoneyMoved);
     }
 }

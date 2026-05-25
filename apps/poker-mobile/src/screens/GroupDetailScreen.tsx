@@ -363,6 +363,21 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
             </View>
           </View>
 
+          {/* Group stats chips */}
+          {group.totalSessions > 0 && (
+            <View style={styles.groupStatsRow}>
+              <View style={styles.groupStatChip}>
+                <Ionicons name="layers-outline" size={13} color={colors.textDim} />
+                <Text style={styles.groupStatText}>{group.totalSessions} session{group.totalSessions !== 1 ? 's' : ''}</Text>
+              </View>
+              <View style={styles.groupStatDivider} />
+              <View style={styles.groupStatChip}>
+                <Ionicons name="cash-outline" size={13} color={colors.textDim} />
+                <Text style={styles.groupStatText}>₪{Math.round(group.totalMoneyMoved).toLocaleString()} moved</Text>
+              </View>
+            </View>
+          )}
+
           {/* Nav buttons */}
           <View style={styles.navRow}>
             <TouchableOpacity
@@ -831,6 +846,22 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
   metaText: { fontSize: 13, color: colors.textMuted },
   dot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: colors.textDim },
+
+  groupStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 0,
+    backgroundColor: colors.surfaceHigh,
+    borderRadius: 10,
+    paddingVertical: 9,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  groupStatChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 16 },
+  groupStatText: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
+  groupStatDivider: { width: 1, height: 14, backgroundColor: colors.border },
 
   navRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   navButton: {

@@ -11,4 +11,6 @@ public sealed record GetGroupByIdResponse(
     Guid OwnerId,
     string OwnerUsername,
     int MemberCount,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    int TotalSessions = 0,
+    decimal TotalMoneyMoved = 0);
