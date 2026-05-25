@@ -796,6 +796,38 @@ export default function SessionScreen({ route, navigation }: Props) {
           </View>
         ) : null}
 
+        {/* ── Current Standings (Active, 2+ players with balance data) ── */}
+        {isActive && balances.length >= 2 && (
+          <View style={styles.standingsRow}>
+            <Text style={styles.standingsLabel}>STANDINGS</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.standingsScroll}>
+              {[...balances]
+                .sort((a, b) => b.profitLoss - a.profitLoss)
+                .map((b, i) => {
+                  const isLeader = i === 0;
+                  const isTrailing = i === balances.length - 1 && balances.length > 1;
+                  return (
+                    <View key={b.sessionPlayerId} style={[
+                      styles.standingChip,
+                      isLeader && styles.standingChipLeader,
+                      isTrailing && !isLeader && styles.standingChipTrailing,
+                    ]}>
+                      <Text style={[styles.standingName, isLeader && styles.standingNameLeader]} numberOfLines={1}>
+                        {isLeader ? '▲ ' : isTrailing ? '▼ ' : ''}{b.username}
+                      </Text>
+                      <Text style={[
+                        styles.standingPL,
+                        b.profitLoss > 0 ? styles.standingPos : b.profitLoss < 0 ? styles.standingNeg : styles.standingZero,
+                      ]}>
+                        {b.profitLoss > 0 ? '+' : ''}{formatMoney(b.profitLoss)}
+                      </Text>
+                    </View>
+                  );
+                })}
+            </ScrollView>
+          </View>
+        )}
+
         {/* ── Players ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -867,36 +899,16 @@ export default function SessionScreen({ route, navigation }: Props) {
                       )}
                     </View>
 
-                    {/* P&L / actions */}
+                    {/* P&L */}
                     {(isActive || isFinished) && bal ? (
                       <View style={styles.playerRight}>
-                        {(isActive || isFinished) && (
-                          <Text style={[
-                            styles.plValue,
-                            pl > 0 ? styles.plPos : pl < 0 ? styles.plNeg : styles.plZero,
-                            isFirst && styles.plValueFirst,
-                          ]}>
-                            {pl > 0 ? '+' : ''}{formatMoney(pl)}
-                          </Text>
-                        )}
-                        {isActive && (
-                          <View style={styles.txButtons}>
-                            <TouchableOpacity
-                              style={styles.txBtn}
-                              onPress={() => openTransaction('buyin', player)}
-                              activeOpacity={0.7}
-                            >
-                              <Text style={styles.txBtnText}>BUY</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                              style={[styles.txBtn, styles.txBtnCash]}
-                              onPress={() => openTransaction('cashout', player)}
-                              activeOpacity={0.7}
-                            >
-                              <Text style={[styles.txBtnText, { color: colors.success }]}>OUT</Text>
-                            </TouchableOpacity>
-                          </View>
-                        )}
+                        <Text style={[
+                          styles.plValue,
+                          pl > 0 ? styles.plPos : pl < 0 ? styles.plNeg : styles.plZero,
+                          isFirst && styles.plValueFirst,
+                        ]}>
+                          {pl > 0 ? '+' : ''}{formatMoney(pl)}
+                        </Text>
                       </View>
                     ) : isDraft ? (
                       <TouchableOpacity
@@ -1382,7 +1394,7 @@ export default function SessionScreen({ route, navigation }: Props) {
         <View style={styles.modalOverlay}>
           <View style={styles.sheet}>
             <View style={styles.sheetHandle} />
-            <Text style={styles.sheetTitle}>End Game?</Text>
+            <Text style={styles.sheetTitle}>Wrap Up?</Text>
 
             <View style={styles.endInfoCard}>
               <View style={styles.endInfoRow}>
@@ -1933,6 +1945,44 @@ const styles = StyleSheet.create({
   plPos: { color: colors.success },
   plNeg: { color: colors.error },
   plZero: { color: colors.textMuted },
+  // Current Standings strip (active session)
+  standingsRow: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+  },
+  standingsLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textDim,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+  standingsScroll: { gap: 8, paddingRight: 4 },
+  standingChip: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    alignItems: 'center',
+    minWidth: 80,
+  },
+  standingChipLeader: {
+    borderColor: colors.goldMuted,
+    backgroundColor: colors.goldFaint,
+  },
+  standingChipTrailing: {
+    borderColor: 'rgba(231,76,60,0.25)',
+  },
+  standingName: { fontSize: 11, fontWeight: '600', color: colors.textMuted, marginBottom: 2 },
+  standingNameLeader: { color: colors.goldLight },
+  standingPL: { fontSize: 12, fontWeight: '800', fontVariant: ['tabular-nums'] as const },
+  standingPos: { color: colors.success },
+  standingNeg: { color: colors.error },
+  standingZero: { color: colors.textMuted },
+
   txButtons: { flexDirection: 'row', gap: 6 },
   txBtn: {
     paddingHorizontal: 10,
