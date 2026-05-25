@@ -223,6 +223,19 @@ export default function SessionScreen({ route, navigation }: Props) {
               .filter(g => g.netBalance !== 0);
             setGuestBalances(computed);
           }
+          // Auto-recalculate if no settlements are saved (e.g. prior calculation failed)
+          if (!settData || settData.settlements.length === 0) {
+            const tok = await SecureStore.getItemAsync('accessToken');
+            if (tok) {
+              calculateSettlements(tok, sessionId)
+                .then(r => {
+                  setSettlements(r.settlements);
+                  setGuestBalances(r.guestBalances);
+                  setSettlementsLoaded(true);
+                })
+                .catch(() => {});
+            }
+          }
         }
       }
     } catch {
@@ -399,7 +412,10 @@ export default function SessionScreen({ route, navigation }: Props) {
 
       const [balData, calcResult] = await Promise.all([
         getSessionBalances(token, sessionId).catch(() => null),
-        calculateSettlements(token, sessionId).catch(() => ({ settlements: [], guestBalances: [] })),
+        calculateSettlements(token, sessionId).catch(() => {
+          showToast('Settlements could not be calculated — tap Recalculate to retry.', 'info');
+          return { settlements: [], guestBalances: [] };
+        }),
       ]);
 
       if (balData) setBalances(balData.players);
@@ -420,8 +436,7 @@ export default function SessionScreen({ route, navigation }: Props) {
   function finishGame() {
     setEndStep(0);
     setEndSummary(null);
-    // State is already fresh from handleEndSession; useFocusEffect reloads on next focus.
-    // Removed load(true) here — it could trigger 401 → clearSession → Login redirect.
+    load(true).catch(() => {}); // safe now that auth is stable (Phase 53)
   }
 
   // ── Hand Logging ──

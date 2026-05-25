@@ -209,8 +209,12 @@ export default function NewGameScreen({ route, navigation }: Props) {
       const sessionId = session.id;
       const groupId = selectedGroupId ?? '';
 
-      // Add all players
-      for (const id of selectedMemberIds) {
+      // Add all players — always include the creator (solo sessions have no pre-selected members)
+      const memberIds = Array.from(selectedMemberIds);
+      if (user?.userId && !memberIds.includes(user.userId)) {
+        await addPlayer(token, sessionId, user.userId);
+      }
+      for (const id of memberIds) {
         await addPlayer(token, sessionId, id);
       }
       const guestNames: string[] = [];
