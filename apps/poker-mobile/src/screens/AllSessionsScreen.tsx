@@ -125,11 +125,15 @@ export default function AllSessionsScreen() {
   }
 
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const active   = sessions.filter(s => s.status === 'Active');
   const allFinished = sessions.filter(s => s.status === 'Finished');
   const groupNames = Array.from(new Set(allFinished.map(s => s.groupName ?? 'Solo'))).sort();
-  const finished = selectedGroup ? allFinished.filter(s => (s.groupName ?? 'Solo') === selectedGroup) : allFinished;
+  const q = searchQuery.trim().toLowerCase();
+  const finished = allFinished
+    .filter(s => !selectedGroup || (s.groupName ?? 'Solo') === selectedGroup)
+    .filter(s => !q || s.sessionName.toLowerCase().includes(q));
 
   // Pulse for live dot
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
@@ -141,6 +145,24 @@ export default function AllSessionsScreen() {
   const stickyHeader = (
     <View style={[styles.stickyHeader, { paddingTop: insets.top + 12 }]}>
       <Text style={styles.screenTitle}>Sessions</Text>
+      <View style={styles.searchRow}>
+        <Ionicons name="search-outline" size={16} color={colors.textDim} style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search sessions…"
+          placeholderTextColor={colors.textDim}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          returnKeyType="search"
+          clearButtonMode="while-editing"
+          autoCorrect={false}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
+            <Ionicons name="close-circle" size={16} color={colors.textDim} />
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 
@@ -250,7 +272,9 @@ export default function AllSessionsScreen() {
         {/* ── Recent Sessions ── */}
         <View style={styles.section}>
           <View style={styles.sectionLabelRow}>
-            <Text style={styles.sectionLabel}>Recent Sessions</Text>
+            <Text style={styles.sectionLabel}>
+              Recent Sessions{finished.length < allFinished.length ? ` (${finished.length})` : ''}
+            </Text>
             {selectedGroup && (
               <TouchableOpacity onPress={() => setSelectedGroup(null)}>
                 <Text style={styles.clearFilter}>Clear filter</Text>
@@ -278,10 +302,12 @@ export default function AllSessionsScreen() {
           {finished.length === 0 ? (
             <View style={styles.emptyCard}>
               <View style={styles.emptyIconWrap}>
-                <Ionicons name="layers-outline" size={28} color={colors.textDim} />
+                <Ionicons name={q ? 'search-outline' : 'layers-outline'} size={28} color={colors.textDim} />
               </View>
-              <Text style={styles.emptyText}>No sessions yet</Text>
-              <Text style={styles.emptySubtext}>Finished games will appear here</Text>
+              <Text style={styles.emptyText}>{q ? 'No results' : 'No sessions yet'}</Text>
+              <Text style={styles.emptySubtext}>
+                {q ? `No sessions match "${searchQuery}"` : 'Finished games will appear here'}
+              </Text>
             </View>
           ) : (
             <View style={styles.card}>
@@ -455,7 +481,7 @@ const styles = StyleSheet.create({
 
   stickyHeader: {
     paddingHorizontal: 20,
-    paddingBottom: 14,
+    paddingBottom: 10,
     backgroundColor: colors.background,
   },
   screenTitle: {
@@ -463,6 +489,25 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.text,
     letterSpacing: -0.5,
+    marginBottom: 10,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    gap: 8,
+  },
+  searchIcon: { flexShrink: 0 },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.text,
+    padding: 0,
   },
 
   section: { marginBottom: 28 },
