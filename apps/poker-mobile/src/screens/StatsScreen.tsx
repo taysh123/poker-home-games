@@ -355,6 +355,7 @@ export default function StatsScreen() {
                   status={s.status}
                   onPress={() => navigation.navigate('Session', { sessionId: s.sessionId, groupId: s.groupId ?? '' })}
                   isFirst={i === 0}
+                  showResultBadge
                 />
               ))}
             </View>
@@ -382,9 +383,17 @@ export default function StatsScreen() {
                 {achievements.earned.length > 0 && <View style={achStyles.divider} />}
                 <Text style={achStyles.lockedLabel}>Locked</Text>
                 <View style={achStyles.grid}>
-                  {achievements.locked.map((a) => (
-                    <AchievementBadge key={a.key} achievement={a} earned={false} />
-                  ))}
+                  {achievements.locked.map((a) => {
+                    let progressText: string | undefined;
+                    if (stats) {
+                      if (a.key === 'ten_sessions') progressText = `${Math.min(stats.totalSessionsPlayed, 10)}/10`;
+                      else if (a.key === 'fifty_sessions') progressText = `${Math.min(stats.totalSessionsPlayed, 50)}/50`;
+                      else if (a.key === 'five_win_streak') progressText = `${Math.min(stats.longestWinStreak, 5)}/5`;
+                      else if (a.key === 'profit_100' && stats.totalProfitLoss > 0) progressText = `${Math.min(Math.floor(stats.totalProfitLoss), 100)}/100`;
+                      else if (a.key === 'profit_1000' && stats.totalProfitLoss > 0) progressText = `${Math.min(Math.floor(stats.totalProfitLoss), 1000)}/1000`;
+                    }
+                    return <AchievementBadge key={a.key} achievement={a} earned={false} progressText={progressText} />;
+                  })}
                 </View>
               </>
             )}
@@ -622,7 +631,7 @@ const RARITY_COLORS: Record<string, string> = {
   Legendary: colors.gold,
 };
 
-function AchievementBadge({ achievement, earned }: { achievement: AchievementDto; earned: boolean }) {
+function AchievementBadge({ achievement, earned, progressText }: { achievement: AchievementDto; earned: boolean; progressText?: string }) {
   const rarityColor = RARITY_COLORS[achievement.rarity] ?? colors.textMuted;
   return (
     <View style={[achStyles.badge, !earned && achStyles.badgeLocked]}>
@@ -636,6 +645,9 @@ function AchievementBadge({ achievement, earned }: { achievement: AchievementDto
       <Text style={[achStyles.badgeName, !earned && achStyles.badgeNameLocked]} numberOfLines={1}>
         {achievement.name}
       </Text>
+      {!earned && progressText && (
+        <Text style={achStyles.progressText}>{progressText}</Text>
+      )}
     </View>
   );
 }
@@ -699,6 +711,7 @@ const achStyles = StyleSheet.create({
   badgeNameLocked: { color: colors.textMuted },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: 12 },
   lockedLabel: { fontSize: 10, fontWeight: '600', color: colors.textDim, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },
+  progressText: { fontSize: 9, fontWeight: '600', color: colors.textDim },
 });
 
 const statsHeaderStyles = StyleSheet.create({
