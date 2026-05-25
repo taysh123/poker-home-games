@@ -1,11 +1,4 @@
-import axios from 'axios';
-import { API_BASE_URL } from './config';
-
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: { 'Content-Type': 'application/json' },
-  timeout: 10000,
-});
+import apiClient from './apiClient';
 
 export type UserSearchResultDto = {
   userId: string;
@@ -68,7 +61,7 @@ export async function searchUsers(
   token: string,
   q: string,
 ): Promise<UserSearchResultDto[]> {
-  const { data } = await api.get<UserSearchResultDto[]>(
+  const { data } = await apiClient.get<UserSearchResultDto[]>(
     `/api/auth/users/search`,
     { params: { q }, headers: authHeader(token) },
   );
@@ -79,7 +72,7 @@ export async function getPlayerProfile(
   token: string,
   userId: string,
 ): Promise<PlayerProfileDto> {
-  const { data } = await api.get<PlayerProfileDto>(
+  const { data } = await apiClient.get<PlayerProfileDto>(
     `/api/users/${userId}/profile`,
     { headers: authHeader(token) },
   );
@@ -90,7 +83,7 @@ export async function getHeadToHead(
   token: string,
   opponentId: string,
 ): Promise<HeadToHeadDto> {
-  const { data } = await api.get<HeadToHeadDto>(
+  const { data } = await apiClient.get<HeadToHeadDto>(
     `/api/users/${opponentId}/head-to-head`,
     { headers: authHeader(token) },
   );

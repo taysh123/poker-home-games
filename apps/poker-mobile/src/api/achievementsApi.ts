@@ -1,5 +1,4 @@
-import axios from 'axios';
-import { API_BASE_URL } from './config';
+import apiClient from './apiClient';
 
 export type AchievementDto = {
   key: string;
@@ -20,7 +19,7 @@ function authHeader(token: string) {
 }
 
 export async function getMyAchievements(token: string): Promise<MyAchievementsDto> {
-  const { data } = await axios.get<MyAchievementsDto>(`${API_BASE_URL}/api/users/me/achievements`, {
+  const { data } = await apiClient.get<MyAchievementsDto>('/api/users/me/achievements', {
     headers: authHeader(token),
   });
   return data;

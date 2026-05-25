@@ -1,5 +1,4 @@
-import axios from 'axios';
-import { API_BASE_URL } from './config';
+import apiClient from './apiClient';
 
 export type NotificationDto = {
   id: string;
@@ -20,15 +19,13 @@ function authHeader(token: string) {
   return { Authorization: `Bearer ${token}` };
 }
 
-const api = axios.create({ baseURL: API_BASE_URL, headers: { 'Content-Type': 'application/json' } });
-
 export async function getMyNotifications(token: string): Promise<NotificationsResponse> {
-  const { data } = await api.get<NotificationsResponse>('/api/notifications', {
+  const { data } = await apiClient.get<NotificationsResponse>('/api/notifications', {
     headers: authHeader(token),
   });
   return data;
 }
 
 export async function markAllNotificationsRead(token: string): Promise<void> {
-  await api.post('/api/notifications/read-all', null, { headers: authHeader(token) });
+  await apiClient.post('/api/notifications/read-all', null, { headers: authHeader(token) });
 }
