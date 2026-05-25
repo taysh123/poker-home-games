@@ -19,6 +19,7 @@ import { getMyNotifications, markAllNotificationsRead, NotificationDto } from '.
 import { RootStackParamList } from '../navigation/AppNavigator';
 import SkeletonCard from '../components/SkeletonCard';
 import SkeletonRow from '../components/SkeletonRow';
+import { timeAgo } from '../utils/formatters';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -31,17 +32,6 @@ const TYPE_ICON: Record<string, { name: string; color: string }> = {
   GroupJoined:         { name: 'people-outline',  color: colors.success },
   MemberRemoved:       { name: 'person-remove-outline', color: colors.error },
 };
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return 'just now';
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24);
-  return `${d}d ago`;
-}
 
 export default function NotificationsScreen() {
   const navigation = useNavigation<Nav>();

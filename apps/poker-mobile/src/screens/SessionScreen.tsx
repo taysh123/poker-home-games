@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
@@ -59,6 +60,7 @@ import {
 } from '../api/handsApi';
 import { exportSessionCsv, shareSessionCard } from '../utils/exportUtils';
 import RecapCard from '../components/RecapCard';
+import SkeletonCard from '../components/SkeletonCard';
 import { successNotification, errorNotification, lightTap } from '../utils/haptics';
 import { showToast } from '../utils/toast';
 import { formatMoney } from '../utils/formatters';
@@ -87,6 +89,7 @@ function formatDate(iso: string): string {
 export default function SessionScreen({ route, navigation }: Props) {
   const { sessionId, groupId } = route.params;
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const { refresh: refreshActiveSession, clear: clearActiveSession } = useActiveSession();
 
   const [session, setSession] = useState<SessionDetailDto | null>(null);
@@ -657,8 +660,36 @@ export default function SessionScreen({ route, navigation }: Props) {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator color={colors.gold} size="large" />
+      <View style={styles.flex}>
+        {/* skeleton header */}
+        <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
+          <View style={styles.backBtn} />
+          <View style={{ flex: 1, gap: 8 }}>
+            <SkeletonCard height={16} borderRadius={6} style={{ width: '55%' }} />
+            <SkeletonCard height={10} borderRadius={4} style={{ width: '30%' }} />
+          </View>
+        </View>
+        {/* skeleton meta chips */}
+        <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingVertical: 12 }}>
+          <SkeletonCard height={28} borderRadius={8} style={{ width: 90 }} />
+          <SkeletonCard height={28} borderRadius={8} style={{ width: 70 }} />
+        </View>
+        {/* skeleton player list */}
+        <View style={{ marginTop: 8, paddingHorizontal: 16 }}>
+          <SkeletonCard height={10} borderRadius={4} style={{ width: '25%', marginBottom: 12 }} />
+          <View style={{ backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
+            {[0, 1, 2, 3].map(i => (
+              <View key={i} style={[{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 }, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
+                <SkeletonCard height={36} borderRadius={10} style={{ width: 36, flexShrink: 0 }} />
+                <View style={{ flex: 1, gap: 7 }}>
+                  <SkeletonCard height={13} borderRadius={4} style={{ width: '45%' }} />
+                  <SkeletonCard height={9} borderRadius={3} style={{ width: '60%' }} />
+                </View>
+                <SkeletonCard height={18} borderRadius={4} style={{ width: 52 }} />
+              </View>
+            ))}
+          </View>
+        </View>
       </View>
     );
   }
@@ -686,7 +717,7 @@ export default function SessionScreen({ route, navigation }: Props) {
         }
       >
         {/* ── Header ── */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={12}>
             <Ionicons name="chevron-back" size={20} color={colors.text} />
           </TouchableOpacity>
@@ -1765,7 +1796,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
-    paddingTop: Platform.OS === 'ios' ? 56 : 24,
     paddingBottom: 14,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
