@@ -929,12 +929,15 @@ export default function SessionScreen({ route, navigation }: Props) {
 
         {/* ── Session Recap (Finished) ── */}
         {isFinished && (
-          <RecapCard
-            recap={recap}
-            loading={recapLoading}
-            onShare={handleShareCard}
-            sharing={sharing}
-          />
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Game Highlights</Text>
+            <RecapCard
+              recap={recap}
+              loading={recapLoading}
+              onShare={handleShareCard}
+              sharing={sharing}
+            />
+          </View>
         )}
 
         {/* ── Settlements (Finished) ── */}
@@ -963,6 +966,17 @@ export default function SessionScreen({ route, navigation }: Props) {
                 <Ionicons name="checkmark-circle" size={36} color={colors.success} />
                 <Text style={styles.evenTitle}>Everyone is even</Text>
                 <Text style={styles.evenSub}>No transfers needed — the math works out perfectly.</Text>
+                <TouchableOpacity onPress={handleCalculateSettlements} disabled={calcLoading}>
+                  {calcLoading
+                    ? <ActivityIndicator color={colors.gold} size="small" />
+                    : <Text style={styles.recalcLink}>Recalculate</Text>}
+                </TouchableOpacity>
+              </View>
+            ) : settlements.every(s => s.status === 'Confirmed') ? (
+              <View style={styles.evenCard}>
+                <Ionicons name="checkmark-circle" size={36} color={colors.success} />
+                <Text style={styles.evenTitle}>All settled up! 🎉</Text>
+                <Text style={styles.evenSub}>Everyone's even. See you next game.</Text>
                 <TouchableOpacity onPress={handleCalculateSettlements} disabled={calcLoading}>
                   {calcLoading
                     ? <ActivityIndicator color={colors.gold} size="small" />
@@ -1694,7 +1708,7 @@ export default function SessionScreen({ route, navigation }: Props) {
 
             <TouchableOpacity style={styles.finishGameBtn} onPress={finishGame} activeOpacity={0.85}>
               <Ionicons name="checkmark-circle-outline" size={18} color={colors.background} />
-              <Text style={styles.finishGameBtnText}>Save & View Session</Text>
+              <Text style={styles.finishGameBtnText}>Save Results →</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1792,6 +1806,9 @@ function MetaChip({ label, gold }: { label: string; gold?: boolean }) {
 }
 
 function rankLabel(rank: number): string {
+  if (rank === 1) return '🥇';
+  if (rank === 2) return '🥈';
+  if (rank === 3) return '🥉';
   return `#${rank}`;
 }
 
