@@ -122,11 +122,21 @@ export default function PlayerProfileScreen({ route, navigation }: Props) {
     >
       {/* Hero */}
       <View style={styles.hero}>
-        <View style={styles.avatar}>
+        <View style={[styles.avatar, {
+          borderColor: profile.totalProfitLoss > 0
+            ? colors.goldMuted
+            : profile.totalProfitLoss < 0
+              ? colors.errorMuted
+              : colors.border,
+          borderWidth: profile.totalProfitLoss !== 0 ? 2.5 : 1,
+        }]}>
           <Text style={styles.avatarText}>{initials}</Text>
         </View>
         <View style={styles.heroInfo}>
           <Text style={styles.heroName}>{profile.username}</Text>
+          <Text style={[styles.heroPL, { color: plColor }]}>
+            {formatPL(profile.totalProfitLoss)}
+          </Text>
           <Text style={styles.heroSub}>
             {profile.totalSessionsPlayed} sessions · {profile.winRate}% win rate
           </Text>
@@ -220,6 +230,19 @@ export default function PlayerProfileScreen({ route, navigation }: Props) {
       {!isOwnProfile && h2h && h2h.sessionsTogether > 0 && (
         <View style={styles.h2hCard}>
           <Text style={styles.sectionTitle}>You vs. {profile.username}</Text>
+          <View style={styles.verdictChip}>
+            <Text style={[styles.verdictText, {
+              color: h2h.myWins > h2h.opponentWins
+                ? colors.success
+                : h2h.myWins < h2h.opponentWins
+                  ? colors.textMuted
+                  : colors.textDim,
+            }]}>
+              {h2h.myWins > h2h.opponentWins ? 'YOU LEAD'
+                : h2h.myWins < h2h.opponentWins ? 'THEY LEAD'
+                : 'TIED'}
+            </Text>
+          </View>
           <View style={styles.h2hStats}>
             <View style={styles.h2hSide}>
               <Text style={[styles.h2hValue, { color: colors.goldLight }]}>{h2h.myWins}</Text>
@@ -327,6 +350,7 @@ const styles = StyleSheet.create({
   },
   heroInfo: { flex: 1, gap: 4 },
   heroName: { ...typography.h2, color: colors.text },
+  heroPL: { ...typography.amountLarge, letterSpacing: -0.5 },
   heroSub: { ...typography.body, color: colors.textMuted },
   streakLabel: { ...typography.labelSmall, color: colors.gold, marginTop: 2 },
 
@@ -378,6 +402,23 @@ const styles = StyleSheet.create({
   formDotEven: { backgroundColor: colors.surfaceHigh, borderWidth: 1, borderColor: colors.border },
   formDotText: { fontSize: 10, fontWeight: '700', color: colors.text },
   formCaption: { ...typography.caption, color: colors.textDim },
+
+  // H2H verdict
+  verdictChip: {
+    alignSelf: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceHigh,
+  },
+  verdictText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
 
   // H2H card
   h2hCard: {
