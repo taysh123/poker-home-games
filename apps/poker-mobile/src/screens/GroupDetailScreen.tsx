@@ -512,7 +512,12 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                 {leaderboard.map((entry, index) => (
                   <React.Fragment key={entry.userId}>
                     {index > 0 && <View style={styles.separator} />}
-                    <LeaderboardRow entry={entry} rank={index + 1} />
+                    <TouchableOpacity
+                      onPress={() => navigation.navigate('PlayerProfile', { userId: entry.userId, username: entry.username })}
+                      activeOpacity={0.75}
+                    >
+                      <LeaderboardRow entry={entry} rank={index + 1} />
+                    </TouchableOpacity>
                   </React.Fragment>
                 ))}
               </View>
