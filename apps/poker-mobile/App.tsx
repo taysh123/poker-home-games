@@ -5,6 +5,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { NavigationContainerRef } from '@react-navigation/native';
 import { AuthProvider } from './src/context/AuthContext';
 import { ActiveSessionProvider } from './src/context/ActiveSessionContext';
+import { LocalGamesProvider } from './src/context/LocalGamesContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import { RootStackParamList } from './src/navigation/AppNavigator';
 
@@ -47,8 +48,10 @@ export default function App() {
   return (
     <AuthProvider>
       <ActiveSessionProvider>
-        <StatusBar style="light" />
-        <AppNavigator navigationRef={navRef} />
+        <LocalGamesProvider>
+          <StatusBar style="light" />
+          <AppNavigator navigationRef={navRef} />
+        </LocalGamesProvider>
       </ActiveSessionProvider>
     </AuthProvider>
   );

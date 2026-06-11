@@ -19,6 +19,7 @@
     "axios": "^1.16.1",
     "expo": "~54.0.33",
     "expo-auth-session": "~7.0.11",
+    "expo-crypto": "~15.0.9",
     "expo-file-system": "~19.0.22",
     "expo-haptics": "~15.0.8",
     "expo-print": "~15.0.8",
