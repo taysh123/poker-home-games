@@ -4,7 +4,6 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   StyleSheet,
   Platform,
   ActivityIndicator,
@@ -25,6 +24,8 @@ import { getMyGroups, getGroupMembers, MyGroupDto, GroupMemberDto } from '../api
 import { createSession, addPlayer, startSession, getGroupSessions } from '../api/sessionsApi';
 import AppTextInput from '../components/AppTextInput';
 import PrimaryButton from '../components/PrimaryButton';
+import StepIndicator from '../components/StepIndicator';
+import GuestNameInput from '../components/GuestNameInput';
 import { getRecentGuests, recordGuestName } from '../utils/guestHistory';
 import { showToast } from '../utils/toast';
 import { useActiveSession } from '../context/ActiveSessionContext';
@@ -267,27 +268,7 @@ export default function NewGameScreen({ route, navigation }: Props) {
       </View>
 
       {/* Step indicator */}
-      <View style={styles.stepIndicator}>
-        {STEP_LABELS.map((label, i) => {
-          const n = i + 1;
-          const active = step === n;
-          const done = step > n;
-          return (
-            <React.Fragment key={n}>
-              {i > 0 && <View style={[styles.stepConnector, (done || active) && styles.stepConnectorActive]} />}
-              <View style={styles.stepItem}>
-                <View style={[styles.stepCircle, active && styles.stepCircleActive, done && styles.stepCircleDone]}>
-                  {done
-                    ? <Ionicons name="checkmark" size={13} color={colors.background} />
-                    : <Text style={[styles.stepCircleText, active && styles.stepCircleTextActive]}>{String(n)}</Text>
-                  }
-                </View>
-                <Text style={[styles.stepLabel, active && styles.stepLabelActive]}>{label}</Text>
-              </View>
-            </React.Fragment>
-          );
-        })}
-      </View>
+      <StepIndicator steps={STEP_LABELS} current={step} />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
@@ -403,40 +384,13 @@ export default function NewGameScreen({ route, navigation }: Props) {
 
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>Add Guest</Text>
-              <View style={styles.guestInputRow}>
-                <TextInput
-                  style={styles.guestInput}
-                  value={guestInput}
-                  onChangeText={setGuestInput}
-                  placeholder="Guest name..."
-                  placeholderTextColor={colors.textDim}
-                  onSubmitEditing={addGuest}
-                  returnKeyType="done"
-                />
-                <TouchableOpacity
-                  style={[styles.addGuestBtn, !guestInput.trim() && styles.addGuestBtnDisabled]}
-                  onPress={addGuest}
-                  disabled={!guestInput.trim()}
-                >
-                  <Text style={styles.addGuestBtnText}>Add</Text>
-                </TouchableOpacity>
-              </View>
-              {guestSuggestions.length > 0 && (
-                <View style={styles.suggestions}>
-                  <Text style={styles.suggestionsLabel}>Recent:</Text>
-                  <View style={styles.chipRow}>
-                    {guestSuggestions.map(name => (
-                      <TouchableOpacity
-                        key={name}
-                        style={styles.suggestionChip}
-                        onPress={() => { setGuestInput(name); }}
-                      >
-                        <Text style={styles.suggestionChipText}>{name}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-              )}
+              <GuestNameInput
+                value={guestInput}
+                onChangeText={setGuestInput}
+                onAdd={addGuest}
+                suggestions={guestSuggestions}
+                onPickSuggestion={setGuestInput}
+              />
             </View>
 
             {/* Added guests list */}
@@ -550,45 +504,6 @@ const styles = StyleSheet.create({
   },
   headerTitle: { flex: 1, ...typography.h3, color: colors.text, textAlign: 'center' },
 
-  // Step indicator
-  stepIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  stepItem: { alignItems: 'center', gap: 6 },
-  stepConnector: {
-    flex: 1,
-    height: 2,
-    backgroundColor: colors.border,
-    marginBottom: 18,
-    marginHorizontal: 4,
-    maxWidth: 48,
-  },
-  stepConnectorActive: { backgroundColor: colors.gold },
-  stepCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceHigh,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepCircleActive: { borderColor: colors.gold, backgroundColor: 'rgba(201,168,76,0.15)' },
-  stepCircleDone: { borderColor: colors.gold, backgroundColor: colors.gold },
-  stepCircleText: { fontSize: 12, fontWeight: '700', color: colors.textMuted },
-  stepCircleTextActive: { color: colors.gold },
-  stepCircleTextDone: { color: colors.background },
-  stepLabel: { fontSize: 11, fontWeight: '600', color: colors.textDim, textTransform: 'uppercase' as const, letterSpacing: 0.5 },
-  stepLabelActive: { color: colors.gold },
-
   scroll: { flex: 1 },
   content: { padding: 20 },
   stepContent: { gap: 24 },
@@ -635,41 +550,6 @@ const styles = StyleSheet.create({
   memberChipText: { fontSize: 14, fontWeight: '600', color: colors.textMuted },
   memberChipTextSelected: { color: colors.gold },
   memberChipCheck: { fontSize: 12, color: colors.gold },
-
-  guestInputRow: { flexDirection: 'row', gap: 10 },
-  guestInput: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: colors.text,
-  },
-  addGuestBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: colors.gold,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addGuestBtnDisabled: { opacity: 0.5 },
-  addGuestBtnText: { fontSize: 14, fontWeight: '700', color: colors.background },
-
-  suggestions: { gap: 8 },
-  suggestionsLabel: { fontSize: 11, color: colors.textDim, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  suggestionChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceHigh,
-  },
-  suggestionChipText: { fontSize: 13, color: colors.textMuted, fontWeight: '500' },
 
   addedGuestChip: {
     flexDirection: 'row',

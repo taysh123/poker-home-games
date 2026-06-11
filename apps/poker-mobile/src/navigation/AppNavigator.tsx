@@ -29,6 +29,9 @@ import JoinGroupScreen from '../screens/JoinGroupScreen';
 import PlayerProfileScreen from '../screens/PlayerProfileScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
+import LocalNewGameScreen from '../screens/LocalNewGameScreen';
+import LocalSessionScreen from '../screens/LocalSessionScreen';
+import LocalSessionSummaryScreen from '../screens/LocalSessionSummaryScreen';
 import Toast from '../components/Toast';
 import * as storage from '../utils/storage';
 
@@ -50,6 +53,10 @@ export type RootStackParamList = {
   JoinGroup: { inviteToken: string };
   PlayerProfile: { userId: string; username: string };
   Notifications: undefined;
+  // Local (on-device) games — available to guests and logged-in users
+  LocalNewGame: undefined;
+  LocalSession: { gameId: string };
+  LocalSessionSummary: { gameId: string };
   // Kept for TypeScript compat on existing screens that navigate to these by name
   Home: undefined;
   AllSessions: undefined;
@@ -255,6 +262,9 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
             <Stack.Screen name="JoinGroup"          component={JoinGroupScreen}           options={{ title: 'Joining Group', headerShown: false }} />
             <Stack.Screen name="PlayerProfile"      component={PlayerProfileScreen}       options={{ title: 'Player Profile' }} />
             <Stack.Screen name="Notifications"      component={NotificationsScreen}        options={{ headerShown: false }} />
+            <Stack.Screen name="LocalNewGame"        component={LocalNewGameScreen}        options={{ headerShown: false }} />
+            <Stack.Screen name="LocalSession"        component={LocalSessionScreen}        options={{ headerShown: false, gestureEnabled: false }} />
+            <Stack.Screen name="LocalSessionSummary" component={LocalSessionSummaryScreen} options={{ headerShown: false, gestureEnabled: false }} />
           </>
         )}
       </Stack.Navigator>
