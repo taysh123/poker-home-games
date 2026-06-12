@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Linking } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as WebBrowser from 'expo-web-browser';
 import { NavigationContainerRef } from '@react-navigation/native';
 import { AuthProvider } from './src/context/AuthContext';
@@ -46,13 +47,15 @@ export default function App() {
   }, []);
 
   return (
-    <AuthProvider>
-      <ActiveSessionProvider>
-        <LocalGamesProvider>
-          <StatusBar style="light" />
-          <AppNavigator navigationRef={navRef} />
-        </LocalGamesProvider>
-      </ActiveSessionProvider>
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <ActiveSessionProvider>
+          <LocalGamesProvider>
+            <StatusBar style="light" />
+            <AppNavigator navigationRef={navRef} />
+          </LocalGamesProvider>
+        </ActiveSessionProvider>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }

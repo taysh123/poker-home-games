@@ -1,6 +1,7 @@
 import React from 'react';
-import { TouchableOpacity, Text, ActivityIndicator, StyleSheet, ViewStyle } from 'react-native';
+import { Text, ActivityIndicator, StyleSheet, ViewStyle } from 'react-native';
 import { colors } from '../theme/colors';
+import PressableScale from './motion/PressableScale';
 
 type Variant = 'gold' | 'outline' | 'danger';
 
@@ -27,7 +28,7 @@ export default function PrimaryButton({
     variant === 'gold' ? colors.background : variant === 'outline' ? colors.gold : colors.error;
 
   return (
-    <TouchableOpacity
+    <PressableScale
       style={[
         styles.base,
         variant === 'gold' ? styles.gold : variant === 'outline' ? styles.outline : styles.danger,
@@ -36,7 +37,7 @@ export default function PrimaryButton({
         style,
       ]}
       onPress={onPress}
-      activeOpacity={0.8}
+      haptic="light"
       disabled={disabled || loading}
     >
       {loading ? (
@@ -51,7 +52,7 @@ export default function PrimaryButton({
           {label}
         </Text>
       )}
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 
