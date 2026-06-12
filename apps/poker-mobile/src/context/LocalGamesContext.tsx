@@ -19,6 +19,10 @@ type LocalGamesContextType = {
   undoLastTxn: (gameId: string) => Promise<void>;
   endGame: (gameId: string, finalStacks: { playerId: string; amountCents: number }[]) => Promise<void>;
   deleteGame: (gameId: string) => Promise<void>;
+  /** Tournament only: bust a player out (auto-finishes on last man standing). */
+  eliminatePlayer: (gameId: string, playerId: string) => Promise<void>;
+  /** Tournament only: undo the most recent bust. */
+  undoElimination: (gameId: string) => Promise<void>;
 };
 
 const LocalGamesContext = createContext<LocalGamesContextType>({
@@ -32,6 +36,8 @@ const LocalGamesContext = createContext<LocalGamesContextType>({
   undoLastTxn: async () => {},
   endGame: async () => {},
   deleteGame: async () => {},
+  eliminatePlayer: async () => {},
+  undoElimination: async () => {},
 });
 
 export function LocalGamesProvider({ children }: { children: React.ReactNode }) {
@@ -89,6 +95,14 @@ export function LocalGamesProvider({ children }: { children: React.ReactNode }) 
     await commit(store.deleteGame(file, gameId));
   }, [file, commit]);
 
+  const eliminatePlayer = useCallback(async (gameId: string, playerId: string) => {
+    await commit(store.eliminatePlayer(file, gameId, playerId));
+  }, [file, commit]);
+
+  const undoElimination = useCallback(async (gameId: string) => {
+    await commit(store.undoElimination(file, gameId));
+  }, [file, commit]);
+
   const activeGame = file.games.find(g => g.status === 'Active') ?? null;
 
   return (
@@ -104,6 +118,8 @@ export function LocalGamesProvider({ children }: { children: React.ReactNode }) 
         undoLastTxn,
         endGame,
         deleteGame,
+        eliminatePlayer,
+        undoElimination,
       }}
     >
       {children}

@@ -23,12 +23,33 @@ export interface LocalTxn {
 
 export type LocalGameStatus = 'Active' | 'Finished';
 
+export type PayoutPreset = '100' | '60-40' | '50-30-20';
+export type BlindPreset = 'turbo' | 'standard' | 'deep';
+
+export interface LocalElimination {
+  playerId: string;
+  /** 1 = winner; assigned bottom-up as players bust. */
+  position: number;
+  at: string;
+}
+
+export interface LocalTournamentConfig {
+  entryFeeCents: number;
+  payoutPreset: PayoutPreset;
+  blindPreset: BlindPreset;
+  eliminations: LocalElimination[];
+}
+
 export interface LocalGame {
   id: string;
-  schemaVersion: 1;
+  schemaVersion: 2;
   name: string;
   /** Local games skip Draft — they are Active from creation. */
   status: LocalGameStatus;
+  /** undefined = cash game (v1 files migrate to 'cash'). */
+  mode?: 'cash' | 'tournament';
+  /** Present only when mode === 'tournament'. */
+  tournament?: LocalTournamentConfig;
   createdAt: string;
   endedAt?: string;
   chipRatio?: number;
@@ -40,6 +61,6 @@ export interface LocalGame {
 }
 
 export interface LocalGamesFile {
-  schemaVersion: 1;
+  schemaVersion: 2;
   games: LocalGame[];
 }
