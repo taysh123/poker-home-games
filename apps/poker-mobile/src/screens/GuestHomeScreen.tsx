@@ -2,6 +2,7 @@ import React from 'react';
 import {
   View,
   Text,
+  Image,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
@@ -39,9 +40,14 @@ export default function GuestHomeScreen() {
     >
       {/* Brand header */}
       <View style={styles.brandRow}>
-        <View>
-          <Text style={styles.brand}>T POKER</Text>
-          <Text style={styles.tagline}>Your home game, handled.</Text>
+        <View style={styles.brandLeft}>
+          <View style={styles.logoBadge}>
+            <Image source={require('../../assets/logo.png')} style={styles.logoImg} resizeMode="contain" />
+          </View>
+          <View>
+            <Text style={styles.brand}>T POKER</Text>
+            <Text style={styles.tagline}>Your home game, handled.</Text>
+          </View>
         </View>
         <TouchableOpacity style={styles.signInBtn} onPress={() => navigation.navigate('Login')} activeOpacity={0.8}>
           <Text style={styles.signInBtnText}>Sign In</Text>
@@ -136,6 +142,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 4,
   },
+  brandLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  logoBadge: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.goldMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  logoImg: { width: 38, height: 38 },
   brand: { ...typography.displaySerif, fontSize: 27, color: colors.text, letterSpacing: 2.5 },
   tagline: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
   signInBtn: {

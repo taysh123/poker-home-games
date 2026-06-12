@@ -98,7 +98,7 @@ export default function RegisterScreen({ navigation }: Props) {
         <Animated.View style={[styles.header, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}>
           <View style={styles.logoOuter}>
             <View style={styles.logoRing}>
-              <Image source={require('../../assets/icon.png')} style={styles.logo} resizeMode="contain" />
+              <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
             </View>
           </View>
           <Text style={styles.appName}>T POKER</Text>

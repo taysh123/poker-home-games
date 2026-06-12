@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
+  Image,
   TouchableOpacity,
   StyleSheet,
   Dimensions,
@@ -71,6 +72,14 @@ export default function OnboardingScreen({ navigation }: Props) {
 
   return (
     <Screen style={styles.container}>
+      {/* Brand mark */}
+      <View style={styles.brandRow}>
+        <View style={styles.brandLogoRing}>
+          <Image source={require('../../assets/logo.png')} style={styles.brandLogo} resizeMode="contain" />
+        </View>
+        <Text style={styles.brandName}>T POKER</Text>
+      </View>
+
       {/* Skip button */}
       {currentIndex < SLIDES.length - 1 && (
         <TouchableOpacity style={styles.skipBtn} onPress={markSeenAndNavigate} activeOpacity={0.7}>
@@ -129,6 +138,25 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: Platform.OS === 'ios' ? 48 : 32,
   },
+  brandRow: {
+    alignItems: 'center',
+    gap: 10,
+    paddingTop: 8,
+  },
+  brandLogoRing: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.goldMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  brandLogo: { width: 52, height: 52 },
+  brandName: { ...typography.displaySerif, fontSize: 20, color: colors.goldLight, letterSpacing: 4 },
+
   skipBtn: {
     position: 'absolute',
     top: Platform.OS === 'ios' ? 56 : 36,
