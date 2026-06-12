@@ -33,6 +33,17 @@ Items marked **(you)** require credentials only the account owner can supply.
 3. First AAB must be uploaded manually through the Play Console UI before
    `eas submit` can manage releases.
 
+### Push notification credentials (required since the push foundation shipped)
+- **Android**: EAS needs an FCM v1 service-account key — Firebase console →
+  create/link the project → Project settings → Service accounts → generate key →
+  upload via `eas credentials` (Android → Push notifications). Expo Go testing
+  works WITHOUT this; production builds need it.
+- **iOS**: an APNs key (requires the paid Apple Developer account) — `eas credentials`
+  walks you through creating/uploading it. Remote push does NOT work in Expo Go on
+  iOS; test with an EAS development build.
+- The app config plugin (`expo-notifications`, gold accent color) is already set
+  in app.json.
+
 ### Google OAuth (for "Continue with Google" in store builds)
 - Create **Android** OAuth client (package + release-keystore SHA-1 — get it from
   `eas credentials` after the first build) → set `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID`.

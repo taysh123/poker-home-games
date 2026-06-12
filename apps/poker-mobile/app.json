@@ -3,7 +3,7 @@
     "name": "T Poker",
     "slug": "t-poker",
     "scheme": "tpoker",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -55,7 +55,13 @@
     "plugins": [
       "expo-web-browser",
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "color": "#C9A84C"
+        }
+      ]
     ],
     "extra": {
       "eas": {
