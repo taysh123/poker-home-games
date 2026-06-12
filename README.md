@@ -14,6 +14,17 @@ a real modern poker product.
 
 ## Features
 
+### Guest Mode — no account required
+- Open the app and run a full poker night **without signing up**: add players,
+  track buy-ins/cash-outs, end the game, and get "Alice pays Bob ₪40" cash
+  settlements — entirely on-device, no network needed
+- Local games persist in device storage (schema-versioned, corruption-quarantined)
+- Guest Stats tab: games played, money on the table, biggest win — from local games
+- TypeScript port of the backend settlement engine (integer-cents arithmetic,
+  unit-tested against shared fixtures)
+- Sign in any time to unlock groups, cloud sync, lifetime stats, and leaderboards;
+  invite deep links opened while logged out continue automatically after sign-in
+
 ### Live Session Management
 - Create cash game sessions (standalone or inside a group)
 - Real-time buy-in / rebuy / cash-out tracking per player
@@ -105,6 +116,14 @@ a real modern poker product.
 - Remember Me option
 - Profile management, password change, account deletion
 
+### Motion & Delight
+- Reanimated 4 motion system: springy press-scale on every primary button (with
+  haptics), shimmer skeleton loaders, count-up money displays
+- Confetti celebration on game end (local summary + winner reveal)
+- Frosted-glass tab bar and action sheets on iOS (solid fallback elsewhere)
+- Swipeable onboarding carousel with spring-animated pagination dots
+- LiveGameBar springs above the tab bar for active games — server **and** local
+
 ---
 
 ## Screenshots
@@ -119,6 +138,9 @@ a real modern poker product.
 |-------|-----------|
 | Mobile / Web | Expo SDK 54, React Native, TypeScript |
 | Navigation | React Navigation v7 (native stack + bottom tabs) |
+| Animation | Reanimated 4 + gesture-handler, expo-haptics, expo-blur, expo-linear-gradient |
+| Local-first storage | AsyncStorage (guest games, schema-versioned) |
+| Testing | Jest (jest-expo) — settlement engine, local game store, money utils |
 | HTTP client | Axios with 401 interceptor + auto-refresh |
 | Token storage | Platform-aware: `localStorage` (web) / `expo-secure-store` (native) |
 | Backend API | ASP.NET Core 8 Web API |
@@ -139,11 +161,13 @@ poker-app/
 │   └── src/
 │       ├── api/                # Typed Axios wrappers
 │       ├── components/         # Reusable UI components
-│       ├── context/            # Auth, ActiveSession contexts
-│       ├── navigation/         # Stack + tab navigator
+│       │   └── motion/         # PressableScale, Shimmer, AnimatedNumber, GlassView, Celebration
+│       ├── context/            # Auth, ActiveSession, LocalGames contexts
+│       ├── local/              # Guest-mode engine: settlement port, game store, stats
+│       ├── navigation/         # Root stack + authed/guest tab navigators
 │       ├── screens/            # One file per screen
-│       ├── theme/              # colors.ts, typography.ts
-│       └── utils/              # Formatters, storage, haptics, toast
+│       ├── theme/              # colors.ts, typography.ts, shadows.ts, motion.ts
+│       └── utils/              # Formatters, storage, haptics, toast, money (cents)
 └── src/
     ├── PokerApp.API/           # Controllers, middleware, DI
     ├── PokerApp.Application/   # Commands, queries, validators, DTOs
@@ -385,8 +409,15 @@ Railway shows the exact string under your PostgreSQL plugin → **Connect** tab.
 | ✅ | Player profile identity: P&L hero, performance avatar ring, H2H verdict badge |
 | ✅ | Session winner spotlight (spring animation + gold glow) + live leader chip glow |
 | ✅ | Achievement progress text for locked achievements |
+| ✅ | **Guest mode** — full local game loop without an account (on-device, offline) |
+| ✅ | TypeScript settlement engine port with Jest test suite |
+| ✅ | Reanimated 4 motion system (press-scale + haptics, shimmer skeletons, count-ups) |
+| ✅ | Confetti celebrations, glass tab bar/sheets (iOS), swipeable onboarding |
+| ✅ | Deep-link invite continuation after sign-in (pending-invite handoff) |
+| ✅ | Privacy policy page + EAS submit scaffold + store release checklist |
+| 🔜 | Import local guest games into a cloud account (`importedSessionId` reserved) |
 | 🔜 | Push notifications (Expo push) |
-| 🔜 | Native iOS/Android release (EAS) |
+| 🔜 | Native iOS/Android release (EAS — see `docs/store-release.md`) |
 
 ---
 
@@ -403,6 +434,7 @@ Railway shows the exact string under your PostgreSQL plugin → **Connect** tab.
 | 41–50 | Notifications, rivalries, cross-group activity feed, leaderboard periods, per-group P&L |
 | 51–60 | Production hardening, Railway deployment fixes, healthcheck, middleware pipeline |
 | 61–70 | Cash transfer engine, social home feed, leaderboard medals, profile identity polish, session winner spotlight, achievement progress |
+| 71+ | Guest mode (local-first games, no login wall), TS settlement port + Jest, Reanimated 4 motion system, celebrations, glass UI, store-readiness scaffold |
 
 ---
 
@@ -410,6 +442,8 @@ Railway shows the exact string under your PostgreSQL plugin → **Connect** tab.
 
 ```powershell
 # Build checks before committing
-dotnet build PokerApp.sln              # 0 errors required
-cd apps/poker-mobile && npx tsc --noEmit   # 0 errors required
+dotnet build PokerApp.sln                  # 0 errors required
+cd apps/poker-mobile
+npx tsc --noEmit                           # 0 errors required
+npx jest                                   # settlement engine + local store tests
 ```

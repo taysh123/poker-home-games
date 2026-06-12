@@ -40,6 +40,9 @@ npm run tunnel     # ngrok for physical devices
 
 # Type check (must pass before committing)
 npx tsc --noEmit
+
+# Unit tests (must pass before committing — settlement engine, local game store)
+npx jest
 ```
 
 **Mobile dev note:** When testing on a physical device, update the LAN IP in `apps/poker-mobile/src/api/config.ts`. It falls back to `localhost:5062` only on web.
@@ -127,6 +130,34 @@ Group invite links are generated via `POST /api/groups/{id}/invite-link`. Sessio
 
 ---
 
+## Local (Guest) Games — `src/local/`
+
+Guest mode runs full games on-device with zero network. Rules:
+
+- **Amounts are ALWAYS integer cents** (`utils/money.ts`: `formatCents`, `parseAmountToCents`). Never store floats.
+- `local/settlements.ts` is a TypeScript port of the backend `SettlementCalculatorService.cs` (greedy two-pointer debt minimization). **Any change to the C# algorithm must be mirrored here** — both are pinned by shared test fixtures (`local/__tests__/settlements.test.ts`).
+- `local/localGamesStore.ts`: pure mutation functions (game file in → new file out) + AsyncStorage persistence under `tpoker.localGames.v1`. Corrupt payloads are **quarantined** (copied to a timestamped key), never silently cleared. Final stacks are recorded as cash-out transactions, mirroring backend `EndSessionCommandHandler`.
+- `context/LocalGamesContext.tsx`: thin React wrapper; enforces at most one Active local game; serializes writes.
+- `LocalGame.importedSessionId` is reserved for a future "import to cloud account" feature.
+- Local games skip Draft — they're Active from creation. Status: `Active | Finished`.
+- Web caveat: `Alert.alert` is a no-op on react-native-web — use `utils/confirm.ts` (`confirmDialog`/`infoDialog`) for anything that must work on web.
+
+## Motion System — `src/components/motion/`
+
+Reanimated 4 components layered ON TOP of the legacy `Animated` helpers in `theme/motion.ts` (both coexist; don't rewrite old screens wholesale):
+
+| Component | Use |
+|-----------|-----|
+| `PressableScale` | Base touchable: spring scale + optional haptic. `PrimaryButton` uses it internally. |
+| `Shimmer` | Sweeping highlight inside `SkeletonCard`/`SkeletonRow` (opacity pulse on web). |
+| `AnimatedNumber` | rAF count-up for money values (Home hero, summaries). |
+| `GlassView` | iOS-only blur (tab bar, ActionSheet); solid `colors.surface` on Android/web. Never inside scrolling lists. |
+| `Celebration` | Confetti burst on game end; auto-unmounts; fires success haptic. |
+
+Web rule: reanimated layout animations / `entering` props are NOT used on existing screens; basic shared-value styles are fine everywhere.
+
+---
+
 ## Active Session Context
 
 `ActiveSessionContext` drives the `LiveGameBar` (floats above tab bar when a game is in progress). It:
@@ -135,6 +166,8 @@ Group invite links are generated via `POST /api/groups/{id}/invite-link`. Sessio
 - Finds the first session with `status === 'Active'` from recent sessions
 
 Call `refresh()` after starting/ending a session to update the bar immediately. Call `clear()` when navigating away from a finished session.
+
+`LiveGameBar` itself unions two sources: the server `activeSession` (wins when both exist) and `useLocalGames().activeGame` — so the bar also appears for guests running local games. It renders inside both tab navigators.
 
 ---
 
@@ -148,7 +181,14 @@ JWT: 15-min access token + 30-day refresh token (stored hashed SHA-256 in DB, ne
 3. 401 on any request: `apiClient` interceptor attempts refresh; on failure calls `onUnauthenticated` → `clearSession()` → `setUser(null)`
 4. "Remember me = false" uses `sessionStorage` on web (session mode via `storage.setSessionMode(true)`)
 
-`AppNavigator` renders auth screens when `user === null`, app screens otherwise — no manual `navigation.replace()` needed.
+`AppNavigator` renders **two trees** on `user === null` — but the logged-out tree is a full guest experience, NOT a login wall:
+
+- **Guest tree** (`user === null`): Onboarding (first run) → `GuestTabNavigator` (GuestHome | LocalSessions | GroupsAuthGate | GuestStats) + local game screens + Login/Register as dismissible modals + guest-aware JoinSession/JoinGroup.
+- **Authed tree**: `TabNavigator` + all server-backed screens (unchanged), plus the local game screens (so a guest who logs in mid-game can still reach it).
+
+Both trees expose the route name `MainTabs`. React Navigation swaps trees automatically when `user` changes — no manual `navigation.replace()` needed. Logout lands on guest Home, not a login wall.
+
+**Pending invite handoff:** a guest opening an invite deep link sees "Sign in to join"; the invite is stashed in AsyncStorage (`tpoker.pendingInvite`, 15-min TTL via `utils/pendingInvite.ts`) and `AppNavigator` resumes the join on the null → user transition.
 
 ---
 
