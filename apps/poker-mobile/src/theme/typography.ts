@@ -43,6 +43,6 @@ export const typography = {
     fontFamily: 'DMSerifDisplay_400Regular',
     fontSize: 44,
     letterSpacing: 0.5,
-    fontVariant: ['tabular-nums'] as const,
+    fontVariant: ['tabular-nums'] as Array<'tabular-nums'>,
   },
 } as const;

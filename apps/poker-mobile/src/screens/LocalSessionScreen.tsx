@@ -26,7 +26,7 @@ import { formatCents, formatCentsSigned, parseAmountToCents } from '../utils/mon
 import { timeAgo } from '../utils/formatters';
 import { lightTap, successNotification } from '../utils/haptics';
 import { showToast } from '../utils/toast';
-import { confirmDialog, infoDialog } from '../utils/confirm';
+import { infoDialog } from '../utils/confirm';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocalSession'>;
 
@@ -50,6 +50,8 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
 
   const [ending, setEnding] = useState(false);
   const [finalStacks, setFinalStacks] = useState<Record<string, string>>({});
+  // Explicit arming required to end with an unbalanced count (replaces the old confirm dialog).
+  const [overrideArmed, setOverrideArmed] = useState(false);
 
   const standings = useMemo(() => {
     if (!game) return [];
@@ -79,6 +81,21 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
       navigation.replace('LocalSessionSummary', { gameId });
     }
   }, [game?.status, gameId, navigation]);
+
+  // Balance math for The Final Count (plain derivations — safe above the returns).
+  const stacksTotalCents = Object.values(finalStacks).reduce((sum, v) => {
+    const cents = parseAmountToCents(v);
+    return sum + (cents ?? 0);
+  }, 0);
+  const remainingCents = totalPotCents - standings.reduce((s, p) => s + p.cashOutCents, 0);
+  const stacksMismatch = stacksTotalCents !== remainingCents;
+  const mismatchCents = Math.abs(remainingCents - stacksTotalCents);
+
+  // Disarm the override the moment the count balances again.
+  // MUST stay above the early returns (hooks order).
+  useEffect(() => {
+    if (!stacksMismatch && overrideArmed) setOverrideArmed(false);
+  }, [stacksMismatch, overrideArmed]);
 
   if (!game) {
     return (
@@ -142,17 +159,12 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
     const stacks: Record<string, string> = {};
     for (const p of game!.players) stacks[p.id] = '';
     setFinalStacks(stacks);
+    setOverrideArmed(false);
     setEnding(true);
   }
 
-  const stacksTotalCents = Object.values(finalStacks).reduce((sum, v) => {
-    const cents = parseAmountToCents(v);
-    return sum + (cents ?? 0);
-  }, 0);
-  const remainingCents = totalPotCents - standings.reduce((s, p) => s + p.cashOutCents, 0);
-  const stacksMismatch = stacksTotalCents !== remainingCents;
-
   async function confirmEndGame() {
+    if (stacksMismatch && !overrideArmed) return; // button is disabled; defensive
     const stacks: { playerId: string; amountCents: number }[] = [];
     for (const [playerId, value] of Object.entries(finalStacks)) {
       if (!value.trim()) continue;
@@ -164,23 +176,9 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
       stacks.push({ playerId, amountCents: cents });
     }
 
-    const finish = async () => {
-      await endGame(game!.id, stacks);
-      successNotification();
-      navigation.replace('LocalSessionSummary', { gameId: game!.id });
-    };
-
-    if (stacksMismatch) {
-      confirmDialog(
-        'Chips don’t add up',
-        `Final stacks total ${formatCents(stacksTotalCents)} but ${formatCents(remainingCents)} is still on the table. End anyway?`,
-        'End Game',
-        finish,
-        { destructive: true, cancelLabel: 'Keep Playing' },
-      );
-    } else {
-      await finish();
-    }
+    await endGame(game!.id, stacks);
+    successNotification();
+    navigation.replace('LocalSessionSummary', { gameId: game!.id });
   }
 
   const defaultBuyInCents = game.defaultBuyInCents;
@@ -322,39 +320,101 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* End-game modal: final stacks */}
+      {/* The Final Count — last step before the game closes */}
       <Modal visible={ending} transparent animationType="fade" onRequestClose={() => setEnding(false)}>
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={[styles.modalCard, styles.endModalCard]}>
-            <Text style={styles.modalTitle}>Count the Chips</Text>
-            <Text style={styles.modalSubtitle}>
-              Enter each player's final stack. Leave empty for busted players.
-            </Text>
-            <ScrollView style={styles.stacksScroll} keyboardShouldPersistTaps="handled">
-              {game.players.map(p => (
-                <View key={p.id} style={styles.stackRow}>
-                  <Text style={styles.stackName} numberOfLines={1}>{p.name}</Text>
-                  <View style={styles.stackInputWrap}>
-                    <AppTextInput
-                      label=""
-                      value={finalStacks[p.id] ?? ''}
-                      onChangeText={v => setFinalStacks(prev => ({ ...prev, [p.id]: v }))}
-                      placeholder="0"
-                      keyboardType="decimal-pad"
-                      prefix="₪"
-                    />
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-            <View style={[styles.stacksSummary, stacksMismatch && styles.stacksSummaryWarn]}>
-              <Text style={[styles.stacksSummaryText, stacksMismatch && styles.stacksSummaryTextWarn]}>
-                Stacks: {formatCents(stacksTotalCents)} / On table: {formatCents(remainingCents)}
-              </Text>
+            <View style={styles.finalCountHeader}>
+              <View style={styles.finalCountIcon}>
+                <Ionicons name="flag-outline" size={17} color={colors.gold} />
+              </View>
+              <Text style={styles.finalCountTitle} maxFontSizeMultiplier={1.3}>The Final Count</Text>
             </View>
+            <Text style={styles.modalSubtitle}>
+              Last step — count each player's remaining chips. We'll settle the rest.
+            </Text>
+
+            <ScrollView style={styles.stacksScroll} keyboardShouldPersistTaps="handled">
+              {game.players.map(p => {
+                const isEmpty = !(finalStacks[p.id] ?? '').trim();
+                return (
+                  <View key={p.id} style={styles.stackRow}>
+                    <View style={styles.stackNameWrap}>
+                      <Text style={styles.stackName} numberOfLines={1}>{p.name}</Text>
+                      {isEmpty && <Text style={styles.bustedHint}>Busted · ₪0</Text>}
+                    </View>
+                    <View style={styles.stackInputWrap}>
+                      <AppTextInput
+                        label=""
+                        value={finalStacks[p.id] ?? ''}
+                        onChangeText={v => setFinalStacks(prev => ({ ...prev, [p.id]: v }))}
+                        placeholder="0"
+                        keyboardType="decimal-pad"
+                        prefix="₪"
+                      />
+                    </View>
+                  </View>
+                );
+              })}
+            </ScrollView>
+
+            {/* Balance indicator */}
+            <View style={[styles.countCard, stacksMismatch ? styles.countCardWarn : styles.countCardOk]}>
+              <Text style={[styles.countHeadline, stacksMismatch && styles.countHeadlineWarn]}>
+                Counted {formatCents(stacksTotalCents)} of {formatCents(remainingCents)} on the table
+              </Text>
+              {stacksMismatch ? (
+                <>
+                  <Text style={styles.countDetailWarn}>
+                    {stacksTotalCents < remainingCents
+                      ? `${formatCents(mismatchCents)} unaccounted for`
+                      : `${formatCents(mismatchCents)} over the table total`}
+                  </Text>
+                  <Text style={styles.countWhy}>
+                    Chips counted should equal buy-ins minus cash-outs — recount or check for a missed transaction.
+                  </Text>
+                </>
+              ) : (
+                <View style={styles.countOkRow}>
+                  <Ionicons name="checkmark-circle" size={15} color={colors.success} />
+                  <Text style={styles.countOkText}>Totals match — every shekel is accounted for.</Text>
+                </View>
+              )}
+            </View>
+
+            {/* Inline override — replaces the old post-hoc confirm dialog */}
+            {stacksMismatch && (
+              <TouchableOpacity
+                style={[styles.overrideRow, overrideArmed && styles.overrideRowArmed]}
+                onPress={() => setOverrideArmed(v => !v)}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name={overrideArmed ? 'checkbox' : 'square-outline'}
+                  size={22}
+                  color={overrideArmed ? colors.error : colors.textMuted}
+                />
+                <View style={styles.overrideTextWrap}>
+                  <Text style={styles.overrideLabel}>End anyway with an unbalanced count</Text>
+                  <Text style={styles.overrideCaption}>Results will be off by {formatCents(mismatchCents)}.</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+
+            <Text style={styles.finalityFooter}>
+              Winners, losers, and who-pays-who are calculated automatically. This ends the game — it can't be reopened.
+            </Text>
+
             <View style={styles.modalActions}>
               <PrimaryButton label="Keep Playing" onPress={() => setEnding(false)} variant="outline" fullWidth={false} style={styles.modalBtn} />
-              <PrimaryButton label="End Game" onPress={confirmEndGame} fullWidth={false} style={styles.modalBtnPrimary} />
+              <PrimaryButton
+                label="End Game & Settle"
+                onPress={confirmEndGame}
+                variant={overrideArmed ? 'danger' : 'gradient'}
+                disabled={stacksMismatch && !overrideArmed}
+                fullWidth={false}
+                style={styles.modalBtnPrimary}
+              />
             </View>
           </View>
         </KeyboardAvoidingView>
@@ -485,20 +545,57 @@ const styles = StyleSheet.create({
   modalBtn: { flex: 1 },
   modalBtnPrimary: { flex: 2 },
 
-  stacksScroll: { maxHeight: 320 },
+  stacksScroll: { maxHeight: 280 },
   stackRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
-  stackName: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.text },
+  stackNameWrap: { flex: 1, gap: 2 },
+  stackName: { fontSize: 15, fontWeight: '600', color: colors.text },
+  bustedHint: { fontSize: 12, fontWeight: '500', color: colors.textMuted },
   stackInputWrap: { width: 140 },
 
-  stacksSummary: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+  // The Final Count
+  finalCountHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  finalCountIcon: {
+    width: 34,
+    height: 34,
     borderRadius: 10,
     backgroundColor: colors.goldFaint,
     borderWidth: 1,
     borderColor: colors.goldMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  stacksSummaryWarn: { backgroundColor: colors.errorFaint, borderColor: colors.errorMuted },
-  stacksSummaryText: { fontSize: 13, fontWeight: '600', color: colors.goldLight, textAlign: 'center' },
-  stacksSummaryTextWarn: { color: colors.error },
+  finalCountTitle: { ...typography.displaySerif, fontSize: 26, color: colors.text },
+
+  countCard: {
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 5,
+  },
+  countCardOk: { backgroundColor: 'rgba(39,174,96,0.08)', borderColor: 'rgba(39,174,96,0.35)' },
+  countCardWarn: { backgroundColor: colors.errorFaint, borderColor: colors.errorMuted },
+  countHeadline: { fontSize: 14, fontWeight: '700', color: colors.text },
+  countHeadlineWarn: { color: colors.text },
+  countOkRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  countOkText: { fontSize: 12.5, color: colors.success, fontWeight: '600', flex: 1 },
+  countDetailWarn: { fontSize: 13, fontWeight: '700', color: colors.error },
+  countWhy: { fontSize: 12, color: colors.textMuted, lineHeight: 17 },
+
+  overrideRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 12,
+    minHeight: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  overrideRowArmed: { borderColor: colors.errorMuted, backgroundColor: colors.errorFaint },
+  overrideTextWrap: { flex: 1, gap: 2 },
+  overrideLabel: { fontSize: 13.5, fontWeight: '600', color: colors.text },
+  overrideCaption: { fontSize: 12, color: colors.textMuted },
+
+  finalityFooter: { fontSize: 12, color: colors.textMuted, lineHeight: 17, textAlign: 'center' },
 });

@@ -97,7 +97,14 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
         {/* Game over hero */}
         <View style={styles.heroCard}>
           <Text style={styles.heroLabel}>GAME OVER</Text>
-          <AnimatedNumber value={totalPotCents} format={formatCents} style={styles.heroPot} />
+          <AnimatedNumber
+            value={totalPotCents}
+            format={formatCents}
+            style={styles.heroPot}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            maxFontSizeMultiplier={1.3}
+          />
           <Text style={styles.heroMeta}>
             total pot · {game.players.length} players
             {game.endedAt ? ` · ${formatDuration(game.createdAt, game.endedAt)}` : ''}
@@ -193,7 +200,7 @@ const styles = StyleSheet.create({
     ...shadows.goldSm,
   },
   heroLabel: { fontSize: 11, fontWeight: '700', color: colors.goldLight, letterSpacing: 2 },
-  heroPot: { ...typography.amountLarge, color: colors.text },
+  heroPot: { ...typography.amountHero, color: colors.text },
   heroMeta: { fontSize: 13, color: colors.textMuted },
 
   sectionTitle: {
