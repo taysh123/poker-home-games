@@ -7,6 +7,7 @@ import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import EmptyState from '../components/EmptyState';
+import Screen from '../components/Screen';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -16,7 +17,7 @@ export default function GroupsAuthGateScreen() {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.flex, { paddingTop: insets.top }]}>
+    <Screen style={{ paddingTop: insets.top }}>
       <Text style={styles.title}>Groups</Text>
       <EmptyState
         ionicon="people-outline"
@@ -26,11 +27,10 @@ export default function GroupsAuthGateScreen() {
         }
         action={{ label: 'Sign In', onPress: () => navigation.navigate('Login') }}
       />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.background },
-  title: { ...typography.h1, color: colors.text, padding: 20, paddingBottom: 0 },
+  title: { ...typography.displaySerif, color: colors.text, padding: 20, paddingBottom: 0 },
 });

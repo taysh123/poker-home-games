@@ -30,6 +30,7 @@ import SessionListItem from '../components/SessionListItem';
 import GroupListItem from '../components/GroupListItem';
 import { formatPL, formatMoney, formatDate, formatDuration, timeAgo } from '../utils/formatters';
 import AnimatedNumber from '../components/motion/AnimatedNumber';
+import Screen from '../components/Screen';
 import { useActiveSession } from '../context/ActiveSessionContext';
 
 type HomeNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -165,6 +166,7 @@ export default function HomeScreen() {
   const greeting = greetingHour < 12 ? 'Good morning' : greetingHour < 18 ? 'Good afternoon' : 'Good evening';
 
   return (
+    <Screen>
     <ScrollView
       style={styles.scroll}
       contentContainerStyle={[styles.container, { paddingTop: insets.top + 20 }]}
@@ -610,11 +612,12 @@ export default function HomeScreen() {
 
       </Animated.View>
     </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: colors.background },
+  scroll: { flex: 1 },
   container: { paddingHorizontal: 20, paddingBottom: 120 },
 
   // ── Header ──────────────────────────────────────────────────────────────
@@ -633,7 +636,8 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   username: {
-    ...typography.h2,
+    ...typography.displaySerif,
+    fontSize: 27,
     color: colors.text,
   },
 
@@ -717,9 +721,8 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   heroValue: {
+    ...typography.amountHero,
     fontSize: 48,
-    fontWeight: '800',
-    letterSpacing: -2,
     marginTop: 4,
     fontVariant: ['tabular-nums'],
   },

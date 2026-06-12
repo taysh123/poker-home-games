@@ -23,6 +23,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import SessionListItem from '../components/SessionListItem';
 import SkeletonCard from '../components/SkeletonCard';
 import SkeletonRow from '../components/SkeletonRow';
+import Screen from '../components/Screen';
 import { formatPL, formatDate, formatDuration, formatMinutes } from '../utils/formatters';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -109,7 +110,7 @@ export default function StatsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.scroll}>
+      <Screen>
         {customHeader}
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <SkeletonCard height={180} borderRadius={20} style={{ marginBottom: 24 }} />
@@ -132,13 +133,13 @@ export default function StatsScreen() {
           </View>
         </View>
         </ScrollView>
-      </View>
+      </Screen>
     );
   }
 
   if (error || !stats) {
     return (
-      <View style={styles.scroll}>
+      <Screen>
         {customHeader}
         <View style={styles.center}>
           <Ionicons name="alert-circle-outline" size={40} color={colors.textDim} />
@@ -147,7 +148,7 @@ export default function StatsScreen() {
             <Text style={styles.retryText}>Try Again</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </Screen>
     );
   }
 
@@ -162,7 +163,7 @@ export default function StatsScreen() {
   const activeSessions = stats.recentSessions.filter(s => s.status === 'Active');
 
   return (
-    <View style={styles.scroll}>
+    <Screen>
       {customHeader}
     <ScrollView
       contentContainerStyle={styles.content}
@@ -412,7 +413,7 @@ export default function StatsScreen() {
 
       </Animated.View>
     </ScrollView>
-    </View>
+    </Screen>
   );
 }
 
@@ -718,18 +719,15 @@ const statsHeaderStyles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     paddingBottom: 8,
-    backgroundColor: colors.background,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '800',
+    ...typography.displaySerif,
     color: colors.text,
-    letterSpacing: -0.5,
   },
 });
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: colors.background },
+  scroll: { flex: 1 },
   content: { padding: 16, paddingBottom: 120 },
 
   center: {

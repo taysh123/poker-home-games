@@ -9,6 +9,7 @@ import { typography } from '../theme/typography';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import StatWidget from '../components/StatWidget';
 import EmptyState from '../components/EmptyState';
+import Screen from '../components/Screen';
 import { useLocalGames } from '../context/LocalGamesContext';
 import { computeLocalStats } from '../local/localStats';
 import { formatCents } from '../utils/money';
@@ -26,7 +27,7 @@ export default function GuestStatsScreen() {
 
   if (stats.gamesPlayed === 0) {
     return (
-      <View style={[styles.flex, { paddingTop: insets.top }]}>
+      <Screen style={{ paddingTop: insets.top }}>
         <Text style={[styles.title, { padding: 20, paddingBottom: 0 }]}>Stats</Text>
         <EmptyState
           ionicon="bar-chart-outline"
@@ -36,11 +37,12 @@ export default function GuestStatsScreen() {
           }
           action={{ label: 'Sign In', onPress: () => navigation.navigate('Login') }}
         />
-      </View>
+      </Screen>
     );
   }
 
   return (
+    <Screen>
     <ScrollView style={styles.flex} contentContainerStyle={[styles.content, { paddingTop: insets.top + 20 }]}>
       <Text style={styles.title}>Stats</Text>
       <Text style={styles.subtitle}>From games on this device</Text>
@@ -105,13 +107,14 @@ export default function GuestStatsScreen() {
 
       <View style={{ height: 100 }} />
     </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.background },
+  flex: { flex: 1 },
   content: { padding: 20, gap: 16 },
-  title: { ...typography.h1, color: colors.text },
+  title: { ...typography.displaySerif, color: colors.text },
   subtitle: { fontSize: 13, color: colors.textMuted, marginTop: -10 },
 
   grid: { gap: 12 },

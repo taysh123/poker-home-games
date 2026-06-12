@@ -15,6 +15,7 @@ import { typography } from '../theme/typography';
 import { shadows } from '../theme/shadows';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import SessionListItem from '../components/SessionListItem';
+import Screen from '../components/Screen';
 import { useLocalGames } from '../context/LocalGamesContext';
 import { gameResult } from '../local/localStats';
 import { formatCents } from '../utils/money';
@@ -31,6 +32,7 @@ export default function GuestHomeScreen() {
   const recentFinished = games.filter(g => g.status === 'Finished').slice(0, 5);
 
   return (
+    <Screen>
     <ScrollView
       style={styles.flex}
       contentContainerStyle={[styles.content, { paddingTop: insets.top + 20 }]}
@@ -120,11 +122,12 @@ export default function GuestHomeScreen() {
 
       <View style={{ height: 100 }} />
     </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.background },
+  flex: { flex: 1 },
   content: { padding: 20, gap: 16 },
 
   brandRow: {
@@ -133,7 +136,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 4,
   },
-  brand: { fontSize: 24, fontWeight: '800', color: colors.text, letterSpacing: 3 },
+  brand: { ...typography.displaySerif, fontSize: 27, color: colors.text, letterSpacing: 2.5 },
   tagline: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
   signInBtn: {
     paddingHorizontal: 16,

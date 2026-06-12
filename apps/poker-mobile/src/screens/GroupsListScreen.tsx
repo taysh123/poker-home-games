@@ -14,6 +14,7 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useScreenEntrance } from '../hooks/useScreenEntrance';
+import Screen from '../components/Screen';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from '../utils/storage';
@@ -229,7 +230,7 @@ export default function GroupsListScreen() {
 
   if (loading) {
     return (
-      <View style={styles.flex}>
+      <Screen>
         {customHeader}
         <Animated.View style={[{ flex: 1 }, entrance.style]}>
           {[0, 1, 2, 3].map((i) => (
@@ -250,13 +251,13 @@ export default function GroupsListScreen() {
             </View>
           ))}
         </Animated.View>
-      </View>
+      </Screen>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.flex}>
+      <Screen>
         {customHeader}
         <View style={styles.center}>
           <Text style={styles.errorText}>{error}</Text>
@@ -264,13 +265,13 @@ export default function GroupsListScreen() {
             <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </Screen>
     );
   }
 
   if (groups.length === 0) {
     return (
-      <View style={styles.flex}>
+      <Screen>
         {customHeader}
         <View style={styles.center}>
           <View style={styles.emptyIconWrap}>
@@ -287,14 +288,14 @@ export default function GroupsListScreen() {
             <Text style={styles.createButtonText}>Create Group</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </Screen>
     );
   }
 
   const actionGroup = actionSheetGroup;
 
   return (
-    <View style={styles.flex}>
+    <Screen>
       {customHeader}
       <Animated.View style={[{ flex: 1 }, entrance.style]}>
       <FlatList
@@ -406,16 +407,15 @@ export default function GroupsListScreen() {
         </View>
       </Modal>
       </Animated.View>
-    </View>
+    </Screen>
   );
 }
 
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.background },
+  flex: { flex: 1 },
   center: {
     flex: 1,
-    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
@@ -429,13 +429,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingBottom: 14,
-    backgroundColor: colors.background,
   },
   customHeaderTitle: {
-    fontSize: 28,
-    fontWeight: '800',
+    ...typography.displaySerif,
     color: colors.text,
-    letterSpacing: -0.5,
   },
   customHeaderActions: {
     flexDirection: 'row',

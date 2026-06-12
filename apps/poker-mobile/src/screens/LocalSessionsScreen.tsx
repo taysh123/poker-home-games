@@ -9,6 +9,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import SessionListItem from '../components/SessionListItem';
 import EmptyState from '../components/EmptyState';
 import PrimaryButton from '../components/PrimaryButton';
+import Screen from '../components/Screen';
 import { useLocalGames } from '../context/LocalGamesContext';
 import { gameResult } from '../local/localStats';
 import { formatCents } from '../utils/money';
@@ -26,19 +27,20 @@ export default function LocalSessionsScreen() {
 
   if (games.length === 0) {
     return (
-      <View style={[styles.flex, { paddingTop: insets.top }]}>
-        <Text style={[styles.title, { marginTop: 20 }]}>Sessions</Text>
+      <Screen style={{ paddingTop: insets.top }}>
+        <Text style={[styles.title, { marginTop: 20, paddingHorizontal: 20 }]}>Sessions</Text>
         <EmptyState
           ionicon="card-outline"
           title="No games yet"
           subtitle="Games you play on this device show up here. Start your first one — no account needed."
           action={{ label: 'Start a Game', onPress: () => navigation.navigate('LocalNewGame') }}
         />
-      </View>
+      </Screen>
     );
   }
 
   return (
+    <Screen>
     <ScrollView style={styles.flex} contentContainerStyle={[styles.content, { paddingTop: insets.top + 20 }]}>
       <Text style={styles.title}>Sessions</Text>
 
@@ -83,13 +85,14 @@ export default function LocalSessionsScreen() {
 
       <View style={{ height: 100 }} />
     </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.background },
+  flex: { flex: 1 },
   content: { padding: 20, gap: 16 },
-  title: { ...typography.h1, color: colors.text, paddingHorizontal: 0 },
+  title: { ...typography.displaySerif, color: colors.text, paddingHorizontal: 0 },
   section: { gap: 10 },
   sectionTitle: { fontSize: 12, fontWeight: '700', color: colors.textMuted, letterSpacing: 1 },
   sectionCard: {

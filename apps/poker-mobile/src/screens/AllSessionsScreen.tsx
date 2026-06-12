@@ -31,6 +31,7 @@ import { formatPL, formatDate, formatDuration } from '../utils/formatters';
 import ActionSheet from '../components/ActionSheet';
 import SkeletonCard from '../components/SkeletonCard';
 import SkeletonRow from '../components/SkeletonRow';
+import Screen from '../components/Screen';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -168,7 +169,7 @@ export default function AllSessionsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.flex}>
+      <Screen>
         {stickyHeader}
         <ScrollView
           style={styles.scroll}
@@ -189,13 +190,13 @@ export default function AllSessionsScreen() {
             </View>
           </View>
         </ScrollView>
-      </View>
+      </Screen>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.flex}>
+      <Screen>
         {stickyHeader}
         <View style={styles.center}>
           <Ionicons name="alert-circle-outline" size={36} color={colors.textDim} />
@@ -204,14 +205,14 @@ export default function AllSessionsScreen() {
             <Text style={styles.retryText}>Try Again</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </Screen>
     );
   }
 
   const actionSession = actionSheetSession;
 
   return (
-    <View style={styles.flex}>
+    <Screen>
       {stickyHeader}
       <ScrollView
         style={styles.scroll}
@@ -462,13 +463,13 @@ export default function AllSessionsScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.background },
-  scroll: { flex: 1, backgroundColor: colors.background },
+  flex: { flex: 1 },
+  scroll: { flex: 1 },
   container: { paddingHorizontal: 20, paddingBottom: 120, paddingTop: 8 },
   center: {
     flex: 1,
@@ -482,13 +483,10 @@ const styles = StyleSheet.create({
   stickyHeader: {
     paddingHorizontal: 20,
     paddingBottom: 10,
-    backgroundColor: colors.background,
   },
   screenTitle: {
-    fontSize: 28,
-    fontWeight: '800',
+    ...typography.displaySerif,
     color: colors.text,
-    letterSpacing: -0.5,
     marginBottom: 10,
   },
   searchRow: {
