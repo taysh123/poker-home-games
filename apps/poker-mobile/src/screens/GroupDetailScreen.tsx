@@ -43,6 +43,7 @@ import SkeletonCard from '../components/SkeletonCard';
 import SkeletonRow from '../components/SkeletonRow';
 import Screen from '../components/Screen';
 import ScreenHeader from '../components/ScreenHeader';
+import Avatar from '../components/Avatar';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupDetail'>;
 
@@ -650,25 +651,10 @@ type MemberRowProps = {
   onPress: () => void;
 };
 
-const AVATAR_COLORS = [
-  '#4A90E2', '#7B68EE', '#50C878', '#FF6B6B',
-  '#FFD93D', '#6BCB77', '#4D96FF', '#C9A84C',
-  '#E88C4A', '#A855F7',
-];
-function avatarColor(name: string) {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff;
-  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
-}
-
 function MemberRow({ member, canRemove, isRemoving, onRemove, onPress }: MemberRowProps) {
-  const initial = (member.username?.[0] ?? '?').toUpperCase();
-  const bgColor = avatarColor(member.username ?? '?');
   return (
     <TouchableOpacity style={styles.memberRow} onPress={onPress} activeOpacity={0.7}>
-      <View style={[styles.avatar, { backgroundColor: bgColor + '22', borderColor: bgColor + '55' }]}>
-        <Text style={[styles.avatarText, { color: bgColor }]}>{initial}</Text>
-      </View>
+      <Avatar name={member.username ?? '?'} size={40} />
       <View style={styles.memberInfo}>
         <Text style={styles.memberName}>{member.username}</Text>
         <Text style={styles.memberEmail}>{member.email}</Text>
@@ -712,8 +698,6 @@ function LeaderboardRow({ entry, rank }: { entry: PlayerLeaderboardEntryDto; ran
   const avgIsNeg = entry.avgProfitLoss < 0;
   const avgColor = avgIsPos ? colors.success : avgIsNeg ? colors.error : colors.textMuted;
   const rankColor = RANK_COLORS[rank] ?? colors.textDim;
-  const bgColor = avatarColor(entry.username ?? '?');
-  const initial = (entry.username?.[0] ?? '?').toUpperCase();
 
   return (
     <View style={[
@@ -725,9 +709,7 @@ function LeaderboardRow({ entry, rank }: { entry: PlayerLeaderboardEntryDto; ran
       <View style={[styles.rankBadge, { backgroundColor: rankColor + '22', borderColor: rankColor + '55' }]}>
         <Text style={[styles.lbRank, { color: rankColor }]}>{rank}</Text>
       </View>
-      <View style={[styles.avatar, { backgroundColor: bgColor + '22', borderColor: bgColor + '55' }]}>
-        <Text style={[styles.avatarText, { color: bgColor }]}>{initial}</Text>
-      </View>
+      <Avatar name={entry.username ?? '?'} size={40} />
       <View style={styles.lbInfo}>
         <Text style={styles.lbUsername}>{entry.username}</Text>
         <Text style={styles.lbSessions}>
@@ -1022,15 +1004,6 @@ const styles = StyleSheet.create({
     gap: 12,
     ...shadows.sm,
   },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { fontSize: 16, fontWeight: '800' },
   memberInfo: { flex: 1, gap: 2 },
   memberName: { fontSize: 15, fontWeight: '700', color: colors.text },
   memberEmail: { fontSize: 12, color: colors.textMuted },

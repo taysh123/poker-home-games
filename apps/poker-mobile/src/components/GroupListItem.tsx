@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { formatPL } from '../utils/formatters';
+import Avatar from './Avatar';
 
 type Props = {
   name: string;
@@ -14,20 +15,7 @@ type Props = {
   isFirst?: boolean;
 };
 
-const AVATAR_COLORS = [
-  '#7C6EE8', '#4EAADC', '#50C878', '#E8965E', '#E86E8A',
-  '#6EC6E8', '#A8E860', '#E8C45E', '#C46EE8', '#5EC8A0',
-];
-
-function avatarColor(name: string) {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h + name.charCodeAt(i)) % AVATAR_COLORS.length;
-  return AVATAR_COLORS[h];
-}
-
 export default function GroupListItem({ name, memberCount, role, myGroupPL, myGroupSessions, onPress, isFirst }: Props) {
-  const bg = avatarColor(name);
-  const initial = name[0]?.toUpperCase() ?? '?';
   const isOwner = role === 'Owner';
   const isAdmin = role === 'Admin';
 
@@ -37,9 +25,7 @@ export default function GroupListItem({ name, memberCount, role, myGroupPL, myGr
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.avatar, { backgroundColor: bg + '22' }]}>
-        <Text style={[styles.avatarText, { color: bg }]}>{initial}</Text>
-      </View>
+      <Avatar name={name} size={40} style={styles.avatar} />
       <View style={styles.content}>
         <View style={styles.nameRow}>
           <Text style={styles.name} numberOfLines={1}>{name}</Text>
@@ -81,16 +67,8 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   avatar: {
-    width: 40,
-    height: 40,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
     flexShrink: 0,
-  },
-  avatarText: {
-    fontSize: 16,
-    fontWeight: '800',
   },
   content: {
     flex: 1,

@@ -28,6 +28,7 @@ import { springScale, USE_NATIVE_DRIVER } from '../theme/motion';
 import Celebration from '../components/motion/Celebration';
 import PrimaryButton from '../components/PrimaryButton';
 import Screen from '../components/Screen';
+import Avatar from '../components/Avatar';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import {
@@ -970,11 +971,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                     isFirst && { borderLeftWidth: 3, borderLeftColor: colors.gold },
                   ]}>
                     {/* Avatar + name */}
-                    <View style={[styles.playerAvatar, isFirst && styles.playerAvatarFirst]}>
-                      <Text style={styles.playerAvatarText}>
-                        {player.username[0].toUpperCase()}
-                      </Text>
-                    </View>
+                    <Avatar name={player.username} size={42} ring={isFirst ? 'gold' : undefined} />
                     <View style={styles.playerInfo}>
                       <View style={styles.playerNameRow}>
                         <TouchableOpacity
@@ -1107,8 +1104,6 @@ export default function SessionScreen({ route, navigation }: Props) {
                 {settlements.map(s => {
                   const isInvolved = s.payerUserId === user?.userId || s.receiverUserId === user?.userId;
                   const isPaid = s.status === 'Confirmed';
-                  const payerInitial = s.payerName[0]?.toUpperCase() ?? '?';
-                  const receiverInitial = s.receiverName[0]?.toUpperCase() ?? '?';
                   return (
                     <View key={s.id} style={[
                       styles.settlementCard,
@@ -1121,9 +1116,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                         {/* Players row */}
                         <View style={styles.settlementFlow}>
                           <View style={styles.settlementParty}>
-                            <View style={styles.settlementAvatar}>
-                              <Text style={styles.settlementAvatarText}>{payerInitial}</Text>
-                            </View>
+                            <Avatar name={s.payerName} color={colors.error} size={36} />
                             <Text style={styles.settlementPartyName} numberOfLines={1}>{s.payerName}</Text>
                           </View>
                           <View style={styles.settlementMiddle}>
@@ -1131,9 +1124,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                             <Text style={styles.settlementAmount}>{formatMoney(s.amount)}</Text>
                           </View>
                           <View style={styles.settlementParty}>
-                            <View style={[styles.settlementAvatar, styles.settlementAvatarReceiver]}>
-                              <Text style={styles.settlementAvatarText}>{receiverInitial}</Text>
-                            </View>
+                            <Avatar name={s.receiverName} color={colors.success} size={36} />
                             <Text style={styles.settlementPartyName} numberOfLines={1}>{s.receiverName}</Text>
                           </View>
                         </View>
@@ -1188,17 +1179,13 @@ export default function SessionScreen({ route, navigation }: Props) {
             </Text>
             <View style={[styles.settlementList, { marginTop: 10 }]}>
               {cashTransfers.map((ct, i) => {
-                const fromInitial = ct.fromName[0]?.toUpperCase() ?? '?';
-                const toInitial = ct.toName[0]?.toUpperCase() ?? '?';
                 return (
                   <View key={i} style={[styles.settlementCard, styles.settlementCardCash]}>
                     <View style={[styles.settlementAccent, styles.settlementAccentCash]} />
                     <View style={styles.settlementCardInner}>
                       <View style={styles.settlementFlow}>
                         <View style={styles.settlementParty}>
-                          <View style={[styles.settlementAvatar, styles.settlementAvatarCash]}>
-                            <Text style={styles.settlementAvatarText}>{fromInitial}</Text>
-                          </View>
+                          <Avatar name={ct.fromName} color={colors.error} size={36} />
                           <Text style={styles.settlementPartyName} numberOfLines={1}>{ct.fromName}</Text>
                         </View>
                         <View style={styles.settlementMiddle}>
@@ -1206,9 +1193,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                           <Text style={styles.settlementAmount}>{formatMoney(ct.amount)}</Text>
                         </View>
                         <View style={styles.settlementParty}>
-                          <View style={[styles.settlementAvatar, styles.settlementAvatarReceiver]}>
-                            <Text style={styles.settlementAvatarText}>{toInitial}</Text>
-                          </View>
+                          <Avatar name={ct.toName} color={colors.success} size={36} />
                           <Text style={styles.settlementPartyName} numberOfLines={1}>{ct.toName}</Text>
                         </View>
                       </View>
@@ -1644,9 +1629,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                 const isEmpty = !hasCashOut && !(finalStacks[p.sessionPlayerId] ?? '').trim();
                 return (
                   <View key={p.sessionPlayerId} style={styles.endPlayerRow}>
-                    <View style={[styles.endPlayerAvatar]}>
-                      <Text style={styles.endPlayerAvatarText}>{p.username[0].toUpperCase()}</Text>
-                    </View>
+                    <Avatar name={p.username} size={32} />
                     <View style={styles.endPlayerNameWrap}>
                       <Text style={styles.endPlayerName} numberOfLines={1}>{p.username}</Text>
                       {isEmpty && <Text style={styles.endBustedHint}>Busted · {session.chipRatio && useChips ? '0 chips' : '₪0'}</Text>}
@@ -2123,21 +2106,6 @@ const styles = StyleSheet.create({
   playerRowFirst: {
     backgroundColor: colors.goldFaint,
   },
-  playerAvatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
-    backgroundColor: colors.surfaceHigh,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  playerAvatarFirst: {
-    backgroundColor: colors.goldSubtle,
-    borderWidth: 1.5,
-    borderColor: colors.goldMuted,
-  },
-  playerAvatarText: { fontSize: 16, fontWeight: '800', color: colors.textMuted },
   playerInfo: { flex: 1, gap: 3 },
   playerNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   playerName: { ...typography.label, color: colors.text },
@@ -2299,21 +2267,6 @@ const styles = StyleSheet.create({
   },
   settlementParty: { alignItems: 'center', gap: 4, flex: 1 },
   settlementPartyName: { fontSize: 13, fontWeight: '600', color: colors.text, textAlign: 'center' },
-  settlementAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(231,76,60,0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(231,76,60,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  settlementAvatarReceiver: {
-    backgroundColor: 'rgba(39,174,96,0.15)',
-    borderColor: 'rgba(39,174,96,0.4)',
-  },
-  settlementAvatarText: { fontSize: 15, fontWeight: '700', color: colors.text },
   settlementMiddle: { alignItems: 'center', gap: 2, paddingHorizontal: 8 },
   settlementArrowIcon: { fontSize: 20, color: colors.textDim },
   settlementAmount: { fontSize: 20, fontWeight: '800', color: colors.gold },
@@ -2394,10 +2347,6 @@ const styles = StyleSheet.create({
   cashBadgeHeaderText: { fontSize: 9, fontWeight: '700', color: colors.textDim, textTransform: 'uppercase', letterSpacing: 0.5 },
   settlementCardCash: { backgroundColor: colors.surfaceAlt },
   settlementAccentCash: { backgroundColor: colors.textMuted },
-  settlementAvatarCash: {
-    backgroundColor: 'rgba(231,76,60,0.15)',
-    borderColor: 'rgba(231,76,60,0.4)',
-  },
   badgeCashRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2915,19 +2864,6 @@ const styles = StyleSheet.create({
   endOptionChevron: { fontSize: 22, color: colors.textMuted, fontWeight: '300' },
   endCancelRow: { alignItems: 'center', paddingVertical: 8 },
   endCancelText: { fontSize: 14, color: colors.textMuted, fontWeight: '600' },
-
-  // End Game — Step 2 player avatar in list
-  endPlayerAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.surfaceHigh,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  endPlayerAvatarText: { fontSize: 13, fontWeight: '700', color: colors.textMuted },
 
   // The Final Count — balance indicator
   chipCounter: {

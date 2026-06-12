@@ -21,6 +21,7 @@ import SessionListItem from '../components/SessionListItem';
 import SkeletonCard from '../components/SkeletonCard';
 import Screen from '../components/Screen';
 import ScreenHeader from '../components/ScreenHeader';
+import Avatar from '../components/Avatar';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PlayerProfile'>;
 
@@ -69,7 +70,6 @@ export default function PlayerProfileScreen({ route, navigation }: Props) {
     return () => { cancelled = true; };
   }, [userId]));
 
-  const initials = username.slice(0, 2).toUpperCase();
   const isOwnProfile = myUserId === userId;
 
   // Velvet Table header (replaces the old native navigation header)
@@ -137,16 +137,16 @@ export default function PlayerProfileScreen({ route, navigation }: Props) {
     >
       {/* Hero */}
       <View style={styles.hero}>
-        <View style={[styles.avatar, {
-          borderColor: profile.totalProfitLoss > 0
+        <Avatar
+          name={profile.username}
+          size={72}
+          ring={profile.totalProfitLoss > 0
             ? colors.goldMuted
             : profile.totalProfitLoss < 0
               ? colors.errorMuted
-              : colors.border,
-          borderWidth: profile.totalProfitLoss !== 0 ? 2.5 : 1,
-        }]}>
-          <Text style={styles.avatarText}>{initials}</Text>
-        </View>
+              : undefined}
+          style={profile.totalProfitLoss !== 0 ? { borderWidth: 2.5 } : undefined}
+        />
         <View style={styles.heroInfo}>
           <Text style={styles.heroName}>{profile.username}</Text>
           <Text style={[styles.heroPL, { color: plColor }]}>
@@ -347,22 +347,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 16,
     paddingBottom: 8,
-  },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.surfaceHigh,
-    borderWidth: 2,
-    borderColor: colors.gold,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: colors.gold,
-    letterSpacing: 1,
   },
   heroInfo: { flex: 1, gap: 4 },
   heroName: { ...typography.h2, color: colors.text },

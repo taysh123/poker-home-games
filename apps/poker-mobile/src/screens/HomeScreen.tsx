@@ -31,6 +31,7 @@ import GroupListItem from '../components/GroupListItem';
 import { formatPL, formatMoney, formatDate, formatDuration, timeAgo } from '../utils/formatters';
 import AnimatedNumber from '../components/motion/AnimatedNumber';
 import Screen from '../components/Screen';
+import Avatar from '../components/Avatar';
 import { useActiveSession } from '../context/ActiveSessionContext';
 
 type HomeNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -135,7 +136,6 @@ export default function HomeScreen() {
     navigation.navigate('Session', { sessionId: s.sessionId, groupId: s.groupId ?? '' });
   }
 
-  const initial = user?.username?.[0]?.toUpperCase() ?? '?';
   const activeSessions = stats?.recentSessions.filter(s => s.status === 'Active') ?? [];
   const recentSessions = stats?.recentSessions.filter(s => s.status === 'Finished').slice(0, 4) ?? [];
 
@@ -198,11 +198,10 @@ export default function HomeScreen() {
             )}
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.avatar}
             onPress={() => navigation.navigate('Profile')}
             activeOpacity={0.7}
           >
-            <Text style={styles.avatarText}>{initial}</Text>
+            <Avatar name={user?.username ?? '?'} size={40} ring="gold" />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.iconBtn, loggingOut && { opacity: 0.5 }]}
@@ -640,18 +639,6 @@ const styles = StyleSheet.create({
     fontSize: 27,
     color: colors.text,
   },
-
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surfaceHigh,
-    borderWidth: 2,
-    borderColor: colors.goldSubtle,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { fontSize: 16, fontWeight: '800', color: colors.gold },
 
   notifBtn: {
     width: 40,

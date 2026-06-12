@@ -29,6 +29,7 @@ import { showToast } from '../utils/toast';
 import { infoDialog } from '../utils/confirm';
 import Screen from '../components/Screen';
 import AnimatedNumber from '../components/motion/AnimatedNumber';
+import Avatar from '../components/Avatar';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocalSession'>;
 
@@ -238,9 +239,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
               onPress={() => setSheetPlayer(player)}
               activeOpacity={0.75}
             >
-              <View style={styles.playerAvatar}>
-                <Text style={styles.playerAvatarText}>{player.name.slice(0, 1).toUpperCase()}</Text>
-              </View>
+              <Avatar name={player.name} size={40} />
               <View style={styles.playerInfo}>
                 <Text style={styles.playerName} numberOfLines={1}>
                   {player.name}
@@ -498,17 +497,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   playerRowLeader: { borderColor: colors.goldMuted, backgroundColor: colors.goldFaint },
-  playerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surfaceHigh,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  playerAvatarText: { fontSize: 16, fontWeight: '700', color: colors.goldLight },
   playerInfo: { flex: 1, gap: 2 },
   playerName: { fontSize: 16, fontWeight: '600', color: colors.text },
   playerMeta: { fontSize: 12, color: colors.textMuted },
