@@ -69,7 +69,8 @@ import RecapCard from '../components/RecapCard';
 import SkeletonCard from '../components/SkeletonCard';
 import { successNotification, errorNotification, lightTap } from '../utils/haptics';
 import { showToast } from '../utils/toast';
-import { formatMoney } from '../utils/formatters';
+import { formatMoney, formatPL } from '../utils/formatters';
+import ShareCard, { canShareImages, shareCardImage } from '../components/ShareCard';
 import { useActiveSession } from '../context/ActiveSessionContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Session'>;
@@ -236,6 +237,7 @@ export default function SessionScreen({ route, navigation }: Props) {
 
   // Winner spotlight animation (end-game summary step 3)
   const winnerScaleAnim = useRef(new Animated.Value(0.9)).current;
+  const gameOverShareRef = useRef<View>(null);
 
   useEffect(() => {
     if (endStep === 3) {
@@ -1877,10 +1879,42 @@ export default function SessionScreen({ route, navigation }: Props) {
               )}
             </ScrollView>
 
-            <TouchableOpacity style={styles.finishGameBtn} onPress={finishGame} activeOpacity={0.85}>
-              <Ionicons name="checkmark-circle-outline" size={18} color={colors.background} />
-              <Text style={styles.finishGameBtnText}>Save Results →</Text>
-            </TouchableOpacity>
+            <View style={styles.finishRow}>
+              {canShareImages && endSummary && (
+                <TouchableOpacity
+                  style={styles.shareImageBtn}
+                  onPress={() => shareCardImage(gameOverShareRef).catch(() => {})}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="share-outline" size={18} color={colors.gold} />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={[styles.finishGameBtn, { flex: 1 }]} onPress={finishGame} activeOpacity={0.85}>
+                <Ionicons name="checkmark-circle-outline" size={18} color={colors.background} />
+                <Text style={styles.finishGameBtnText}>Save Results →</Text>
+              </TouchableOpacity>
+            </View>
+
+            {canShareImages && endSummary && (
+              <ShareCard
+                ref={gameOverShareRef}
+                data={{
+                  title: session.name,
+                  heading: 'GAME OVER',
+                  potLabel: 'TOTAL POT',
+                  potCents: Math.round(totalPot * 100),
+                  dateText: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                  rows: [...endSummary.players]
+                    .sort((a, b) => b.profitLoss - a.profitLoss)
+                    .slice(0, 3)
+                    .map(p => ({
+                      name: p.username,
+                      valueText: formatPL(p.profitLoss),
+                      positive: p.profitLoss >= 0,
+                    })),
+                }}
+              />
+            )}
           </View>
         </View>
       </Modal>
@@ -2664,6 +2698,16 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   finalityFooter: { fontSize: 12, color: colors.textMuted, lineHeight: 17, textAlign: 'center', marginTop: 10 },
+  finishRow: { flexDirection: 'row', gap: 10, alignItems: 'stretch' },
+  shareImageBtn: {
+    width: 52,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: colors.goldMuted,
+    backgroundColor: colors.goldFaint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   endActionsRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
   endActionSecondary: { flex: 1 },
   endActionPrimary: { flex: 2 },

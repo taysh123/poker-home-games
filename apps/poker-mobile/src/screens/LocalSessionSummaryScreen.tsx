@@ -18,6 +18,8 @@ import EmptyState from '../components/EmptyState';
 import { useLocalGames } from '../context/LocalGamesContext';
 import { settleGame } from '../local/settlements';
 import { contributionCents, tournamentResult } from '../local/tournament';
+import ShareCard, { canShareImages, shareCardImage, ShareCardData } from '../components/ShareCard';
+import { formatDate } from '../utils/formatters';
 import { formatCents, formatCentsSigned } from '../utils/money';
 import { formatDuration } from '../utils/formatters';
 import { confirmDialog } from '../utils/confirm';
@@ -34,6 +36,7 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
 
   const game = games.find(g => g.id === gameId);
   const isTournament = game?.mode === 'tournament';
+  const shareRef = React.useRef<View>(null);
 
   const { results, transfers, totalPotCents, podium } = useMemo(() => {
     if (!game) return { results: [], transfers: [], totalPotCents: 0, podium: null };
@@ -86,6 +89,35 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
   // revisiting an old summary from the games list.
   const justEnded = !!game.endedAt && Date.now() - new Date(game.endedAt).getTime() < 60_000;
 
+  // Shareable image card (native only)
+  const shareData: ShareCardData = {
+    title: game.name,
+    heading: isTournament ? 'TOURNAMENT COMPLETE' : 'GAME OVER',
+    potLabel: isTournament ? 'PRIZE POOL' : 'TOTAL POT',
+    potCents: totalPotCents,
+    dateText: formatDate(game.endedAt ?? game.createdAt),
+    rows: podium
+      ? podium.slice(0, 3).map(p => ({
+          name: p.player.name,
+          valueText: p.payoutCents > 0 ? `wins ${formatCents(p.payoutCents)}` : formatCentsSigned(p.netCents),
+          positive: p.netCents >= 0,
+          medal: p.position === 1 ? '🥇' : p.position === 2 ? '🥈' : '🥉',
+        }))
+      : results.slice(0, 3).map(r => ({
+          name: r.player.name,
+          valueText: formatCentsSigned(r.netCents),
+          positive: r.netCents >= 0,
+        })),
+  };
+
+  async function handleShareImage() {
+    try {
+      await shareCardImage(shareRef);
+    } catch {
+      // share sheet dismissed or capture failed — non-critical
+    }
+  }
+
   function handleDelete() {
     confirmDialog(
       'Delete this game?',
@@ -107,9 +139,16 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
           <Ionicons name="close" size={20} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{game.name}</Text>
-        <TouchableOpacity style={styles.backBtn} onPress={handleDelete} hitSlop={12} activeOpacity={0.75}>
-          <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          {canShareImages && (
+            <TouchableOpacity style={styles.backBtn} onPress={handleShareImage} hitSlop={12} activeOpacity={0.75}>
+              <Ionicons name="share-outline" size={18} color={colors.gold} />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.backBtn} onPress={handleDelete} hitSlop={12} activeOpacity={0.75}>
+            <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
@@ -205,6 +244,7 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
         <View style={{ height: 40 }} />
       </ScrollView>
       {justEnded && <Celebration />}
+      <ShareCard ref={shareRef} data={shareData} />
     </View>
   );
 }
@@ -233,6 +273,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: { flex: 1, ...typography.h3, color: colors.text, textAlign: 'center' },
+  headerActions: { flexDirection: 'row', gap: 8 },
 
   scroll: { flex: 1 },
   content: { padding: 20, gap: 10 },
