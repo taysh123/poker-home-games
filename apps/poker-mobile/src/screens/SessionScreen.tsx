@@ -25,6 +25,7 @@ import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { shadows } from '../theme/shadows';
 import { springScale, USE_NATIVE_DRIVER } from '../theme/motion';
+import Celebration from '../components/motion/Celebration';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import {
@@ -1737,6 +1738,7 @@ export default function SessionScreen({ route, navigation }: Props) {
       {/* ── End Session Modal (Step 3: Game Over Summary) ── */}
       <Modal visible={endStep === 3} transparent animationType="fade">
         <View style={styles.modalOverlay}>
+          {endStep === 3 && <Celebration />}
           <View style={[styles.sheet, styles.sheetTall]}>
             <View style={styles.sheetHandle} />
             <Text style={styles.summaryTitle}>🏆 Game Over!</Text>

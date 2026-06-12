@@ -21,6 +21,7 @@ import { formatCents, formatCentsSigned } from '../utils/money';
 import { formatDuration } from '../utils/formatters';
 import { confirmDialog } from '../utils/confirm';
 import AnimatedNumber from '../components/motion/AnimatedNumber';
+import Celebration from '../components/motion/Celebration';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocalSessionSummary'>;
 
@@ -61,6 +62,10 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
   }
 
   const playerName = (id: string) => game.players.find(p => p.id === id)?.name ?? 'Unknown';
+
+  // Confetti only when arriving fresh from ending the game — not when
+  // revisiting an old summary from the games list.
+  const justEnded = !!game.endedAt && Date.now() - new Date(game.endedAt).getTime() < 60_000;
 
   function handleDelete() {
     confirmDialog(
@@ -143,6 +148,7 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
         <PrimaryButton label="Done" onPress={() => navigation.popToTop()} />
         <View style={{ height: 40 }} />
       </ScrollView>
+      {justEnded && <Celebration />}
     </View>
   );
 }
