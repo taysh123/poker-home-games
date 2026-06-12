@@ -45,6 +45,7 @@ import GuestHomeScreen from '../screens/GuestHomeScreen';
 import LocalSessionsScreen from '../screens/LocalSessionsScreen';
 import GroupsAuthGateScreen from '../screens/GroupsAuthGateScreen';
 import GuestStatsScreen from '../screens/GuestStatsScreen';
+import GlassView from '../components/motion/GlassView';
 import Toast from '../components/Toast';
 import * as storage from '../utils/storage';
 
@@ -179,13 +180,18 @@ function tabScreenOptions({ route }: { route: { name: string } }) {
   };
   return {
     tabBarStyle: {
-      backgroundColor: colors.surface,
+      // iOS: transparent over a GlassView blur; elsewhere: today's solid surface.
+      backgroundColor: Platform.OS === 'ios' ? 'transparent' : colors.surface,
+      ...(Platform.OS === 'ios' ? { position: 'absolute' as const } : null),
       borderTopColor: colors.border,
       borderTopWidth: 1,
       height: TAB_BAR_HEIGHT + (Platform.OS === 'ios' ? 0 : 8),
       paddingBottom: Platform.OS === 'ios' ? 0 : 4,
       paddingTop: 4,
     },
+    ...(Platform.OS === 'ios'
+      ? { tabBarBackground: () => <GlassView style={StyleSheet.absoluteFill} /> }
+      : null),
     tabBarActiveTintColor: colors.gold,
     tabBarInactiveTintColor: colors.textDim,
     tabBarLabelStyle: {

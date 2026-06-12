@@ -7,8 +7,11 @@ import {
   Dimensions,
   ScrollView,
   Platform,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, { useAnimatedStyle, withSpring, withTiming } from 'react-native-reanimated';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
@@ -36,6 +39,14 @@ const SLIDES = [
     subtitle: 'Lifetime P&L, win rate, head-to-head stats, and session recaps — all in one place.',
   },
 ];
+
+function Dot({ active }: { active: boolean }) {
+  const style = useAnimatedStyle(() => ({
+    width: withSpring(active ? 24 : 8, { damping: 18, stiffness: 220 }),
+    opacity: withTiming(active ? 1 : 0.7, { duration: 200 }),
+  }));
+  return <Animated.View style={[styles.dot, active && styles.dotActive, style]} />;
+}
 
 export default function OnboardingScreen({ navigation }: Props) {
   const scrollRef = useRef<ScrollView>(null);
@@ -72,7 +83,11 @@ export default function OnboardingScreen({ navigation }: Props) {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        scrollEnabled={false}
+        scrollEnabled
+        onMomentumScrollEnd={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
+          const index = Math.round(e.nativeEvent.contentOffset.x / width);
+          if (index !== currentIndex && index >= 0 && index < SLIDES.length) setCurrentIndex(index);
+        }}
         style={styles.slideScroll}
       >
         {SLIDES.map((slide, i) => (
@@ -90,10 +105,7 @@ export default function OnboardingScreen({ navigation }: Props) {
       <View style={styles.footer}>
         <View style={styles.dots}>
           {SLIDES.map((_, i) => (
-            <View
-              key={i}
-              style={[styles.dot, i === currentIndex && styles.dotActive]}
-            />
+            <Dot key={i} active={i === currentIndex} />
           ))}
         </View>
 

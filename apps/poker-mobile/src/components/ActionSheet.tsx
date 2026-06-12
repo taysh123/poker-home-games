@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { USE_NATIVE_DRIVER } from '../theme/motion';
+import GlassView from './motion/GlassView';
 
 export type ActionSheetOption = {
   label: string;
@@ -78,7 +79,7 @@ export default function ActionSheet({ visible, onClose, title, subtitle, options
           ]}
         >
           {/* Main options card */}
-          <View style={styles.card}>
+          <GlassView style={styles.card}>
             {(title || subtitle) && (
               <View style={styles.header}>
                 {title   && <Text style={styles.title}   numberOfLines={1}>{title}</Text>}
@@ -104,7 +105,7 @@ export default function ActionSheet({ visible, onClose, title, subtitle, options
                 </TouchableOpacity>
               </React.Fragment>
             ))}
-          </View>
+          </GlassView>
 
           {/* Cancel — separate card */}
           {cancelOption && (
@@ -135,7 +136,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   card: {
-    backgroundColor: colors.surface,
+    // background comes from GlassView (blur on iOS, colors.surface elsewhere)
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
