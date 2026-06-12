@@ -142,6 +142,20 @@ Guest mode runs full games on-device with zero network. Rules:
 - Local games skip Draft — they're Active from creation. Status: `Active | Finished`.
 - Web caveat: `Alert.alert` is a no-op on react-native-web — use `utils/confirm.ts` (`confirmDialog`/`infoDialog`) for anything that must work on web.
 
+## Notifications (in-app + push)
+
+In-app: `Notification` entity, `INotificationService.NotifyAsync/NotifyManyAsync`
+(writes rows), inbox at NotificationsScreen, fetch-on-focus. Emission points:
+EndSession, InviteUserToGroup, MarkSettlementPaid (single + bulk), AchievementUnlocked.
+
+Push (best-effort, native only — expo-notifications has NO web support):
+`DeviceToken` entity ← `POST/DELETE /api/users/device-tokens`; `ExpoPushService`
+posts to exp.host and deactivates `DeviceNotRegistered` tokens; it's invoked from
+inside `NotificationService` after the DB write, wrapped in try/catch — push must
+NEVER fail a command. Client: `src/hooks/usePushNotifications.ts` (registration in
+AuthContext.saveSession, unregistration on logout, tap → Notifications screen).
+Delivery testing: Android works in Expo Go; iOS needs an EAS dev build.
+
 ## Motion System — `src/components/motion/`
 
 Reanimated 4 components layered ON TOP of the legacy `Animated` helpers in `theme/motion.ts` (both coexist; don't rewrite old screens wholesale):

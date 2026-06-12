@@ -123,6 +123,7 @@ poker-app/
 | Typography | System sans + DM Serif Display accents (expo-google-fonts) |
 | Backend | ASP.NET Core 8, MediatR CQRS, FluentValidation, EF Core 8, PostgreSQL |
 | Auth | JWT + refresh rotation, Google OAuth, BCrypt |
+| Notifications | In-app inbox + Expo push (native; device tokens, best-effort delivery) |
 | Testing | Jest (settlement engine, local store, money utils) |
 
 ---
@@ -185,6 +186,10 @@ cd ../.. ; dotnet build PokerApp.sln
 | `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` | Google OAuth — Android store builds |
 | `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | Google OAuth — iOS store builds |
 
+Google sign-in requires the OAuth client IDs to be allow-listed on the backend and
+the web origin registered in Google Cloud Console — full setup/troubleshooting:
+[docs/google-oauth-fix.md](docs/google-oauth-fix.md).
+
 **Backend** (env vars map to config with `__`):
 
 | Variable | Purpose |
@@ -214,9 +219,12 @@ amount validation on every transaction. Privacy policy: [PRIVACY.md](PRIVACY.md)
 
 ## Roadmap
 
+- **Tournament mode** — fixed buy-ins, blind timer, eliminations, prize-pool payouts.
+  Architecture + phased plan: [docs/tournament-mode.md](docs/tournament-mode.md)
+- Push notification delivery rollout (foundation shipped: device tokens + Expo push
+  sender; iOS delivery needs an EAS build — see platform caveats in the hook)
 - Import local guest games into a cloud account (`importedSessionId` is reserved)
-- Push notifications (Expo push)
-- App Store / Play Store release (EAS scaffold ready)
+- App Store / Play Store release (EAS scaffold ready — [docs/store-release.md](docs/store-release.md))
 - Multi-currency display (engine is currency-agnostic integer cents)
 
 ## License
