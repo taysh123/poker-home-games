@@ -29,6 +29,7 @@ import StatWidget from '../components/StatWidget';
 import SessionListItem from '../components/SessionListItem';
 import GroupListItem from '../components/GroupListItem';
 import { formatPL, formatMoney, formatDate, formatDuration, timeAgo } from '../utils/formatters';
+import AnimatedNumber from '../components/motion/AnimatedNumber';
 import { useActiveSession } from '../context/ActiveSessionContext';
 
 type HomeNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -228,9 +229,13 @@ export default function HomeScreen() {
           {statsLoading ? (
             <SkeletonCard height={48} borderRadius={8} style={{ marginTop: 8, width: '60%' }} />
           ) : (
-            <Text style={[styles.heroValue, { color: plColor }]} numberOfLines={1} adjustsFontSizeToFit>
-              {formatPL(plValue)}
-            </Text>
+            <AnimatedNumber
+              value={plValue}
+              format={formatPL}
+              style={[styles.heroValue, { color: plColor }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            />
           )}
           {statsLoading ? (
             <SkeletonCard height={14} borderRadius={4} style={{ marginTop: 10, width: '40%' }} />

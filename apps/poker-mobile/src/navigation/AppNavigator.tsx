@@ -1,12 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, Platform, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { NavigationContainer, NavigationContainerRef, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp, createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import Reanimated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { colors } from '../theme/colors';
-import { USE_NATIVE_DRIVER } from '../theme/motion';
 import { useAuth } from '../context/AuthContext';
 import { useActiveSession } from '../context/ActiveSessionContext';
 import { useLocalGames } from '../context/LocalGamesContext';
@@ -117,47 +124,40 @@ function LiveGameBar() {
         }
       : null;
 
-  const translateY = React.useRef(new Animated.Value(80)).current;
-  const prevHasSession = React.useRef(false);
+  const hasEntry = entry != null;
+  const translateY = useSharedValue(80);
+  const pulse = useSharedValue(1);
 
   React.useEffect(() => {
-    const hasSession = entry != null;
-    if (hasSession !== prevHasSession.current) {
-      prevHasSession.current = hasSession;
-      Animated.spring(translateY, {
-        toValue: hasSession ? 0 : 80,
-        friction: 10,
-        tension: 120,
-        useNativeDriver: USE_NATIVE_DRIVER,
-      }).start();
-    }
-  }, [entry != null]);
+    translateY.value = withSpring(hasEntry ? 0 : 80, { damping: 18, stiffness: 160 });
+  }, [hasEntry, translateY]);
 
-  // Pulse animation for the dot
-  const pulseAnim = React.useRef(new Animated.Value(1)).current;
   React.useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 0.2, duration: 900, useNativeDriver: USE_NATIVE_DRIVER }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: USE_NATIVE_DRIVER }),
-      ]),
+    pulse.value = withRepeat(
+      withSequence(
+        withTiming(0.2, { duration: 900 }),
+        withTiming(1, { duration: 900 }),
+      ),
+      -1,
     );
-    loop.start();
-    return () => loop.stop();
-  }, []);
+  }, [pulse]);
+
+  const barStyle = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }));
+  const dotStyle = useAnimatedStyle(() => ({ opacity: pulse.value }));
 
   if (!entry) return null;
 
   return (
-    <Animated.View
+    <Reanimated.View
       style={[
         liveBarStyles.barWrap,
-        { bottom: TAB_BAR_HEIGHT + insets.bottom + 8, transform: [{ translateY }] },
+        { bottom: TAB_BAR_HEIGHT + insets.bottom + 8 },
+        barStyle,
       ]}
     >
       <TouchableOpacity style={liveBarStyles.bar} onPress={entry.onPress} activeOpacity={0.9}>
         <View style={liveBarStyles.dotWrapper}>
-          <Animated.View style={[liveBarStyles.dot, { opacity: pulseAnim }]} />
+          <Reanimated.View style={[liveBarStyles.dot, dotStyle]} />
         </View>
         <View style={liveBarStyles.textGroup}>
           <Text style={liveBarStyles.title} numberOfLines={1}>{entry.title}</Text>
@@ -165,7 +165,7 @@ function LiveGameBar() {
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.gold} />
       </TouchableOpacity>
-    </Animated.View>
+    </Reanimated.View>
   );
 }
 

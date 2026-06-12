@@ -1,7 +1,7 @@
-import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, View, ViewStyle } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, View, ViewStyle } from 'react-native';
 import { colors } from '../theme/colors';
-import { USE_NATIVE_DRIVER } from './../theme/motion';
+import Shimmer from './motion/Shimmer';
 
 type Props = {
   height?: number;
@@ -9,24 +9,17 @@ type Props = {
   style?: ViewStyle;
 };
 
+/** Loading placeholder with a sweeping shimmer (opacity pulse on web). */
 export default function SkeletonCard({ height = 80, borderRadius = 14, style }: Props) {
-  const opacity = useRef(new Animated.Value(0.4)).current;
-
-  useEffect(() => {
-    const pulse = Animated.loop(
-      Animated.sequence([
-        Animated.timing(opacity, { toValue: 1, duration: 700, useNativeDriver: USE_NATIVE_DRIVER }),
-        Animated.timing(opacity, { toValue: 0.4, duration: 700, useNativeDriver: USE_NATIVE_DRIVER }),
-      ]),
-    );
-    pulse.start();
-    return () => pulse.stop();
-  }, []);
+  const [width, setWidth] = useState(0);
 
   return (
-    <Animated.View
-      style={[styles.skeleton, { height, borderRadius, opacity }, style]}
-    />
+    <View
+      style={[styles.skeleton, { height, borderRadius }, style]}
+      onLayout={e => setWidth(e.nativeEvent.layout.width)}
+    >
+      {width > 0 && <Shimmer width={width} />}
+    </View>
   );
 }
 
@@ -34,5 +27,6 @@ const styles = StyleSheet.create({
   skeleton: {
     backgroundColor: colors.surfaceHigh,
     width: '100%',
+    overflow: 'hidden',
   },
 });

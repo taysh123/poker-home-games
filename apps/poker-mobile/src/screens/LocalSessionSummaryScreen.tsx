@@ -20,6 +20,7 @@ import { settleGame } from '../local/settlements';
 import { formatCents, formatCentsSigned } from '../utils/money';
 import { formatDuration } from '../utils/formatters';
 import { confirmDialog } from '../utils/confirm';
+import AnimatedNumber from '../components/motion/AnimatedNumber';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocalSessionSummary'>;
 
@@ -91,7 +92,7 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
         {/* Game over hero */}
         <View style={styles.heroCard}>
           <Text style={styles.heroLabel}>GAME OVER</Text>
-          <Text style={styles.heroPot}>{formatCents(totalPotCents)}</Text>
+          <AnimatedNumber value={totalPotCents} format={formatCents} style={styles.heroPot} />
           <Text style={styles.heroMeta}>
             total pot · {game.players.length} players
             {game.endedAt ? ` · ${formatDuration(game.createdAt, game.endedAt)}` : ''}
