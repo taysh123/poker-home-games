@@ -223,9 +223,27 @@ All colors in `apps/poker-mobile/src/theme/colors.ts`. Never hardcode hex values
 
 Gold accents are used **sparingly** — only on primary CTAs, live indicators, and key financial numbers. Overusing gold degrades the premium feel.
 
-Typography: `apps/poker-mobile/src/theme/typography.ts` — never hardcode font sizes.  
-Icons: Ionicons via `@expo/vector-icons`.  
-Animations: `Animated` from React Native, `useNativeDriver: true` always.
+Typography: `apps/poker-mobile/src/theme/typography.ts` — never hardcode font sizes.
+`displaySerif`/`amountHero` (DM Serif Display, loaded in App.tsx) are reserved for
+screen titles and hero money numerals ONLY — body text stays system sans.
+Spacing/radii: `theme/spacing.ts` (4pt scale) and `theme/radii.ts` — use tokens in new code.
+Icons: Ionicons via `@expo/vector-icons`. No emoji as icons in new/redesigned surfaces.
+Animations: legacy screens use RN `Animated` (`useNativeDriver: true`); new motion goes
+through `components/motion/` (Reanimated 4). Both coexist — don't rewrite old screens wholesale.
+
+**Velvet Table components** (`src/components/`): `Screen` (deep bg + ambient gradient
+vignette — wrap screen roots; its `style` prop applies to the content container),
+`ScreenHeader` (unified header: title/subtitle/onBack/right, `large` = serif),
+`Card` (flat/elevated/hero — hero has a gold gradient hairline border),
+`SectionTitle` (caps label; renders children VERBATIM — pass pre-uppercased strings).
+`PrimaryButton` has a `gradient` variant (gold gradient) for hero CTAs.
+
+**The Final Count** (end-game step, both LocalSessionScreen and SessionScreen): keep the
+canonical copy in sync across both flows — title "The Final Count", subtitle
+"Last step — count each player's remaining chips. We'll settle the rest.",
+"Busted · ₪0" empty hints, "Counted X of Y on the table" balance indicator,
+inline override "End anyway with an unbalanced count", finality footer, and the
+"Keep Playing" / "End Game & Settle" button pair.
 
 ---
 
