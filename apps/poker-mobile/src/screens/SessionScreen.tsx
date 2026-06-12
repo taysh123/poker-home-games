@@ -26,6 +26,7 @@ import { typography } from '../theme/typography';
 import { shadows } from '../theme/shadows';
 import { springScale, USE_NATIVE_DRIVER } from '../theme/motion';
 import Celebration from '../components/motion/Celebration';
+import PrimaryButton from '../components/PrimaryButton';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import {
@@ -1330,7 +1331,8 @@ export default function SessionScreen({ route, navigation }: Props) {
       {/* ── End Game sticky CTA (Active, Admin/Owner, above action bar) ── */}
       {isActive && isAdminOrOwner && (
         <TouchableOpacity style={styles.endGameBar} onPress={openEndModal} activeOpacity={0.85}>
-          <Text style={styles.endGameBarText}>🏁  End Game</Text>
+          <Ionicons name="flag-outline" size={16} color={colors.text} />
+          <Text style={styles.endGameBarText}>End Game</Text>
         </TouchableOpacity>
       )}
 
@@ -1570,8 +1572,8 @@ export default function SessionScreen({ route, navigation }: Props) {
             <TouchableOpacity style={styles.endOptionBtn} onPress={() => setEndStep(2)} activeOpacity={0.8}>
               <View style={styles.endOptionIconWrap}><Ionicons name="list-outline" size={18} color={colors.gold} /></View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.endOptionTitle}>Enter Final {session.chipRatio ? 'Chip Counts' : 'Cash Amounts'}</Text>
-                <Text style={styles.endOptionSub}>Recommended — most accurate results</Text>
+                <Text style={styles.endOptionTitle}>Count the Chips & Settle</Text>
+                <Text style={styles.endOptionSub}>Recommended — count what's on the table for exact results.</Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.gold} />
             </TouchableOpacity>
@@ -1588,8 +1590,8 @@ export default function SessionScreen({ route, navigation }: Props) {
                 <>
                   <View style={styles.endOptionIconWrap}><Ionicons name="flash-outline" size={18} color={colors.textMuted} /></View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.endOptionTitle, { color: colors.textMuted }]}>Skip — Use Transaction Records</Text>
-                    <Text style={styles.endOptionSub}>Calculate from recorded buy-ins and cash-outs</Text>
+                    <Text style={[styles.endOptionTitle, { color: colors.textMuted }]}>Quick End — use recorded transactions</Text>
+                    <Text style={styles.endOptionSub}>Settle from buy-ins and cash-outs already recorded. No count needed.</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color={colors.gold} />
                 </>
@@ -1609,9 +1611,11 @@ export default function SessionScreen({ route, navigation }: Props) {
           <View style={[styles.sheet, styles.sheetTall]}>
             <View style={styles.sheetHandle} />
             <View style={styles.sheetTitleRow}>
-              <View>
-                <Text style={styles.sheetTitle}>Final {session.chipRatio && useChips ? 'Chip Counts' : 'Cash Amounts'}</Text>
-                <Text style={styles.endSubtitle}>Enter what each player has left at the table.</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.finalCountTitle} maxFontSizeMultiplier={1.3}>The Final Count</Text>
+                <Text style={styles.endSubtitle}>
+                  Last step — count each player's remaining {session.chipRatio && useChips ? 'chips' : 'cash'}. We'll settle the rest.
+                </Text>
               </View>
               <TouchableOpacity onPress={() => setEndStep(1)} hitSlop={8}>
                 <View style={styles.closeBtnWrap}><Ionicons name="close" size={16} color={colors.textMuted} /></View>
@@ -1624,7 +1628,10 @@ export default function SessionScreen({ route, navigation }: Props) {
                   <Text style={[styles.toggleBtnText, !useChips && styles.toggleBtnTextActive]}>₪ Money</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.toggleBtn, useChips && styles.toggleBtnActive]} onPress={() => setUseChips(true)}>
-                  <Text style={[styles.toggleBtnText, useChips && styles.toggleBtnTextActive]}>🪙 Chips</Text>
+                  <View style={styles.toggleBtnInner}>
+                    <Ionicons name="disc-outline" size={13} color={useChips ? colors.background : colors.textMuted} />
+                    <Text style={[styles.toggleBtnText, useChips && styles.toggleBtnTextActive]}>Chips</Text>
+                  </View>
                 </TouchableOpacity>
               </View>
             )}
@@ -1633,12 +1640,16 @@ export default function SessionScreen({ route, navigation }: Props) {
               {session.players.map(p => {
                 const bal = getBalance(p);
                 const hasCashOut = (bal?.totalCashOut ?? 0) > 0;
+                const isEmpty = !hasCashOut && !(finalStacks[p.sessionPlayerId] ?? '').trim();
                 return (
                   <View key={p.sessionPlayerId} style={styles.endPlayerRow}>
                     <View style={[styles.endPlayerAvatar]}>
                       <Text style={styles.endPlayerAvatarText}>{p.username[0].toUpperCase()}</Text>
                     </View>
-                    <Text style={styles.endPlayerName}>{p.username}</Text>
+                    <View style={styles.endPlayerNameWrap}>
+                      <Text style={styles.endPlayerName} numberOfLines={1}>{p.username}</Text>
+                      {isEmpty && <Text style={styles.endBustedHint}>Busted · {session.chipRatio && useChips ? '0 chips' : '₪0'}</Text>}
+                    </View>
                     {hasCashOut ? (
                       <Text style={styles.endPlayerCashed}>Cashed {formatMoney(bal!.totalCashOut)}</Text>
                     ) : (
@@ -1682,52 +1693,69 @@ export default function SessionScreen({ route, navigation }: Props) {
                 <>
                   {hasAnyEntered && (
                     <View style={[styles.chipCounter, isBalanced ? styles.chipCounterOk : styles.chipCounterWarn]}>
-                      <View style={styles.chipCounterRow}>
-                        <Text style={styles.chipCounterLabel}>Entered</Text>
-                        <Text style={[styles.chipCounterValue, isBalanced ? styles.chipCounterValueOk : styles.chipCounterValueWarn]}>
-                          {fmt(totalEntered)} {unitLabel}
-                        </Text>
-                      </View>
-                      <View style={styles.chipCounterRow}>
-                        <Text style={styles.chipCounterLabel}>Expected</Text>
-                        <Text style={styles.chipCounterValue}>{fmt(expectedInUnits)} {unitLabel}</Text>
-                      </View>
-                      {isBalanced
-                        ? (
-                          <View style={styles.chipCounterMatchRow}>
-                            <Ionicons name="checkmark-circle" size={14} color={colors.success} />
-                            <Text style={styles.chipCounterMatch}>Totals match</Text>
-                          </View>
-                        )
-                        : <Text style={styles.chipCounterDiff}>
-                            {diff > 0 ? '+' : ''}{fmt(Math.abs(diff))} {diff > 0 ? 'over' : 'short'}
+                      <Text style={styles.countHeadline}>
+                        Counted {fmt(totalEntered)} of {fmt(expectedInUnits)} {unitLabel} on the table
+                      </Text>
+                      {isBalanced ? (
+                        <View style={styles.chipCounterMatchRow}>
+                          <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                          <Text style={styles.chipCounterMatch}>Totals match — everything is accounted for.</Text>
+                        </View>
+                      ) : (
+                        <>
+                          <Text style={styles.countDetailWarn}>
+                            {fmt(Math.abs(diff))} {unitLabel} {diff > 0 ? 'over the table total' : 'unaccounted for'}
                           </Text>
-                      }
+                          <Text style={styles.countWhy}>
+                            Chips counted should equal buy-ins minus cash-outs — recount or check for a missed transaction.
+                          </Text>
+                        </>
+                      )}
                     </View>
                   )}
 
                   {!isBalanced && (
                     <TouchableOpacity
-                      style={styles.overrideRow}
+                      style={[styles.overrideRow, overrideBalance && styles.overrideRowArmed]}
                       onPress={() => setOverrideBalance(v => !v)}
                       activeOpacity={0.7}
                     >
-                      <View style={[styles.overrideCheckbox, overrideBalance && styles.overrideCheckboxChecked]}>
-                        {overrideBalance && <Ionicons name="checkmark" size={12} color={colors.background} />}
+                      <Ionicons
+                        name={overrideBalance ? 'checkbox' : 'square-outline'}
+                        size={22}
+                        color={overrideBalance ? colors.error : colors.textMuted}
+                      />
+                      <View style={styles.overrideTextWrap}>
+                        <Text style={styles.overrideLabel}>End anyway with an unbalanced count</Text>
+                        <Text style={styles.overrideCaption}>
+                          Results will be off by {fmt(Math.abs(diff))} {unitLabel}.
+                        </Text>
                       </View>
-                      <Text style={styles.overrideLabel}>Calculate anyway (totals don't balance)</Text>
                     </TouchableOpacity>
                   )}
 
-                  <TouchableOpacity
-                    style={[styles.endConfirmBtn, blocked && styles.endConfirmBtnDisabled]}
-                    onPress={handleEndSession}
-                    disabled={endLoading || blocked}
-                  >
-                    {endLoading
-                      ? <ActivityIndicator color={styles.endConfirmBtnText.color as string} />
-                      : <Text style={styles.endConfirmBtnText}>Calculate Results →</Text>}
-                  </TouchableOpacity>
+                  <Text style={styles.finalityFooter}>
+                    Winners, losers, and who-pays-who are calculated automatically. This ends the game — it can't be reopened.
+                  </Text>
+
+                  <View style={styles.endActionsRow}>
+                    <PrimaryButton
+                      label="Keep Playing"
+                      onPress={() => setEndStep(0)}
+                      variant="outline"
+                      fullWidth={false}
+                      style={styles.endActionSecondary}
+                    />
+                    <PrimaryButton
+                      label="End Game & Settle"
+                      onPress={handleEndSession}
+                      variant={overrideBalance && !isBalanced ? 'danger' : 'gradient'}
+                      loading={endLoading}
+                      disabled={blocked}
+                      fullWidth={false}
+                      style={styles.endActionPrimary}
+                    />
+                  </View>
                 </>
               );
             })()}
@@ -2191,6 +2219,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.error,
     paddingVertical: 13,
     alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
     borderRadius: 12,
     shadowColor: colors.error,
     shadowOpacity: 0.5,
@@ -2564,6 +2595,7 @@ const styles = StyleSheet.create({
   toggleBtnActive: { backgroundColor: colors.gold },
   toggleBtnText: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
   toggleBtnTextActive: { color: colors.background },
+  toggleBtnInner: { flexDirection: 'row', alignItems: 'center', gap: 5 },
 
   // Transaction inputs
   txInput: {
@@ -2649,8 +2681,9 @@ const styles = StyleSheet.create({
   addGuestBtnDisabled: { opacity: 0.5 },
   addGuestBtnText: { fontSize: 14, fontWeight: '700', color: colors.background },
 
-  // End session modal
-  endSubtitle: { fontSize: 13, color: colors.textMuted, lineHeight: 19 },
+  // End session modal — The Final Count
+  finalCountTitle: { ...typography.displaySerif, fontSize: 24, color: colors.text },
+  endSubtitle: { fontSize: 13, color: colors.textMuted, lineHeight: 19, marginTop: 2 },
   endPlayerList: { maxHeight: 280 },
   endPlayerRow: {
     flexDirection: 'row',
@@ -2661,7 +2694,9 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     gap: 10,
   },
-  endPlayerName: { fontSize: 15, fontWeight: '600', color: colors.text, flex: 1 },
+  endPlayerNameWrap: { flex: 1, gap: 2 },
+  endPlayerName: { fontSize: 15, fontWeight: '600', color: colors.text },
+  endBustedHint: { fontSize: 12, fontWeight: '500', color: colors.textMuted },
   endPlayerCashed: { fontSize: 13, color: colors.success, fontWeight: '600' },
   endStackInput: {
     backgroundColor: colors.surfaceHigh,
@@ -2675,14 +2710,10 @@ const styles = StyleSheet.create({
     width: 100,
     textAlign: 'right',
   },
-  endConfirmBtn: {
-    marginTop: 12,
-    backgroundColor: colors.error,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  endConfirmBtnText: { fontSize: 15, fontWeight: '700', color: colors.text },
+  finalityFooter: { fontSize: 12, color: colors.textMuted, lineHeight: 17, textAlign: 'center', marginTop: 10 },
+  endActionsRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
+  endActionSecondary: { flex: 1 },
+  endActionPrimary: { flex: 2 },
 
   // Summary modal (Step 2)
   summaryTitle: { fontSize: 26, fontWeight: '800', color: colors.gold, textAlign: 'center' },
@@ -2882,48 +2913,39 @@ const styles = StyleSheet.create({
   },
   endPlayerAvatarText: { fontSize: 13, fontWeight: '700', color: colors.textMuted },
 
-  // Disabled confirm button
-  endConfirmBtnDisabled: { opacity: 0.4 },
-
-  // Chip counter validation block
+  // The Final Count — balance indicator
   chipCounter: {
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 6,
+    paddingVertical: 12,
+    gap: 5,
   },
   chipCounterOk: { backgroundColor: 'rgba(39,174,96,0.08)', borderColor: 'rgba(39,174,96,0.35)' },
   chipCounterWarn: { backgroundColor: 'rgba(231,76,60,0.08)', borderColor: 'rgba(231,76,60,0.35)' },
-  chipCounterRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  chipCounterLabel: { fontSize: 13, color: colors.textMuted, fontWeight: '500' },
-  chipCounterValue: { fontSize: 13, fontWeight: '700', color: colors.text },
-  chipCounterValueOk: { color: colors.success },
-  chipCounterValueWarn: { color: colors.error },
-  chipCounterMatchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
-  chipCounterMatch: { fontSize: 12, color: colors.success, fontWeight: '700' },
-  chipCounterDiff: { fontSize: 12, color: colors.error, fontWeight: '700', textAlign: 'center' },
+  countHeadline: { fontSize: 14, fontWeight: '700', color: colors.text },
+  countDetailWarn: { fontSize: 13, fontWeight: '700', color: colors.error },
+  countWhy: { fontSize: 12, color: colors.textMuted, lineHeight: 17 },
+  chipCounterMatchRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  chipCounterMatch: { fontSize: 12.5, color: colors.success, fontWeight: '600', flex: 1 },
 
-  // Override balance checkbox row
+  // The Final Count — inline override (replaces buried checkbox)
   overrideRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingVertical: 4,
-  },
-  overrideCheckbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 5,
-    borderWidth: 2,
+    padding: 12,
+    minHeight: 48,
+    borderRadius: 12,
+    borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.surfaceHigh,
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    marginTop: 8,
   },
-  overrideCheckboxChecked: { backgroundColor: colors.gold, borderColor: colors.gold },
-  overrideCheckmark: { fontSize: 13, color: colors.background, fontWeight: '800' },
-  overrideLabel: { flex: 1, fontSize: 13, color: colors.textMuted, fontWeight: '500' },
+  overrideRowArmed: { borderColor: colors.errorMuted, backgroundColor: colors.errorFaint },
+  overrideTextWrap: { flex: 1, gap: 2 },
+  overrideLabel: { fontSize: 13.5, fontWeight: '600', color: colors.text },
+  overrideCaption: { fontSize: 12, color: colors.textMuted },
 
   // Game Over summary — stats row
   summaryStatsRow: { flexDirection: 'row', justifyContent: 'space-around', marginVertical: 4 },
