@@ -2,7 +2,13 @@ using MediatR;
 
 namespace PokerApp.Application.Features.Groups.Queries.GetCrossGroupActivity;
 
-public sealed record GetCrossGroupActivityQuery : IRequest<List<CrossGroupActivityDto>>;
+public sealed record GetCrossGroupActivityQuery(
+    int Skip = 0,
+    int Take = GetCrossGroupActivityQuery.DefaultTake) : IRequest<List<CrossGroupActivityDto>>
+{
+    public const int DefaultTake = 10;
+    public const int MaxTake = 50;
+}
 
 public sealed record CrossGroupActivityDto(
     Guid Id,
@@ -11,4 +17,5 @@ public sealed record CrossGroupActivityDto(
     string ActorName,
     string Type,
     string Description,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    Guid? RelatedSessionId);

@@ -21,11 +21,15 @@ public sealed class GetCrossGroupActivityQueryHandler(
 
         if (groupIds.Count == 0) return [];
 
+        var skip = Math.Max(request.Skip, 0);
+        var take = Math.Clamp(request.Take, 1, GetCrossGroupActivityQuery.MaxTake);
+
         var logs = await context.ActivityLogs
             .AsNoTracking()
             .Where(a => groupIds.Contains(a.GroupId))
             .OrderByDescending(a => a.CreatedAt)
-            .Take(10)
+            .Skip(skip)
+            .Take(take)
             .Select(a => new CrossGroupActivityDto(
                 a.Id,
                 a.GroupId,
@@ -33,7 +37,8 @@ public sealed class GetCrossGroupActivityQueryHandler(
                 a.ActorName,
                 a.Type.ToString(),
                 a.Description,
-                a.CreatedAt))
+                a.CreatedAt,
+                a.RelatedSessionId))
             .ToListAsync(cancellationToken);
 
         return logs;

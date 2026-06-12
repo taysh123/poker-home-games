@@ -19,16 +19,21 @@ public sealed class GetGroupActivityQueryHandler(
         if (!isMember)
             throw new UnauthorizedAccessException("You are not a member of this group.");
 
+        var skip = Math.Max(request.Skip, 0);
+        var take = Math.Clamp(request.Take, 1, GetGroupActivityQuery.MaxTake);
+
         var logs = await context.ActivityLogs
             .Where(a => a.GroupId == request.GroupId)
             .OrderByDescending(a => a.CreatedAt)
-            .Take(50)
+            .Skip(skip)
+            .Take(take)
             .Select(a => new ActivityLogDto(
                 a.Id,
                 a.ActorName,
                 a.Type.ToString(),
                 a.Description,
-                a.CreatedAt))
+                a.CreatedAt,
+                a.RelatedSessionId))
             .ToListAsync(cancellationToken);
 
         return logs;

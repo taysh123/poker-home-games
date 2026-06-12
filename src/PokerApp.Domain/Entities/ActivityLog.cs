@@ -13,6 +13,10 @@ public class ActivityLog : BaseEntity
     public ActivityType Type { get; private set; }
     public string Description { get; private set; } = string.Empty;
 
+    // Loose reference to the session this event relates to (no navigation/FK on purpose:
+    // sessions may be deleted while their activity history remains).
+    public Guid? RelatedSessionId { get; private set; }
+
     private ActivityLog() { }
 
     public static ActivityLog Create(
@@ -20,7 +24,8 @@ public class ActivityLog : BaseEntity
         Guid? actorUserId,
         string actorName,
         ActivityType type,
-        string description)
+        string description,
+        Guid? relatedSessionId = null)
         => new()
         {
             GroupId = groupId,
@@ -28,5 +33,6 @@ public class ActivityLog : BaseEntity
             ActorName = actorName,
             Type = type,
             Description = description,
+            RelatedSessionId = relatedSessionId,
         };
 }

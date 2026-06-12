@@ -40,7 +40,8 @@ public sealed class CreateSessionCommandHandler(
         {
             var actorName = currentUserService.Username ?? "Unknown";
             var activity = ActivityLog.Create(request.GroupId.Value, userId, actorName,
-                ActivityType.SessionCreated, $"{actorName} created session \"{request.Name}\"");
+                ActivityType.SessionCreated, $"{actorName} created session \"{request.Name}\"",
+                session.Id);
             await context.ActivityLogs.AddAsync(activity, cancellationToken);
         }
 

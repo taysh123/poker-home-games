@@ -64,7 +64,8 @@ public sealed class EndSessionCommandHandler(
         {
             var actorName = currentUserService.Username ?? "Unknown";
             var activity = ActivityLog.Create(session.GroupId.Value, userId, actorName,
-                ActivityType.SessionEnded, $"{actorName} ended session \"{session.Name}\"");
+                ActivityType.SessionEnded, $"{actorName} ended session \"{session.Name}\"",
+                session.Id);
             await context.ActivityLogs.AddAsync(activity, cancellationToken);
         }
 

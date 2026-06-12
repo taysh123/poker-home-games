@@ -42,7 +42,8 @@ public sealed class StartSessionCommandHandler(
         {
             var actorName = currentUserService.Username ?? "Unknown";
             var activity = ActivityLog.Create(session.GroupId.Value, userId, actorName,
-                ActivityType.SessionStarted, $"{actorName} started session \"{session.Name}\"");
+                ActivityType.SessionStarted, $"{actorName} started session \"{session.Name}\"",
+                session.Id);
             await context.ActivityLogs.AddAsync(activity, cancellationToken);
         }
 

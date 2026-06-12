@@ -47,13 +47,16 @@ public class GroupsController(IMediator mediator) : ControllerBase
         return Ok(response);
     }
 
-    /// <summary>Returns the 10 most recent activity events across all groups the caller belongs to.</summary>
+    /// <summary>Returns recent activity events across all groups the caller belongs to. Optional skip/take paging (take defaults to 10, max 50).</summary>
     [HttpGet("activity")]
     [ProducesResponseType(typeof(List<CrossGroupActivityDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetCrossGroupActivity(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetCrossGroupActivity(
+        [FromQuery] int skip = 0,
+        [FromQuery] int take = GetCrossGroupActivityQuery.DefaultTake,
+        CancellationToken cancellationToken = default)
     {
-        var result = await mediator.Send(new GetCrossGroupActivityQuery(), cancellationToken);
+        var result = await mediator.Send(new GetCrossGroupActivityQuery(skip, take), cancellationToken);
         return Ok(result);
     }
 
@@ -121,13 +124,17 @@ public class GroupsController(IMediator mediator) : ControllerBase
         return NoContent();
     }
 
-    /// <summary>Returns the 50 most recent activity events for the group.</summary>
+    /// <summary>Returns recent activity events for the group. Optional skip/take paging (take defaults to 50, max 50).</summary>
     [HttpGet("{id:guid}/activity")]
     [ProducesResponseType(typeof(List<ActivityLogDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetGroupActivity(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetGroupActivity(
+        Guid id,
+        [FromQuery] int skip = 0,
+        [FromQuery] int take = GetGroupActivityQuery.DefaultTake,
+        CancellationToken cancellationToken = default)
     {
-        var result = await mediator.Send(new GetGroupActivityQuery(id), cancellationToken);
+        var result = await mediator.Send(new GetGroupActivityQuery(id, skip, take), cancellationToken);
         return Ok(result);
     }
 

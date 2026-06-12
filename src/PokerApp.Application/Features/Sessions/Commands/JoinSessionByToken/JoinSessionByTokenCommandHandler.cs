@@ -56,7 +56,8 @@ public sealed class JoinSessionByTokenCommandHandler(
                 callerId,
                 actorName,
                 ActivityType.PlayerJoined,
-                $"{actorName} joined session \"{session.Name}\" via invite link");
+                $"{actorName} joined session \"{session.Name}\" via invite link",
+                session.Id);
             await context.ActivityLogs.AddAsync(activity, cancellationToken);
         }
 
