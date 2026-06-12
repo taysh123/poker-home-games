@@ -34,4 +34,15 @@ export const typography = {
   bodyBold: { fontSize: 15, fontWeight: '600' as const },
   caption:  { fontSize: 12, fontWeight: '500' as const, letterSpacing: 0.3 },
   mono:     { fontSize: 14, fontWeight: '700' as const, fontVariant: ['tabular-nums'] as const },
+
+  // ── Velvet Table display accents (DM Serif Display, loaded in App.tsx) ──
+  // Screen titles only. Falls back to system font if the font fails to load.
+  displaySerif: { fontFamily: 'DMSerifDisplay_400Regular', fontSize: 30, letterSpacing: 0.2 },
+  // Hero money numerals only (Home P&L, total pot, summary). Always tabular.
+  amountHero: {
+    fontFamily: 'DMSerifDisplay_400Regular',
+    fontSize: 44,
+    letterSpacing: 0.5,
+    fontVariant: ['tabular-nums'] as const,
+  },
 } as const;

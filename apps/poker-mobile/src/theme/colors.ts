@@ -21,4 +21,16 @@ export const colors = {
   success: '#27AE60',
   warning: '#F39C12',
   bgOverlay: 'rgba(15,25,35,0.6)',
+  // ── Velvet Table additions (additive — never rename the tokens above) ──
+  backgroundDeep: '#0A111B',
+};
+
+/** Static gradient stops for expo-linear-gradient (Velvet Table system). */
+export const gradients = {
+  /** Primary CTA fill — light-to-deep gold, diagonal. */
+  goldShine: ['#E8C97A', '#C9A84C', '#9C7E33'] as const,
+  /** Subtle top-lit sheen for elevated surfaces. */
+  surfaceSheen: ['#1E2D3D', '#1A2535'] as const,
+  /** Ambient screen background — lighter navy fading into the deep base. */
+  screenVignette: ['#101C2A', '#0A111B'] as const,
 };

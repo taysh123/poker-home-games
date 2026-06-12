@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Linking } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useFonts, DMSerifDisplay_400Regular } from '@expo-google-fonts/dm-serif-display';
 import * as WebBrowser from 'expo-web-browser';
 import { NavigationContainerRef } from '@react-navigation/native';
 import { AuthProvider } from './src/context/AuthContext';
@@ -22,6 +23,9 @@ function extractDeepLink(url: string): { type: 'session' | 'group'; token: strin
 
 export default function App() {
   const navRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
+  // Serif display accents (titles + hero numerals). On fontError we proceed —
+  // unknown fontFamily falls back to the system font, which is cosmetic only.
+  const [fontsLoaded, fontError] = useFonts({ DMSerifDisplay_400Regular });
 
   useEffect(() => {
     function handleUrl(url: string) {
@@ -45,6 +49,9 @@ export default function App() {
     const sub = Linking.addEventListener('url', ({ url }) => handleUrl(url));
     return () => sub.remove();
   }, []);
+
+  // Brief gate while the display font loads; proceed on error (system fallback).
+  if (!fontsLoaded && !fontError) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
