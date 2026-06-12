@@ -6,6 +6,8 @@ export type AuthUser = {
   userId: string;
   username: string;
   email: string;
+  avatarEmoji?: string | null;
+  avatarColor?: string | null;
 };
 
 export type AuthResponse = AuthUser & {

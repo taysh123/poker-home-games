@@ -12,4 +12,6 @@ public sealed record PlayerLeaderboardEntryDto(
     decimal? BiggestWin,
     decimal? BiggestLoss,
     int WinsCount,
-    decimal AvgProfitLoss);
+    decimal AvgProfitLoss,
+    string? AvatarEmoji,
+    string? AvatarColor);

@@ -201,7 +201,13 @@ export default function HomeScreen() {
             onPress={() => navigation.navigate('Profile')}
             activeOpacity={0.7}
           >
-            <Avatar name={user?.username ?? '?'} size={40} ring="gold" />
+            <Avatar
+              name={user?.username ?? '?'}
+              emoji={user?.avatarEmoji}
+              color={user?.avatarColor}
+              size={40}
+              ring="gold"
+            />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.iconBtn, loggingOut && { opacity: 0.5 }]}

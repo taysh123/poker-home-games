@@ -4,4 +4,4 @@ namespace PokerApp.Application.Features.Users.Queries.SearchUsers;
 
 public sealed record SearchUsersQuery(string Query) : IRequest<List<UserSearchResultDto>>;
 
-public sealed record UserSearchResultDto(Guid UserId, string Username);
+public sealed record UserSearchResultDto(Guid UserId, string Username, string? AvatarEmoji, string? AvatarColor);

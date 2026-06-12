@@ -24,7 +24,13 @@ public sealed class GetGroupMembersQueryHandler(
             .Where(m => m.GroupId == request.GroupId)
             .Include(m => m.User)
             .OrderBy(m => m.JoinedAt)
-            .Select(m => new GroupMemberDto(m.UserId, m.User.Username, m.Role.ToString(), m.JoinedAt))
+            .Select(m => new GroupMemberDto(
+                m.UserId,
+                m.User.Username,
+                m.Role.ToString(),
+                m.JoinedAt,
+                m.User.AvatarEmoji,
+                m.User.AvatarColor))
             .ToListAsync(cancellationToken);
     }
 }

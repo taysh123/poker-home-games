@@ -30,6 +30,8 @@ public sealed class LoginCommandHandler(
         await context.RefreshTokens.AddAsync(refreshToken, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
 
-        return new LoginResponse(user.Id, user.Username, user.Email, accessToken, refreshTokenPlain);
+        return new LoginResponse(
+            user.Id, user.Username, user.Email, accessToken, refreshTokenPlain,
+            user.AvatarEmoji, user.AvatarColor);
     }
 }

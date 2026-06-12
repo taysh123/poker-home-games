@@ -45,7 +45,9 @@ public sealed class GoogleLoginCommandHandler(
         await context.RefreshTokens.AddAsync(refreshToken, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
 
-        return new GoogleLoginResponse(user.Id, user.Username, user.Email, accessToken, refreshTokenPlain);
+        return new GoogleLoginResponse(
+            user.Id, user.Username, user.Email, accessToken, refreshTokenPlain,
+            user.AvatarEmoji, user.AvatarColor);
     }
 
     private async Task<string> MakeUniqueUsernameAsync(string displayName, CancellationToken ct)

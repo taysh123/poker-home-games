@@ -34,6 +34,8 @@ public sealed class RegisterCommandHandler(
         await context.RefreshTokens.AddAsync(refreshToken, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
 
-        return new RegisterResponse(user.Id, user.Username, user.Email, accessToken, refreshTokenPlain);
+        return new RegisterResponse(
+            user.Id, user.Username, user.Email, accessToken, refreshTokenPlain,
+            user.AvatarEmoji, user.AvatarColor);
     }
 }

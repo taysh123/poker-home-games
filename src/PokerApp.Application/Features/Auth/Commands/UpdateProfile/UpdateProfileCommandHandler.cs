@@ -31,8 +31,15 @@ public sealed class UpdateProfileCommandHandler(
             user.UpdateEmail(request.Email);
         }
 
+        // null = no change; empty string = clear the avatar field
+        if (request.AvatarEmoji is not null)
+            user.UpdateAvatarEmoji(request.AvatarEmoji.Length == 0 ? null : request.AvatarEmoji);
+
+        if (request.AvatarColor is not null)
+            user.UpdateAvatarColor(request.AvatarColor.Length == 0 ? null : request.AvatarColor);
+
         await context.SaveChangesAsync(cancellationToken);
 
-        return new UpdateProfileResponse(user.Id, user.Username, user.Email);
+        return new UpdateProfileResponse(user.Id, user.Username, user.Email, user.AvatarEmoji, user.AvatarColor);
     }
 }

@@ -53,7 +53,15 @@ public sealed class GetSessionBalancesQueryHandler(
             var totalCashOut = cashOuts
                 .Where(c => c.SessionPlayerId == p.Id || (c.SessionPlayerId == null && c.UserId == p.UserId))
                 .Sum(c => c.Amount);
-            return new PlayerBalanceDto(p.Id, p.DisplayName, totalBuyIn, totalCashOut, totalCashOut - totalBuyIn, p.IsGuest);
+            return new PlayerBalanceDto(
+                p.Id,
+                p.DisplayName,
+                totalBuyIn,
+                totalCashOut,
+                totalCashOut - totalBuyIn,
+                p.IsGuest,
+                p.User?.AvatarEmoji,
+                p.User?.AvatarColor);
         }).ToList();
 
         var totalPot = buyIns.Sum(b => b.Amount);

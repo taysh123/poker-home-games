@@ -36,6 +36,13 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.GoogleId)
             .HasMaxLength(255);
 
+        builder.Property(u => u.AvatarEmoji)
+            .HasMaxLength(16);
+
+        // Hex color, e.g. #C9A84C
+        builder.Property(u => u.AvatarColor)
+            .HasMaxLength(7);
+
         builder.HasIndex(u => u.Email)
             .IsUnique()
             .HasDatabaseName("IX_Users_Email");

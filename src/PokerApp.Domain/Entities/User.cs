@@ -17,6 +17,9 @@ public class User : BaseEntity
 
     public string? GoogleId { get; private set; }
 
+    public string? AvatarEmoji { get; private set; }
+    public string? AvatarColor { get; private set; }
+
     private User() { }
 
     public static User Create(string username, string email, string passwordHash) =>
@@ -40,6 +43,18 @@ public class User : BaseEntity
     public void UpdatePassword(string passwordHash)
     {
         PasswordHash = passwordHash;
+        SetUpdatedAt();
+    }
+
+    public void UpdateAvatarEmoji(string? avatarEmoji)
+    {
+        AvatarEmoji = avatarEmoji;
+        SetUpdatedAt();
+    }
+
+    public void UpdateAvatarColor(string? avatarColor)
+    {
+        AvatarColor = avatarColor;
         SetUpdatedAt();
     }
 

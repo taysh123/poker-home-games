@@ -17,7 +17,7 @@ public sealed class GetPlayerProfileQueryHandler(
         var target = await context.Users
             .AsNoTracking()
             .Where(u => u.Id == request.UserId)
-            .Select(u => new { u.Id, u.Username })
+            .Select(u => new { u.Id, u.Username, u.AvatarEmoji, u.AvatarColor })
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException("User", request.UserId);
 
@@ -49,7 +49,8 @@ public sealed class GetPlayerProfileQueryHandler(
             return new PlayerProfileDto(
                 target.Id, target.Username,
                 0, 0m, null, null, 0, 0, 0, 0m, 0.0,
-                0, 0, [], []);
+                0, 0, [], [],
+                target.AvatarEmoji, target.AvatarColor);
         }
 
         var sessionIds = sessionPlayers.Select(x => x.SessionId).ToList();
@@ -163,6 +164,7 @@ public sealed class GetPlayerProfileQueryHandler(
             winsCount, lossesCount, breakEvenCount, avg,
             Math.Round(winRate, 1),
             currentStreak, longestWin,
-            recentForm, recentSessions);
+            recentForm, recentSessions,
+            target.AvatarEmoji, target.AvatarColor);
     }
 }

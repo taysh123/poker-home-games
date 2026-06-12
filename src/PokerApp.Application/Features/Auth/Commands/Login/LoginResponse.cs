@@ -5,4 +5,6 @@ public sealed record LoginResponse(
     string Username,
     string Email,
     string AccessToken,
-    string RefreshToken);
+    string RefreshToken,
+    string? AvatarEmoji,
+    string? AvatarColor);

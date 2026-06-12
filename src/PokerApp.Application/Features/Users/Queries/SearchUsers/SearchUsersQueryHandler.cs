@@ -14,7 +14,7 @@ public sealed class SearchUsersQueryHandler(
             .Where(u => u.Username.ToLower().Contains(request.Query.ToLower()))
             .OrderBy(u => u.Username)
             .Take(20)
-            .Select(u => new UserSearchResultDto(u.Id, u.Username))
+            .Select(u => new UserSearchResultDto(u.Id, u.Username, u.AvatarEmoji, u.AvatarColor))
             .ToListAsync(cancellationToken);
     }
 }

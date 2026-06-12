@@ -15,7 +15,9 @@ public sealed record PlayerProfileDto(
     int CurrentStreak,
     int LongestWinStreak,
     List<string> RecentForm,
-    List<ProfileSessionDto> RecentSessions
+    List<ProfileSessionDto> RecentSessions,
+    string? AvatarEmoji,
+    string? AvatarColor
 );
 
 public sealed record ProfileSessionDto(

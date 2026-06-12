@@ -52,11 +52,11 @@ public sealed class GetGroupLeaderboardQueryHandler(
 
         var allUserIds = sessionPlayers.Select(sp => sp.UserId!.Value).Distinct().ToList();
 
-        var usernames = await context.Users
+        var users = await context.Users
             .AsNoTracking()
             .Where(u => allUserIds.Contains(u.Id))
-            .Select(u => new { u.Id, u.Username })
-            .ToDictionaryAsync(u => u.Id, u => u.Username, cancellationToken);
+            .Select(u => new { u.Id, u.Username, u.AvatarEmoji, u.AvatarColor })
+            .ToDictionaryAsync(u => u.Id, cancellationToken);
 
         var spIds = sessionPlayers.Select(sp => sp.Id).ToHashSet();
 
@@ -102,15 +102,19 @@ public sealed class GetGroupLeaderboardQueryHandler(
             var winsCount = sessionProfits.Count(p => p > 0);
             var avgPL = sessionProfits.Count > 0 ? totalPL / sessionProfits.Count : 0m;
 
+            var userInfo = users.GetValueOrDefault(uid);
+
             return new PlayerLeaderboardEntryDto(
                 uid,
-                usernames.GetValueOrDefault(uid, "Unknown"),
+                userInfo?.Username ?? "Unknown",
                 players.Count,
                 totalPL,
                 biggestWin,
                 biggestLoss,
                 winsCount,
-                avgPL);
+                avgPL,
+                userInfo?.AvatarEmoji,
+                userInfo?.AvatarColor);
         })
         .OrderByDescending(e => e.TotalProfitLoss)
         .ToList();

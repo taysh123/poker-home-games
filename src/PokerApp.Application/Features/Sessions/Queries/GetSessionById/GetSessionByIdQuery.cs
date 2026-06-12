@@ -19,4 +19,11 @@ public sealed record SessionDetailDto(
     DateTime CreatedAt,
     string? Notes);
 
-public sealed record SessionPlayerDto(Guid SessionPlayerId, Guid? UserId, string Username, bool IsGuest, Guid? LinkedUserId);
+public sealed record SessionPlayerDto(
+    Guid SessionPlayerId,
+    Guid? UserId,
+    string Username,
+    bool IsGuest,
+    Guid? LinkedUserId,
+    string? AvatarEmoji,
+    string? AvatarColor);

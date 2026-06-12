@@ -5,4 +5,6 @@ public sealed record GetCurrentUserResponse(
     string Username,
     string Email,
     string AppRole,
-    DateTime MemberSince);
+    DateTime MemberSince,
+    string? AvatarEmoji,
+    string? AvatarColor);

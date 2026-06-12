@@ -21,6 +21,15 @@ import { updateProfile, changePassword, deleteAccount } from '../api/profileApi'
 import { RootStackParamList } from '../navigation/AppNavigator';
 import Screen from '../components/Screen';
 import ScreenHeader from '../components/ScreenHeader';
+import Avatar from '../components/Avatar';
+import { AVATAR_COLORS } from '../utils/avatarColor';
+
+// Curated identity emojis — poker-flavored plus broadly fun picks.
+const IDENTITY_EMOJIS = [
+  '🃏', '♠️', '♥️', '♦️', '♣️', '🎲', '💰', '👑',
+  '🦈', '🦊', '🐺', '🦅', '🐯', '🐉', '🦂', '🃟',
+  '😎', '🤠', '🧐', '😈', '🥷', '🤖', '👻', '🍀',
+];
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Profile'>;
 
@@ -40,6 +49,30 @@ export default function ProfileScreen({ navigation }: Props) {
   const [savingPassword, setSavingPassword] = useState(false);
 
   const [deletingAccount, setDeletingAccount] = useState(false);
+
+  // Identity (emoji + color) state
+  const [pendingEmoji, setPendingEmoji] = useState(user?.avatarEmoji ?? '');
+  const [pendingColor, setPendingColor] = useState(user?.avatarColor ?? '');
+  const [savingIdentity, setSavingIdentity] = useState(false);
+  const identityDirty =
+    pendingEmoji !== (user?.avatarEmoji ?? '') || pendingColor !== (user?.avatarColor ?? '');
+
+  async function handleSaveIdentity() {
+    setSavingIdentity(true);
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!token) return;
+      const response = await updateProfile(token, undefined, undefined, {
+        avatarEmoji: pendingEmoji,
+        avatarColor: pendingColor,
+      });
+      updateUser({ avatarEmoji: response.avatarEmoji, avatarColor: response.avatarColor });
+    } catch (err: any) {
+      Alert.alert('Error', err?.response?.data?.message ?? 'Failed to update identity.');
+    } finally {
+      setSavingIdentity(false);
+    }
+  }
 
   async function handleSaveProfile() {
     const trimmedUsername = username.trim();
@@ -133,8 +166,6 @@ export default function ProfileScreen({ navigation }: Props) {
     }
   }
 
-  const avatarLetter = (user?.username?.[0] ?? '?').toUpperCase();
-
   // Velvet Table header (replaces the old native navigation header)
   const header = (
     <ScreenHeader title="My Profile" onBack={() => navigation.goBack()} />
@@ -151,13 +182,73 @@ export default function ProfileScreen({ navigation }: Props) {
 
         {/* Avatar */}
         <View style={styles.avatarWrap}>
-          <View style={styles.avatarOuter}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{avatarLetter}</Text>
-            </View>
-          </View>
+          <Avatar
+            name={user?.username ?? '?'}
+            emoji={user?.avatarEmoji}
+            color={user?.avatarColor}
+            size={84}
+            ring="gold"
+          />
           <Text style={styles.avatarUsername}>{user?.username}</Text>
           <Text style={styles.avatarEmail}>{user?.email}</Text>
+        </View>
+
+        {/* ── Identity section ────────────────────────────────────────── */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionTitleRow}>
+              <View style={styles.sectionIconWrap}>
+                <Ionicons name="color-palette-outline" size={14} color={colors.gold} />
+              </View>
+              <Text style={styles.sectionTitle}>Identity</Text>
+            </View>
+          </View>
+
+          <Text style={styles.fieldLabel}>EMOJI</Text>
+          <View style={styles.identityGrid}>
+            <TouchableOpacity
+              style={[styles.emojiCell, !pendingEmoji && styles.identityCellSelected]}
+              onPress={() => setPendingEmoji('')}
+            >
+              <Text style={styles.emojiInitial}>{(user?.username?.[0] ?? '?').toUpperCase()}</Text>
+            </TouchableOpacity>
+            {IDENTITY_EMOJIS.map(e => (
+              <TouchableOpacity
+                key={e}
+                style={[styles.emojiCell, pendingEmoji === e && styles.identityCellSelected]}
+                onPress={() => setPendingEmoji(e)}
+              >
+                <Text style={styles.emojiText} allowFontScaling={false}>{e}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.fieldLabel}>COLOR</Text>
+          <View style={styles.identityGrid}>
+            {AVATAR_COLORS.map(c => (
+              <TouchableOpacity
+                key={c}
+                style={[
+                  styles.colorCell,
+                  { backgroundColor: c },
+                  pendingColor === c && styles.colorCellSelected,
+                ]}
+                onPress={() => setPendingColor(c)}
+              />
+            ))}
+          </View>
+
+          {identityDirty && (
+            <TouchableOpacity
+              style={[styles.saveBtn, savingIdentity && { opacity: 0.6 }]}
+              onPress={handleSaveIdentity}
+              disabled={savingIdentity}
+            >
+              {savingIdentity
+                ? <ActivityIndicator size="small" color={colors.background} />
+                : <Text style={styles.saveBtnText}>Save Identity</Text>}
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* ── Profile section ─────────────────────────────────────────── */}
@@ -322,6 +413,40 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 48 },
 
   avatarWrap: { alignItems: 'center', marginBottom: 28, marginTop: 8, gap: 6 },
+  // Identity picker
+  identityGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  emojiCell: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  identityCellSelected: { borderColor: colors.gold, backgroundColor: colors.goldFaint },
+  emojiText: { fontSize: 22 },
+  emojiInitial: { fontSize: 18, fontWeight: '800', color: colors.goldLight },
+  colorCell: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  colorCellSelected: { borderColor: colors.text },
+  saveBtn: {
+    marginTop: 4,
+    backgroundColor: colors.gold,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  saveBtnText: { fontSize: 14, fontWeight: '700', color: colors.background },
+
   avatarOuter: {
     width: 86,
     height: 86,

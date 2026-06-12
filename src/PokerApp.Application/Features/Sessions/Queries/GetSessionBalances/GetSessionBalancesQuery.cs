@@ -11,7 +11,9 @@ public sealed record PlayerBalanceDto(
     decimal TotalBuyIn,
     decimal TotalCashOut,
     decimal ProfitLoss,
-    bool IsGuest);
+    bool IsGuest,
+    string? AvatarEmoji,
+    string? AvatarColor);
 
 public sealed record SessionBalancesDto(
     Guid SessionId,

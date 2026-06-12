@@ -26,6 +26,8 @@ public sealed class GetCurrentUserQueryHandler(
             user.Username,
             user.Email,
             user.AppRole.ToString(),
-            user.CreatedAt);
+            user.CreatedAt,
+            user.AvatarEmoji,
+            user.AvatarColor);
     }
 }

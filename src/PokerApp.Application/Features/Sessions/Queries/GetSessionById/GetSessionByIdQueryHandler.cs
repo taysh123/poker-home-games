@@ -37,7 +37,14 @@ public sealed class GetSessionByIdQueryHandler(
             throw new UnauthorizedException("You do not have access to this session.");
 
         var players = session.SessionPlayers
-            .Select(sp => new SessionPlayerDto(sp.Id, sp.UserId, sp.DisplayName, sp.IsGuest, sp.LinkedUserId))
+            .Select(sp => new SessionPlayerDto(
+                sp.Id,
+                sp.UserId,
+                sp.DisplayName,
+                sp.IsGuest,
+                sp.LinkedUserId,
+                sp.User?.AvatarEmoji,
+                sp.User?.AvatarColor))
             .ToList();
 
         return new SessionDetailDto(
