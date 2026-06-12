@@ -22,6 +22,7 @@ import SkeletonCard from '../components/SkeletonCard';
 import SkeletonRow from '../components/SkeletonRow';
 import { timeAgo } from '../utils/formatters';
 import { useScreenEntrance } from '../hooks/useScreenEntrance';
+import Screen from '../components/Screen';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -76,22 +77,25 @@ export default function NotificationsScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.screen, { paddingTop: insets.top + 16 }]}>
-        <View style={styles.header}>
-          <SkeletonCard height={24} borderRadius={6} style={{ width: 160 }} />
+      <Screen>
+        <View style={[styles.screen, { paddingTop: insets.top + 16 }]}>
+          <View style={styles.header}>
+            <SkeletonCard height={24} borderRadius={6} style={{ width: 160 }} />
+          </View>
+          <View style={styles.listCard}>
+            <SkeletonRow isFirst />
+            <SkeletonRow />
+            <SkeletonRow />
+            <SkeletonRow />
+            <SkeletonRow />
+          </View>
         </View>
-        <View style={styles.listCard}>
-          <SkeletonRow isFirst />
-          <SkeletonRow />
-          <SkeletonRow />
-          <SkeletonRow />
-          <SkeletonRow />
-        </View>
-      </View>
+      </Screen>
     );
   }
 
   return (
+    <Screen>
     <Animated.ScrollView
       style={[styles.screen, entrance.style]}
       contentContainerStyle={[styles.content, { paddingTop: insets.top + 16 }]}
@@ -145,13 +149,13 @@ export default function NotificationsScreen() {
         </View>
       )}
     </Animated.ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   content: {
     paddingHorizontal: 20,

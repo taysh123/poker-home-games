@@ -15,6 +15,8 @@ import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
 import { updateGroup } from '../api/groupsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import Screen from '../components/Screen';
+import ScreenHeader from '../components/ScreenHeader';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'EditGroup'>;
 
@@ -29,15 +31,10 @@ export default function EditGroupScreen({ route, navigation }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  React.useLayoutEffect(() => {
-    navigation.setOptions({
-      headerLeft: () => (
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={8}>
-          <Text style={styles.cancelText}>Cancel</Text>
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation]);
+  // Velvet Table header (replaces the old native navigation header)
+  const header = (
+    <ScreenHeader title="Edit Group" onBack={() => navigation.goBack()} />
+  );
 
   const handleSave = async () => {
     const trimmedName = name.trim();
@@ -70,6 +67,8 @@ export default function EditGroupScreen({ route, navigation }: Props) {
   const canSave = name.trim().length > 0 && name.trim().length <= MAX_NAME && !loading;
 
   return (
+    <Screen>
+    {header}
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -121,13 +120,13 @@ export default function EditGroupScreen({ route, navigation }: Props) {
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.background },
+  flex: { flex: 1 },
   container: { padding: 24, paddingBottom: 40 },
-  cancelText: { color: colors.textMuted, fontSize: 16 },
   errorBanner: {
     backgroundColor: 'rgba(231,76,60,0.12)',
     borderWidth: 1,

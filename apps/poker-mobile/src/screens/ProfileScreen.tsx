@@ -19,6 +19,8 @@ import { shadows } from '../theme/shadows';
 import { useAuth } from '../context/AuthContext';
 import { updateProfile, changePassword, deleteAccount } from '../api/profileApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import Screen from '../components/Screen';
+import ScreenHeader from '../components/ScreenHeader';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Profile'>;
 
@@ -133,7 +135,14 @@ export default function ProfileScreen({ navigation }: Props) {
 
   const avatarLetter = (user?.username?.[0] ?? '?').toUpperCase();
 
+  // Velvet Table header (replaces the old native navigation header)
+  const header = (
+    <ScreenHeader title="My Profile" onBack={() => navigation.goBack()} />
+  );
+
   return (
+    <Screen>
+    {header}
     <KeyboardAvoidingView
       style={styles.root}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -304,11 +313,12 @@ export default function ProfileScreen({ navigation }: Props) {
 
       </ScrollView>
     </KeyboardAvoidingView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1 },
   content: { padding: 20, paddingBottom: 48 },
 
   avatarWrap: { alignItems: 'center', marginBottom: 28, marginTop: 8, gap: 6 },

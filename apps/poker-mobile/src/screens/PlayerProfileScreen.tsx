@@ -19,6 +19,8 @@ import { formatPL, formatMoney, formatDate } from '../utils/formatters';
 import StatWidget from '../components/StatWidget';
 import SessionListItem from '../components/SessionListItem';
 import SkeletonCard from '../components/SkeletonCard';
+import Screen from '../components/Screen';
+import ScreenHeader from '../components/ScreenHeader';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PlayerProfile'>;
 
@@ -70,35 +72,46 @@ export default function PlayerProfileScreen({ route, navigation }: Props) {
   const initials = username.slice(0, 2).toUpperCase();
   const isOwnProfile = myUserId === userId;
 
+  // Velvet Table header (replaces the old native navigation header)
+  const header = (
+    <ScreenHeader title={username} onBack={() => navigation.goBack()} />
+  );
+
   if (loading) {
     return (
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <View style={styles.heroSkeleton}>
-          <SkeletonCard height={72} borderRadius={36} style={{ width: 72 }} />
-          <View style={{ flex: 1, gap: 8 }}>
-            <SkeletonCard height={20} borderRadius={8} style={{ width: '60%' }} />
-            <SkeletonCard height={14} borderRadius={6} style={{ width: '40%' }} />
+      <Screen>
+        {header}
+        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+          <View style={styles.heroSkeleton}>
+            <SkeletonCard height={72} borderRadius={36} style={{ width: 72 }} />
+            <View style={{ flex: 1, gap: 8 }}>
+              <SkeletonCard height={20} borderRadius={8} style={{ width: '60%' }} />
+              <SkeletonCard height={14} borderRadius={6} style={{ width: '40%' }} />
+            </View>
           </View>
-        </View>
-        <View style={styles.statsRow}>
-          <SkeletonCard height={90} borderRadius={14} />
-          <SkeletonCard height={90} borderRadius={14} />
-          <SkeletonCard height={90} borderRadius={14} />
-        </View>
-        <SkeletonCard height={64} borderRadius={14} />
-        <SkeletonCard height={220} borderRadius={14} />
-      </ScrollView>
+          <View style={styles.statsRow}>
+            <SkeletonCard height={90} borderRadius={14} />
+            <SkeletonCard height={90} borderRadius={14} />
+            <SkeletonCard height={90} borderRadius={14} />
+          </View>
+          <SkeletonCard height={64} borderRadius={14} />
+          <SkeletonCard height={220} borderRadius={14} />
+        </ScrollView>
+      </Screen>
     );
   }
 
   if (error || !profile) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>{error ?? 'Player not found.'}</Text>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backBtnText}>Go Back</Text>
-        </TouchableOpacity>
-      </View>
+      <Screen>
+        {header}
+        <View style={styles.center}>
+          <Text style={styles.errorText}>{error ?? 'Player not found.'}</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Text style={styles.backBtnText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </Screen>
     );
   }
 
@@ -115,6 +128,8 @@ export default function PlayerProfileScreen({ route, navigation }: Props) {
       : null;
 
   return (
+    <Screen>
+    {header}
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
@@ -317,13 +332,14 @@ export default function PlayerProfileScreen({ route, navigation }: Props) {
 
       <View style={{ height: 32 }} />
     </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1 },
   content: { padding: 20, gap: 12 },
-  center: { flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', gap: 16 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
 
   // Hero
   hero: {

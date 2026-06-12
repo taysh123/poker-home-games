@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   Alert,
   Animated,
@@ -30,6 +30,8 @@ import { showToast } from '../utils/toast';
 import { formatMoney } from '../utils/formatters';
 import { useScreenEntrance } from '../hooks/useScreenEntrance';
 import SkeletonCard from '../components/SkeletonCard';
+import Screen from '../components/Screen';
+import ScreenHeader from '../components/ScreenHeader';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -62,15 +64,18 @@ export default function PendingSettlementsScreen() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
+  // Velvet Table header (replaces the old native navigation header)
+  const header = (
+    <ScreenHeader
+      title="Pending Settlements"
+      onBack={() => navigation.goBack()}
+      right={
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 4 }}>
           <Text style={{ color: colors.gold, fontSize: 16, fontWeight: '600' }}>Done</Text>
         </TouchableOpacity>
-      ),
-    });
-  }, [navigation]);
+      }
+    />
+  );
 
   async function handleMarkPaid(id: string) {
     setMarkingId(id);
@@ -123,37 +128,46 @@ export default function PendingSettlementsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.scroll}>
-        <View style={{ padding: 16, gap: 20 }}>
-          <SkeletonCard height={50} borderRadius={14} />
-          <SkeletonCard height={100} borderRadius={14} />
-          <SkeletonCard height={50} borderRadius={14} />
-          <SkeletonCard height={170} borderRadius={14} />
+      <Screen>
+        {header}
+        <View style={styles.scroll}>
+          <View style={{ padding: 16, gap: 20 }}>
+            <SkeletonCard height={50} borderRadius={14} />
+            <SkeletonCard height={100} borderRadius={14} />
+            <SkeletonCard height={50} borderRadius={14} />
+            <SkeletonCard height={170} borderRadius={14} />
+          </View>
         </View>
-      </View>
+      </Screen>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
-          <Text style={styles.retryText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
+      <Screen>
+        {header}
+        <View style={styles.center}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </Screen>
     );
   }
 
   if (settlements.length === 0) {
     return (
-      <View style={styles.center}>
-        <View style={styles.emptyIconWrap}>
-          <Ionicons name="checkmark-circle-outline" size={40} color={colors.success} />
+      <Screen>
+        {header}
+        <View style={styles.center}>
+          <View style={styles.emptyIconWrap}>
+            <Ionicons name="checkmark-circle-outline" size={40} color={colors.success} />
+          </View>
+          <Text style={styles.emptyTitle}>All settled up!</Text>
+          <Text style={styles.emptySubtitle}>No pending payments across any session.</Text>
         </View>
-        <Text style={styles.emptyTitle}>All settled up!</Text>
-        <Text style={styles.emptySubtitle}>No pending payments across any session.</Text>
-      </View>
+      </Screen>
     );
   }
 
@@ -170,6 +184,8 @@ export default function PendingSettlementsScreen() {
   );
 
   return (
+    <Screen>
+    {header}
     <Animated.ScrollView
       style={[styles.scroll, entrance.style]}
       contentContainerStyle={styles.content}
@@ -271,15 +287,15 @@ export default function PendingSettlementsScreen() {
 
       <View style={{ height: 40 }} />
     </Animated.ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: colors.background },
+  scroll: { flex: 1 },
   content: { padding: 16 },
   center: {
     flex: 1,
-    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,

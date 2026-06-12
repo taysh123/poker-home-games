@@ -25,6 +25,8 @@ import {
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useScreenEntrance } from '../hooks/useScreenEntrance';
 import SkeletonCard from '../components/SkeletonCard';
+import Screen from '../components/Screen';
+import ScreenHeader from '../components/ScreenHeader';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Invitations'>;
 
@@ -113,36 +115,49 @@ export default function InvitationsScreen({ navigation }: Props) {
     );
   };
 
+  // Velvet Table header (replaces the old native navigation header)
+  const header = (
+    <ScreenHeader title="Invitations" onBack={() => navigation.goBack()} />
+  );
+
   if (loading) {
     return (
-      <View style={styles.list}>
-        <View style={{ padding: 16, gap: 12 }}>
-          <SkeletonCard height={140} borderRadius={16} />
-          <SkeletonCard height={140} borderRadius={16} />
-          <SkeletonCard height={140} borderRadius={16} />
+      <Screen>
+        {header}
+        <View style={styles.list}>
+          <View style={{ padding: 16, gap: 12 }}>
+            <SkeletonCard height={140} borderRadius={16} />
+            <SkeletonCard height={140} borderRadius={16} />
+            <SkeletonCard height={140} borderRadius={16} />
+          </View>
         </View>
-      </View>
+      </Screen>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity
-          style={styles.retryBtn}
-          onPress={() => {
-            setLoading(true);
-            load();
-          }}
-        >
-          <Text style={styles.retryText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
+      <Screen>
+        {header}
+        <View style={styles.centered}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity
+            style={styles.retryBtn}
+            onPress={() => {
+              setLoading(true);
+              load();
+            }}
+          >
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </Screen>
     );
   }
 
   return (
+    <Screen>
+    {header}
     <Animated.View style={[{ flex: 1 }, entrance.style]}>
     <FlatList
       style={styles.list}
@@ -211,15 +226,15 @@ export default function InvitationsScreen({ navigation }: Props) {
       }}
     />
     </Animated.View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  list: { flex: 1, backgroundColor: colors.background },
+  list: { flex: 1 },
   listContent: { padding: 16, paddingBottom: 40 },
   centered: {
     flex: 1,
-    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,

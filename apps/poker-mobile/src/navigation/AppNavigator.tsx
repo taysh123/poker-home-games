@@ -361,18 +361,18 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
         ) : (
           <>
             <Stack.Screen name="MainTabs"      component={TabNavigator}          options={{ headerShown: false }} />
-            <Stack.Screen name="CreateGroup"   component={CreateGroupScreen}     options={{ presentation: 'modal' }} />
-            <Stack.Screen name="GroupDetail"   component={GroupDetailScreen} />
-            <Stack.Screen name="Invitations"   component={InvitationsScreen}     options={{ title: 'Invitations' }} />
-            <Stack.Screen name="EditGroup"     component={EditGroupScreen}       options={{ presentation: 'modal', title: 'Edit Group' }} />
-            <Stack.Screen name="SessionsList"  component={SessionsListScreen} />
+            <Stack.Screen name="CreateGroup"   component={CreateGroupScreen}     options={{ presentation: 'modal', headerShown: false }} />
+            <Stack.Screen name="GroupDetail"   component={GroupDetailScreen}     options={{ headerShown: false }} />
+            <Stack.Screen name="Invitations"   component={InvitationsScreen}     options={{ title: 'Invitations', headerShown: false }} />
+            <Stack.Screen name="EditGroup"     component={EditGroupScreen}       options={{ presentation: 'modal', title: 'Edit Group', headerShown: false }} />
+            <Stack.Screen name="SessionsList"  component={SessionsListScreen}    options={{ headerShown: false }} />
             <Stack.Screen name="Session"       component={SessionScreen}         options={{ headerShown: false }} />
-            <Stack.Screen name="Profile"       component={ProfileScreen}         options={{ title: 'My Profile' }} />
+            <Stack.Screen name="Profile"       component={ProfileScreen}         options={{ title: 'My Profile', headerShown: false }} />
             <Stack.Screen name="NewGame"            component={NewGameScreen}            options={{ headerShown: false }} />
-            <Stack.Screen name="PendingSettlements" component={PendingSettlementsScreen}  options={{ title: 'Pending Settlements' }} />
+            <Stack.Screen name="PendingSettlements" component={PendingSettlementsScreen}  options={{ title: 'Pending Settlements', headerShown: false }} />
             <Stack.Screen name="JoinSession"        component={JoinSessionScreen}         options={{ title: 'Joining Session', headerShown: false }} />
             <Stack.Screen name="JoinGroup"          component={JoinGroupScreen}           options={{ title: 'Joining Group', headerShown: false }} />
-            <Stack.Screen name="PlayerProfile"      component={PlayerProfileScreen}       options={{ title: 'Player Profile' }} />
+            <Stack.Screen name="PlayerProfile"      component={PlayerProfileScreen}       options={{ title: 'Player Profile', headerShown: false }} />
             <Stack.Screen name="Notifications"      component={NotificationsScreen}        options={{ headerShown: false }} />
             <Stack.Screen name="LocalNewGame"        component={LocalNewGameScreen}        options={{ headerShown: false }} />
             <Stack.Screen name="LocalSession"        component={LocalSessionScreen}        options={{ headerShown: false, gestureEnabled: false }} />

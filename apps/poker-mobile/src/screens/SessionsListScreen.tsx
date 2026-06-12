@@ -19,6 +19,8 @@ import { shadows } from '../theme/shadows';
 import { getGroupSessions, SessionSummaryDto } from '../api/sessionsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import SkeletonCard from '../components/SkeletonCard';
+import Screen from '../components/Screen';
+import ScreenHeader from '../components/ScreenHeader';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SessionsList'>;
 
@@ -33,14 +35,12 @@ export default function SessionsListScreen({ route, navigation }: Props) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(16)).current;
 
-  React.useLayoutEffect(() => {
-    navigation.setOptions({
-      title: 'Sessions',
-      headerStyle: { backgroundColor: colors.background },
-      headerTintColor: colors.text,
-      headerTitleStyle: { fontWeight: '700' },
-      headerShadowVisible: false,
-      headerRight: () => (
+  // Velvet Table header (replaces the old native navigation header)
+  const header = (
+    <ScreenHeader
+      title={groupName}
+      onBack={() => navigation.goBack()}
+      right={
         <TouchableOpacity
           onPress={() => navigation.navigate('NewGame', { groupId, groupName })}
           style={styles.headerAddBtn}
@@ -48,9 +48,9 @@ export default function SessionsListScreen({ route, navigation }: Props) {
         >
           <Ionicons name="add" size={22} color={colors.gold} />
         </TouchableOpacity>
-      ),
-    });
-  }, [navigation, groupId, groupName]);
+      }
+    />
+  );
 
   const load = useCallback(async (isRefresh = false) => {
     if (!isRefresh) setLoading(true);
@@ -86,74 +86,86 @@ export default function SessionsListScreen({ route, navigation }: Props) {
 
   if (loading) {
     return (
-      <View style={styles.listWrap}>
-        <View style={[styles.listContent, { gap: 10 }]}>
-          {[0, 1, 2, 3].map((i) => (
-            <View key={i} style={styles.card}>
-              <View style={styles.cardAccent} />
-              <View style={styles.cardInner}>
-                <SkeletonCard height={16} borderRadius={6} style={{ width: '60%', marginBottom: 10 }} />
-                <SkeletonCard height={11} borderRadius={4} style={{ width: '40%' }} />
+      <Screen>
+        {header}
+        <View style={styles.listWrap}>
+          <View style={[styles.listContent, { gap: 10 }]}>
+            {[0, 1, 2, 3].map((i) => (
+              <View key={i} style={styles.card}>
+                <View style={styles.cardAccent} />
+                <View style={styles.cardInner}>
+                  <SkeletonCard height={16} borderRadius={6} style={{ width: '60%', marginBottom: 10 }} />
+                  <SkeletonCard height={11} borderRadius={4} style={{ width: '40%' }} />
+                </View>
               </View>
-            </View>
-          ))}
+            ))}
+          </View>
         </View>
-      </View>
+      </Screen>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={() => load()}>
-          <Text style={styles.retryText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
+      <Screen>
+        {header}
+        <View style={styles.center}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => load()}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </Screen>
     );
   }
 
   if (sessions.length === 0) {
     return (
-      <View style={styles.center}>
-        <View style={styles.emptyIconWrap}>
-          <Ionicons name="layers-outline" size={36} color={colors.textDim} />
+      <Screen>
+        {header}
+        <View style={styles.center}>
+          <View style={styles.emptyIconWrap}>
+            <Ionicons name="layers-outline" size={36} color={colors.textDim} />
+          </View>
+          <Text style={styles.emptyTitle}>No Sessions Yet</Text>
+          <Text style={styles.emptySubtitle}>Create the first session for {groupName}</Text>
+          <TouchableOpacity
+            style={styles.createButton}
+            onPress={() => navigation.navigate('NewGame', { groupId, groupName })}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="add-circle-outline" size={18} color={colors.background} />
+            <Text style={styles.createButtonText}>New Game</Text>
+          </TouchableOpacity>
         </View>
-        <Text style={styles.emptyTitle}>No Sessions Yet</Text>
-        <Text style={styles.emptySubtitle}>Create the first session for {groupName}</Text>
-        <TouchableOpacity
-          style={styles.createButton}
-          onPress={() => navigation.navigate('NewGame', { groupId, groupName })}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="add-circle-outline" size={18} color={colors.background} />
-          <Text style={styles.createButtonText}>New Game</Text>
-        </TouchableOpacity>
-      </View>
+      </Screen>
     );
   }
 
   return (
-    <Animated.View style={[styles.listWrap, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-      <FlatList
-        style={styles.list}
-        contentContainerStyle={styles.listContent}
-        data={sessions}
-        keyExtractor={(item) => item.id}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />
-        }
-        renderItem={({ item }) => (
-          <SessionCard
-            session={item}
-            onPress={() => {
-              navigation.navigate('Session', { sessionId: item.id, groupId });
-            }}
-          />
-        )}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-      />
-    </Animated.View>
+    <Screen>
+      {header}
+      <Animated.View style={[styles.listWrap, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+        <FlatList
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          data={sessions}
+          keyExtractor={(item) => item.id}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />
+          }
+          renderItem={({ item }) => (
+            <SessionCard
+              session={item}
+              onPress={() => {
+                navigation.navigate('Session', { sessionId: item.id, groupId });
+              }}
+            />
+          )}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+        />
+      </Animated.View>
+    </Screen>
   );
 }
 
@@ -226,12 +238,11 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 const styles = StyleSheet.create({
-  listWrap: { flex: 1, backgroundColor: colors.background },
+  listWrap: { flex: 1 },
   list: { flex: 1 },
   listContent: { padding: 16, paddingBottom: 60 },
   center: {
     flex: 1,
-    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,

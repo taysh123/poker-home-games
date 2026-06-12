@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -41,6 +41,8 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { searchUsers, UserSearchResultDto } from '../api/usersApi';
 import SkeletonCard from '../components/SkeletonCard';
 import SkeletonRow from '../components/SkeletonRow';
+import Screen from '../components/Screen';
+import ScreenHeader from '../components/ScreenHeader';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupDetail'>;
 
@@ -139,28 +141,30 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
     }
   }, [showInviteOnLoad, loading, group]);
 
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      title: groupName,
-      headerRight: isAdminOrOwner
-        ? () => (
-            <TouchableOpacity
-              style={styles.headerEditBtn}
-              onPress={() =>
-                navigation.navigate('EditGroup', {
-                  groupId,
-                  groupName: group?.name ?? groupName,
-                  description: group?.description,
-                })
-              }
-              hitSlop={8}
-            >
-              <Ionicons name="settings-outline" size={20} color={colors.gold} />
-            </TouchableOpacity>
-          )
-        : undefined,
-    });
-  }, [navigation, groupId, groupName, group, isAdminOrOwner]);
+  // Velvet Table header (replaces the old native navigation header)
+  const header = (
+    <ScreenHeader
+      title={group?.name ?? groupName}
+      onBack={() => navigation.goBack()}
+      right={
+        isAdminOrOwner ? (
+          <TouchableOpacity
+            style={styles.headerEditBtn}
+            onPress={() =>
+              navigation.navigate('EditGroup', {
+                groupId,
+                groupName: group?.name ?? groupName,
+                description: group?.description,
+              })
+            }
+            hitSlop={8}
+          >
+            <Ionicons name="settings-outline" size={20} color={colors.gold} />
+          </TouchableOpacity>
+        ) : undefined
+      }
+    />
+  );
 
   const handleInvite = async (usernameOverride?: string) => {
     const username = (usernameOverride ?? inviteUsername).trim();
@@ -303,7 +307,8 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
 
   if (loading) {
     return (
-      <View style={styles.listWrap}>
+      <Screen>
+        {header}
         <View style={styles.listContent}>
           {/* group card */}
           <SkeletonCard height={88} borderRadius={16} style={{ marginBottom: 12 }} />
@@ -322,24 +327,29 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
             <SkeletonRow />
           </View>
         </View>
-      </View>
+      </Screen>
     );
   }
 
   if (error || !group) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>{error ?? 'Group not found.'}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={load}>
-          <Text style={styles.retryText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
+      <Screen>
+        {header}
+        <View style={styles.center}>
+          <Text style={styles.errorText}>{error ?? 'Group not found.'}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={load}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </Screen>
     );
   }
 
   const ownerId = group.ownerId;
 
   return (
+    <Screen>
+    {header}
     <Animated.View style={[styles.listWrap, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
     <FlatList
       style={styles.list}
@@ -628,6 +638,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
       }
     />
     </Animated.View>
+    </Screen>
   );
 }
 
@@ -829,12 +840,11 @@ function RoleBadge({ role }: { role: string }) {
 }
 
 const styles = StyleSheet.create({
-  listWrap: { flex: 1, backgroundColor: colors.background },
+  listWrap: { flex: 1 },
   list: { flex: 1 },
   listContent: { padding: 16, paddingBottom: 60 },
   center: {
     flex: 1,
-    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
