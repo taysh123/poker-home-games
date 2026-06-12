@@ -60,3 +60,4 @@ Newest entries at the bottom of each table.
 | 61–70 | Cash transfer engine, social home feed, leaderboard medals, profile identity polish, session winner spotlight, achievement progress |
 | 71+ | Guest mode (local-first games, no login wall), TS settlement port + Jest, Reanimated 4 motion system, celebrations, glass UI, store-readiness scaffold |
 | 80+ | The Final Count end-game redesign, Velvet Table visual system (serif display type, ambient vignettes, design tokens, unified components), professional README |
+| 90+ | Social layer (unified Avatar + emoji/color identity, activity tap-through + pagination, weekly digest card, image share cards), store readiness (notifications plugin, v1.1.0, expo-doctor clean, EAS preview build), local-first Tournament Mode v1 (prize pools, blind clock, bust-outs, rebuys, podium payouts) |

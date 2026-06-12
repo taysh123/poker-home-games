@@ -1,7 +1,12 @@
 # Tournament Mode — Architecture & Phased Plan
 
-Status: **planning** (approved direction, not yet scheduled). Grounded in an audit
-of the current entities and flows (June 2026).
+Status: **v1 SHIPPED (local-first)** — June 2026. Guests and signed-in users can
+run on-device tournaments: fixed entries → prize pool, blind clock
+(Turbo/Standard/Deep), bust-outs with bottom-up positions, anytime rebuys,
+largest-remainder payouts settled into minimal transfers, podium summary +
+shareable image card. Engine: `apps/poker-mobile/src/local/tournament.ts` +
+`blinds.ts` (Jest-pinned). **Next: server-side group tournaments** per the design
+below (the local model is the proven template).
 
 ## Product shape
 

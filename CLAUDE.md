@@ -142,6 +142,26 @@ Guest mode runs full games on-device with zero network. Rules:
 - Local games skip Draft — they're Active from creation. Status: `Active | Finished`.
 - Web caveat: `Alert.alert` is a no-op on react-native-web — use `utils/confirm.ts` (`confirmDialog`/`infoDialog`) for anything that must work on web.
 
+## Avatars & identity
+
+Render every avatar through `src/components/Avatar.tsx` ({ name, emoji?, color?,
+size, ring? }) — NEVER hand-roll initials circles. Color hash + palette live in
+`src/utils/avatarColor.ts` (single source). Users pick emoji+color in
+ProfileScreen; server fields `User.AvatarEmoji/AvatarColor` flow through auth,
+members, leaderboard, session-player, search, and profile DTOs.
+
+## Local games schema v2 + tournaments
+
+`src/local/types.ts` is at schemaVersion 2 (`mode: 'cash' | 'tournament'` +
+`tournament` config; v1 files auto-migrate in `loadFile`, quarantine preserved).
+Tournament logic: `src/local/tournament.ts` (prize pool from buy-in txns,
+bottom-up eliminations with auto-finish, largest-remainder payouts settled via
+the SAME `calculateSettlements` engine) and `src/local/blinds.ts` (deterministic
+clock derived from `createdAt` — no timer state). Tournaments do NOT use The
+Final Count: they end by elimination; LocalSession hides End Game and shows
+Abort (delete) instead. Rebuys = `addBuyIn` while Active. Roster is locked
+(no add-player) once a tournament starts — position math depends on it.
+
 ## Notifications (in-app + push)
 
 In-app: `Notification` entity, `INotificationService.NotifyAsync/NotifyManyAsync`

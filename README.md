@@ -26,9 +26,17 @@ every week and argue about the ledger every time.
   the night's chaos into the fewest possible transfers — identical algorithm on
   the server (C# decimal) and on-device (TypeScript integer cents), pinned by a
   shared test suite.
-- **A club, not a spreadsheet.** Private groups with roles, invite links,
-  activity feeds, rivalries, head-to-head records, leaderboards with medal
-  accents, 14 achievements, and session recaps with narrative highlights.
+- **Tournament night, handled.** Local-first tournament mode: fixed entries feed
+  a prize pool, a deterministic blind clock (Turbo/Standard/Deep), one-tap
+  bust-outs, rebuys, and a medal podium with exact largest-remainder payouts —
+  settled into minimal transfers by the same engine as cash games.
+- **A club, not a spreadsheet.** Private groups with roles, invite links, a
+  tappable activity feed, rivalries, head-to-head records, leaderboards with
+  medal accents, 14 achievements, emoji+color player identities, and a weekly
+  "Your Week at the Club" digest that gives you a reason to open the app on
+  Monday morning.
+- **Brag-worthy results.** One tap turns any game's result into a branded podium
+  image card for the group chat (plus the existing PDF recap).
 - **Your numbers, forever.** Lifetime P&L, win rate, streaks, time played —
   filterable by week/month/all-time, charted, and badged on every session row.
 - **Premium dark UI ("Velvet Table").** Deep navy with ambient gradients, serif
@@ -219,13 +227,13 @@ amount validation on every transaction. Privacy policy: [PRIVACY.md](PRIVACY.md)
 
 ## Roadmap
 
-- **Tournament mode** — fixed buy-ins, blind timer, eliminations, prize-pool payouts.
-  Architecture + phased plan: [docs/tournament-mode.md](docs/tournament-mode.md)
-- Push notification delivery rollout (foundation shipped: device tokens + Expo push
-  sender; iOS delivery needs an EAS build — see platform caveats in the hook)
+- **Server-side tournaments** — local-first tournament v1 has shipped; group/cloud
+  tournaments follow the same model: [docs/tournament-mode.md](docs/tournament-mode.md)
+- Push notification delivery rollout (foundation + config plugin shipped; FCM/APNs
+  credentials via `eas credentials` — see [docs/store-release.md](docs/store-release.md))
 - Import local guest games into a cloud account (`importedSessionId` is reserved)
-- App Store / Play Store release (EAS scaffold ready — [docs/store-release.md](docs/store-release.md))
-- Multi-currency display (engine is currency-agnostic integer cents)
+- App Store / Play Store release (v1.1.0, expo-doctor clean, EAS preview builds running)
+- Scheduled weekly-digest push, multi-currency display
 
 ## License
 
