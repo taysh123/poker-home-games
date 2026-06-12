@@ -11,10 +11,18 @@
       }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://poker-home-games-production.up.railway.app",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "12435044751-eruvq9uduc9sk5mietg9eiab2epddsp6.apps.googleusercontent.com"
+      }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://poker-home-games-production.up.railway.app",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "12435044751-eruvq9uduc9sk5mietg9eiab2epddsp6.apps.googleusercontent.com"
+      }
     }
   },
   "submit": {
