@@ -150,6 +150,15 @@ size, ring? }) — NEVER hand-roll initials circles. Color hash + palette live i
 ProfileScreen; server fields `User.AvatarEmoji/AvatarColor` flow through auth,
 members, leaderboard, session-player, search, and profile DTOs.
 
+## Tournament entry points & store assets
+
+Tournament is a FIRST-CLASS mode: dual entry cards on GuestHome, a "Host a
+Tournament" CTA on authed Home, and rich mode cards in the wizard — all navigate
+`LocalNewGame { mode }` (optional route param preselects the wizard). Store
+listing assets (icons, feature graphic, 18 screenshots at exact store sizes)
+live in `apps/poker-mobile/store-assets/` — regenerate screenshots via the
+verification harness after visual changes. Release process: docs/store-release.md.
+
 ## Local games schema v2 + tournaments
 
 `src/local/types.ts` is at schemaVersion 2 (`mode: 'cash' | 'tournament'` +

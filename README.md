@@ -10,15 +10,17 @@ buy-ins, rebuys, cash-outs, and the dreaded end-of-night math — and settles
 everything down to "Bob pays Alice ₪40". Built for friend groups who play
 every week and argue about the ledger every time.
 
-> **Web:** [t-poker.vercel.app](https://t-poker.vercel.app) · **iOS/Android:** EAS builds — see [docs/store-release.md](docs/store-release.md)
+> **Web:** [t-poker.vercel.app](https://t-poker.vercel.app) · **Android:** installable
+> v1.1.0 APKs building on EAS ([builds](https://expo.dev/accounts/taysh/projects/t-poker/builds)) ·
+> **Store release:** assets + step-by-step guide ready — [docs/store-release.md](docs/store-release.md)
 
 ---
 
 ## Why T Poker
 
-- **Start playing in 30 seconds, no account.** Guest mode runs a complete game
-  on-device: name the players, track the money, count the chips, settle up.
-  Nothing leaves your phone.
+- **Start playing in 30 seconds, no account.** Guest mode opens to two cards —
+  **Cash Game** or **Tournament** — and runs the whole night on-device: name the
+  players, track the money, settle up. Nothing leaves your phone.
 - **The Final Count.** Ending a game is a guided, foolproof step: enter each
   player's final stack (empty = busted), watch the live balance check
   ("Counted ₪185 of ₪185 on the table ✓"), and get settlements instantly.
@@ -227,13 +229,9 @@ amount validation on every transaction. Privacy policy: [PRIVACY.md](PRIVACY.md)
 
 ## Roadmap
 
-- **Server-side tournaments** — local-first tournament v1 has shipped; group/cloud
-  tournaments follow the same model: [docs/tournament-mode.md](docs/tournament-mode.md)
-- Push notification delivery rollout (foundation + config plugin shipped; FCM/APNs
-  credentials via `eas credentials` — see [docs/store-release.md](docs/store-release.md))
-- Import local guest games into a cloud account (`importedSessionId` is reserved)
-- App Store / Play Store release (v1.1.0, expo-doctor clean, EAS preview builds running)
-- Scheduled weekly-digest push, multi-currency display
+Full prioritized roadmap with efforts and release trains: [docs/roadmap-v2.md](docs/roadmap-v2.md).
+Headline next steps: server-side group tournaments → push delivery rollout →
+Play Store internal track → local-to-cloud game import.
 
 ## License
 

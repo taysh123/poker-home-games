@@ -61,3 +61,4 @@ Newest entries at the bottom of each table.
 | 71+ | Guest mode (local-first games, no login wall), TS settlement port + Jest, Reanimated 4 motion system, celebrations, glass UI, store-readiness scaffold |
 | 80+ | The Final Count end-game redesign, Velvet Table visual system (serif display type, ambient vignettes, design tokens, unified components), professional README |
 | 90+ | Social layer (unified Avatar + emoji/color identity, activity tap-through + pagination, weekly digest card, image share cards), store readiness (notifications plugin, v1.1.0, expo-doctor clean, EAS preview build), local-first Tournament Mode v1 (prize pools, blind clock, bust-outs, rebuys, podium payouts) |
+| 95+ | Tournament-first UI (dual entry cards, rich wizard mode cards), store asset production (icons, feature graphic, 18 store-size screenshots), complete Play/App Store release guide, mobile-first audit + small-screen fixes, post-v1.1 roadmap |
