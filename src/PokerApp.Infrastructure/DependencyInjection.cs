@@ -45,6 +45,9 @@ public static class DependencyInjection
         services.AddScoped<IAchievementEvaluator, AchievementEvaluator>();
         services.AddScoped<INotificationService, NotificationService>();
 
+        services.AddHttpClient();
+        services.AddScoped<IPushNotificationService, ExpoPushService>();
+
         return services;
     }
 }

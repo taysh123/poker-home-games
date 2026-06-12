@@ -71,7 +71,30 @@ public sealed class EndSessionCommandHandler(
         await context.SaveChangesAsync(cancellationToken);
 
         // Award any newly-earned achievements for the session creator
-        await achievementEvaluator.EvaluateAsync(userId, request.SessionId, cancellationToken);
+        var newAchievementKeys = await achievementEvaluator.EvaluateAsync(userId, request.SessionId, cancellationToken);
+
+        // Notify the creator about each newly unlocked achievement (best-effort)
+        if (newAchievementKeys.Count > 0)
+        {
+            try
+            {
+                var achievementNames = await context.Achievements
+                    .Where(a => newAchievementKeys.Contains(a.Key))
+                    .Select(a => a.Name)
+                    .ToListAsync(cancellationToken);
+
+                foreach (var name in achievementNames)
+                {
+                    await notificationService.NotifyAsync(
+                        userId,
+                        NotificationType.AchievementUnlocked,
+                        "Achievement unlocked!",
+                        name,
+                        cancellationToken: cancellationToken);
+                }
+            }
+            catch { /* notifications are non-critical */ }
+        }
 
         // Notify all registered players that the session ended (best-effort)
         try
