@@ -17,6 +17,7 @@ import PrimaryButton from '../components/PrimaryButton';
 import EmptyState from '../components/EmptyState';
 import { useLocalGames } from '../context/LocalGamesContext';
 import { settleGame } from '../local/settlements';
+import { contributionCents, tournamentResult } from '../local/tournament';
 import { formatCents, formatCentsSigned } from '../utils/money';
 import { formatDuration } from '../utils/formatters';
 import { confirmDialog } from '../utils/confirm';
@@ -32,9 +33,27 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
   const { games, deleteGame } = useLocalGames();
 
   const game = games.find(g => g.id === gameId);
+  const isTournament = game?.mode === 'tournament';
 
-  const { results, transfers, totalPotCents } = useMemo(() => {
-    if (!game) return { results: [], transfers: [], totalPotCents: 0 };
+  const { results, transfers, totalPotCents, podium } = useMemo(() => {
+    if (!game) return { results: [], transfers: [], totalPotCents: 0, podium: null };
+
+    if (game.mode === 'tournament' && game.tournament) {
+      const result = tournamentResult(game);
+      const podium = result.standings.map(s => ({
+        player: game.players.find(p => p.id === s.playerId)!,
+        position: s.position,
+        payoutCents: s.payoutCents,
+        netCents: s.payoutCents - contributionCents(game, s.playerId),
+      }));
+      return {
+        results: [],
+        transfers: result.transfers,
+        totalPotCents: result.poolCents,
+        podium,
+      };
+    }
+
     const { balances, transfers } = settleGame(game);
     const results = game.players
       .map(player => ({
@@ -45,7 +64,7 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
     const totalPotCents = game.txns
       .filter(t => t.kind === 'buyin')
       .reduce((s, t) => s + t.amountCents, 0);
-    return { results, transfers, totalPotCents };
+    return { results, transfers, totalPotCents, podium: null };
   }, [game]);
 
   if (!game) {
@@ -96,7 +115,7 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         {/* Game over hero */}
         <View style={styles.heroCard}>
-          <Text style={styles.heroLabel}>GAME OVER</Text>
+          <Text style={styles.heroLabel}>{isTournament ? 'TOURNAMENT COMPLETE' : 'GAME OVER'}</Text>
           <AnimatedNumber
             value={totalPotCents}
             format={formatCents}
@@ -106,13 +125,43 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
             maxFontSizeMultiplier={1.3}
           />
           <Text style={styles.heroMeta}>
-            total pot · {game.players.length} players
+            {isTournament ? 'prize pool' : 'total pot'} · {game.players.length} players
             {game.endedAt ? ` · ${formatDuration(game.createdAt, game.endedAt)}` : ''}
           </Text>
         </View>
 
-        {/* Results */}
-        <Text style={styles.sectionTitle}>RESULTS</Text>
+        {/* Tournament podium */}
+        {podium && (
+          <>
+            <Text style={styles.sectionTitle}>FINAL STANDINGS</Text>
+            {podium.map(({ player, position, payoutCents, netCents }) => {
+              const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : null;
+              const isChampion = position === 1;
+              return (
+                <View key={player.id} style={[styles.resultRow, isChampion && styles.resultRowWinner]}>
+                  <Text style={[styles.resultRank, isChampion && styles.resultRankWinner]}>
+                    {medal ?? `#${position}`}
+                  </Text>
+                  <View style={styles.podiumInfo}>
+                    <Text style={styles.podiumName} numberOfLines={1}>{player.name}</Text>
+                    {payoutCents > 0 && (
+                      <Text style={styles.podiumPayout}>wins {formatCents(payoutCents)}</Text>
+                    )}
+                  </View>
+                  <Text style={[
+                    styles.resultNet,
+                    netCents > 0 ? styles.netPositive : netCents < 0 ? styles.netNegative : styles.netEven,
+                  ]}>
+                    {formatCentsSigned(netCents)}
+                  </Text>
+                </View>
+              );
+            })}
+          </>
+        )}
+
+        {/* Results (cash games) */}
+        {!podium && <Text style={styles.sectionTitle}>RESULTS</Text>}
         {results.map(({ player, netCents }, index) => {
           const isWinner = index === 0 && netCents > 0;
           return (
@@ -226,6 +275,9 @@ const styles = StyleSheet.create({
   resultRank: { width: 34, fontSize: 14, fontWeight: '700', color: colors.textMuted },
   resultRankWinner: { fontSize: 18 },
   resultName: { flex: 1, fontSize: 16, fontWeight: '600', color: colors.text },
+  podiumInfo: { flex: 1, gap: 2 },
+  podiumName: { fontSize: 16, fontWeight: '600', color: colors.text },
+  podiumPayout: { fontSize: 12, fontWeight: '600', color: colors.goldLight },
   resultNet: { fontSize: 16, fontWeight: '800', fontVariant: ['tabular-nums'] },
   netPositive: { color: colors.success },
   netNegative: { color: colors.error },

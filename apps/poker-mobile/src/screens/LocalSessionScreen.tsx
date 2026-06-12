@@ -26,7 +26,9 @@ import { formatCents, formatCentsSigned, parseAmountToCents } from '../utils/mon
 import { timeAgo } from '../utils/formatters';
 import { lightTap, successNotification } from '../utils/haptics';
 import { showToast } from '../utils/toast';
-import { infoDialog } from '../utils/confirm';
+import { confirmDialog, infoDialog } from '../utils/confirm';
+import { blindClock } from '../local/blinds';
+import { prizePoolCents, remainingPlayerIds } from '../local/tournament';
 import Screen from '../components/Screen';
 import AnimatedNumber from '../components/motion/AnimatedNumber';
 import Avatar from '../components/Avatar';
@@ -42,9 +44,19 @@ type AmountModalState =
 export default function LocalSessionScreen({ route, navigation }: Props) {
   const { gameId } = route.params;
   const insets = useSafeAreaInsets();
-  const { games, addBuyIn, addCashOut, addPlayer, undoLastTxn, endGame } = useLocalGames();
+  const { games, addBuyIn, addCashOut, addPlayer, undoLastTxn, endGame, eliminatePlayer, undoElimination, deleteGame } =
+    useLocalGames();
 
   const game = games.find(g => g.id === gameId);
+  const isTournament = game?.mode === 'tournament';
+
+  // 1-second tick drives the blind countdown (tournaments only).
+  const [nowMs, setNowMs] = useState(Date.now());
+  useEffect(() => {
+    if (!isTournament || game?.status !== 'Active') return;
+    const interval = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, [isTournament, game?.status]);
 
   const [sheetPlayer, setSheetPlayer] = useState<LocalPlayer | null>(null);
   const [amountModal, setAmountModal] = useState<AmountModalState>(null);
@@ -151,11 +163,55 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
   }
 
   async function handleUndo() {
+    // Tournaments: the most recent meaningful action is usually a bust.
+    const eliminations = game!.tournament?.eliminations ?? [];
+    if (isTournament && eliminations.length > 0) {
+      const last = eliminations[eliminations.length - 1];
+      const playerName = game!.players.find(p => p.id === last.playerId)?.name ?? 'player';
+      await undoElimination(game!.id);
+      showToast(`Undid bust-out for ${playerName}`, 'info');
+      return;
+    }
     if (game!.txns.length === 0) return;
     const last = game!.txns[game!.txns.length - 1];
     const playerName = game!.players.find(p => p.id === last.playerId)?.name ?? 'player';
     await undoLastTxn(game!.id);
     showToast(`Undid ${last.kind === 'buyin' ? 'buy-in' : 'cash-out'} for ${playerName}`, 'info');
+  }
+
+  async function handleBustOut(player: LocalPlayer) {
+    const remaining = remainingPlayerIds(game!);
+    const isFinalBust = remaining.length === 2; // busting now crowns a winner
+    const doBust = async () => {
+      await eliminatePlayer(game!.id, player.id);
+      successNotification();
+      // Auto-finish navigates via the Finished-status effect.
+      if (!isFinalBust) showToast(`${player.name} busted out`, 'info');
+    };
+    if (isFinalBust) {
+      const winner = game!.players.find(p => p.id === remaining.find(id => id !== player.id));
+      confirmDialog(
+        'Crown the champion?',
+        `Busting ${player.name} ends the tournament — ${winner?.name ?? 'the last player'} wins.`,
+        'End Tournament',
+        doBust,
+      );
+    } else {
+      await doBust();
+    }
+  }
+
+  function handleAbortTournament() {
+    confirmDialog(
+      'Abort tournament?',
+      'This deletes the tournament from your device — entries and busts are discarded. This cannot be undone.',
+      'Abort & Delete',
+      async () => {
+        await deleteGame(game!.id);
+        navigation.popToTop();
+      },
+      { destructive: true },
+    );
   }
 
   function openEndFlow() {
@@ -208,9 +264,9 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         {/* Pot summary */}
         <View style={styles.potCard}>
-          <Text style={styles.potLabel}>TOTAL POT</Text>
+          <Text style={styles.potLabel}>{isTournament ? 'PRIZE POOL' : 'TOTAL POT'}</Text>
           <AnimatedNumber
-            value={totalPotCents}
+            value={isTournament ? prizePoolCents(game) : totalPotCents}
             format={formatCents}
             style={styles.potValue}
             numberOfLines={1}
@@ -222,49 +278,119 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
           </Text>
         </View>
 
-        {/* Standings */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>AT THE TABLE</Text>
-          <TouchableOpacity onPress={() => openAmountModal({ kind: 'addPlayer' })} hitSlop={8}>
-            <Text style={styles.sectionAction}>+ Add Player</Text>
-          </TouchableOpacity>
-        </View>
-
-        {standings.map(({ player, buyInCents, cashOutCents, netCents }, index) => {
-          const isLeader = index === 0 && netCents > 0;
+        {/* Blind clock (tournaments) */}
+        {isTournament && game.tournament && (() => {
+          const clock = blindClock(game.tournament.blindPreset, game.createdAt, nowMs);
+          const mins = Math.floor(clock.secondsRemaining / 60);
+          const secs = clock.secondsRemaining % 60;
           return (
-            <TouchableOpacity
-              key={player.id}
-              style={[styles.playerRow, isLeader && styles.playerRowLeader]}
-              onPress={() => setSheetPlayer(player)}
-              activeOpacity={0.75}
-            >
-              <Avatar name={player.name} size={40} />
-              <View style={styles.playerInfo}>
-                <Text style={styles.playerName} numberOfLines={1}>
-                  {player.name}
-                  {isLeader ? '  👑' : ''}
-                </Text>
-                <Text style={styles.playerMeta}>
-                  in {formatCents(buyInCents)}{cashOutCents > 0 ? ` · out ${formatCents(cashOutCents)}` : ''}
+            <View style={styles.blindBanner}>
+              <View style={styles.blindLevelWrap}>
+                <Text style={styles.blindLevelLabel}>LEVEL {clock.current.level}</Text>
+                <Text style={styles.blindValue}>
+                  {clock.current.smallBlind.toLocaleString()} / {clock.current.bigBlind.toLocaleString()}
                 </Text>
               </View>
-              <Text style={[
-                styles.playerNet,
-                netCents > 0 ? styles.netPositive : netCents < 0 ? styles.netNegative : styles.netEven,
-              ]}>
-                {formatCentsSigned(netCents)}
-              </Text>
-            </TouchableOpacity>
+              <View style={styles.blindClockWrap}>
+                <Text style={styles.blindCountdown}>
+                  {mins}:{String(secs).padStart(2, '0')}
+                </Text>
+                <Text style={styles.blindNext}>
+                  next {clock.next.smallBlind.toLocaleString()}/{clock.next.bigBlind.toLocaleString()}
+                </Text>
+              </View>
+            </View>
           );
-        })}
+        })()}
+
+        {/* Standings */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{isTournament ? 'IN THE GAME' : 'AT THE TABLE'}</Text>
+          {!isTournament && (
+            <TouchableOpacity onPress={() => openAmountModal({ kind: 'addPlayer' })} hitSlop={8}>
+              <Text style={styles.sectionAction}>+ Add Player</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {(() => {
+          const bustedPositions = new Map(
+            (game.tournament?.eliminations ?? []).map(e => [e.playerId, e.position]),
+          );
+          const visible = isTournament
+            ? standings.filter(s => !bustedPositions.has(s.player.id))
+            : standings;
+          const busted = isTournament
+            ? standings
+                .filter(s => bustedPositions.has(s.player.id))
+                .sort((a, b) => bustedPositions.get(a.player.id)! - bustedPositions.get(b.player.id)!)
+            : [];
+          return (
+            <>
+              {visible.map(({ player, buyInCents, cashOutCents, netCents }, index) => {
+                const isLeader = !isTournament && index === 0 && netCents > 0;
+                return (
+                  <TouchableOpacity
+                    key={player.id}
+                    style={[styles.playerRow, isLeader && styles.playerRowLeader]}
+                    onPress={() => setSheetPlayer(player)}
+                    activeOpacity={0.75}
+                  >
+                    <Avatar name={player.name} size={40} />
+                    <View style={styles.playerInfo}>
+                      <Text style={styles.playerName} numberOfLines={1}>
+                        {player.name}
+                        {isLeader ? '  👑' : ''}
+                      </Text>
+                      <Text style={styles.playerMeta}>
+                        in {formatCents(buyInCents)}{!isTournament && cashOutCents > 0 ? ` · out ${formatCents(cashOutCents)}` : ''}
+                      </Text>
+                    </View>
+                    {!isTournament && (
+                      <Text style={[
+                        styles.playerNet,
+                        netCents > 0 ? styles.netPositive : netCents < 0 ? styles.netNegative : styles.netEven,
+                      ]}>
+                        {formatCentsSigned(netCents)}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+
+              {busted.length > 0 && (
+                <>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>BUSTED</Text>
+                  </View>
+                  {busted.map(({ player, buyInCents }) => (
+                    <View key={player.id} style={[styles.playerRow, styles.playerRowBusted]}>
+                      <Avatar name={player.name} size={40} />
+                      <View style={styles.playerInfo}>
+                        <Text style={[styles.playerName, styles.playerNameBusted]} numberOfLines={1}>{player.name}</Text>
+                        <Text style={styles.playerMeta}>in {formatCents(buyInCents)}</Text>
+                      </View>
+                      <View style={styles.positionBadge}>
+                        <Text style={styles.positionBadgeText}>#{bustedPositions.get(player.id)}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </>
+              )}
+            </>
+          );
+        })()}
 
         <View style={{ height: 120 }} />
       </ScrollView>
 
       {/* Bottom action bar */}
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 14 }]}>
-        <PrimaryButton label="End Game" onPress={openEndFlow} variant="outline" fullWidth={false} style={styles.endBtn} />
+        {isTournament ? (
+          <PrimaryButton label="Abort Tournament" onPress={handleAbortTournament} variant="danger" fullWidth={false} style={styles.endBtn} />
+        ) : (
+          <PrimaryButton label="End Game" onPress={openEndFlow} variant="outline" fullWidth={false} style={styles.endBtn} />
+        )}
       </View>
 
       {/* Player action sheet */}
@@ -272,24 +398,43 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
         visible={sheetPlayer !== null}
         onClose={() => setSheetPlayer(null)}
         title={sheetPlayer?.name}
-        subtitle="Record a transaction"
-        options={[
-          ...(defaultBuyInCents
-            ? [{
-                label: `Rebuy ${formatCents(defaultBuyInCents)}`,
-                onPress: () => {
-                  const p = sheetPlayer!;
-                  addBuyIn(game.id, p.id, defaultBuyInCents).then(() => {
-                    lightTap();
-                    showToast(`${p.name} bought in for ${formatCents(defaultBuyInCents)}`, 'success');
-                  });
-                },
-              }]
-            : []),
-          { label: 'Buy In…', onPress: () => openAmountModal({ kind: 'buyin', player: sheetPlayer! }, defaultBuyInCents) },
-          { label: 'Cash Out…', onPress: () => openAmountModal({ kind: 'cashout', player: sheetPlayer! }) },
-          { label: 'Cancel', onPress: () => {}, style: 'cancel' },
-        ]}
+        subtitle={isTournament ? 'Tournament actions' : 'Record a transaction'}
+        options={
+          isTournament
+            ? [
+                ...(defaultBuyInCents
+                  ? [{
+                      label: `Rebuy ${formatCents(defaultBuyInCents)}`,
+                      onPress: () => {
+                        const p = sheetPlayer!;
+                        addBuyIn(game.id, p.id, defaultBuyInCents).then(() => {
+                          lightTap();
+                          showToast(`${p.name} rebought for ${formatCents(defaultBuyInCents)}`, 'success');
+                        });
+                      },
+                    }]
+                  : []),
+                { label: 'Bust Out', onPress: () => handleBustOut(sheetPlayer!), style: 'destructive' as const },
+                { label: 'Cancel', onPress: () => {}, style: 'cancel' as const },
+              ]
+            : [
+                ...(defaultBuyInCents
+                  ? [{
+                      label: `Rebuy ${formatCents(defaultBuyInCents)}`,
+                      onPress: () => {
+                        const p = sheetPlayer!;
+                        addBuyIn(game.id, p.id, defaultBuyInCents).then(() => {
+                          lightTap();
+                          showToast(`${p.name} bought in for ${formatCents(defaultBuyInCents)}`, 'success');
+                        });
+                      },
+                    }]
+                  : []),
+                { label: 'Buy In…', onPress: () => openAmountModal({ kind: 'buyin', player: sheetPlayer! }, defaultBuyInCents) },
+                { label: 'Cash Out…', onPress: () => openAmountModal({ kind: 'cashout', player: sheetPlayer! }) },
+                { label: 'Cancel', onPress: () => {}, style: 'cancel' as const },
+              ]
+        }
       />
 
       {/* Amount / add-player modal */}
@@ -474,6 +619,39 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   potLabel: { fontSize: 11, fontWeight: '700', color: colors.textMuted, letterSpacing: 1.2 },
+
+  // Tournament blind clock
+  blindBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: colors.goldFaint,
+    borderWidth: 1,
+    borderColor: colors.goldMuted,
+    marginBottom: 8,
+  },
+  blindLevelWrap: { gap: 2 },
+  blindLevelLabel: { fontSize: 10, fontWeight: '800', color: colors.goldLight, letterSpacing: 1.4 },
+  blindValue: { ...typography.amount, color: colors.text, fontVariant: ['tabular-nums'] },
+  blindClockWrap: { alignItems: 'flex-end', gap: 2 },
+  blindCountdown: { ...typography.amount, color: colors.gold, fontVariant: ['tabular-nums'] },
+  blindNext: { fontSize: 11, color: colors.textMuted },
+
+  // Tournament busted rows
+  playerRowBusted: { opacity: 0.55 },
+  playerNameBusted: { textDecorationLine: 'line-through' },
+  positionBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  positionBadgeText: { fontSize: 12, fontWeight: '800', color: colors.textMuted },
   potValue: { ...typography.amountHero, fontSize: 38, color: colors.goldLight },
   potMeta: { fontSize: 13, color: colors.textMuted },
 

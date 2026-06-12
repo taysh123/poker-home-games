@@ -27,6 +27,9 @@ import { parseAmountToCents, formatCents } from '../utils/money';
 import { useLocalGames } from '../context/LocalGamesContext';
 import { showToast } from '../utils/toast';
 import { infoDialog } from '../utils/confirm';
+import { PAYOUT_PRESET_LABELS } from '../local/tournament';
+import { BLIND_PRESET_LABELS } from '../local/blinds';
+import type { BlindPreset, PayoutPreset } from '../local/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocalNewGame'>;
 
@@ -52,6 +55,14 @@ export default function LocalNewGameScreen({ navigation }: Props) {
   const [chipRatio, setChipRatio] = useState('');
   const [defaultBuyIn, setDefaultBuyIn] = useState('');
   const [buyInError, setBuyInError] = useState('');
+
+  // Tournament mode
+  const [mode, setMode] = useState<'cash' | 'tournament'>('cash');
+  const [entryFee, setEntryFee] = useState('');
+  const [entryFeeError, setEntryFeeError] = useState('');
+  const [payoutPreset, setPayoutPreset] = useState<PayoutPreset>('50-30-20');
+  const [blindPreset, setBlindPreset] = useState<BlindPreset>('standard');
+  const isTournament = mode === 'tournament';
 
   const [playerInput, setPlayerInput] = useState('');
   const [playerNames, setPlayerNames] = useState<string[]>([]);
@@ -99,12 +110,17 @@ export default function LocalNewGameScreen({ navigation }: Props) {
         setNameError('Game name is required.');
         return;
       }
-      if (defaultBuyIn.trim() && parseAmountToCents(defaultBuyIn) === null) {
+      if (isTournament && parseAmountToCents(entryFee) === null) {
+        setEntryFeeError('Entry fee is required.');
+        return;
+      }
+      if (!isTournament && defaultBuyIn.trim() && parseAmountToCents(defaultBuyIn) === null) {
         setBuyInError('Enter a valid amount.');
         return;
       }
       setNameError('');
       setBuyInError('');
+      setEntryFeeError('');
       goToStep(2);
     } else if (step === 2) {
       if (playerNames.length < 2) {
@@ -129,8 +145,16 @@ export default function LocalNewGameScreen({ navigation }: Props) {
       const game = await startGame({
         name: gameName.trim(),
         playerNames,
-        chipRatio: ratio && Number.isFinite(ratio) ? ratio : undefined,
-        defaultBuyInCents: buyInCents,
+        chipRatio: !isTournament && ratio && Number.isFinite(ratio) ? ratio : undefined,
+        defaultBuyInCents: isTournament ? undefined : buyInCents,
+        mode,
+        tournament: isTournament
+          ? {
+              entryFeeCents: parseAmountToCents(entryFee)!,
+              payoutPreset,
+              blindPreset,
+            }
+          : undefined,
       });
 
       for (const name of playerNames) {
@@ -172,29 +196,97 @@ export default function LocalNewGameScreen({ navigation }: Props) {
               autoFocus
             />
 
-            <View style={styles.row}>
-              <View style={styles.halfField}>
-                <AppTextInput
-                  label="Chip Ratio"
-                  value={chipRatio}
-                  onChangeText={setChipRatio}
-                  placeholder="e.g. 100"
-                  keyboardType="decimal-pad"
-                  hint="chips per ₪"
-                />
-              </View>
-              <View style={styles.halfField}>
-                <AppTextInput
-                  label="Default Buy-In"
-                  value={defaultBuyIn}
-                  onChangeText={setDefaultBuyIn}
-                  placeholder="0"
-                  keyboardType="decimal-pad"
-                  prefix="₪"
-                  error={buyInError}
-                />
+            {/* Cash / Tournament mode */}
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Game Type</Text>
+              <View style={styles.modeRow}>
+                <TouchableOpacity
+                  style={[styles.modeBtn, !isTournament && styles.modeBtnActive]}
+                  onPress={() => setMode('cash')}
+                >
+                  <Ionicons name="cash-outline" size={15} color={!isTournament ? colors.gold : colors.textMuted} />
+                  <Text style={[styles.modeBtnText, !isTournament && styles.modeBtnTextActive]}>Cash Game</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modeBtn, isTournament && styles.modeBtnActive]}
+                  onPress={() => setMode('tournament')}
+                >
+                  <Ionicons name="trophy-outline" size={15} color={isTournament ? colors.gold : colors.textMuted} />
+                  <Text style={[styles.modeBtnText, isTournament && styles.modeBtnTextActive]}>Tournament</Text>
+                </TouchableOpacity>
               </View>
             </View>
+
+            {isTournament ? (
+              <>
+                <AppTextInput
+                  label="Entry Fee"
+                  value={entryFee}
+                  onChangeText={setEntryFee}
+                  placeholder="50"
+                  keyboardType="decimal-pad"
+                  prefix="₪"
+                  error={entryFeeError}
+                  hint="everyone pays this into the prize pool"
+                />
+                <View style={styles.field}>
+                  <Text style={styles.fieldLabel}>Payouts</Text>
+                  <View style={styles.chipRow}>
+                    {(Object.keys(PAYOUT_PRESET_LABELS) as PayoutPreset[]).map(p => (
+                      <TouchableOpacity
+                        key={p}
+                        style={[styles.presetChip, payoutPreset === p && styles.presetChipSelected]}
+                        onPress={() => setPayoutPreset(p)}
+                      >
+                        <Text style={[styles.presetChipText, payoutPreset === p && styles.presetChipTextSelected]}>
+                          {PAYOUT_PRESET_LABELS[p]}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                <View style={styles.field}>
+                  <Text style={styles.fieldLabel}>Blinds</Text>
+                  <View style={styles.chipRow}>
+                    {(Object.keys(BLIND_PRESET_LABELS) as BlindPreset[]).map(b => (
+                      <TouchableOpacity
+                        key={b}
+                        style={[styles.presetChip, blindPreset === b && styles.presetChipSelected]}
+                        onPress={() => setBlindPreset(b)}
+                      >
+                        <Text style={[styles.presetChipText, blindPreset === b && styles.presetChipTextSelected]}>
+                          {BLIND_PRESET_LABELS[b]}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </>
+            ) : (
+              <View style={styles.row}>
+                <View style={styles.halfField}>
+                  <AppTextInput
+                    label="Chip Ratio"
+                    value={chipRatio}
+                    onChangeText={setChipRatio}
+                    placeholder="e.g. 100"
+                    keyboardType="decimal-pad"
+                    hint="chips per ₪"
+                  />
+                </View>
+                <View style={styles.halfField}>
+                  <AppTextInput
+                    label="Default Buy-In"
+                    value={defaultBuyIn}
+                    onChangeText={setDefaultBuyIn}
+                    placeholder="0"
+                    keyboardType="decimal-pad"
+                    prefix="₪"
+                    error={buyInError}
+                  />
+                </View>
+              </View>
+            )}
 
             <PrimaryButton label="Next" onPress={handleNextStep} style={styles.actionButton} />
           </View>
@@ -251,15 +343,29 @@ export default function LocalNewGameScreen({ navigation }: Props) {
               <View style={styles.reviewAccent} />
               <View style={styles.reviewCardBody}>
                 <Text style={styles.reviewName}>{gameName}</Text>
-                <Text style={styles.reviewMeta}>Local game · this device</Text>
+                <Text style={styles.reviewMeta}>
+                  {isTournament ? 'Tournament · this device' : 'Local game · this device'}
+                </Text>
                 <Text style={styles.reviewPlayerCount}>
                   {playerNames.length} player{playerNames.length !== 1 ? 's' : ''} at the table
                 </Text>
                 <View style={styles.reviewMetaRow}>
-                  {defaultBuyIn && parseAmountToCents(defaultBuyIn) !== null
-                    ? <Text style={styles.reviewChip}>{formatCents(parseAmountToCents(defaultBuyIn)!)} buy-in</Text>
-                    : null}
-                  {chipRatio ? <Text style={styles.reviewChip}>{chipRatio} chips/₪</Text> : null}
+                  {isTournament ? (
+                    <>
+                      {parseAmountToCents(entryFee) !== null && (
+                        <Text style={styles.reviewChip}>{formatCents(parseAmountToCents(entryFee)!)} entry</Text>
+                      )}
+                      <Text style={styles.reviewChip}>{PAYOUT_PRESET_LABELS[payoutPreset]}</Text>
+                      <Text style={styles.reviewChip}>{blindPreset} blinds</Text>
+                    </>
+                  ) : (
+                    <>
+                      {defaultBuyIn && parseAmountToCents(defaultBuyIn) !== null
+                        ? <Text style={styles.reviewChip}>{formatCents(parseAmountToCents(defaultBuyIn)!)} buy-in</Text>
+                        : null}
+                      {chipRatio ? <Text style={styles.reviewChip}>{chipRatio} chips/₪</Text> : null}
+                    </>
+                  )}
                 </View>
               </View>
             </Animated.View>
@@ -330,6 +436,35 @@ const styles = StyleSheet.create({
 
   row: { flexDirection: 'row', gap: 12 },
   halfField: { flex: 1 },
+
+  // Cash / Tournament toggle + preset chips
+  modeRow: { flexDirection: 'row', gap: 10 },
+  modeBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    paddingVertical: 13,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  modeBtnActive: { borderColor: colors.gold, backgroundColor: colors.goldFaint },
+  modeBtnText: { fontSize: 14, fontWeight: '700', color: colors.textMuted },
+  modeBtnTextActive: { color: colors.gold },
+  presetChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  presetChipSelected: { borderColor: colors.gold, backgroundColor: 'rgba(201,168,76,0.12)' },
+  presetChipText: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
+  presetChipTextSelected: { color: colors.gold },
 
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   playerChip: {
