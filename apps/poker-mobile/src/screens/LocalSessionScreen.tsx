@@ -27,6 +27,8 @@ import { timeAgo } from '../utils/formatters';
 import { lightTap, successNotification } from '../utils/haptics';
 import { showToast } from '../utils/toast';
 import { infoDialog } from '../utils/confirm';
+import Screen from '../components/Screen';
+import AnimatedNumber from '../components/motion/AnimatedNumber';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocalSession'>;
 
@@ -184,7 +186,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
   const defaultBuyInCents = game.defaultBuyInCents;
 
   return (
-    <View style={styles.flex}>
+    <Screen>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={12} activeOpacity={0.75}>
@@ -206,7 +208,14 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
         {/* Pot summary */}
         <View style={styles.potCard}>
           <Text style={styles.potLabel}>TOTAL POT</Text>
-          <Text style={styles.potValue}>{formatCents(totalPotCents)}</Text>
+          <AnimatedNumber
+            value={totalPotCents}
+            format={formatCents}
+            style={styles.potValue}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            maxFontSizeMultiplier={1.3}
+          />
           <Text style={styles.potMeta}>
             {game.players.length} players · {game.txns.filter(t => t.kind === 'buyin').length} buy-ins
           </Text>
@@ -419,7 +428,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-    </View>
+    </Screen>
   );
 }
 
@@ -466,7 +475,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   potLabel: { fontSize: 11, fontWeight: '700', color: colors.textMuted, letterSpacing: 1.2 },
-  potValue: { ...typography.amountLarge, color: colors.goldLight },
+  potValue: { ...typography.amountHero, fontSize: 38, color: colors.goldLight },
   potMeta: { fontSize: 13, color: colors.textMuted },
 
   sectionHeader: {

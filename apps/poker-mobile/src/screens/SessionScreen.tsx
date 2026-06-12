@@ -27,6 +27,7 @@ import { shadows } from '../theme/shadows';
 import { springScale, USE_NATIVE_DRIVER } from '../theme/motion';
 import Celebration from '../components/motion/Celebration';
 import PrimaryButton from '../components/PrimaryButton';
+import Screen from '../components/Screen';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import {
@@ -759,7 +760,7 @@ export default function SessionScreen({ route, navigation }: Props) {
 
   if (loading) {
     return (
-      <View style={styles.flex}>
+      <Screen>
         {/* skeleton header */}
         <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
           <View style={styles.backBtn} />
@@ -789,7 +790,7 @@ export default function SessionScreen({ route, navigation }: Props) {
             ))}
           </View>
         </View>
-      </View>
+      </Screen>
     );
   }
 
@@ -807,7 +808,7 @@ export default function SessionScreen({ route, navigation }: Props) {
   const totalPot = balances.reduce((s, b) => s + b.totalBuyIn, 0);
 
   return (
-    <View style={styles.flex}>
+    <Screen>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -1956,7 +1957,7 @@ export default function SessionScreen({ route, navigation }: Props) {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-    </View>
+    </Screen>
   );
 }
 
@@ -1999,7 +2000,7 @@ function rankLabel(rank: number): string {
 const RANK_COLORS: Record<number, string> = { 1: '#C9A84C', 2: '#8DA9C4', 3: '#B87333' };
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.background },
+  flex: { flex: 1 },
   scroll: { flex: 1 },
   content: { paddingBottom: 32 },
   center: { flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', padding: 32 },

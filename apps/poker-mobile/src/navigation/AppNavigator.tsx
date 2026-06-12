@@ -170,6 +170,28 @@ function LiveGameBar() {
   );
 }
 
+/** Tab icon with a spring pop when its tab gains focus. */
+function TabIcon({ name, color, size, focused }: { name: IoniconsName; color: string; size: number; focused: boolean }) {
+  const scale = useSharedValue(1);
+
+  React.useEffect(() => {
+    if (focused) {
+      scale.value = withSequence(
+        withSpring(1.18, { damping: 12, stiffness: 320 }),
+        withSpring(1, { damping: 15, stiffness: 280 }),
+      );
+    }
+  }, [focused, scale]);
+
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  return (
+    <Reanimated.View style={style}>
+      <Ionicons name={name} size={size} color={color} />
+    </Reanimated.View>
+  );
+}
+
 /** Shared tab styling for both the authed and guest tab navigators. */
 function tabScreenOptions({ route }: { route: { name: string } }) {
   const icons: Record<string, { active: IoniconsName; inactive: IoniconsName }> = {
@@ -202,7 +224,7 @@ function tabScreenOptions({ route }: { route: { name: string } }) {
     },
     tabBarIcon: ({ focused, color, size }: { focused: boolean; color: string; size: number }) => {
       const pair = icons[route.name] ?? { active: 'ellipse' as IoniconsName, inactive: 'ellipse-outline' as IoniconsName };
-      return <Ionicons name={focused ? pair.active : pair.inactive} size={size - 2} color={color} />;
+      return <TabIcon name={focused ? pair.active : pair.inactive} size={size - 2} color={color} focused={focused} />;
     },
   };
 }
