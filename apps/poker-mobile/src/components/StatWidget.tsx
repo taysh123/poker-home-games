@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { shadows } from '../theme/shadows';
+import { radii } from '../theme/radii';
+import { spacing } from '../theme/spacing';
 import { fadeIn, slideUp } from '../theme/motion';
 
 type Props = {
@@ -67,11 +69,11 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     backgroundColor: colors.surface,
-    borderRadius: 16,
+    borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.border,
     borderTopWidth: 2,
-    padding: 16,
+    padding: spacing.lg,
     gap: 4,
     ...shadows.md,
   },

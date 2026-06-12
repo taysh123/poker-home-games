@@ -1770,7 +1770,10 @@ export default function SessionScreen({ route, navigation }: Props) {
           {endStep === 3 && <Celebration />}
           <View style={[styles.sheet, styles.sheetTall]}>
             <View style={styles.sheetHandle} />
-            <Text style={styles.summaryTitle}>🏆 Game Over!</Text>
+            <View style={styles.summaryTrophyWrap}>
+              <Ionicons name="trophy" size={22} color={colors.gold} />
+            </View>
+            <Text style={styles.summaryTitle} maxFontSizeMultiplier={1.3}>Game Over</Text>
             <Text style={styles.summarySessionName}>{session.name}</Text>
 
             {/* Stats row */}
@@ -1801,7 +1804,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                 <View style={styles.summaryHighlights}>
                   {winner.profitLoss > 0 && (
                     <View style={[styles.summaryHighlight, styles.summaryHighlightWin]}>
-                      <Text style={styles.summaryHighlightEmoji}>🏆</Text>
+                      <Ionicons name="trophy-outline" size={18} color={colors.gold} />
                       <View style={{ gap: 1 }}>
                         <Text style={styles.summaryHighlightName} numberOfLines={1}>{winner.username}</Text>
                         <Text style={[styles.summaryHighlightAmount, { color: colors.success }]}>+{formatMoney(winner.profitLoss)}</Text>
@@ -1810,7 +1813,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                   )}
                   {loser.profitLoss < 0 && (
                     <View style={[styles.summaryHighlight, styles.summaryHighlightLoss]}>
-                      <Text style={styles.summaryHighlightEmoji}>💸</Text>
+                      <Ionicons name="trending-down-outline" size={18} color={colors.error} />
                       <View style={{ gap: 1 }}>
                         <Text style={styles.summaryHighlightName} numberOfLines={1}>{loser.username}</Text>
                         <Text style={[styles.summaryHighlightAmount, { color: colors.error }]}>{formatMoney(loser.profitLoss)}</Text>
@@ -2716,8 +2719,20 @@ const styles = StyleSheet.create({
   endActionSecondary: { flex: 1 },
   endActionPrimary: { flex: 2 },
 
-  // Summary modal (Step 2)
-  summaryTitle: { fontSize: 26, fontWeight: '800', color: colors.gold, textAlign: 'center' },
+  // Summary modal (Step 3 — Game Over)
+  summaryTrophyWrap: {
+    alignSelf: 'center',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.goldFaint,
+    borderWidth: 1,
+    borderColor: colors.goldMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  summaryTitle: { ...typography.displaySerif, fontSize: 28, color: colors.gold, textAlign: 'center' },
   summarySessionName: { fontSize: 16, fontWeight: '600', color: colors.text, textAlign: 'center' },
   summaryDuration: { fontSize: 13, color: colors.textMuted, textAlign: 'center' },
   summarySection: {

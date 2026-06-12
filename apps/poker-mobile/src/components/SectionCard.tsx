@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { colors } from '../theme/colors';
+import { radii } from '../theme/radii';
+import { spacing } from '../theme/spacing';
 
 type Props = {
   children: React.ReactNode;
@@ -21,8 +23,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 14,
+    borderRadius: radii.md,
     overflow: 'hidden',
   },
-  padded: { padding: 16 },
+  padded: { padding: spacing.lg },
 });
