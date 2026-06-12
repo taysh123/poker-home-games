@@ -17,18 +17,22 @@ import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { shadows } from '../theme/shadows';
+import { spacing } from '../theme/spacing';
+import { radii } from '../theme/radii';
 import { pulse, fadeIn, slideUp } from '../theme/motion';
 import { useAuth } from '../context/AuthContext';
 import { getMyGroups, getMyInvitations, getCrossGroupActivity, MyGroupDto, PendingInvitationDto, CrossGroupActivityDto } from '../api/groupsApi';
 import { getMyNotifications } from '../api/notificationsApi';
 import { getMyStats, MyStatsDto, RecentSessionDto } from '../api/statsApi';
 import { getMyPendingSettlements, MyPendingSettlementDto } from '../api/settlementsApi';
+import { getWeeklyDigest, WeeklyDigestDto } from '../api/digestApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import SkeletonCard from '../components/SkeletonCard';
 import StatWidget from '../components/StatWidget';
 import SessionListItem from '../components/SessionListItem';
 import GroupListItem from '../components/GroupListItem';
-import { formatPL, formatMoney, formatDate, formatDuration, timeAgo } from '../utils/formatters';
+import Card from '../components/Card';
+import { formatPL, formatMoney, formatDate, formatDuration, formatMinutes, timeAgo } from '../utils/formatters';
 import AnimatedNumber from '../components/motion/AnimatedNumber';
 import Screen from '../components/Screen';
 import Avatar from '../components/Avatar';
@@ -61,6 +65,7 @@ export default function HomeScreen() {
   const [invitations, setInvitations] = useState<PendingInvitationDto[]>([]);
   const [pendingSettlements, setPendingSettlements] = useState<MyPendingSettlementDto[]>([]);
   const [crossGroupActivity, setCrossGroupActivity] = useState<CrossGroupActivityDto[]>([]);
+  const [digest, setDigest] = useState<WeeklyDigestDto | null>(null);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -94,13 +99,14 @@ export default function HomeScreen() {
     try {
       const token = await SecureStore.getItemAsync('accessToken');
       if (!token) return;
-      const [groupsData, statsData, invData, pendingData, notifData, activityData] = await Promise.all([
+      const [groupsData, statsData, invData, pendingData, notifData, activityData, digestData] = await Promise.all([
         getMyGroups(token),
         getMyStats(token),
         getMyInvitations(token),
         getMyPendingSettlements(token).catch(() => [] as MyPendingSettlementDto[]),
         getMyNotifications(token).catch(() => null),
         getCrossGroupActivity(token).catch(() => [] as CrossGroupActivityDto[]),
+        getWeeklyDigest(token).catch(() => null),
       ]);
       setGroups(groupsData);
       setStats(statsData);
@@ -108,6 +114,7 @@ export default function HomeScreen() {
       setPendingSettlements(pendingData);
       setUnreadNotifications(notifData?.unreadCount ?? 0);
       setCrossGroupActivity(activityData);
+      setDigest(digestData);
     } catch {
       // silent — home screen degrades gracefully
     } finally {
@@ -297,6 +304,81 @@ export default function HomeScreen() {
       </Animated.View>
 
       <Animated.View style={{ opacity: contentOpacity }}>
+
+        {/* ── Weekly Digest ── */}
+        {statsLoading ? (
+          <SkeletonCard height={120} style={styles.digestSkeleton} />
+        ) : digest && digest.sessionsPlayed > 0 ? (
+          <Card variant="hero" style={styles.digestCard}>
+            <Text style={styles.digestTitle}>Your Week at the Club</Text>
+            <View style={styles.digestRow}>
+              <Ionicons name="layers-outline" size={15} color={colors.gold} style={styles.digestIcon} />
+              <Text style={styles.digestLabel}>Games played</Text>
+              <Text style={styles.digestValue}>{digest.sessionsPlayed}</Text>
+            </View>
+            <View style={styles.digestRow}>
+              <Ionicons
+                name={digest.netProfitLoss >= 0 ? 'trending-up' : 'trending-down'}
+                size={15}
+                color={digest.netProfitLoss > 0 ? colors.success : digest.netProfitLoss < 0 ? colors.error : colors.textMuted}
+                style={styles.digestIcon}
+              />
+              <Text style={styles.digestLabel}>Net P&L</Text>
+              <AnimatedNumber
+                value={digest.netProfitLoss}
+                format={formatPL}
+                style={[
+                  styles.digestValue,
+                  { color: digest.netProfitLoss > 0 ? colors.success : digest.netProfitLoss < 0 ? colors.error : colors.textMuted },
+                ]}
+              />
+            </View>
+            {digest.bestNight && (
+              <View style={styles.digestRow}>
+                <Ionicons name="trophy-outline" size={15} color={colors.gold} style={styles.digestIcon} />
+                <Text style={styles.digestLabel}>Best night</Text>
+                <Text style={styles.digestValue} numberOfLines={1}>
+                  {digest.bestNight.sessionName}{'  '}
+                  <Text style={{ color: digest.bestNight.profitLoss >= 0 ? colors.success : colors.error }}>
+                    {formatPL(digest.bestNight.profitLoss)}
+                  </Text>
+                </Text>
+              </View>
+            )}
+            {digest.mostActiveGroup && (
+              <View style={styles.digestRow}>
+                <Ionicons name="people-outline" size={15} color={colors.gold} style={styles.digestIcon} />
+                <Text style={styles.digestLabel}>Most active group</Text>
+                <Text style={styles.digestValue} numberOfLines={1}>
+                  {digest.mostActiveGroup.groupName} · {digest.mostActiveGroup.gamesCount} game{digest.mostActiveGroup.gamesCount !== 1 ? 's' : ''}
+                </Text>
+              </View>
+            )}
+            <View style={styles.digestRow}>
+              <Ionicons name="time-outline" size={15} color={colors.gold} style={styles.digestIcon} />
+              <Text style={styles.digestLabel}>Time played</Text>
+              <Text style={styles.digestValue}>{formatMinutes(digest.totalMinutesPlayed)}</Text>
+            </View>
+            {digest.currentStreak !== 0 && (
+              <View style={styles.digestRow}>
+                <Text style={styles.digestEmoji}>{digest.currentStreak > 0 ? '🔥' : '❄️'}</Text>
+                <Text style={styles.digestLabel}>Streak</Text>
+                <Text style={[styles.digestValue, { color: digest.currentStreak > 0 ? colors.success : colors.error }]}>
+                  {Math.abs(digest.currentStreak)}-game {digest.currentStreak > 0 ? 'win' : 'loss'} streak
+                </Text>
+              </View>
+            )}
+          </Card>
+        ) : digest ? (
+          <TouchableOpacity
+            style={styles.digestPromptCard}
+            onPress={() => navigation.navigate('NewGame', {})}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="sparkles-outline" size={16} color={colors.gold} />
+            <Text style={styles.digestPromptText}>Quiet week — deal someone in →</Text>
+          </TouchableOpacity>
+        ) : null}
 
         {/* ── Active Game Banner ── */}
         {activeSessions.map(s => (
@@ -591,8 +673,18 @@ export default function HomeScreen() {
                     <View style={styles.card}>
                       {bucket.data.map((item, i) => {
                         const cfg = ACTIVITY_ICON_CFG[item.type] ?? ACTIVITY_ICON_CFG._default;
+                        const sessionId = item.relatedSessionId;
+                        const onPress = sessionId
+                          ? () => navigation.navigate('Session', { sessionId, groupId: item.groupId ?? '' })
+                          : () => navigation.navigate('GroupDetail', { groupId: item.groupId, groupName: item.groupName });
                         return (
-                          <View key={item.id} style={[styles.activityRow, i > 0 && styles.activityBorder]}>
+                          <TouchableOpacity
+                            key={item.id}
+                            style={[styles.activityRow, i > 0 && styles.activityBorder]}
+                            onPress={onPress}
+                            activeOpacity={0.7}
+                          >
+                            <Avatar name={item.actorName} size={28} />
                             <View style={[styles.activityIcon, { backgroundColor: cfg.bg }]}>
                               <Ionicons name={cfg.icon} size={15} color={cfg.color} />
                             </View>
@@ -604,7 +696,8 @@ export default function HomeScreen() {
                                 <Text style={styles.activityTime}>{timeAgo(item.createdAt)}</Text>
                               </View>
                             </View>
-                          </View>
+                            <Ionicons name="chevron-forward" size={14} color={colors.textDim} />
+                          </TouchableOpacity>
                         );
                       })}
                     </View>
@@ -1079,4 +1172,47 @@ const styles = StyleSheet.create({
   activityGroup: { ...typography.caption, color: colors.gold, fontWeight: '600' },
   activityDot: { ...typography.caption, color: colors.textDim },
   activityTime: { ...typography.caption, color: colors.textMuted },
+
+  // ── Weekly Digest ─────────────────────────────────────────────────────────
+  digestSkeleton: { marginBottom: spacing.xl },
+  digestCard: { marginBottom: spacing.xl },
+  digestTitle: {
+    ...typography.displaySerif,
+    fontSize: 20,
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  digestRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  digestIcon: { width: 16, textAlign: 'center' },
+  digestEmoji: { fontSize: 13, width: 16, textAlign: 'center' },
+  digestLabel: { ...typography.caption, color: colors.textMuted },
+  digestValue: {
+    ...typography.labelSmall,
+    color: colors.text,
+    flex: 1,
+    textAlign: 'right',
+  },
+  digestPromptCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.goldMuted,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.xl,
+  },
+  digestPromptText: {
+    ...typography.bodySmall,
+    fontWeight: '600',
+    color: colors.goldLight,
+    flex: 1,
+  },
 });

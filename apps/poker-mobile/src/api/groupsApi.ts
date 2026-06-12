@@ -264,12 +264,16 @@ export type CrossGroupActivityDto = {
   type: string;
   description: string;
   createdAt: string;
+  relatedSessionId?: string | null;
 };
 
-export async function getCrossGroupActivity(token: string): Promise<CrossGroupActivityDto[]> {
+export async function getCrossGroupActivity(
+  token: string,
+  params?: { skip?: number; take?: number },
+): Promise<CrossGroupActivityDto[]> {
   const { data } = await api.get<CrossGroupActivityDto[]>(
     '/api/groups/activity',
-    { headers: authHeader(token) },
+    { headers: authHeader(token), params },
   );
   return data;
 }

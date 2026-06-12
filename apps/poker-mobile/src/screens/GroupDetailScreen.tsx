@@ -67,6 +67,8 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   const [shareLoading, setShareLoading] = useState(false);
   const [lbPeriod, setLbPeriod] = useState<'week' | 'month' | 'all'>('all');
   const [lbLoading, setLbLoading] = useState(false);
+  const [activityHasMore, setActivityHasMore] = useState(false);
+  const [activityLoadingMore, setActivityLoadingMore] = useState(false);
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isAdminOrOwner = group?.myRole === 'Admin' || group?.myRole === 'Owner';
@@ -91,6 +93,9 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
       setMembers(membersData);
       setLeaderboard(leaderboardData);
       setActivity(activityData);
+      // Initial fetch uses the server default page size (50, the max) —
+      // a full page means there may be older entries to load.
+      setActivityHasMore(activityData.length >= 50);
       setRivals(rivalsData);
     } catch {
       setError('Failed to load group details.');
@@ -98,6 +103,23 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
       setLoading(false);
     }
   }, [groupId]);
+
+  const loadMoreActivity = useCallback(async () => {
+    if (activityLoadingMore) return;
+    setActivityLoadingMore(true);
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!token) return;
+      const take = 20;
+      const page = await getGroupActivity(token, groupId, { skip: activity.length, take });
+      setActivity(prev => [...prev, ...page]);
+      if (page.length < take) setActivityHasMore(false);
+    } catch {
+      // silent — keep the button so the user can retry
+    } finally {
+      setActivityLoadingMore(false);
+    }
+  }, [groupId, activity.length, activityLoadingMore]);
 
   const loadLeaderboard = useCallback(async (period: 'week' | 'month' | 'all') => {
     setLbLoading(true);
@@ -614,12 +636,34 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                 </TouchableOpacity>
               </View>
               <View style={styles.activityCard}>
-                {activity.slice(0, 15).map((item, i) => (
+                {activity.map((item, i) => (
                   <React.Fragment key={item.id}>
                     {i > 0 && <View style={styles.activityDivider} />}
-                    <ActivityRow item={item} />
+                    <ActivityRow
+                      item={item}
+                      onPress={item.relatedSessionId
+                        ? () => navigation.navigate('Session', { sessionId: item.relatedSessionId!, groupId })
+                        : undefined}
+                    />
                   </React.Fragment>
                 ))}
+                {activityHasMore && (
+                  <>
+                    <View style={styles.activityDivider} />
+                    <TouchableOpacity
+                      style={styles.activityLoadMoreRow}
+                      onPress={loadMoreActivity}
+                      disabled={activityLoadingMore}
+                      activeOpacity={0.7}
+                    >
+                      {activityLoadingMore ? (
+                        <ActivityIndicator size="small" color={colors.gold} />
+                      ) : (
+                        <Text style={styles.activityLoadMoreText}>Load more</Text>
+                      )}
+                    </TouchableOpacity>
+                  </>
+                )}
               </View>
             </View>
           )}
@@ -746,7 +790,7 @@ function activityIconName(type: string): { name: IoniconsName; color: string } {
   }
 }
 
-function ActivityRow({ item }: { item: ActivityLogDto }) {
+function ActivityRow({ item, onPress }: { item: ActivityLogDto; onPress?: () => void }) {
   const ago = (() => {
     const diff = Date.now() - new Date(item.createdAt).getTime();
     const mins = Math.floor(diff / 60000);
@@ -759,14 +803,25 @@ function ActivityRow({ item }: { item: ActivityLogDto }) {
 
   const { name: iconName, color: iconColor } = activityIconName(item.type);
 
-  return (
-    <View style={styles.activityRow}>
+  const inner = (
+    <>
       <View style={[styles.activityIconWrap, { backgroundColor: iconColor + '18' }]}>
         <Ionicons name={iconName} size={15} color={iconColor} />
       </View>
       <Text style={styles.activityDesc} numberOfLines={2}>{item.description}</Text>
       <Text style={styles.activityTime}>{ago}</Text>
-    </View>
+    </>
+  );
+
+  if (!onPress) {
+    return <View style={styles.activityRow}>{inner}</View>;
+  }
+
+  return (
+    <TouchableOpacity style={styles.activityRow} onPress={onPress} activeOpacity={0.7}>
+      {inner}
+      <Ionicons name="chevron-forward" size={13} color={colors.textDim} />
+    </TouchableOpacity>
   );
 }
 
@@ -1192,6 +1247,12 @@ const styles = StyleSheet.create({
   },
   activityDesc: { flex: 1, fontSize: 13, color: colors.text, lineHeight: 18 },
   activityTime: { fontSize: 11, color: colors.textMuted, flexShrink: 0 },
+  activityLoadMoreRow: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  activityLoadMoreText: { fontSize: 12, fontWeight: '600', color: colors.gold },
   rivalryRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
