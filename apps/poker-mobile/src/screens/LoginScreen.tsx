@@ -89,6 +89,12 @@ export default function LoginScreen({ navigation }: Props) {
     >
       <View style={styles.bgDecor1} />
       <View style={styles.bgDecor2} />
+      {/* Dismiss — only when pushed from the guest app (never in the old gate flow) */}
+      {navigation.canGoBack() && (
+        <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()} hitSlop={12} activeOpacity={0.7}>
+          <Ionicons name="close" size={22} color={colors.textMuted} />
+        </TouchableOpacity>
+      )}
       <ScrollView
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
@@ -171,6 +177,20 @@ export default function LoginScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
   container: { flexGrow: 1, paddingHorizontal: 24, paddingVertical: 48, justifyContent: 'center' },
+  closeBtn: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 56 : 36,
+    right: 20,
+    zIndex: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   bgDecor1: {
     position: 'absolute',

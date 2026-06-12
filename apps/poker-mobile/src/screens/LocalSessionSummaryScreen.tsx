@@ -5,7 +5,6 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -20,6 +19,7 @@ import { useLocalGames } from '../context/LocalGamesContext';
 import { settleGame } from '../local/settlements';
 import { formatCents, formatCentsSigned } from '../utils/money';
 import { formatDuration } from '../utils/formatters';
+import { confirmDialog } from '../utils/confirm';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocalSessionSummary'>;
 
@@ -62,17 +62,16 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
   const playerName = (id: string) => game.players.find(p => p.id === id)?.name ?? 'Unknown';
 
   function handleDelete() {
-    Alert.alert('Delete this game?', 'This removes it from your device. This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          await deleteGame(game!.id);
-          navigation.popToTop();
-        },
+    confirmDialog(
+      'Delete this game?',
+      'This removes it from your device. This cannot be undone.',
+      'Delete',
+      async () => {
+        await deleteGame(game!.id);
+        navigation.popToTop();
       },
-    ]);
+      { destructive: true },
+    );
   }
 
   return (

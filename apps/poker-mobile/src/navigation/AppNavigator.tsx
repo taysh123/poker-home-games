@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, Platform, Animated } from 'react-native';
 import { NavigationContainer, NavigationContainerRef, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp, createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -9,6 +9,8 @@ import { colors } from '../theme/colors';
 import { USE_NATIVE_DRIVER } from '../theme/motion';
 import { useAuth } from '../context/AuthContext';
 import { useActiveSession } from '../context/ActiveSessionContext';
+import { useLocalGames } from '../context/LocalGamesContext';
+import { consumePendingInvite } from '../utils/pendingInvite';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import HomeScreen from '../screens/HomeScreen';
@@ -32,6 +34,10 @@ import NotificationsScreen from '../screens/NotificationsScreen';
 import LocalNewGameScreen from '../screens/LocalNewGameScreen';
 import LocalSessionScreen from '../screens/LocalSessionScreen';
 import LocalSessionSummaryScreen from '../screens/LocalSessionSummaryScreen';
+import GuestHomeScreen from '../screens/GuestHomeScreen';
+import LocalSessionsScreen from '../screens/LocalSessionsScreen';
+import GroupsAuthGateScreen from '../screens/GroupsAuthGateScreen';
+import GuestStatsScreen from '../screens/GuestStatsScreen';
 import Toast from '../components/Toast';
 import * as storage from '../utils/storage';
 
@@ -89,14 +95,33 @@ const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 49 : 56;
 
 function LiveGameBar() {
   const { activeSession } = useActiveSession();
+  const { activeGame } = useLocalGames();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
+
+  // Server session wins when both exist; local games keep the bar alive for guests.
+  const entry = activeSession
+    ? {
+        title: activeSession.sessionName,
+        sub: 'Live game · tap to return',
+        onPress: () => navigation.navigate('Session', {
+          sessionId: activeSession.sessionId,
+          groupId: activeSession.groupId ?? '',
+        }),
+      }
+    : activeGame
+      ? {
+          title: activeGame.name,
+          sub: 'Live local game · tap to return',
+          onPress: () => navigation.navigate('LocalSession', { gameId: activeGame.id }),
+        }
+      : null;
 
   const translateY = React.useRef(new Animated.Value(80)).current;
   const prevHasSession = React.useRef(false);
 
   React.useEffect(() => {
-    const hasSession = activeSession != null;
+    const hasSession = entry != null;
     if (hasSession !== prevHasSession.current) {
       prevHasSession.current = hasSession;
       Animated.spring(translateY, {
@@ -106,7 +131,7 @@ function LiveGameBar() {
         useNativeDriver: USE_NATIVE_DRIVER,
       }).start();
     }
-  }, [activeSession]);
+  }, [entry != null]);
 
   // Pulse animation for the dot
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
@@ -121,7 +146,7 @@ function LiveGameBar() {
     return () => loop.stop();
   }, []);
 
-  if (!activeSession) return null;
+  if (!entry) return null;
 
   return (
     <Animated.View
@@ -130,20 +155,13 @@ function LiveGameBar() {
         { bottom: TAB_BAR_HEIGHT + insets.bottom + 8, transform: [{ translateY }] },
       ]}
     >
-      <TouchableOpacity
-        style={liveBarStyles.bar}
-        onPress={() => navigation.navigate('Session', {
-          sessionId: activeSession.sessionId,
-          groupId: activeSession.groupId ?? '',
-        })}
-        activeOpacity={0.9}
-      >
+      <TouchableOpacity style={liveBarStyles.bar} onPress={entry.onPress} activeOpacity={0.9}>
         <View style={liveBarStyles.dotWrapper}>
           <Animated.View style={[liveBarStyles.dot, { opacity: pulseAnim }]} />
         </View>
         <View style={liveBarStyles.textGroup}>
-          <Text style={liveBarStyles.title} numberOfLines={1}>{activeSession.sessionName}</Text>
-          <Text style={liveBarStyles.sub}>Live game · tap to return</Text>
+          <Text style={liveBarStyles.title} numberOfLines={1}>{entry.title}</Text>
+          <Text style={liveBarStyles.sub}>{entry.sub}</Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.gold} />
       </TouchableOpacity>
@@ -151,41 +169,42 @@ function LiveGameBar() {
   );
 }
 
+/** Shared tab styling for both the authed and guest tab navigators. */
+function tabScreenOptions({ route }: { route: { name: string } }) {
+  const icons: Record<string, { active: IoniconsName; inactive: IoniconsName }> = {
+    Home:        { active: 'home',      inactive: 'home-outline' },
+    AllSessions: { active: 'card',      inactive: 'card-outline' },
+    GroupsList:  { active: 'people',    inactive: 'people-outline' },
+    Stats:       { active: 'bar-chart', inactive: 'bar-chart-outline' },
+  };
+  return {
+    tabBarStyle: {
+      backgroundColor: colors.surface,
+      borderTopColor: colors.border,
+      borderTopWidth: 1,
+      height: TAB_BAR_HEIGHT + (Platform.OS === 'ios' ? 0 : 8),
+      paddingBottom: Platform.OS === 'ios' ? 0 : 4,
+      paddingTop: 4,
+    },
+    tabBarActiveTintColor: colors.gold,
+    tabBarInactiveTintColor: colors.textDim,
+    tabBarLabelStyle: {
+      fontSize: 10,
+      fontWeight: '600' as const,
+      letterSpacing: 0.3,
+      marginTop: 2,
+    },
+    tabBarIcon: ({ focused, color, size }: { focused: boolean; color: string; size: number }) => {
+      const pair = icons[route.name] ?? { active: 'ellipse' as IoniconsName, inactive: 'ellipse-outline' as IoniconsName };
+      return <Ionicons name={focused ? pair.active : pair.inactive} size={size - 2} color={color} />;
+    },
+  };
+}
+
 function TabNavigator() {
   return (
     <View style={{ flex: 1 }}>
-      <Tab.Navigator
-        screenOptions={({ route }) => {
-          const icons: Record<string, { active: IoniconsName; inactive: IoniconsName }> = {
-            Home:        { active: 'home',      inactive: 'home-outline' },
-            AllSessions: { active: 'card',      inactive: 'card-outline' },
-            GroupsList:  { active: 'people',    inactive: 'people-outline' },
-            Stats:       { active: 'bar-chart', inactive: 'bar-chart-outline' },
-          };
-          return {
-            tabBarStyle: {
-              backgroundColor: colors.surface,
-              borderTopColor: colors.border,
-              borderTopWidth: 1,
-              height: TAB_BAR_HEIGHT + (Platform.OS === 'ios' ? 0 : 8),
-              paddingBottom: Platform.OS === 'ios' ? 0 : 4,
-              paddingTop: 4,
-            },
-            tabBarActiveTintColor: colors.gold,
-            tabBarInactiveTintColor: colors.textDim,
-            tabBarLabelStyle: {
-              fontSize: 10,
-              fontWeight: '600' as const,
-              letterSpacing: 0.3,
-              marginTop: 2,
-            },
-            tabBarIcon: ({ focused, color, size }: { focused: boolean; color: string; size: number }) => {
-              const pair = icons[route.name] ?? { active: 'ellipse', inactive: 'ellipse-outline' };
-              return <Ionicons name={focused ? pair.active : pair.inactive} size={size - 2} color={color} />;
-            },
-          };
-        }}
-      >
+      <Tab.Navigator screenOptions={tabScreenOptions}>
         <Tab.Screen
           name="Home"
           component={HomeScreen}
@@ -212,6 +231,37 @@ function TabNavigator() {
   );
 }
 
+/** Tabs for guests (no account): local games + auth-gated Groups, local Stats. */
+function GuestTabNavigator() {
+  return (
+    <View style={{ flex: 1 }}>
+      <Tab.Navigator screenOptions={tabScreenOptions}>
+        <Tab.Screen
+          name="Home"
+          component={GuestHomeScreen}
+          options={{ title: 'Home', headerShown: false }}
+        />
+        <Tab.Screen
+          name="AllSessions"
+          component={LocalSessionsScreen}
+          options={{ title: 'Sessions', headerShown: false }}
+        />
+        <Tab.Screen
+          name="GroupsList"
+          component={GroupsAuthGateScreen}
+          options={{ title: 'Groups', headerShown: false }}
+        />
+        <Tab.Screen
+          name="Stats"
+          component={GuestStatsScreen}
+          options={{ title: 'Stats', headerShown: false }}
+        />
+      </Tab.Navigator>
+      <LiveGameBar />
+    </View>
+  );
+}
+
 type AppNavigatorProps = {
   navigationRef?: React.RefObject<NavigationContainerRef<RootStackParamList> | null>;
 };
@@ -226,6 +276,32 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
     });
   }, []);
 
+  // A guest who opened an invite link gets sent to Login; once they sign in,
+  // continue the join they started. Fires only on the null → user transition.
+  const prevUserRef = useRef<typeof user>(user);
+  useEffect(() => {
+    const wasGuest = prevUserRef.current === null;
+    prevUserRef.current = user;
+    if (!wasGuest || user === null) return;
+    consumePendingInvite().then(invite => {
+      if (!invite) return;
+      const navigate = () => {
+        const nav = navigationRef?.current;
+        if (nav?.isReady()) {
+          if (invite.type === 'session') {
+            nav.navigate('JoinSession', { inviteToken: invite.token });
+          } else {
+            nav.navigate('JoinGroup', { inviteToken: invite.token });
+          }
+        } else {
+          setTimeout(navigate, 150);
+        }
+      };
+      // Give the authed tree a beat to mount after the swap.
+      setTimeout(navigate, 300);
+    });
+  }, [user, navigationRef]);
+
   if (isLoading || hasSeenOnboarding === undefined) {
     return (
       <View style={styles.loading}>
@@ -239,12 +315,20 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
       <Toast />
       <Stack.Navigator screenOptions={stackScreenOptions}>
         {user === null ? (
+          // Guest tree — the app is fully usable without an account: local games
+          // run on-device; Groups/Stats upsell sign-in; Login is a modal, not a wall.
           <>
             {!hasSeenOnboarding && (
               <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false, gestureEnabled: false }} />
             )}
-            <Stack.Screen name="Login"    component={LoginScreen}    options={{ headerShown: false }} />
-            <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="MainTabs" component={GuestTabNavigator} options={{ headerShown: false }} />
+            <Stack.Screen name="LocalNewGame"        component={LocalNewGameScreen}        options={{ headerShown: false }} />
+            <Stack.Screen name="LocalSession"        component={LocalSessionScreen}        options={{ headerShown: false, gestureEnabled: false }} />
+            <Stack.Screen name="LocalSessionSummary" component={LocalSessionSummaryScreen} options={{ headerShown: false, gestureEnabled: false }} />
+            <Stack.Screen name="Login"    component={LoginScreen}    options={{ headerShown: false, presentation: 'modal' }} />
+            <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false, presentation: 'modal' }} />
+            <Stack.Screen name="JoinSession" component={JoinSessionScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="JoinGroup"   component={JoinGroupScreen}   options={{ headerShown: false }} />
           </>
         ) : (
           <>

@@ -8,7 +8,6 @@ import {
   Platform,
   Modal,
   KeyboardAvoidingView,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -27,6 +26,7 @@ import { formatCents, formatCentsSigned, parseAmountToCents } from '../utils/mon
 import { timeAgo } from '../utils/formatters';
 import { lightTap, successNotification } from '../utils/haptics';
 import { showToast } from '../utils/toast';
+import { confirmDialog, infoDialog } from '../utils/confirm';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocalSession'>;
 
@@ -158,7 +158,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
       if (!value.trim()) continue;
       const cents = parseAmountToCents(value);
       if (cents === null) {
-        Alert.alert('Invalid stack', 'Final stacks must be valid amounts (or empty for busted players).');
+        infoDialog('Invalid stack', 'Final stacks must be valid amounts (or empty for busted players).');
         return;
       }
       stacks.push({ playerId, amountCents: cents });
@@ -171,13 +171,12 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
     };
 
     if (stacksMismatch) {
-      Alert.alert(
+      confirmDialog(
         'Chips don’t add up',
         `Final stacks total ${formatCents(stacksTotalCents)} but ${formatCents(remainingCents)} is still on the table. End anyway?`,
-        [
-          { text: 'Keep Playing', style: 'cancel' },
-          { text: 'End Game', style: 'destructive', onPress: finish },
-        ],
+        'End Game',
+        finish,
+        { destructive: true, cancelLabel: 'Keep Playing' },
       );
     } else {
       await finish();

@@ -43,7 +43,8 @@ export default function OnboardingScreen({ navigation }: Props) {
 
   async function markSeenAndNavigate() {
     await storage.setItemAsync('hasSeenOnboarding', 'true');
-    navigation.replace('Login');
+    // Land in the guest app — no account required. Sign-in is offered contextually.
+    navigation.replace('MainTabs');
   }
 
   function goNext() {

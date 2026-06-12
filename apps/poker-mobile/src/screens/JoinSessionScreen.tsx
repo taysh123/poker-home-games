@@ -7,12 +7,13 @@ import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { joinSessionByToken } from '../api/sessionsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { savePendingInvite } from '../utils/pendingInvite';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'JoinSession'>;
 
 export default function JoinSessionScreen({ route, navigation }: Props) {
   const { inviteToken } = route.params;
-  const [status, setStatus] = useState<'joining' | 'success' | 'error'>('joining');
+  const [status, setStatus] = useState<'joining' | 'success' | 'error' | 'signin'>('joining');
   const [errorMsg, setErrorMsg] = useState('');
   const [sessionId, setSessionId] = useState('');
   const [groupId, setGroupId] = useState('');
@@ -27,8 +28,9 @@ export default function JoinSessionScreen({ route, navigation }: Props) {
     try {
       const token = await SecureStore.getItemAsync('accessToken');
       if (!token) {
-        setErrorMsg('You need to be logged in to join a session.');
-        setStatus('error');
+        // Guest opened an invite link — stash it and offer sign-in; the join
+        // continues automatically after login (see AppNavigator).
+        setStatus('signin');
         return;
       }
       const result = await joinSessionByToken(token, inviteToken);
@@ -47,6 +49,28 @@ export default function JoinSessionScreen({ route, navigation }: Props) {
       <View style={styles.center}>
         <ActivityIndicator color={colors.gold} size="large" />
         <Text style={styles.joiningText}>Joining session…</Text>
+      </View>
+    );
+  }
+
+  if (status === 'signin') {
+    return (
+      <View style={styles.center}>
+        <View style={styles.successIconWrap}><Ionicons name="mail-open-outline" size={48} color={colors.gold} /></View>
+        <Text style={styles.errorTitle}>You're invited!</Text>
+        <Text style={styles.errorMsg}>Sign in to join this game — we'll take you straight back here.</Text>
+        <TouchableOpacity
+          style={styles.btn}
+          onPress={async () => {
+            await savePendingInvite('session', inviteToken);
+            navigation.navigate('Login');
+          }}
+        >
+          <Text style={styles.btnText}>Sign In to Join</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={8}>
+          <Text style={styles.secondaryLink}>Not now</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -103,4 +127,5 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   btnText: { fontSize: 15, fontWeight: '700', color: colors.background },
+  secondaryLink: { fontSize: 14, fontWeight: '600', color: colors.textMuted, padding: 8 },
 });

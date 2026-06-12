@@ -7,7 +7,6 @@ import {
   StyleSheet,
   Platform,
   KeyboardAvoidingView,
-  Alert,
   Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +24,7 @@ import { getRecentGuests, recordGuestName } from '../utils/guestHistory';
 import { parseAmountToCents, formatCents } from '../utils/money';
 import { useLocalGames } from '../context/LocalGamesContext';
 import { showToast } from '../utils/toast';
+import { infoDialog } from '../utils/confirm';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocalNewGame'>;
 
@@ -116,7 +116,7 @@ export default function LocalNewGameScreen({ navigation }: Props) {
 
   async function handleStartGame() {
     if (activeGame) {
-      Alert.alert('Game in progress', 'Finish your current game before starting a new one.');
+      infoDialog('Game in progress', 'Finish your current game before starting a new one.');
       return;
     }
     setStarting(true);
@@ -138,7 +138,7 @@ export default function LocalNewGameScreen({ navigation }: Props) {
       showToast('Game started!', 'success');
       navigation.replace('LocalSession', { gameId: game.id });
     } catch {
-      Alert.alert('Failed to start game', 'Please try again.');
+      infoDialog('Failed to start game', 'Please try again.');
       setStarting(false);
     }
   }
