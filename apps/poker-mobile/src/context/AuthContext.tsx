@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import * as SecureStore from '../utils/storage';
 import { loginApi, registerApi, logoutApi, googleLoginApi, AuthUser, AuthResponse } from '../api/authApi';
 import { registerUnauthenticatedCallback } from '../api/apiClient';
+import { registerForPushAsync, unregisterPushAsync } from '../hooks/usePushNotifications';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -67,6 +68,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Persistence failed — user is logged in for this session but will need
       // to sign in again after a page refresh.
     }
+    // Best-effort push registration (native only; no-op on web)
+    registerForPushAsync(accessToken);
   }
 
   // Wipe all stored auth data and clear state
@@ -113,7 +116,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         SecureStore.getItemAsync(KEY_REFRESH),
       ]);
       if (accessToken && refreshToken) {
-        // Tell the server to revoke the refresh token
+        // Deactivate this device's push token, then revoke the refresh token
+        await unregisterPushAsync(accessToken);
         await logoutApi(accessToken, refreshToken);
       }
     } catch {

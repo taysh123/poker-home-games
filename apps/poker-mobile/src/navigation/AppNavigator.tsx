@@ -18,6 +18,7 @@ import { useAuth } from '../context/AuthContext';
 import { useActiveSession } from '../context/ActiveSessionContext';
 import { useLocalGames } from '../context/LocalGamesContext';
 import { consumePendingInvite } from '../utils/pendingInvite';
+import { usePushNotificationListeners } from '../hooks/usePushNotifications';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import HomeScreen from '../screens/HomeScreen';
@@ -168,6 +169,12 @@ function LiveGameBar() {
       </TouchableOpacity>
     </Reanimated.View>
   );
+}
+
+/** Mounts push-notification listeners; must live inside NavigationContainer. */
+function PushListeners() {
+  usePushNotificationListeners();
+  return null;
 }
 
 /** Tab icon with a spring pop when its tab gains focus. */
@@ -341,6 +348,7 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
   return (
     <NavigationContainer ref={navigationRef}>
       <Toast />
+      <PushListeners />
       <Stack.Navigator screenOptions={stackScreenOptions}>
         {user === null ? (
           // Guest tree — the app is fully usable without an account: local games
