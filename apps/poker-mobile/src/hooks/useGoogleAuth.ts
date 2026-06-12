@@ -1,10 +1,12 @@
 import { useEffect, useRef } from 'react';
 import * as Google from 'expo-auth-session/providers/google';
 
-// OAuth client IDs
-// - EXPO_CLIENT_ID: for Expo Go (both platforms, proxy auth through auth.expo.io)
-// - IOS_CLIENT_ID / ANDROID_CLIENT_ID: for production standalone builds
-//   Override with env vars for production; falls back to Expo proxy for Expo Go
+// OAuth client IDs — these must ALL be listed in the backend's
+// GoogleSettings:ClientIds audience allow-list or token validation fails.
+// - EXPO_CLIENT_ID: web-type client used as the Expo Go / dev fallback
+// - IOS_CLIENT_ID / ANDROID_CLIENT_ID / WEB_CLIENT_ID: per-platform clients,
+//   overridable via EXPO_PUBLIC_* env vars (see docs/google-oauth-fix.md)
+// Note: expo-auth-session v5+ has no auth.expo.io proxy — flows are direct.
 const EXPO_CLIENT_ID    = '12435044751-jdh0dldfhkn2h8hqs3ssegbjflhvcmfi.apps.googleusercontent.com';
 const IOS_CLIENT_ID     = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
                           ?? '12435044751-jap7j5prc6vm0eh0mj517nv0phrlu8mr.apps.googleusercontent.com';
