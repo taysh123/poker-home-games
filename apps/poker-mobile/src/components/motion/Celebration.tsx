@@ -91,7 +91,8 @@ export default function Celebration({ haptic = true }: Props) {
   if (done) return null;
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+    // overflow hidden: drifting particles must never widen the page (web)
+    <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]} pointerEvents="none">
       {particles.map((spec, i) => (
         <Particle key={i} spec={spec} />
       ))}

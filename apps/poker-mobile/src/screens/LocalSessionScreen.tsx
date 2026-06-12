@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Platform,
   Modal,
+  Dimensions,
   KeyboardAvoidingView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -487,7 +488,10 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
               Last step — count each player's remaining chips. We'll settle the rest.
             </Text>
 
-            <ScrollView style={styles.stacksScroll} keyboardShouldPersistTaps="handled">
+            <ScrollView
+              style={[styles.stacksScroll, { maxHeight: Math.min(280, Dimensions.get('window').height * 0.25) }]}
+              keyboardShouldPersistTaps="handled"
+            >
               {game.players.map(p => {
                 const isEmpty = !(finalStacks[p.id] ?? '').trim();
                 return (
@@ -713,7 +717,7 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 14,
   },
-  endModalCard: { maxHeight: '85%' },
+  endModalCard: { maxHeight: '94%' },
   modalTitle: { ...typography.h3, color: colors.text },
   modalSubtitle: { fontSize: 13, color: colors.textMuted, lineHeight: 18 },
   modalActions: { flexDirection: 'row', gap: 10 },
