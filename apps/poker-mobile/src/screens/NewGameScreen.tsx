@@ -26,6 +26,8 @@ import AppTextInput from '../components/AppTextInput';
 import PrimaryButton from '../components/PrimaryButton';
 import StepIndicator from '../components/StepIndicator';
 import GuestNameInput from '../components/GuestNameInput';
+import Screen from '../components/Screen';
+import ScreenHeader from '../components/ScreenHeader';
 import { getRecentGuests, recordGuestName } from '../utils/guestHistory';
 import { showToast } from '../utils/toast';
 import { useActiveSession } from '../context/ActiveSessionContext';
@@ -252,20 +254,9 @@ export default function NewGameScreen({ route, navigation }: Props) {
   ];
 
   return (
+    <Screen>
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => step > 1 ? goToStep(step - 1) : navigation.goBack()}
-          hitSlop={12}
-          activeOpacity={0.75}
-        >
-          <Ionicons name="chevron-back" size={20} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>New Game</Text>
-        <View style={{ width: 36 }} />
-      </View>
+      <ScreenHeader title="New Game" onBack={() => step > 1 ? goToStep(step - 1) : navigation.goBack()} />
 
       {/* Step indicator */}
       <StepIndicator steps={STEP_LABELS} current={step} />
@@ -476,33 +467,12 @@ export default function NewGameScreen({ route, navigation }: Props) {
         <View style={{ height: 80 }} />
       </ScrollView>
     </KeyboardAvoidingView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.background },
-
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 14,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    gap: 12,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: colors.surfaceHigh,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: { flex: 1, ...typography.h3, color: colors.text, textAlign: 'center' },
+  flex: { flex: 1 },
 
   scroll: { flex: 1 },
   content: { padding: 20 },

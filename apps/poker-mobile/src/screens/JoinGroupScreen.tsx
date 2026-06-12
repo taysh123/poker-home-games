@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Screen from '../components/Screen';
+import PrimaryButton from '../components/PrimaryButton';
+import SkeletonCard from '../components/SkeletonCard';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
@@ -55,72 +58,72 @@ export default function JoinGroupScreen({ route, navigation }: Props) {
 
   if (status === 'joining') {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator color={colors.gold} size="large" />
+      <Screen style={styles.center}>
+        <SkeletonCard height={120} borderRadius={16} style={styles.joinSkeleton} />
         <Text style={styles.joiningText}>Joining group…</Text>
-      </View>
+      </Screen>
     );
   }
 
   if (status === 'signin') {
     return (
-      <View style={styles.center}>
+      <Screen style={styles.center}>
         <View style={styles.successIconWrap}><Ionicons name="mail-open-outline" size={48} color={colors.gold} /></View>
         <Text style={styles.errorTitle}>You're invited!</Text>
         <Text style={styles.errorMsg}>Sign in to join this group — we'll take you straight back here.</Text>
-        <TouchableOpacity
+        <PrimaryButton
+          label="Sign In to Join"
+          variant="gradient"
+          fullWidth={false}
           style={styles.btn}
           onPress={async () => {
             await savePendingInvite('group', inviteToken);
             navigation.navigate('Login');
           }}
-        >
-          <Text style={styles.btnText}>Sign In to Join</Text>
-        </TouchableOpacity>
+        />
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={8}>
           <Text style={styles.secondaryLink}>Not now</Text>
         </TouchableOpacity>
-      </View>
+      </Screen>
     );
   }
 
   if (status === 'error') {
     return (
-      <View style={styles.center}>
+      <Screen style={styles.center}>
         <View style={styles.errorIconWrap}><Ionicons name="close-circle-outline" size={44} color={colors.error} /></View>
         <Text style={styles.errorTitle}>Couldn't join</Text>
         <Text style={styles.errorMsg}>{errorMsg}</Text>
-        <TouchableOpacity style={styles.btn} onPress={() => navigation.goBack()}>
-          <Text style={styles.btnText}>Go Back</Text>
-        </TouchableOpacity>
-      </View>
+        <PrimaryButton label="Go Back" variant="outline" fullWidth={false} style={styles.btn} onPress={() => navigation.goBack()} />
+      </Screen>
     );
   }
 
   return (
-    <View style={styles.center}>
+    <Screen style={styles.center}>
       <View style={styles.successIconWrap}><Ionicons name="checkmark-circle-outline" size={56} color={colors.success} /></View>
       <Text style={styles.successTitle}>You're in!</Text>
       <Text style={styles.successSub}>You've joined {groupName}.</Text>
-      <TouchableOpacity
+      <PrimaryButton
+        label="Open Group"
+        variant="gradient"
+        fullWidth={false}
         style={styles.btn}
         onPress={() => navigation.replace('GroupDetail', { groupId, groupName })}
-      >
-        <Text style={styles.btnText}>Open Group</Text>
-      </TouchableOpacity>
-    </View>
+      />
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   center: {
     flex: 1,
-    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
     gap: 16,
   },
+  joinSkeleton: { width: 220 },
   joiningText: { ...typography.body, color: colors.textMuted, marginTop: 8 },
   errorIconWrap: { marginBottom: 4 },
   errorTitle: { ...typography.h2, color: colors.text },
@@ -128,13 +131,6 @@ const styles = StyleSheet.create({
   successIconWrap: { marginBottom: 4 },
   successTitle: { ...typography.h1, color: colors.text },
   successSub: { fontSize: 15, color: colors.textMuted },
-  btn: {
-    marginTop: 8,
-    backgroundColor: colors.gold,
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 12,
-  },
-  btnText: { fontSize: 15, fontWeight: '700', color: colors.background },
+  btn: { marginTop: 8, minWidth: 200 },
   secondaryLink: { fontSize: 14, fontWeight: '600', color: colors.textMuted, padding: 8 },
 });

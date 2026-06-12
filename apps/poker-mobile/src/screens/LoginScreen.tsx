@@ -20,6 +20,7 @@ import { useAuth } from '../context/AuthContext';
 import { useGoogleAuth } from '../hooks/useGoogleAuth';
 import GoogleAuthButton from '../components/GoogleAuthButton';
 import PrimaryButton from '../components/PrimaryButton';
+import Screen from '../components/Screen';
 import AppTextInput from '../components/AppTextInput';
 import { parseAuthError } from '../utils/parseAuthError';
 
@@ -83,6 +84,7 @@ export default function LoginScreen({ navigation }: Props) {
   }
 
   return (
+    <Screen>
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -171,11 +173,12 @@ export default function LoginScreen({ navigation }: Props) {
         </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.background },
+  flex: { flex: 1 },
   container: { flexGrow: 1, paddingHorizontal: 24, paddingVertical: 48, justifyContent: 'center' },
   closeBtn: {
     position: 'absolute',

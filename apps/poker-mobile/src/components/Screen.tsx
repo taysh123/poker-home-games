@@ -18,16 +18,18 @@ type Props = {
  * (matches existing screen patterns).
  */
 export default function Screen({ children, style, animated = false }: Props) {
+  // `style` is applied to the CONTENT container (inside the gradient), so
+  // padding/centering styles behave as screens expect.
   const content = animated && Platform.OS !== 'web' ? (
-    <Animated.View style={styles.flex} entering={FadeInDown.duration(300)}>
+    <Animated.View style={[styles.flex, style]} entering={FadeInDown.duration(300)}>
       {children}
     </Animated.View>
   ) : (
-    <View style={styles.flex}>{children}</View>
+    <View style={[styles.flex, style]}>{children}</View>
   );
 
   return (
-    <View style={[styles.root, style]}>
+    <View style={styles.root}>
       <LinearGradient
         colors={[...gradients.screenVignette]}
         style={StyleSheet.absoluteFill}

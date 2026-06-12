@@ -15,6 +15,7 @@ import Animated, { useAnimatedStyle, withSpring, withTiming } from 'react-native
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
+import Screen from '../components/Screen';
 import * as storage from '../utils/storage';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
@@ -69,7 +70,7 @@ export default function OnboardingScreen({ navigation }: Props) {
   }
 
   return (
-    <View style={styles.container}>
+    <Screen style={styles.container}>
       {/* Skip button */}
       {currentIndex < SLIDES.length - 1 && (
         <TouchableOpacity style={styles.skipBtn} onPress={markSeenAndNavigate} activeOpacity={0.7}>
@@ -118,14 +119,13 @@ export default function OnboardingScreen({ navigation }: Props) {
           )}
         </TouchableOpacity>
       </View>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: Platform.OS === 'ios' ? 48 : 32,
   },
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   slideTitle: {
-    ...typography.h1,
+    ...typography.displaySerif,
     color: colors.text,
     textAlign: 'center',
   },
