@@ -101,6 +101,16 @@ TestFlight (test it!) → add the build to the version page → Submit for Revie
 
 ## Step 8 — Final pre-submission checklist
 
+- [ ] **Privacy URL actually serves the policy**: open
+      `https://t-poker.vercel.app/privacy.html` in an incognito tab — you must see
+      the styled policy, NOT the app. (Audit 2026-06 found the deployed build was
+      serving the SPA shell — fix: Vercel → Deployments → Redeploy from latest
+      main; if it persists, check the project's build output settings so static
+      `public/` files win over SPA rewrites.) Data-safety deletion URL:
+      `https://t-poker.vercel.app/privacy.html#delete`.
+- [ ] **APK networking**: install the newest preview APK and SIGN IN on a phone —
+      builds before `aaf473f` shipped a dead LAN API fallback (fixed via eas.json
+      env); any build from `99e9d17e` onward has the production URL baked in.
 - [ ] `npx tsc --noEmit` · `npx jest` · `npx expo-doctor` all clean
 - [ ] Browser regression (drive harness) green
 - [ ] Manual pass on a real device from the latest preview build: guest cash game

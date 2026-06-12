@@ -35,11 +35,16 @@ If you create an account, we store:
 Short-lived access tokens with rotating refresh tokens, stored in device secure
 storage (Keychain/Keystore). Refresh tokens are stored hashed server-side.
 
-## Data deletion
+## Delete your account & data
 
-Delete your account from **Profile → Delete Account** in the app — this permanently
-removes your account and personal data from our servers. Guest data is removed by
-deleting games in-app or uninstalling.
+- **In the app:** Profile → Delete Account — permanently removes your account and
+  all associated personal data from our servers, immediately.
+- **Without the app** (e.g. after uninstalling): email tayshofer05@gmail.com from
+  your account's address with subject "Account deletion request"; we verify and
+  delete within 30 days with confirmation.
+- Guest data never reaches our servers — delete games in-app or uninstall.
+
+(Deletion-request URL for store forms: `https://t-poker.vercel.app/privacy.html#delete`)
 
 ## Data location
 

@@ -218,7 +218,7 @@ the web origin registered in Google Cloud Console — full setup/troubleshooting
 | Target | How |
 |--------|-----|
 | **Backend → Railway** | Root `Dockerfile`; EF migrations run on startup; health check at `/health` via `railway.toml`. Set the backend env vars above. |
-| **Web → Vercel** | Repo-connected; `vercel.json` at root. Set `EXPO_PUBLIC_API_URL` + Google web client ID. Privacy policy ships at `/privacy.html`. |
+| **Web → Vercel** | Repo-connected; build settings live in the Vercel dashboard (no vercel.json in repo). Set `EXPO_PUBLIC_API_URL` + Google web client ID env vars. Privacy policy ships at `/privacy.html` — **verify it serves the policy (not the app shell) after each deploy config change**. |
 | **iOS / Android → EAS** | `eas build --profile production --platform all`, then `eas submit`. Full checklist incl. credentials you must supply: [docs/store-release.md](docs/store-release.md). |
 
 Security posture: hashed refresh tokens, zero JWT clock skew, per-IP rate limits
