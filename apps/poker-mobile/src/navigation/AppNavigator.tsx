@@ -69,7 +69,7 @@ export type RootStackParamList = {
   PlayerProfile: { userId: string; username: string };
   Notifications: undefined;
   // Local (on-device) games — available to guests and logged-in users
-  LocalNewGame: undefined;
+  LocalNewGame: { mode?: 'cash' | 'tournament' } | undefined;
   LocalSession: { gameId: string };
   LocalSessionSummary: { gameId: string };
   // Kept for TypeScript compat on existing screens that navigate to these by name

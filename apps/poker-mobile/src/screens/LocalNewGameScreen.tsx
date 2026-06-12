@@ -37,7 +37,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'LocalNewGame'>;
  * Local-only New Game wizard — no account, no network. Mirrors the NewGame
  * wizard UX but every player is a named local player stored on-device.
  */
-export default function LocalNewGameScreen({ navigation }: Props) {
+export default function LocalNewGameScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { startGame, activeGame } = useLocalGames();
 
@@ -56,8 +56,8 @@ export default function LocalNewGameScreen({ navigation }: Props) {
   const [defaultBuyIn, setDefaultBuyIn] = useState('');
   const [buyInError, setBuyInError] = useState('');
 
-  // Tournament mode
-  const [mode, setMode] = useState<'cash' | 'tournament'>('cash');
+  // Tournament mode (preselectable via the home-surface entry cards)
+  const [mode, setMode] = useState<'cash' | 'tournament'>(route.params?.mode ?? 'cash');
   const [entryFee, setEntryFee] = useState('');
   const [entryFeeError, setEntryFeeError] = useState('');
   const [payoutPreset, setPayoutPreset] = useState<PayoutPreset>('50-30-20');
@@ -196,25 +196,48 @@ export default function LocalNewGameScreen({ navigation }: Props) {
               autoFocus
             />
 
-            {/* Cash / Tournament mode */}
+            {/* Cash / Tournament mode — first-class choice */}
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>Game Type</Text>
-              <View style={styles.modeRow}>
-                <TouchableOpacity
-                  style={[styles.modeBtn, !isTournament && styles.modeBtnActive]}
-                  onPress={() => setMode('cash')}
-                >
-                  <Ionicons name="cash-outline" size={15} color={!isTournament ? colors.gold : colors.textMuted} />
-                  <Text style={[styles.modeBtnText, !isTournament && styles.modeBtnTextActive]}>Cash Game</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modeBtn, isTournament && styles.modeBtnActive]}
-                  onPress={() => setMode('tournament')}
-                >
-                  <Ionicons name="trophy-outline" size={15} color={isTournament ? colors.gold : colors.textMuted} />
-                  <Text style={[styles.modeBtnText, isTournament && styles.modeBtnTextActive]}>Tournament</Text>
-                </TouchableOpacity>
-              </View>
+              {([
+                {
+                  value: 'cash' as const,
+                  icon: 'cash-outline' as const,
+                  title: 'Cash Game',
+                  blurb: 'Flexible buy-ins — settle up at the end.',
+                },
+                {
+                  value: 'tournament' as const,
+                  icon: 'trophy-outline' as const,
+                  title: 'Tournament',
+                  blurb: 'Entry fee, blind clock, podium payouts.',
+                },
+              ]).map(option => {
+                const selected = mode === option.value;
+                return (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[styles.modeCard, selected && styles.modeCardActive]}
+                    onPress={() => setMode(option.value)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.modeIconWrap, selected && styles.modeIconWrapActive]}>
+                      <Ionicons name={option.icon} size={20} color={selected ? colors.gold : colors.textMuted} />
+                    </View>
+                    <View style={styles.modeCardText}>
+                      <Text style={[styles.modeCardTitle, selected && styles.modeCardTitleActive]}>
+                        {option.title}
+                      </Text>
+                      <Text style={styles.modeCardBlurb}>{option.blurb}</Text>
+                    </View>
+                    <Ionicons
+                      name={selected ? 'radio-button-on' : 'radio-button-off'}
+                      size={20}
+                      color={selected ? colors.gold : colors.textDim}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
             {isTournament ? (
@@ -437,23 +460,35 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 12 },
   halfField: { flex: 1 },
 
-  // Cash / Tournament toggle + preset chips
-  modeRow: { flexDirection: 'row', gap: 10 },
-  modeBtn: {
-    flex: 1,
+  // Cash / Tournament mode cards + preset chips
+  modeCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-    paddingVertical: 13,
-    borderRadius: 12,
+    gap: 12,
+    padding: 14,
+    minHeight: 64,
+    borderRadius: 14,
     borderWidth: 1.5,
     borderColor: colors.border,
     backgroundColor: colors.surface,
+    marginBottom: 8,
   },
-  modeBtnActive: { borderColor: colors.gold, backgroundColor: colors.goldFaint },
-  modeBtnText: { fontSize: 14, fontWeight: '700', color: colors.textMuted },
-  modeBtnTextActive: { color: colors.gold },
+  modeCardActive: { borderColor: colors.gold, backgroundColor: colors.goldFaint },
+  modeIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modeIconWrapActive: { backgroundColor: colors.goldFaint, borderColor: colors.goldMuted },
+  modeCardText: { flex: 1, gap: 2 },
+  modeCardTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
+  modeCardTitleActive: { color: colors.goldLight },
+  modeCardBlurb: { fontSize: 12, color: colors.textMuted, lineHeight: 16 },
   presetChip: {
     paddingHorizontal: 14,
     paddingVertical: 10,

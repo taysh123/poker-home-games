@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -33,8 +34,16 @@ export default function LocalSessionsScreen() {
           ionicon="card-outline"
           title="No games yet"
           subtitle="Games you play on this device show up here. Start your first one — no account needed."
-          action={{ label: 'Start a Game', onPress: () => navigation.navigate('LocalNewGame') }}
+          action={{ label: 'Start a Game', onPress: () => navigation.navigate('LocalNewGame', { mode: 'cash' }) }}
         />
+        <TouchableOpacity
+          style={styles.tournamentLink}
+          onPress={() => navigation.navigate('LocalNewGame', { mode: 'tournament' })}
+          hitSlop={8}
+        >
+          <Ionicons name="trophy-outline" size={14} color={colors.gold} />
+          <Text style={styles.tournamentLinkText}>or host a Tournament</Text>
+        </TouchableOpacity>
       </Screen>
     );
   }
@@ -102,4 +111,13 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     overflow: 'hidden',
   },
+  tournamentLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 14,
+    marginBottom: 24,
+  },
+  tournamentLinkText: { fontSize: 14, fontWeight: '700', color: colors.gold },
 });

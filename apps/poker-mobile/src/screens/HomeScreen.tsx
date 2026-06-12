@@ -467,6 +467,24 @@ export default function HomeScreen() {
           <Ionicons name="chevron-forward" size={20} color="rgba(15,25,35,0.5)" />
         </TouchableOpacity>
 
+        {/* ── Tournament CTA (local-first) ── */}
+        <TouchableOpacity
+          style={styles.tournamentCard}
+          onPress={() => navigation.navigate('LocalNewGame', { mode: 'tournament' })}
+          activeOpacity={0.85}
+        >
+          <View style={styles.newGameLeft}>
+            <View style={styles.tournamentIconWrap}>
+              <Ionicons name="trophy" size={16} color={colors.gold} />
+            </View>
+            <View>
+              <Text style={styles.tournamentTitle}>Host a Tournament</Text>
+              <Text style={styles.tournamentSub}>Blind clock, prize pool, podium · runs on this device</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.gold} />
+        </TouchableOpacity>
+
         {/* ── Stats Widgets ── */}
         <View style={styles.section}>
           <View style={styles.sectionRow}>
@@ -965,9 +983,32 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 20,
     paddingVertical: 18,
-    marginBottom: 32,
+    marginBottom: 12,
     ...shadows.gold,
   },
+  tournamentCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: colors.goldMuted,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    marginBottom: 32,
+  },
+  tournamentIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 9,
+    backgroundColor: colors.goldFaint,
+    borderWidth: 1,
+    borderColor: colors.goldMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tournamentTitle: { ...typography.h4, color: colors.text },
+  tournamentSub: { ...typography.caption, color: colors.textMuted, marginTop: 1 },
   newGameLeft: {
     flex: 1,
     flexDirection: 'row',

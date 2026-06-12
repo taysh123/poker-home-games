@@ -74,21 +74,37 @@ export default function GuestHomeScreen() {
         </TouchableOpacity>
       )}
 
-      {/* Start a game hero */}
+      {/* Start a game — Cash and Tournament as first-class choices */}
       {!activeGame && (
-        <TouchableOpacity
-          style={styles.heroCard}
-          onPress={() => navigation.navigate('LocalNewGame')}
-          activeOpacity={0.85}
-        >
-          <View style={styles.heroIconWrap}>
-            <Ionicons name="play" size={26} color={colors.background} />
-          </View>
-          <Text style={styles.heroTitle}>Start a Game</Text>
-          <Text style={styles.heroSubtitle}>
-            Track buy-ins, cash-outs, and who pays who — right now, no account needed.
+        <View style={styles.heroSection}>
+          <Text style={styles.heroLead}>
+            Start a game — right now, no account needed.
           </Text>
-        </TouchableOpacity>
+          <View style={styles.heroRow}>
+            <TouchableOpacity
+              style={styles.heroCard}
+              onPress={() => navigation.navigate('LocalNewGame', { mode: 'cash' })}
+              activeOpacity={0.85}
+            >
+              <View style={styles.heroIconWrap}>
+                <Ionicons name="play" size={22} color={colors.background} style={{ marginLeft: 2 }} />
+              </View>
+              <Text style={styles.heroTitle}>Cash Game</Text>
+              <Text style={styles.heroSubtitle}>Buy-ins, cash-outs, settle up</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.heroCard}
+              onPress={() => navigation.navigate('LocalNewGame', { mode: 'tournament' })}
+              activeOpacity={0.85}
+            >
+              <View style={[styles.heroIconWrap, styles.heroIconWrapAlt]}>
+                <Ionicons name="trophy" size={20} color={colors.gold} />
+              </View>
+              <Text style={styles.heroTitle}>Tournament</Text>
+              <Text style={styles.heroSubtitle}>Blind clock, prize pool, podium</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
 
       {/* Recent local games */}
@@ -192,29 +208,37 @@ const styles = StyleSheet.create({
   activeName: { fontSize: 15, fontWeight: '700', color: colors.text },
   activeMeta: { fontSize: 12, color: colors.textMuted },
 
+  heroSection: { gap: 10 },
+  heroLead: { fontSize: 13, color: colors.textMuted },
+  heroRow: { flexDirection: 'row', gap: 12 },
   heroCard: {
+    flex: 1,
     alignItems: 'center',
-    paddingVertical: 36,
-    paddingHorizontal: 24,
+    paddingVertical: 22,
+    paddingHorizontal: 14,
     borderRadius: 18,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.goldMuted,
-    gap: 10,
+    gap: 7,
     ...shadows.goldSm,
   },
   heroIconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: colors.gold,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
-    paddingLeft: 3,
+    marginBottom: 2,
   },
-  heroTitle: { ...typography.h2, color: colors.text },
-  heroSubtitle: { fontSize: 14, color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
+  heroIconWrapAlt: {
+    backgroundColor: colors.goldFaint,
+    borderWidth: 1.5,
+    borderColor: colors.goldMuted,
+  },
+  heroTitle: { ...typography.h3, color: colors.text },
+  heroSubtitle: { fontSize: 12, color: colors.textMuted, textAlign: 'center', lineHeight: 16 },
 
   section: { gap: 10 },
   sectionTitle: { fontSize: 12, fontWeight: '700', color: colors.textMuted, letterSpacing: 1 },
