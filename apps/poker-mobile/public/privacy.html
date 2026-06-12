@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — T Poker</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      background: #0F1923;
+      color: #E8EDF2;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.65;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 48px 24px 96px; }
+    h1 { color: #FFFFFF; font-size: 32px; letter-spacing: 0.5px; margin-bottom: 4px; }
+    h2 { color: #C9A84C; font-size: 20px; margin-top: 40px; }
+    .updated { color: #7A8A99; font-size: 14px; margin-bottom: 32px; }
+    .brand { color: #C9A84C; font-weight: 800; letter-spacing: 3px; font-size: 14px; }
+    p, li { color: #B8C4CF; font-size: 15px; }
+    a { color: #E8C97A; }
+    .card { background: #1A2535; border: 1px solid #243447; border-radius: 14px; padding: 4px 20px; margin: 16px 0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">T POKER</div>
+    <h1>Privacy Policy</h1>
+    <div class="updated">Last updated: June 12, 2026</div>
+
+    <p>
+      T Poker is a private home-game poker management app. This policy explains what
+      data the app handles, where it lives, and what control you have over it.
+    </p>
+
+    <h2>Guest mode — your data stays on your device</h2>
+    <div class="card">
+      <p>
+        You can use T Poker without creating an account. Games you run in guest mode
+        (players, buy-ins, cash-outs, settlements) are stored <strong>only on your
+        device</strong> and are never sent to our servers. Deleting the app deletes
+        this data. Player names you enter in guest games refer to people at your
+        table and exist only in your device's local storage.
+      </p>
+    </div>
+
+    <h2>Account data</h2>
+    <p>If you create an account, we store:</p>
+    <ul>
+      <li><strong>Identity:</strong> your username, email address, and a securely hashed password (we never store plain-text passwords). If you sign in with Google, we store your Google account identifier and email.</li>
+      <li><strong>Game data:</strong> groups you belong to, sessions you play, buy-ins, cash-outs, settlements, hand records, session notes, and derived statistics (P&amp;L, streaks, achievements).</li>
+      <li><strong>Social data:</strong> group memberships, invitations, and in-app notifications.</li>
+    </ul>
+
+    <h2>What we don't do</h2>
+    <ul>
+      <li>We do not sell or share your data with third parties.</li>
+      <li>We do not run ads or advertising trackers.</li>
+      <li>We do not process real-money transactions — T Poker only records what you track. Settling up happens between you and your friends, outside the app.</li>
+    </ul>
+
+    <h2>Authentication &amp; security</h2>
+    <p>
+      Sign-in uses short-lived access tokens with rotating refresh tokens. Tokens are
+      stored in your device's secure storage (Keychain on iOS, Keystore on Android).
+      Passwords are hashed with bcrypt. Refresh tokens are stored hashed on our servers.
+    </p>
+
+    <h2>Data deletion</h2>
+    <p>
+      You can delete your account at any time from <strong>Profile → Delete Account</strong>
+      inside the app. This permanently removes your account and associated personal data
+      from our servers. Guest-mode data can be removed by deleting individual games in
+      the app or uninstalling the app.
+    </p>
+
+    <h2>Data location</h2>
+    <p>
+      Account data is stored in a PostgreSQL database hosted on Railway. The web app is
+      served via Vercel. Local guest data never leaves your device.
+    </p>
+
+    <h2>Children</h2>
+    <p>
+      T Poker is intended for adults organizing private home games and is not directed
+      at children under 17.
+    </p>
+
+    <h2>Contact</h2>
+    <p>
+      Questions or data requests: <a href="mailto:tayshofer05@gmail.com">tayshofer05@gmail.com</a>
+    </p>
+  </div>
+</body>
+</html>
