@@ -17,7 +17,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.tpoker.app",
       "associatedDomains": [
-        "applinks:t-poker.vercel.app"
+        "applinks:poker-home-games-three.vercel.app"
       ],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -38,7 +38,7 @@
           "data": [
             {
               "scheme": "https",
-              "host": "t-poker.vercel.app",
+              "host": "poker-home-games-three.vercel.app",
               "pathPrefix": "/join"
             }
           ],

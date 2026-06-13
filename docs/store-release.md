@@ -18,7 +18,7 @@ pipeline with store packaging.
 | Bundle IDs `com.tpoker.app`, scheme, deep links | Create the store accounts |
 | Icons/splash/notification color config | Play service-account key; Apple Team/ASC IDs |
 | v1.1.0 + auto-incrementing build numbers | Push credentials (FCM v1, APNs) via `eas credentials` |
-| Privacy policy at t-poker.vercel.app/privacy.html | Google OAuth iOS/Android clients (see google-oauth-fix.md) |
+| Privacy policy at poker-home-games-three.vercel.app/privacy.html | Google OAuth iOS/Android clients (see google-oauth-fix.md) |
 | In-app account deletion (Profile) | Store listings: text, screenshots upload, data-safety forms |
 | Guest mode (reviewers need no account) | Final manual device test + submit clicks |
 | Store screenshots + feature graphic (store-assets/) | Optional: designer pass on those assets |
@@ -87,7 +87,7 @@ replace them later; they're submission-valid now.
     app activity = game records the user enters. All optional — guest mode collects nothing.
   - Not collected: location, contacts, identifiers for ads. No third-party sharing. No ads.
   - Data deletion: in-app (Profile → Delete Account) + privacy policy URL
-    `https://t-poker.vercel.app/privacy.html`.
+    `https://poker-home-games-three.vercel.app/privacy.html`.
 
 ## Step 7 — Submit
 
@@ -101,13 +101,13 @@ TestFlight (test it!) → add the build to the version page → Submit for Revie
 
 ## Step 8 — Final pre-submission checklist
 
-- [ ] **Privacy URL actually serves the policy**: open
-      `https://t-poker.vercel.app/privacy.html` in an incognito tab — you must see
-      the styled policy, NOT the app. (Audit 2026-06 found the deployed build was
-      serving the SPA shell — fix: Vercel → Deployments → Redeploy from latest
-      main; if it persists, check the project's build output settings so static
-      `public/` files win over SPA rewrites.) Data-safety deletion URL:
-      `https://t-poker.vercel.app/privacy.html#delete`.
+- [ ] **Privacy URL is the RIGHT domain and serves the policy**: open
+      `https://poker-home-games-three.vercel.app/privacy.html` in an incognito tab
+      — you must see the styled T Poker policy. NOTE: `t-poker.vercel.app` is a
+      DIFFERENT, third-party site (a Japanese GTO poker app) that we do not own —
+      never use it anywhere. Our deployment is `poker-home-games-three.vercel.app`
+      (it auto-deploys `main`). Data-safety deletion URL:
+      `https://poker-home-games-three.vercel.app/privacy.html#delete`.
 - [ ] **APK networking**: install the newest preview APK and SIGN IN on a phone —
       builds before `aaf473f` shipped a dead LAN API fallback (fixed via eas.json
       env); any build from `99e9d17e` onward has the production URL baked in.

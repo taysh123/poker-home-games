@@ -31,9 +31,9 @@ GoogleSettings__ClientIds__2 = 12435044751-jap7j5prc6vm0eh0mj517nv0phrlu8mr.apps
 Credentials → OAuth 2.0 Client `12435044751-eruvq9uduc9sk5mietg9eiab2epddsp6…` (Web):
 
 - **Authorized JavaScript origins** must include:
-  - `https://t-poker.vercel.app`
+  - `https://poker-home-games-three.vercel.app`
   - `http://localhost:8081` (local web dev)
-- **Authorized redirect URIs**: add `https://t-poker.vercel.app` (and `/` variant).
+- **Authorized redirect URIs**: add `https://poker-home-games-three.vercel.app` (and `/` variant).
 
 ### 3. Vercel — recommended
 Project → Settings → Environment Variables:
@@ -53,7 +53,7 @@ Create OAuth clients in Google Cloud Console:
 
 | Platform | Test |
 |----------|------|
-| Web (Vercel) | Open t-poker.vercel.app → Sign In → Continue with Google → should land on Home. If the Google popup succeeds but the app shows an error, the backend list is wrong; if the popup itself errors ("origin not allowed"), step 2 is incomplete. |
+| Web (Vercel) | Open poker-home-games-three.vercel.app → Sign In → Continue with Google → should land on Home. If the Google popup succeeds but the app shows an error, the backend list is wrong; if the popup itself errors ("origin not allowed"), step 2 is incomplete. |
 | Local web | `npm run web` + backend running → same flow against localhost. |
 | Expo Go | Scan QR → Continue with Google. Token validation now passes (backend fix). |
 | Email/password | Unaffected — regression-checked in CI gate. |

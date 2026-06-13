@@ -10,7 +10,7 @@ buy-ins, rebuys, cash-outs, and the dreaded end-of-night math — and settles
 everything down to "Bob pays Alice ₪40". Built for friend groups who play
 every week and argue about the ledger every time.
 
-> **Web:** [t-poker.vercel.app](https://t-poker.vercel.app) · **Android:** installable
+> **Web:** [poker-home-games-three.vercel.app](https://poker-home-games-three.vercel.app) · **Android:** installable
 > v1.1.0 APKs building on EAS ([builds](https://expo.dev/accounts/taysh/projects/t-poker/builds)) ·
 > **Store release:** assets + step-by-step guide ready — [docs/store-release.md](docs/store-release.md)
 

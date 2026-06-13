@@ -1,7 +1,7 @@
 # T Poker — Privacy Policy
 
 > Source of truth for `apps/poker-mobile/public/privacy.html` (served at
-> https://t-poker.vercel.app/privacy.html). Keep both in sync.
+> https://poker-home-games-three.vercel.app/privacy.html). Keep both in sync.
 
 _Last updated: June 12, 2026_
 
@@ -44,7 +44,7 @@ storage (Keychain/Keystore). Refresh tokens are stored hashed server-side.
   delete within 30 days with confirmation.
 - Guest data never reaches our servers — delete games in-app or uninstall.
 
-(Deletion-request URL for store forms: `https://t-poker.vercel.app/privacy.html#delete`)
+(Deletion-request URL for store forms: `https://poker-home-games-three.vercel.app/privacy.html#delete`)
 
 ## Data location
 

@@ -363,14 +363,14 @@ Copy `.env.example` → `.env`. Expo Go in development uses the hardcoded Expo p
 
 ### Web → Vercel
 
-`vercel.json` is at the repo root:
-```json
-{
-  "buildCommand": "cd apps/poker-mobile && npx expo export -p web",
-  "outputDirectory": "apps/poker-mobile/dist",
-  "framework": null
-}
-```
+There is **no `vercel.json` in the repo** — build settings live in the Vercel
+dashboard (Build command `cd apps/poker-mobile && npx expo export -p web`, Output
+directory `apps/poker-mobile/dist`). The project auto-deploys `main`.
+
+Production domain is **`poker-home-games-three.vercel.app`** (NOT `t-poker.vercel.app`
+— that subdomain belongs to an unrelated third-party site we do not own). The
+privacy policy is served at `https://poker-home-games-three.vercel.app/privacy.html`.
+
 Set `EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` in Vercel environment settings.
 
 ### Mobile → EAS
