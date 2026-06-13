@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
+  TextInput,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
@@ -28,10 +29,21 @@ import { useLocalGames } from '../context/LocalGamesContext';
 import { showToast } from '../utils/toast';
 import { infoDialog } from '../utils/confirm';
 import { PAYOUT_PRESET_LABELS, PAYOUT_PRESETS } from '../local/tournament';
-import { BLIND_PRESET_LABELS, generateBlindLevels } from '../local/blinds';
-import type { BlindPreset, PayoutPreset } from '../local/types';
+import { BLIND_PRESET_LABELS, generateBlindLevels, nextBlindLevel } from '../local/blinds';
+import type { BlindLevel, BlindPreset, PayoutPreset } from '../local/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocalNewGame'>;
+
+const WINNERS_MAX = 6;
+/** Sensible default payout splits per winner count (each sums to 100). */
+const DEFAULT_PAYOUTS: Record<number, number[]> = {
+  1: [100],
+  2: [65, 35],
+  3: [50, 30, 20],
+  4: [40, 30, 20, 10],
+  5: [35, 25, 20, 12, 8],
+  6: [30, 22, 18, 13, 10, 7],
+};
 
 /**
  * Local-only New Game wizard — no account, no network. Mirrors the NewGame
@@ -60,9 +72,54 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
   const [mode, setMode] = useState<'cash' | 'tournament'>(route.params?.mode ?? 'cash');
   const [entryFee, setEntryFee] = useState('');
   const [entryFeeError, setEntryFeeError] = useState('');
-  const [payoutPreset, setPayoutPreset] = useState<PayoutPreset>('50-30-20');
-  const [blindPreset, setBlindPreset] = useState<BlindPreset>('standard');
   const isTournament = mode === 'tournament';
+
+  // Payout structure — editable percentages; winners count drives the rows.
+  const [winners, setWinners] = useState(3);
+  const [payoutPcts, setPayoutPcts] = useState<string[]>(DEFAULT_PAYOUTS[3].map(String));
+  const payoutSum = payoutPcts.reduce((s, p) => s + (parseInt(p, 10) || 0), 0);
+  const payoutValid = payoutSum === 100;
+
+  function setWinnerCount(n: number) {
+    const clamped = Math.max(1, Math.min(WINNERS_MAX, n));
+    setWinners(clamped);
+    setPayoutPcts((DEFAULT_PAYOUTS[clamped] ?? PAYOUT_PRESETS['50-30-20']).map(String));
+  }
+  function applyPayoutPreset(preset: PayoutPreset) {
+    const pcts = PAYOUT_PRESETS[preset];
+    setWinners(pcts.length);
+    setPayoutPcts(pcts.map(String));
+  }
+
+  // Blind structure — seeded from a preset, optionally edited level-by-level.
+  const [blindPreset, setBlindPreset] = useState<BlindPreset>('standard');
+  const [customBlinds, setCustomBlinds] = useState(false);
+  const [blindLevels, setBlindLevels] = useState<BlindLevel[]>(() => generateBlindLevels('standard'));
+
+  function pickBlindPreset(preset: BlindPreset) {
+    setBlindPreset(preset);
+    setCustomBlinds(false);
+    setBlindLevels(generateBlindLevels(preset));
+  }
+  function editLevel(index: number, patch: Partial<BlindLevel>) {
+    setCustomBlinds(true);
+    setBlindLevels(prev => prev.map((lv, i) => (i === index ? { ...lv, ...patch } : lv)));
+  }
+  function addLevel() {
+    setCustomBlinds(true);
+    setBlindLevels(prev => [...prev, nextBlindLevel(prev)]);
+  }
+  function removeLevel(index: number) {
+    setCustomBlinds(true);
+    setBlindLevels(prev => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
+  }
+
+  // Other tournament settings
+  const [startingStack, setStartingStack] = useState('10000');
+  const [rebuysAllowed, setRebuysAllowed] = useState(true);
+  const [addOnsAllowed, setAddOnsAllowed] = useState(false);
+  const [addOnAmount, setAddOnAmount] = useState('');
+  const [lateRegLevels, setLateRegLevels] = useState(0);
 
   const [playerInput, setPlayerInput] = useState('');
   const [playerNames, setPlayerNames] = useState<string[]>([]);
@@ -114,6 +171,10 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
         setEntryFeeError('Entry fee is required.');
         return;
       }
+      if (isTournament && !payoutValid) {
+        infoDialog('Payouts must total 100%', `Your payout split currently adds up to ${payoutSum}%. Adjust the places so they total 100%.`);
+        return;
+      }
       if (!isTournament && defaultBuyIn.trim() && parseAmountToCents(defaultBuyIn) === null) {
         setBuyInError('Enter a valid amount.');
         return;
@@ -151,11 +212,13 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
         tournament: isTournament
           ? {
               entryFeeCents: parseAmountToCents(entryFee)!,
-              payouts: PAYOUT_PRESETS[payoutPreset],
-              blindLevels: generateBlindLevels(blindPreset),
-              rebuysAllowed: true,
-              addOnsAllowed: false,
-              lateRegLevels: 0,
+              payouts: payoutPcts.map(p => parseInt(p, 10) || 0),
+              blindLevels,
+              startingStackChips: startingStack ? parseInt(startingStack, 10) || undefined : undefined,
+              rebuysAllowed,
+              addOnsAllowed,
+              addOnAmountCents: addOnsAllowed && addOnAmount ? parseAmountToCents(addOnAmount) ?? undefined : undefined,
+              lateRegLevels,
             }
           : undefined,
       });
@@ -255,38 +318,178 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                   error={entryFeeError}
                   hint="everyone pays this into the prize pool"
                 />
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Payouts</Text>
+
+                {/* ── Payouts ── */}
+                <View style={styles.setupCard}>
+                  <View style={styles.setupCardHead}>
+                    <Text style={styles.fieldLabel}>Payouts</Text>
+                    <View style={styles.stepper}>
+                      <TouchableOpacity style={styles.stepperBtn} onPress={() => setWinnerCount(winners - 1)} disabled={winners <= 1}>
+                        <Ionicons name="remove" size={16} color={winners <= 1 ? colors.textDim : colors.gold} />
+                      </TouchableOpacity>
+                      <Text style={styles.stepperValue}>{winners} {winners === 1 ? 'place' : 'places'}</Text>
+                      <TouchableOpacity style={styles.stepperBtn} onPress={() => setWinnerCount(winners + 1)} disabled={winners >= WINNERS_MAX}>
+                        <Ionicons name="add" size={16} color={winners >= WINNERS_MAX ? colors.textDim : colors.gold} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                   <View style={styles.chipRow}>
                     {(Object.keys(PAYOUT_PRESET_LABELS) as PayoutPreset[]).map(p => (
-                      <TouchableOpacity
-                        key={p}
-                        style={[styles.presetChip, payoutPreset === p && styles.presetChipSelected]}
-                        onPress={() => setPayoutPreset(p)}
-                      >
-                        <Text style={[styles.presetChipText, payoutPreset === p && styles.presetChipTextSelected]}>
-                          {PAYOUT_PRESET_LABELS[p]}
-                        </Text>
+                      <TouchableOpacity key={p} style={styles.miniChip} onPress={() => applyPayoutPreset(p)}>
+                        <Text style={styles.miniChipText}>{PAYOUT_PRESET_LABELS[p]}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
+                  {payoutPcts.map((pct, i) => (
+                    <View key={i} style={styles.payoutRow}>
+                      <Text style={styles.payoutRank}>{i + 1 === 1 ? '🥇' : i + 1 === 2 ? '🥈' : i + 1 === 3 ? '🥉' : `#${i + 1}`}</Text>
+                      <View style={styles.payoutInputWrap}>
+                        <TextInput
+                          style={styles.payoutInput}
+                          value={pct}
+                          onChangeText={v => setPayoutPcts(prev => prev.map((x, j) => (j === i ? v.replace(/[^0-9]/g, '') : x)))}
+                          placeholder="0"
+                          placeholderTextColor={colors.textDim}
+                          keyboardType="number-pad"
+                        />
+                      </View>
+                      <Text style={styles.payoutPct}>%</Text>
+                    </View>
+                  ))}
+                  <View style={[styles.sumPill, payoutValid ? styles.sumPillOk : styles.sumPillWarn]}>
+                    <Ionicons name={payoutValid ? 'checkmark-circle' : 'alert-circle'} size={14} color={payoutValid ? colors.success : colors.warning} />
+                    <Text style={[styles.sumText, { color: payoutValid ? colors.success : colors.warning }]}>
+                      {payoutValid ? 'Payouts total 100%' : `Payouts total ${payoutSum}% — must be 100%`}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Blinds</Text>
+
+                {/* ── Blinds ── */}
+                <View style={styles.setupCard}>
+                  <Text style={styles.fieldLabel}>Blind Structure</Text>
                   <View style={styles.chipRow}>
                     {(Object.keys(BLIND_PRESET_LABELS) as BlindPreset[]).map(b => (
                       <TouchableOpacity
                         key={b}
-                        style={[styles.presetChip, blindPreset === b && styles.presetChipSelected]}
-                        onPress={() => setBlindPreset(b)}
+                        style={[styles.presetChip, !customBlinds && blindPreset === b && styles.presetChipSelected]}
+                        onPress={() => pickBlindPreset(b)}
                       >
-                        <Text style={[styles.presetChipText, blindPreset === b && styles.presetChipTextSelected]}>
+                        <Text style={[styles.presetChipText, !customBlinds && blindPreset === b && styles.presetChipTextSelected]}>
                           {BLIND_PRESET_LABELS[b]}
                         </Text>
                       </TouchableOpacity>
                     ))}
                   </View>
+                  <TouchableOpacity style={styles.disclosureRow} onPress={() => setCustomBlinds(v => !v)}>
+                    <Ionicons name={customBlinds ? 'chevron-down' : 'chevron-forward'} size={16} color={colors.gold} />
+                    <Text style={styles.disclosureText}>
+                      {customBlinds ? 'Custom structure' : `Customize levels (${blindLevels.length} levels)`}
+                    </Text>
+                  </TouchableOpacity>
+                  {customBlinds && (
+                    <View style={styles.levelEditor}>
+                      <View style={styles.levelHeadRow}>
+                        <Text style={styles.hLv}>Lv</Text>
+                        <Text style={styles.hCell}>SB</Text>
+                        <Text style={styles.hCell}>BB</Text>
+                        <Text style={styles.hCell}>Ante</Text>
+                        <Text style={styles.hCell}>Min</Text>
+                        <View style={styles.hRemove} />
+                      </View>
+                      {blindLevels.map((lv, i) => (
+                        <View key={i} style={styles.levelRow}>
+                          <Text style={styles.levelNum}>{i + 1}</Text>
+                          <TextInput
+                            style={styles.levelCell}
+                            value={String(lv.smallBlind)}
+                            onChangeText={v => editLevel(i, { smallBlind: parseInt(v.replace(/[^0-9]/g, ''), 10) || 0 })}
+                            keyboardType="number-pad"
+                          />
+                          <TextInput
+                            style={styles.levelCell}
+                            value={String(lv.bigBlind)}
+                            onChangeText={v => editLevel(i, { bigBlind: parseInt(v.replace(/[^0-9]/g, ''), 10) || 0 })}
+                            keyboardType="number-pad"
+                          />
+                          <TextInput
+                            style={styles.levelCell}
+                            value={lv.ante ? String(lv.ante) : ''}
+                            placeholder="—"
+                            placeholderTextColor={colors.textDim}
+                            onChangeText={v => editLevel(i, { ante: parseInt(v.replace(/[^0-9]/g, ''), 10) || undefined })}
+                            keyboardType="number-pad"
+                          />
+                          <TextInput
+                            style={styles.levelCell}
+                            value={String(Math.round(lv.durationSeconds / 60))}
+                            onChangeText={v => editLevel(i, { durationSeconds: (parseInt(v.replace(/[^0-9]/g, ''), 10) || 0) * 60 })}
+                            keyboardType="number-pad"
+                          />
+                          <TouchableOpacity style={styles.levelRemove} onPress={() => removeLevel(i)} hitSlop={6}>
+                            <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                      <TouchableOpacity style={styles.addLevelBtn} onPress={addLevel}>
+                        <Ionicons name="add" size={16} color={colors.gold} />
+                        <Text style={styles.addLevelText}>Add level</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
+
+                {/* ── Stack & extras ── */}
+                <View style={styles.row}>
+                  <View style={styles.halfField}>
+                    <AppTextInput
+                      label="Starting Stack"
+                      value={startingStack}
+                      onChangeText={v => setStartingStack(v.replace(/[^0-9]/g, ''))}
+                      placeholder="10000"
+                      keyboardType="number-pad"
+                      hint="chips per entry"
+                    />
+                  </View>
+                  <View style={styles.halfField}>
+                    <Text style={styles.fieldLabel}>Late Reg</Text>
+                    <View style={styles.stepper}>
+                      <TouchableOpacity style={styles.stepperBtn} onPress={() => setLateRegLevels(n => Math.max(0, n - 1))} disabled={lateRegLevels <= 0}>
+                        <Ionicons name="remove" size={16} color={lateRegLevels <= 0 ? colors.textDim : colors.gold} />
+                      </TouchableOpacity>
+                      <Text style={styles.stepperValue}>{lateRegLevels === 0 ? 'Off' : `Lv ${lateRegLevels}`}</Text>
+                      <TouchableOpacity style={styles.stepperBtn} onPress={() => setLateRegLevels(n => Math.min(blindLevels.length, n + 1))}>
+                        <Ionicons name="add" size={16} color={colors.gold} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+
+                <TouchableOpacity style={styles.toggleRow} onPress={() => setRebuysAllowed(v => !v)} activeOpacity={0.8}>
+                  <View style={styles.toggleText}>
+                    <Text style={styles.toggleTitle}>Rebuys</Text>
+                    <Text style={styles.toggleBlurb}>Players can buy back in while they have chips.</Text>
+                  </View>
+                  <Ionicons name={rebuysAllowed ? 'toggle' : 'toggle-outline'} size={34} color={rebuysAllowed ? colors.gold : colors.textDim} />
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.toggleRow} onPress={() => setAddOnsAllowed(v => !v)} activeOpacity={0.8}>
+                  <View style={styles.toggleText}>
+                    <Text style={styles.toggleTitle}>Add-ons</Text>
+                    <Text style={styles.toggleBlurb}>One-time top-up, usually at the break.</Text>
+                  </View>
+                  <Ionicons name={addOnsAllowed ? 'toggle' : 'toggle-outline'} size={34} color={addOnsAllowed ? colors.gold : colors.textDim} />
+                </TouchableOpacity>
+                {addOnsAllowed && (
+                  <AppTextInput
+                    label="Add-on Amount"
+                    value={addOnAmount}
+                    onChangeText={setAddOnAmount}
+                    placeholder="50"
+                    keyboardType="decimal-pad"
+                    prefix="₪"
+                    hint="added to the prize pool"
+                  />
+                )}
               </>
             ) : (
               <View style={styles.row}>
@@ -381,8 +584,11 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                       {parseAmountToCents(entryFee) !== null && (
                         <Text style={styles.reviewChip}>{formatCents(parseAmountToCents(entryFee)!)} entry</Text>
                       )}
-                      <Text style={styles.reviewChip}>{PAYOUT_PRESET_LABELS[payoutPreset]}</Text>
-                      <Text style={styles.reviewChip}>{blindPreset} blinds</Text>
+                      <Text style={styles.reviewChip}>{winners}-place payout</Text>
+                      <Text style={styles.reviewChip}>{customBlinds ? `${blindLevels.length} custom levels` : `${blindPreset} blinds`}</Text>
+                      {rebuysAllowed && <Text style={styles.reviewChip}>rebuys</Text>}
+                      {addOnsAllowed && <Text style={styles.reviewChip}>add-ons</Text>}
+                      {lateRegLevels > 0 && <Text style={styles.reviewChip}>late reg · Lv {lateRegLevels}</Text>}
                     </>
                   ) : (
                     <>
@@ -503,6 +709,98 @@ const styles = StyleSheet.create({
   presetChipSelected: { borderColor: colors.gold, backgroundColor: 'rgba(201,168,76,0.12)' },
   presetChipText: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
   presetChipTextSelected: { color: colors.gold },
+
+  // Tournament setup cards
+  setupCard: {
+    gap: 12,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  setupCardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    backgroundColor: colors.surfaceHigh,
+  },
+  stepperBtn: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
+  stepperValue: { fontSize: 13, fontWeight: '700', color: colors.text, minWidth: 56, textAlign: 'center' },
+  miniChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceHigh,
+  },
+  miniChipText: { fontSize: 12, fontWeight: '600', color: colors.textMuted },
+  payoutRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  payoutRank: { width: 34, fontSize: 16, textAlign: 'center' },
+  payoutInputWrap: { flex: 1 },
+  payoutInput: {
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: colors.text,
+  },
+  payoutPct: { fontSize: 15, fontWeight: '700', color: colors.textMuted, width: 18 },
+  sumPill: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
+  sumPillOk: {},
+  sumPillWarn: {},
+  sumText: { fontSize: 12.5, fontWeight: '600' },
+
+  disclosureRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 },
+  disclosureText: { fontSize: 13, fontWeight: '600', color: colors.gold },
+  levelEditor: { gap: 6 },
+  levelHeadRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  hLv: { width: 22, fontSize: 9, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.3, textAlign: 'center' },
+  hCell: { flex: 1, fontSize: 9, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.3, textAlign: 'center' },
+  hRemove: { width: 24 },
+  levelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  levelNum: { width: 22, fontSize: 13, fontWeight: '700', color: colors.textMuted, textAlign: 'center' },
+  levelCell: {
+    flex: 1,
+    minWidth: 0,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: colors.text,
+    textAlign: 'center',
+  },
+  levelRemove: { width: 24, alignItems: 'center', justifyContent: 'center' },
+  addLevelBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, marginTop: 2 },
+  addLevelText: { fontSize: 13, fontWeight: '700', color: colors.gold },
+
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  toggleText: { flex: 1, gap: 2 },
+  toggleTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
+  toggleBlurb: { fontSize: 12, color: colors.textMuted, lineHeight: 16 },
 
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   playerChip: {
