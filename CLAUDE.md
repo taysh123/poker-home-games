@@ -159,17 +159,42 @@ listing assets (icons, feature graphic, 18 screenshots at exact store sizes)
 live in `apps/poker-mobile/store-assets/` — regenerate screenshots via the
 verification harness after visual changes. Release process: docs/store-release.md.
 
-## Local games schema v2 + tournaments
+## Local games schema v3 + tournaments
 
-`src/local/types.ts` is at schemaVersion 2 (`mode: 'cash' | 'tournament'` +
-`tournament` config; v1 files auto-migrate in `loadFile`, quarantine preserved).
-Tournament logic: `src/local/tournament.ts` (prize pool from buy-in txns,
-bottom-up eliminations with auto-finish, largest-remainder payouts settled via
-the SAME `calculateSettlements` engine) and `src/local/blinds.ts` (deterministic
-clock derived from `createdAt` — no timer state). Tournaments do NOT use The
-Final Count: they end by elimination; LocalSession hides End Game and shows
-Abort (delete) instead. Rebuys = `addBuyIn` while Active. Roster is locked
-(no add-player) once a tournament starts — position math depends on it.
+`src/local/types.ts` is at **schemaVersion 3** (`mode: 'cash' | 'tournament'` +
+`tournament` config; v1→v2→v3 chained auto-migration in `loadFile`, quarantine
+preserved; all tournament fields additive so cash games migrate no-op).
+
+`LocalTournamentConfig` (v3): `entryFeeCents`, `payouts: number[]` (percentages,
+length = paid places — any winner count / custom distribution), editable
+`blindLevels: BlindLevel[]` (SB/BB/ante/duration/break), a **stored**
+`TournamentClock`, `startingStackChips?`, `rebuysAllowed`, `addOnsAllowed` +
+`addOnAmountCents?`, `lateRegLevels?`, `eliminations[]`. `LocalTxn.tag?` classifies
+buy-ins (`entry` | `rebuy` | `addon`).
+
+Engine:
+- `src/local/tournament.ts` — `payoutAmountsCents(pool, percents[])` (largest-
+  remainder; pinned), `prizePoolCents`, `contributionCents`, `tournamentResult`,
+  `eliminatePlayer` (bottom-up; position = remaining-before-bust so it stays
+  correct with late registration), `undoElimination`, `finishWithRanking` (early
+  finish). Payouts settle via the SAME `calculateSettlements` engine.
+- `src/local/blinds.ts` — presets are GENERATORS (`generateBlindLevels`), plus a
+  stored-clock model (`initClock`, `clockRemainingMs`, `pauseClock`, `resumeClock`,
+  `gotoLevel`, `tickAutoAdvance`, `clockView`). The clock supports pause/resume +
+  manual level jumps and survives reload (replaces the old derived-from-`createdAt`
+  clock).
+- Store mutations: `pauseTournamentClock`/`resumeTournamentClock`/
+  `gotoTournamentLevel`/`syncTournamentClock` (auto-advance; returns same ref when
+  unchanged), `finishTournamentEarly`, `isLateRegOpen`. Late entries (`addPlayer`
+  while the window is open) add a tagged `entry` buy-in.
+
+UI: the wizard (`LocalNewGameScreen`) has a payout editor (winners + editable %,
+"must total 100%"), a blind-structure editor, starting stack, and rebuy/add-on/
+late-reg controls. The live screen (`LocalSessionScreen`) shows a tournament
+**dashboard** (level/blinds, countdown, pause/resume + ±level, players-left, avg
+stack/BB-left, next-out payout); rebuy/add-on are config-gated; "End Tournament" →
+Finish early (manual ranking) or Abort & delete. Tournaments do NOT use The Final
+Count — they end by elimination or manual ranking.
 
 ## Notifications (in-app + push)
 

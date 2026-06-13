@@ -167,6 +167,11 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
             {isTournament ? 'prize pool' : 'total pot'} · {game.players.length} players
             {game.endedAt ? ` · ${formatDuration(game.createdAt, game.endedAt)}` : ''}
           </Text>
+          {isTournament && game.tournament && (
+            <Text style={styles.heroMeta}>
+              {game.txns.filter(t => t.kind === 'buyin').length} entries · top {game.tournament.payouts.length} paid
+            </Text>
+          )}
         </View>
 
         {/* Tournament podium */}
@@ -182,7 +187,12 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
                     {medal ?? `#${position}`}
                   </Text>
                   <View style={styles.podiumInfo}>
-                    <Text style={styles.podiumName} numberOfLines={1}>{player.name}</Text>
+                    <View style={styles.podiumNameRow}>
+                      <Text style={styles.podiumName} numberOfLines={1}>{player.name}</Text>
+                      {payoutCents > 0 && (
+                        <View style={styles.itmBadge}><Text style={styles.itmBadgeText}>ITM</Text></View>
+                      )}
+                    </View>
                     {payoutCents > 0 && (
                       <Text style={styles.podiumPayout}>wins {formatCents(payoutCents)}</Text>
                     )}
@@ -317,7 +327,17 @@ const styles = StyleSheet.create({
   resultRankWinner: { fontSize: 18 },
   resultName: { flex: 1, fontSize: 16, fontWeight: '600', color: colors.text },
   podiumInfo: { flex: 1, gap: 2 },
+  podiumNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   podiumName: { fontSize: 16, fontWeight: '600', color: colors.text },
+  itmBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: colors.goldFaint,
+    borderWidth: 1,
+    borderColor: colors.goldMuted,
+  },
+  itmBadgeText: { fontSize: 9, fontWeight: '800', color: colors.goldLight, letterSpacing: 0.5 },
   podiumPayout: { fontSize: 12, fontWeight: '600', color: colors.goldLight },
   resultNet: { fontSize: 16, fontWeight: '800', fontVariant: ['tabular-nums'] },
   netPositive: { color: colors.success },

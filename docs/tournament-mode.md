@@ -1,12 +1,34 @@
 # Tournament Mode — Architecture & Phased Plan
 
-Status: **v1 SHIPPED (local-first)** — June 2026. Guests and signed-in users can
-run on-device tournaments: fixed entries → prize pool, blind clock
-(Turbo/Standard/Deep), bust-outs with bottom-up positions, anytime rebuys,
-largest-remainder payouts settled into minimal transfers, podium summary +
-shareable image card. Engine: `apps/poker-mobile/src/local/tournament.ts` +
-`blinds.ts` (Jest-pinned). **Next: server-side group tournaments** per the design
-below (the local model is the proven template).
+Status: **v2 SHIPPED (local-first, flexible)** — June 2026. Builds on the v1
+freezeout with real tournament-director controls. Engine:
+`apps/poker-mobile/src/local/tournament.ts` + `blinds.ts` (Jest-pinned, 59 tests).
+**Next: server-side group tournaments** per the design below (the local model is
+the proven template).
+
+## v2 — what shipped (schema v3, local-first for guests + signed-in)
+
+- **Flexible payouts:** 1–6 paid places with editable percentages (custom
+  distributions), seeded from presets; largest-remainder allocation always sums to
+  the pool. `payoutAmountsCents(pool, percents[])`.
+- **Editable blind structures:** presets are generators; the wizard can add/remove/
+  edit levels (SB/BB/ante/minutes/break).
+- **Stored blind clock:** pause/resume, manual ±level, auto-advance at expiry,
+  survives reload (replaces the derived-from-`createdAt` clock). Pure functions in
+  `blinds.ts`; store mutations persist it.
+- **Late registration:** open through a configurable level window; late entries pay
+  a tagged entry into the pool. Elimination positions count remaining-before-bust so
+  the math stays correct after late joins.
+- **Rebuys + add-ons:** config-gated, recorded as tagged buy-ins feeding the pool.
+- **Starting stack:** powers the dashboard's average stack + approximate BB-left.
+- **Live dashboard:** level/blinds, big countdown, clock controls, players-left,
+  avg stack/BB, next-out payout.
+- **Early finish:** host manually ranks the remaining players → payouts apply by the
+  structure (`finishWithRanking`), in addition to play-to-last-player and Abort.
+- **Podium summary:** full standings, payouts, ITM badges, shareable card.
+
+Data location: **local-first for everyone** (guests and signed-in users share the
+on-device engine). Server-synced tournaments remain the future work below.
 
 ## Product shape
 

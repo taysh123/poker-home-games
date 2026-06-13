@@ -28,10 +28,13 @@ every week and argue about the ledger every time.
   the night's chaos into the fewest possible transfers — identical algorithm on
   the server (C# decimal) and on-device (TypeScript integer cents), pinned by a
   shared test suite.
-- **Tournament night, handled.** Local-first tournament mode: fixed entries feed
-  a prize pool, a deterministic blind clock (Turbo/Standard/Deep), one-tap
-  bust-outs, rebuys, and a medal podium with exact largest-remainder payouts —
-  settled into minimal transfers by the same engine as cash games.
+- **Tournament night, handled.** A serious local-first tournament director:
+  custom payout structures (1–6 places, editable %), editable blind structures
+  with a controllable clock (pause/resume, manual level changes, antes & breaks),
+  late registration, rebuys & add-ons, a live dashboard (players left, average
+  stack, big-blinds-left, next-out payout), one-tap bust-outs, and an early-finish
+  flow that ranks the remaining players. Payouts use exact largest-remainder math
+  and settle into minimal transfers via the same engine as cash games.
 - **A club, not a spreadsheet.** Private groups with roles, invite links, a
   tappable activity feed, rivalries, head-to-head records, leaderboards with
   medal accents, 14 achievements, emoji+color player identities, and a weekly
