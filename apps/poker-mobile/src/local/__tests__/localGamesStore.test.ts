@@ -45,7 +45,7 @@ describe('createGame', () => {
     expect(game.status).toBe('Active');
     expect(game.players.map(p => p.name)).toEqual(['Alice', 'Bob', 'Carol']);
     expect(game.txns).toEqual([]);
-    expect(game.schemaVersion).toBe(2);
+    expect(game.schemaVersion).toBe(3);
   });
 
   it('rejects a second concurrent active game', () => {

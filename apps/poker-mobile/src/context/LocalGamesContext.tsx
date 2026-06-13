@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import * as store from '../local/localGamesStore';
-import type { LocalGame, LocalGamesFile } from '../local/types';
+import type { LocalGame, LocalGamesFile, LocalTxnTag } from '../local/types';
 
 /**
  * Thin React wrapper around localGamesStore. Holds the loaded file in state;
@@ -14,7 +14,7 @@ type LocalGamesContextType = {
   isLoaded: boolean;
   startGame: (input: store.CreateGameInput) => Promise<LocalGame>;
   addPlayer: (gameId: string, name: string) => Promise<void>;
-  addBuyIn: (gameId: string, playerId: string, amountCents: number) => Promise<void>;
+  addBuyIn: (gameId: string, playerId: string, amountCents: number, tag?: LocalTxnTag) => Promise<void>;
   addCashOut: (gameId: string, playerId: string, amountCents: number) => Promise<void>;
   undoLastTxn: (gameId: string) => Promise<void>;
   endGame: (gameId: string, finalStacks: { playerId: string; amountCents: number }[]) => Promise<void>;
@@ -23,6 +23,13 @@ type LocalGamesContextType = {
   eliminatePlayer: (gameId: string, playerId: string) => Promise<void>;
   /** Tournament only: undo the most recent bust. */
   undoElimination: (gameId: string) => Promise<void>;
+  /** Tournament only: finish early with a host-supplied ranking of remaining players. */
+  finishTournamentEarly: (gameId: string, orderedRemainingIds: string[]) => Promise<void>;
+  /** Tournament clock controls. */
+  pauseClock: (gameId: string) => Promise<void>;
+  resumeClock: (gameId: string) => Promise<void>;
+  gotoLevel: (gameId: string, delta: number) => Promise<void>;
+  syncClock: (gameId: string, nowMs: number) => Promise<void>;
 };
 
 const LocalGamesContext = createContext<LocalGamesContextType>({
@@ -38,6 +45,11 @@ const LocalGamesContext = createContext<LocalGamesContextType>({
   deleteGame: async () => {},
   eliminatePlayer: async () => {},
   undoElimination: async () => {},
+  finishTournamentEarly: async () => {},
+  pauseClock: async () => {},
+  resumeClock: async () => {},
+  gotoLevel: async () => {},
+  syncClock: async () => {},
 });
 
 export function LocalGamesProvider({ children }: { children: React.ReactNode }) {
@@ -75,8 +87,8 @@ export function LocalGamesProvider({ children }: { children: React.ReactNode }) 
     await commit(store.addPlayer(file, gameId, name).file);
   }, [file, commit]);
 
-  const addBuyIn = useCallback(async (gameId: string, playerId: string, amountCents: number) => {
-    await commit(store.addBuyIn(file, gameId, playerId, amountCents));
+  const addBuyIn = useCallback(async (gameId: string, playerId: string, amountCents: number, tag?: LocalTxnTag) => {
+    await commit(store.addBuyIn(file, gameId, playerId, amountCents, tag));
   }, [file, commit]);
 
   const addCashOut = useCallback(async (gameId: string, playerId: string, amountCents: number) => {
@@ -103,6 +115,27 @@ export function LocalGamesProvider({ children }: { children: React.ReactNode }) 
     await commit(store.undoElimination(file, gameId));
   }, [file, commit]);
 
+  const finishTournamentEarly = useCallback(async (gameId: string, orderedRemainingIds: string[]) => {
+    await commit(store.finishTournamentEarly(file, gameId, orderedRemainingIds));
+  }, [file, commit]);
+
+  const pauseClock = useCallback(async (gameId: string) => {
+    await commit(store.pauseTournamentClock(file, gameId));
+  }, [file, commit]);
+
+  const resumeClock = useCallback(async (gameId: string) => {
+    await commit(store.resumeTournamentClock(file, gameId));
+  }, [file, commit]);
+
+  const gotoLevel = useCallback(async (gameId: string, delta: number) => {
+    await commit(store.gotoTournamentLevel(file, gameId, delta));
+  }, [file, commit]);
+
+  const syncClock = useCallback(async (gameId: string, nowMs: number) => {
+    const next = store.syncTournamentClock(file, gameId, nowMs);
+    if (next !== file) await commit(next);
+  }, [file, commit]);
+
   const activeGame = file.games.find(g => g.status === 'Active') ?? null;
 
   return (
@@ -120,6 +153,11 @@ export function LocalGamesProvider({ children }: { children: React.ReactNode }) 
         deleteGame,
         eliminatePlayer,
         undoElimination,
+        finishTournamentEarly,
+        pauseClock,
+        resumeClock,
+        gotoLevel,
+        syncClock,
       }}
     >
       {children}

@@ -27,8 +27,8 @@ import { parseAmountToCents, formatCents } from '../utils/money';
 import { useLocalGames } from '../context/LocalGamesContext';
 import { showToast } from '../utils/toast';
 import { infoDialog } from '../utils/confirm';
-import { PAYOUT_PRESET_LABELS } from '../local/tournament';
-import { BLIND_PRESET_LABELS } from '../local/blinds';
+import { PAYOUT_PRESET_LABELS, PAYOUT_PRESETS } from '../local/tournament';
+import { BLIND_PRESET_LABELS, generateBlindLevels } from '../local/blinds';
 import type { BlindPreset, PayoutPreset } from '../local/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocalNewGame'>;
@@ -151,8 +151,11 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
         tournament: isTournament
           ? {
               entryFeeCents: parseAmountToCents(entryFee)!,
-              payoutPreset,
-              blindPreset,
+              payouts: PAYOUT_PRESETS[payoutPreset],
+              blindLevels: generateBlindLevels(blindPreset),
+              rebuysAllowed: true,
+              addOnsAllowed: false,
+              lateRegLevels: 0,
             }
           : undefined,
       });

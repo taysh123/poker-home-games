@@ -2,7 +2,7 @@
  * Local tournament logic. Pure functions; amounts in integer cents.
  *
  * Payouts reuse the proven settlement engine: each player's net =
- * payout(position) − contributed(entry + rebuys), then the greedy
+ * payout(position) − contributed(entry + rebuys + add-ons), then the greedy
  * calculateSettlements turns nets into minimal "X pays Y" transfers —
  * identical rendering to cash-game settlements.
  */
@@ -10,6 +10,7 @@
 import { calculateSettlements, type PlayerBalance, type Transfer } from './settlements';
 import type { LocalGame, PayoutPreset } from './types';
 
+/** Quick-pick percentage seeds — the live config stores an explicit `payouts[]`. */
 export const PAYOUT_PRESETS: Record<PayoutPreset, number[]> = {
   '100': [100],
   '60-40': [60, 40],
@@ -22,7 +23,7 @@ export const PAYOUT_PRESET_LABELS: Record<PayoutPreset, string> = {
   '50-30-20': '50 / 30 / 20',
 };
 
-/** Entry fees + rebuys — every buy-in transaction feeds the pool. */
+/** Entry fees + rebuys + add-ons — every buy-in transaction feeds the pool. */
 export function prizePoolCents(game: Pick<LocalGame, 'txns'>): number {
   return game.txns.filter(t => t.kind === 'buyin').reduce((s, t) => s + t.amountCents, 0);
 }
@@ -33,14 +34,15 @@ export function remainingPlayerIds(game: LocalGame): string[] {
 }
 
 /**
- * Split the pool by preset percentages using largest-remainder allocation —
- * payouts always sum to the pool exactly, in cents.
+ * Split the pool by percentages using largest-remainder allocation — payouts
+ * always sum to the pool exactly, in cents. Accepts any percentage array
+ * (presets or a custom distribution); caller guarantees it sums to 100.
  */
-export function payoutAmountsCents(poolCents: number, preset: PayoutPreset): number[] {
-  const percents = PAYOUT_PRESETS[preset];
+export function payoutAmountsCents(poolCents: number, percents: number[]): number[] {
+  if (percents.length === 0) return [];
   const raw = percents.map(p => (poolCents * p) / 100);
   const floors = raw.map(Math.floor);
-  let remainder = poolCents - floors.reduce((s, n) => s + n, 0);
+  const remainder = poolCents - floors.reduce((s, n) => s + n, 0);
   // Hand out leftover cents to the largest fractional parts (stable order on tie).
   const order = raw
     .map((value, index) => ({ index, frac: value - Math.floor(value) }))
@@ -50,7 +52,7 @@ export function payoutAmountsCents(poolCents: number, preset: PayoutPreset): num
   return result;
 }
 
-/** Cents each player put in (entry + rebuys). */
+/** Cents each player put in (entry + rebuys + add-ons). */
 export function contributionCents(game: Pick<LocalGame, 'txns'>, playerId: string): number {
   return game.txns
     .filter(t => t.kind === 'buyin' && t.playerId === playerId)
@@ -73,7 +75,7 @@ export function tournamentResult(game: LocalGame): TournamentResult {
   if (!config) throw new Error('Not a tournament');
 
   const poolCents = prizePoolCents(game);
-  const payouts = payoutAmountsCents(poolCents, config.payoutPreset);
+  const payouts = payoutAmountsCents(poolCents, config.payouts);
 
   const positionByPlayer = new Map(config.eliminations.map(e => [e.playerId, e.position]));
   const standings = game.players
@@ -93,9 +95,10 @@ export function tournamentResult(game: LocalGame): TournamentResult {
 }
 
 /**
- * Bust a player out. Positions assign bottom-up (first bust = last place).
- * When one player remains they take position 1 and the game finishes.
- * Returns a NEW game object (pure).
+ * Bust a player out. Positions assign bottom-up (first bust = last place) using
+ * the count of players still in BEFORE this bust, so the math stays correct even
+ * when players join via late registration. When one player remains they take
+ * position 1 and the game finishes. Returns a NEW game object (pure).
  */
 export function eliminatePlayer(game: LocalGame, playerId: string): LocalGame {
   const config = game.tournament;
@@ -105,7 +108,7 @@ export function eliminatePlayer(game: LocalGame, playerId: string): LocalGame {
   if (!game.players.some(p => p.id === playerId)) throw new Error('Player not in game');
 
   const at = new Date().toISOString();
-  const position = game.players.length - config.eliminations.length;
+  const position = remainingPlayerIds(game).length; // players still in, incl. the one busting
   let eliminations = [...config.eliminations, { playerId, position, at }];
 
   const remaining = game.players.filter(p => !eliminations.some(e => e.playerId === p.id));
@@ -129,4 +132,36 @@ export function undoElimination(game: LocalGame): LocalGame {
   if (game.status !== 'Active') throw new Error('Game is not active');
   if (config.eliminations.length === 0) return game;
   return { ...game, tournament: { ...config, eliminations: config.eliminations.slice(0, -1) } };
+}
+
+/**
+ * Finish a tournament early: the host supplies a ranking of the players still in
+ * (orderedRemainingIds[0] = best finish among them). Already-busted players keep
+ * their positions; the remaining players fill positions 1..k above them. Pure.
+ */
+export function finishWithRanking(game: LocalGame, orderedRemainingIds: string[]): LocalGame {
+  const config = game.tournament;
+  if (!config) throw new Error('Not a tournament');
+  if (game.status !== 'Active') throw new Error('Game is not active');
+
+  const remaining = remainingPlayerIds(game);
+  const remainingSet = new Set(remaining);
+  if (orderedRemainingIds.length !== remaining.length || !orderedRemainingIds.every(id => remainingSet.has(id))) {
+    throw new Error('Ranking must list every remaining player exactly once');
+  }
+
+  const at = new Date().toISOString();
+  // Remaining players occupy the top positions 1..k; busted players already hold k+1..N.
+  const newEliminations = orderedRemainingIds.map((playerId, i) => ({
+    playerId,
+    position: i + 1,
+    at,
+  }));
+
+  return {
+    ...game,
+    status: 'Finished',
+    endedAt: at,
+    tournament: { ...config, eliminations: [...config.eliminations, ...newEliminations] },
+  };
 }

@@ -28,7 +28,7 @@ import { timeAgo } from '../utils/formatters';
 import { lightTap, successNotification } from '../utils/haptics';
 import { showToast } from '../utils/toast';
 import { confirmDialog, infoDialog } from '../utils/confirm';
-import { blindClock } from '../local/blinds';
+import { clockView } from '../local/blinds';
 import { prizePoolCents, remainingPlayerIds } from '../local/tournament';
 import Screen from '../components/Screen';
 import AnimatedNumber from '../components/motion/AnimatedNumber';
@@ -45,19 +45,24 @@ type AmountModalState =
 export default function LocalSessionScreen({ route, navigation }: Props) {
   const { gameId } = route.params;
   const insets = useSafeAreaInsets();
-  const { games, addBuyIn, addCashOut, addPlayer, undoLastTxn, endGame, eliminatePlayer, undoElimination, deleteGame } =
+  const { games, addBuyIn, addCashOut, addPlayer, undoLastTxn, endGame, eliminatePlayer, undoElimination, deleteGame, syncClock } =
     useLocalGames();
 
   const game = games.find(g => g.id === gameId);
   const isTournament = game?.mode === 'tournament';
 
-  // 1-second tick drives the blind countdown (tournaments only).
+  // 1-second tick drives the blind countdown (tournaments only) and auto-advances
+  // the stored clock when a running level expires.
   const [nowMs, setNowMs] = useState(Date.now());
   useEffect(() => {
     if (!isTournament || game?.status !== 'Active') return;
-    const interval = setInterval(() => setNowMs(Date.now()), 1000);
+    const interval = setInterval(() => {
+      const t = Date.now();
+      setNowMs(t);
+      syncClock(gameId, t);
+    }, 1000);
     return () => clearInterval(interval);
-  }, [isTournament, game?.status]);
+  }, [isTournament, game?.status, gameId, syncClock]);
 
   const [sheetPlayer, setSheetPlayer] = useState<LocalPlayer | null>(null);
   const [amountModal, setAmountModal] = useState<AmountModalState>(null);
@@ -281,24 +286,29 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
 
         {/* Blind clock (tournaments) */}
         {isTournament && game.tournament && (() => {
-          const clock = blindClock(game.tournament.blindPreset, game.createdAt, nowMs);
-          const mins = Math.floor(clock.secondsRemaining / 60);
-          const secs = clock.secondsRemaining % 60;
+          const view = clockView(game.tournament.clock, game.tournament.blindLevels, nowMs);
+          const mins = Math.floor(view.secondsRemaining / 60);
+          const secs = view.secondsRemaining % 60;
           return (
             <View style={styles.blindBanner}>
               <View style={styles.blindLevelWrap}>
-                <Text style={styles.blindLevelLabel}>LEVEL {clock.current.level}</Text>
+                <Text style={styles.blindLevelLabel}>
+                  LEVEL {view.levelNumber}{view.paused ? ' · PAUSED' : ''}
+                </Text>
                 <Text style={styles.blindValue}>
-                  {clock.current.smallBlind.toLocaleString()} / {clock.current.bigBlind.toLocaleString()}
+                  {view.current.smallBlind.toLocaleString()} / {view.current.bigBlind.toLocaleString()}
+                  {view.current.ante ? ` (${view.current.ante.toLocaleString()})` : ''}
                 </Text>
               </View>
               <View style={styles.blindClockWrap}>
                 <Text style={styles.blindCountdown}>
                   {mins}:{String(secs).padStart(2, '0')}
                 </Text>
-                <Text style={styles.blindNext}>
-                  next {clock.next.smallBlind.toLocaleString()}/{clock.next.bigBlind.toLocaleString()}
-                </Text>
+                {view.next && (
+                  <Text style={styles.blindNext}>
+                    next {view.next.smallBlind.toLocaleString()}/{view.next.bigBlind.toLocaleString()}
+                  </Text>
+                )}
               </View>
             </View>
           );

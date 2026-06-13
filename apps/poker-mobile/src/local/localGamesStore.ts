@@ -11,39 +11,98 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
-import { eliminatePlayer as eliminateInGame, undoElimination as undoInGame } from './tournament';
+import {
+  eliminatePlayer as eliminateInGame,
+  finishWithRanking,
+  undoElimination as undoInGame,
+  PAYOUT_PRESETS,
+} from './tournament';
+import {
+  generateBlindLevels,
+  gotoLevel,
+  initClock,
+  pauseClock,
+  resumeClock,
+  tickAutoAdvance,
+} from './blinds';
 import type {
-  BlindPreset,
+  BlindLevel,
   LocalGame,
   LocalGamesFile,
   LocalPlayer,
   LocalTxn,
   LocalTxnKind,
-  PayoutPreset,
+  LocalTxnTag,
 } from './types';
 
 const STORAGE_KEY = 'tpoker.localGames.v1';
 const QUARANTINE_PREFIX = 'tpoker.localGames.quarantine.';
 
-export const emptyFile = (): LocalGamesFile => ({ schemaVersion: 2, games: [] });
-
-/** v1 files predate tournaments — every game becomes an explicit cash game. */
-function migrateV1(file: { games: unknown[] }): LocalGamesFile {
-  return {
-    schemaVersion: 2,
-    games: (file.games as LocalGame[]).map(g => ({ ...g, schemaVersion: 2, mode: g.mode ?? 'cash' })),
-  };
-}
+export const emptyFile = (): LocalGamesFile => ({ schemaVersion: 3, games: [] });
 
 const newId = (): string => Crypto.randomUUID();
 const now = (): string => new Date().toISOString();
 
-type AnyVersionFile = { schemaVersion: number; games: LocalGame[] };
+/** v1 files predate tournaments — every game becomes an explicit cash game (v2 shape). */
+function migrateV1toV2(file: { games: unknown[] }): { schemaVersion: 2; games: any[] } {
+  return {
+    schemaVersion: 2,
+    games: (file.games as any[]).map(g => ({ ...g, schemaVersion: 2, mode: g.mode ?? 'cash' })),
+  };
+}
+
+/**
+ * v2 → v3: cash games just bump. v2 tournaments had fixed payout/blind presets and
+ * a derived clock — convert to explicit payouts[], generated blindLevels[], and a
+ * stored clock seeded running from now. New flexibility fields get safe defaults.
+ */
+function migrateV2toV3(file: { games: any[] }): LocalGamesFile {
+  const nowMs = Date.now();
+  return {
+    schemaVersion: 3,
+    games: file.games.map(g => {
+      if (g.mode !== 'tournament' || !g.tournament) {
+        return { ...g, schemaVersion: 3 } as LocalGame;
+      }
+      const t = g.tournament;
+      // Already v3-shaped (defensive)?
+      if (Array.isArray(t.blindLevels) && Array.isArray(t.payouts) && t.clock) {
+        return { ...g, schemaVersion: 3 } as LocalGame;
+      }
+      const blindLevels = generateBlindLevels(t.blindPreset ?? 'standard');
+      const payouts = PAYOUT_PRESETS[(t.payoutPreset as keyof typeof PAYOUT_PRESETS)] ?? PAYOUT_PRESETS['50-30-20'];
+      return {
+        ...g,
+        schemaVersion: 3,
+        tournament: {
+          entryFeeCents: t.entryFeeCents,
+          payouts,
+          blindLevels,
+          clock: initClock(blindLevels, nowMs),
+          rebuysAllowed: true,
+          addOnsAllowed: false,
+          lateRegLevels: 0,
+          eliminations: t.eliminations ?? [],
+        },
+      } as LocalGame;
+    }),
+  };
+}
+
+type AnyVersionFile = { schemaVersion: number; games: unknown[] };
 
 function isValidFile(value: unknown): value is AnyVersionFile {
   if (typeof value !== 'object' || value === null) return false;
   const file = value as { schemaVersion?: number; games?: unknown };
-  return (file.schemaVersion === 1 || file.schemaVersion === 2) && Array.isArray(file.games);
+  return (file.schemaVersion === 1 || file.schemaVersion === 2 || file.schemaVersion === 3)
+    && Array.isArray(file.games);
+}
+
+function migrateToCurrent(parsed: AnyVersionFile): LocalGamesFile {
+  let working: any = parsed;
+  if (working.schemaVersion === 1) working = migrateV1toV2(working);
+  if (working.schemaVersion === 2) working = migrateV2toV3(working);
+  return working as LocalGamesFile;
 }
 
 // ---------------------------------------------------------------------------
@@ -61,9 +120,7 @@ export async function loadFile(): Promise<LocalGamesFile> {
 
   try {
     const parsed = JSON.parse(raw);
-    if (isValidFile(parsed)) {
-      return parsed.schemaVersion === 1 ? migrateV1(parsed) : (parsed as LocalGamesFile);
-    }
+    if (isValidFile(parsed)) return migrateToCurrent(parsed);
     throw new Error('unexpected shape');
   } catch {
     // Quarantine, don't clear: keep the raw payload recoverable.
@@ -85,6 +142,17 @@ export async function saveFile(file: LocalGamesFile): Promise<void> {
 // Pure mutations — each returns a NEW file; callers persist via saveFile()
 // ---------------------------------------------------------------------------
 
+export interface CreateTournamentInput {
+  entryFeeCents: number;
+  payouts: number[];
+  blindLevels: BlindLevel[];
+  startingStackChips?: number;
+  rebuysAllowed: boolean;
+  addOnsAllowed: boolean;
+  addOnAmountCents?: number;
+  lateRegLevels?: number;
+}
+
 export interface CreateGameInput {
   name: string;
   playerNames: string[];
@@ -92,11 +160,7 @@ export interface CreateGameInput {
   defaultBuyInCents?: number;
   mode?: 'cash' | 'tournament';
   /** Required when mode === 'tournament'. */
-  tournament?: {
-    entryFeeCents: number;
-    payoutPreset: PayoutPreset;
-    blindPreset: BlindPreset;
-  };
+  tournament?: CreateTournamentInput;
 }
 
 export function createGame(
@@ -107,13 +171,17 @@ export function createGame(
     throw new Error('A local game is already in progress');
   }
   const isTournament = input.mode === 'tournament';
-  if (isTournament && (!input.tournament || input.tournament.entryFeeCents <= 0)) {
-    throw new Error('Tournaments need a positive entry fee');
+  if (isTournament) {
+    const t = input.tournament;
+    if (!t || t.entryFeeCents <= 0) throw new Error('Tournaments need a positive entry fee');
+    if (!t.blindLevels || t.blindLevels.length === 0) throw new Error('Tournaments need a blind structure');
+    if (!t.payouts || t.payouts.length === 0) throw new Error('Tournaments need at least one paid place');
   }
   const createdAt = now();
+  const createdAtMs = new Date(createdAt).getTime();
   const players = input.playerNames.map(name => ({ id: newId(), name: name.trim() }));
   // Tournament entries are paid by everyone up front — recorded as buy-ins
-  // so the prize pool (and future rebuys via addBuyIn) all flow through txns.
+  // (tagged 'entry') so the prize pool and future rebuys/add-ons all flow through txns.
   const txns: LocalTxn[] = isTournament
     ? players.map(p => ({
         id: newId(),
@@ -121,16 +189,29 @@ export function createGame(
         kind: 'buyin' as const,
         amountCents: input.tournament!.entryFeeCents,
         at: createdAt,
+        tag: 'entry' as const,
       }))
     : [];
+  const t = input.tournament;
   const game: LocalGame = {
     id: newId(),
-    schemaVersion: 2,
+    schemaVersion: 3,
     name: input.name.trim(),
     status: 'Active',
     mode: input.mode ?? 'cash',
-    tournament: isTournament
-      ? { ...input.tournament!, eliminations: [] }
+    tournament: isTournament && t
+      ? {
+          entryFeeCents: t.entryFeeCents,
+          payouts: t.payouts,
+          blindLevels: t.blindLevels,
+          clock: initClock(t.blindLevels, createdAtMs),
+          startingStackChips: t.startingStackChips,
+          rebuysAllowed: t.rebuysAllowed,
+          addOnsAllowed: t.addOnsAllowed,
+          addOnAmountCents: t.addOnAmountCents,
+          lateRegLevels: t.lateRegLevels,
+          eliminations: [],
+        }
       : undefined,
     createdAt,
     chipRatio: input.chipRatio,
@@ -151,6 +232,13 @@ function updateGame(
   return { ...file, games: file.games.map(g => (g.id === gameId ? update(g) : g)) };
 }
 
+/** Late registration is open while the current level is within the configured window. */
+export function isLateRegOpen(game: LocalGame): boolean {
+  const t = game.tournament;
+  if (!t || !t.lateRegLevels || t.lateRegLevels <= 0) return false;
+  return t.clock.levelIndex < t.lateRegLevels;
+}
+
 export function addPlayer(
   file: LocalGamesFile,
   gameId: string,
@@ -159,6 +247,19 @@ export function addPlayer(
   const player: LocalPlayer = { id: newId(), name: name.trim() };
   const next = updateGame(file, gameId, game => {
     if (game.status !== 'Active') throw new Error('Game is not active');
+    if (game.mode === 'tournament') {
+      if (!isLateRegOpen(game)) throw new Error('Late registration is closed');
+      // A late entry pays the entry fee into the pool, tagged as an entry.
+      const entry: LocalTxn = {
+        id: newId(),
+        playerId: player.id,
+        kind: 'buyin',
+        amountCents: game.tournament!.entryFeeCents,
+        at: now(),
+        tag: 'entry',
+      };
+      return { ...game, players: [...game.players, player], txns: [...game.txns, entry] };
+    }
     return { ...game, players: [...game.players, player] };
   });
   return { file: next, player };
@@ -170,6 +271,7 @@ function addTxn(
   playerId: string,
   kind: LocalTxnKind,
   amountCents: number,
+  tag?: LocalTxnTag,
 ): LocalGamesFile {
   if (!Number.isInteger(amountCents) || amountCents <= 0) {
     throw new Error('Amount must be a positive whole number of cents');
@@ -177,7 +279,7 @@ function addTxn(
   return updateGame(file, gameId, game => {
     if (game.status !== 'Active') throw new Error('Game is not active');
     if (!game.players.some(p => p.id === playerId)) throw new Error('Player not in game');
-    const txn: LocalTxn = { id: newId(), playerId, kind, amountCents, at: now() };
+    const txn: LocalTxn = { id: newId(), playerId, kind, amountCents, at: now(), tag };
     return { ...game, txns: [...game.txns, txn] };
   });
 }
@@ -187,8 +289,9 @@ export function addBuyIn(
   gameId: string,
   playerId: string,
   amountCents: number,
+  tag?: LocalTxnTag,
 ): LocalGamesFile {
-  return addTxn(file, gameId, playerId, 'buyin', amountCents);
+  return addTxn(file, gameId, playerId, 'buyin', amountCents, tag);
 }
 
 export function addCashOut(
@@ -234,6 +337,10 @@ export function endGame(
   });
 }
 
+// ---------------------------------------------------------------------------
+// Tournament mutations
+// ---------------------------------------------------------------------------
+
 /** Tournament: bust a player (auto-finishes when one remains). */
 export function eliminatePlayer(file: LocalGamesFile, gameId: string, playerId: string): LocalGamesFile {
   return updateGame(file, gameId, game => eliminateInGame(game, playerId));
@@ -242,6 +349,59 @@ export function eliminatePlayer(file: LocalGamesFile, gameId: string, playerId: 
 /** Tournament: undo the most recent bust (Active games only). */
 export function undoElimination(file: LocalGamesFile, gameId: string): LocalGamesFile {
   return updateGame(file, gameId, game => undoInGame(game));
+}
+
+/** Tournament: finish early with a host-supplied ranking of remaining players. */
+export function finishTournamentEarly(
+  file: LocalGamesFile,
+  gameId: string,
+  orderedRemainingIds: string[],
+): LocalGamesFile {
+  return updateGame(file, gameId, game => finishWithRanking(game, orderedRemainingIds));
+}
+
+function updateClock(
+  file: LocalGamesFile,
+  gameId: string,
+  update: (game: LocalGame) => LocalGame['tournament'],
+): LocalGamesFile {
+  return updateGame(file, gameId, game => {
+    if (game.mode !== 'tournament' || !game.tournament) throw new Error('Not a tournament');
+    if (game.status !== 'Active') return game;
+    return { ...game, tournament: update(game) };
+  });
+}
+
+export function pauseTournamentClock(file: LocalGamesFile, gameId: string, nowMs = Date.now()): LocalGamesFile {
+  return updateClock(file, gameId, g => ({ ...g.tournament!, clock: pauseClock(g.tournament!.clock, nowMs) }));
+}
+
+export function resumeTournamentClock(file: LocalGamesFile, gameId: string, nowMs = Date.now()): LocalGamesFile {
+  return updateClock(file, gameId, g => ({ ...g.tournament!, clock: resumeClock(g.tournament!.clock, nowMs) }));
+}
+
+/** Move the blind level by delta (±1), clamped; restarts that level's timer. */
+export function gotoTournamentLevel(file: LocalGamesFile, gameId: string, delta: number, nowMs = Date.now()): LocalGamesFile {
+  return updateClock(file, gameId, g => {
+    const t = g.tournament!;
+    return { ...t, clock: gotoLevel(t.clock, t.blindLevels, t.clock.levelIndex + delta, nowMs) };
+  });
+}
+
+/**
+ * Auto-advance the clock to the next level when a running level expires.
+ * Returns the SAME file reference when nothing changed (so callers can skip
+ * re-renders and writes).
+ */
+export function syncTournamentClock(file: LocalGamesFile, gameId: string, nowMs: number): LocalGamesFile {
+  const game = file.games.find(g => g.id === gameId);
+  if (!game || game.mode !== 'tournament' || !game.tournament || game.status !== 'Active') return file;
+  const clock = tickAutoAdvance(game.tournament.clock, game.tournament.blindLevels, nowMs);
+  if (clock === game.tournament.clock) return file;
+  return {
+    ...file,
+    games: file.games.map(g => (g.id === gameId ? { ...g, tournament: { ...g.tournament!, clock } } : g)),
+  };
 }
 
 export function deleteGame(file: LocalGamesFile, gameId: string): LocalGamesFile {
