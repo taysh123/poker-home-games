@@ -27,6 +27,11 @@ pipeline with store packaging.
 
 ## Step 1 — Accounts (one-time)
 
+> **Publisher identity:** the app is published under **True Story Labs**. Set the
+> Play Console / App Store Connect **developer (publisher) name** to "True Story
+> Labs" and the **support / contact email** to `truestorylabs@gmail.com`. This is
+> the brand and contact users will see on the store listing.
+
 1. **Google Play Console** — [play.google.com/console/signup](https://play.google.com/console/signup) — $25 one-time. Personal account is fine to start.
 2. **Apple Developer Program** — [developer.apple.com/programs/enroll](https://developer.apple.com/programs/enroll) — $99/year. Required for ANY iOS distribution (even TestFlight). If you're Android-first, you can ship Play now and do iOS later.
 
@@ -71,7 +76,18 @@ replace them later; they're submission-valid now.
 
 **Suggested copy** (edit to taste):
 - *Short description (80):* "Run your home poker night — buy-ins, settlements, tournaments. No spreadsheets."
-- *Long description:* lead with guest mode (works instantly, no account), settlements ("Bob pays Alice ₪40"), tournament mode (blind clock, podium payouts), groups/stats for regulars. Avoid gambling language — this is a scorekeeping tool.
+- *Long description:* lead with guest mode (works instantly, no account), settlements ("Bob pays Alice ₪40"), tournament mode (blind clock, podium payouts), groups/stats for regulars. Avoid gambling language — this is a scorekeeping tool. Close with a one-line responsible-play note (see below).
+
+**Positioning & responsible play (keep this framing consistent everywhere):**
+T Poker is a **private home-game management and scorekeeping tool for adults
+(18+)** — think shared ledger, not casino. It does **not** host real-money play,
+wagering, simulated gambling, chips/odds, or payouts; it only records the buy-ins,
+cash-outs, and settlements players track among themselves offline. Every listing,
+screenshot caption, and reviewer note should reinforce this. Include a short,
+non-alarmist responsible-play line in the long description, e.g.: *"For adults
+(18+). T Poker is a scorekeeping tool, not a gambling product — please play
+responsibly and within your local laws."* This wording also lives in the in-app
+Login footer, the Profile → About & Support card, and the privacy policy.
 
 ## Step 6 — Category, rating, privacy forms
 
@@ -81,7 +97,10 @@ replace them later; they're submission-valid now.
   chips/odds simulation, and no payouts — it only records what players track
   themselves, like a spreadsheet."*
 - **Age rating questionnaires:** answer "no" to gambling/simulated gambling
-  (nothing is wagered in-app). Expect 12+/Teen-ish outcomes from other axes.
+  (nothing is wagered in-app). The app is positioned for **adults (18+)** — set the
+  content/target-audience to an adult audience (not children), consistent with the
+  privacy policy's "Responsible play & age" section. Do not select a children's
+  audience or family program.
 - **Play Data Safety / Apple Privacy Nutrition:** derived from [PRIVACY.md](../PRIVACY.md):
   - Collected (account users only): email address, username (account management);
     app activity = game records the user enters. All optional — guest mode collects nothing.

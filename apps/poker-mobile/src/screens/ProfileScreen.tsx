@@ -10,7 +10,9 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Linking,
 } from 'react-native';
+import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as SecureStore from '../utils/storage';
@@ -372,6 +374,46 @@ export default function ProfileScreen({ navigation }: Props) {
           </TouchableOpacity>
         </View>
 
+        {/* ── About & Support ─────────────────────────────────────────── */}
+        <View style={styles.section}>
+          <View style={[styles.sectionHeader, { marginBottom: 12 }]}>
+            <View style={styles.sectionTitleRow}>
+              <View style={styles.sectionIconWrap}>
+                <Ionicons name="information-circle-outline" size={14} color={colors.gold} />
+              </View>
+              <Text style={styles.sectionTitle}>About & Support</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.aboutRow}
+            onPress={() => Linking.openURL('mailto:truestorylabs@gmail.com?subject=T%20Poker%20support')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="mail-outline" size={16} color={colors.textMuted} />
+            <Text style={styles.aboutRowText}>truestorylabs@gmail.com</Text>
+            <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.aboutRow}
+            onPress={() => Linking.openURL('https://poker-home-games-three.vercel.app/privacy.html')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="shield-checkmark-outline" size={16} color={colors.textMuted} />
+            <Text style={styles.aboutRowText}>Privacy Policy</Text>
+            <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
+          </TouchableOpacity>
+
+          <Text style={styles.aboutResponsible}>
+            T Poker is a private home-game scorekeeping app for adults (18+). It is not
+            a gambling product — play responsibly and within the law.
+          </Text>
+          <Text style={styles.aboutMeta}>
+            v{Constants.expoConfig?.version ?? '1.1.0'} · © True Story Labs
+          </Text>
+        </View>
+
         {/* ── Danger Zone ─────────────────────────────────────────────── */}
         <View style={[styles.section, styles.dangerSection]}>
           <View style={[styles.sectionHeader, { marginBottom: 10 }]}>
@@ -542,6 +584,28 @@ const styles = StyleSheet.create({
   btnPrimaryText: { fontSize: 14, fontWeight: '700', color: colors.background },
   btnSecondary: { flex: 1, borderWidth: 1, borderColor: colors.border },
   btnSecondaryText: { fontSize: 14, fontWeight: '600', color: colors.textMuted },
+
+  aboutRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  aboutRowText: { flex: 1, fontSize: 14, color: colors.textHigh, fontWeight: '500' },
+  aboutResponsible: {
+    fontSize: 12,
+    color: colors.textDim,
+    lineHeight: 18,
+    marginTop: 14,
+  },
+  aboutMeta: {
+    fontSize: 11,
+    color: colors.textDim,
+    marginTop: 12,
+    letterSpacing: 0.3,
+  },
 
   dangerSection: { borderColor: colors.errorMuted },
   dangerDesc: { fontSize: 13, color: colors.textMuted, marginBottom: 14, lineHeight: 18 },

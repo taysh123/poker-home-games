@@ -231,7 +231,19 @@ amount validation on every transaction. Privacy policy: [PRIVACY.md](PRIVACY.md)
 
 Full prioritized roadmap with efforts and release trains: [docs/roadmap-v2.md](docs/roadmap-v2.md).
 Headline next steps: server-side group tournaments → push delivery rollout →
-Play Store internal track → local-to-cloud game import.
+Play Store internal track → local-to-cloud game import. Current store-launch
+status: [docs/release-readiness.md](docs/release-readiness.md).
+
+## Responsible play
+
+T Poker is a private home-game management and scorekeeping tool for adults (18+).
+It is **not** a gambling product — it hosts no wagering, real-money play, or
+payouts, and only records what players track among themselves. Please play
+responsibly and within your local laws.
+
+## About
+
+Built by **True Story Labs**. Contact & support: truestorylabs@gmail.com.
 
 ## License
 

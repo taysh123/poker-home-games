@@ -3,10 +3,11 @@
 > Source of truth for `apps/poker-mobile/public/privacy.html` (served at
 > https://poker-home-games-three.vercel.app/privacy.html). Keep both in sync.
 
-_Last updated: June 12, 2026_
+_Last updated: June 13, 2026_
 
-T Poker is a private home-game poker management app. This policy explains what data
-the app handles, where it lives, and what control you have over it.
+T Poker is a private home-game poker management app, operated by **True Story Labs**.
+This policy explains what data the app handles, where it lives, and what control you
+have over it.
 
 ## Guest mode — your data stays on your device
 
@@ -39,7 +40,7 @@ storage (Keychain/Keystore). Refresh tokens are stored hashed server-side.
 
 - **In the app:** Profile → Delete Account — permanently removes your account and
   all associated personal data from our servers, immediately.
-- **Without the app** (e.g. after uninstalling): email tayshofer05@gmail.com from
+- **Without the app** (e.g. after uninstalling): email truestorylabs@gmail.com from
   your account's address with subject "Account deletion request"; we verify and
   delete within 30 days with confirmation.
 - Guest data never reaches our servers — delete games in-app or uninstall.
@@ -51,10 +52,19 @@ storage (Keychain/Keystore). Refresh tokens are stored hashed server-side.
 Account data: PostgreSQL on Railway. Web app: Vercel. Local guest data never leaves
 the device.
 
-## Children
+## Responsible play & age
 
-Intended for adults organizing private home games; not directed at children under 17.
+T Poker is a private home-game management and scorekeeping tool, intended for adults
+**18 and older**. It is not directed at or intended for children. T Poker does not
+offer, host, or encourage real-money gambling — it only records the buy-ins,
+cash-outs, and settlements that players track among themselves, like a shared
+ledger. Poker played for money can be risky and, for some people, addictive. Please
+play responsibly and within the laws of your jurisdiction.
 
 ## Contact
 
-tayshofer05@gmail.com
+True Story Labs · truestorylabs@gmail.com
+
+---
+
+© 2026 True Story Labs · T Poker

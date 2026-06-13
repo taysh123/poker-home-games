@@ -171,6 +171,14 @@ export default function LoginScreen({ navigation }: Props) {
             <Text style={styles.link}>Create one</Text>
           </TouchableOpacity>
         </Animated.View>
+
+        <Animated.View style={[styles.legal, { opacity: formOpacity }]}>
+          <Text style={styles.legalText}>
+            A private home-game scorekeeping app for adults (18+). Not a gambling
+            product — play responsibly.
+          </Text>
+          <Text style={styles.brandByline}>BY TRUE STORY LABS</Text>
+        </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
     </Screen>
@@ -268,4 +276,7 @@ const styles = StyleSheet.create({
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 28 },
   footerText: { color: colors.textMuted, fontSize: 15 },
   link: { color: colors.gold, fontSize: 15, fontWeight: '700' },
+  legal: { alignItems: 'center', marginTop: 32, paddingHorizontal: 12, gap: 10 },
+  legalText: { color: colors.textDim, fontSize: 11.5, lineHeight: 17, textAlign: 'center' },
+  brandByline: { color: colors.goldMuted, fontSize: 10, fontWeight: '700', letterSpacing: 1.5 },
 });
