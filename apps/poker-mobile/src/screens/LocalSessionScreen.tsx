@@ -29,7 +29,8 @@ import { lightTap, successNotification } from '../utils/haptics';
 import { showToast } from '../utils/toast';
 import { confirmDialog, infoDialog } from '../utils/confirm';
 import { clockView } from '../local/blinds';
-import { prizePoolCents, remainingPlayerIds } from '../local/tournament';
+import { prizePoolCents, remainingPlayerIds, payoutAmountsCents } from '../local/tournament';
+import { isLateRegOpen } from '../local/localGamesStore';
 import Screen from '../components/Screen';
 import AnimatedNumber from '../components/motion/AnimatedNumber';
 import Avatar from '../components/Avatar';
@@ -45,7 +46,7 @@ type AmountModalState =
 export default function LocalSessionScreen({ route, navigation }: Props) {
   const { gameId } = route.params;
   const insets = useSafeAreaInsets();
-  const { games, addBuyIn, addCashOut, addPlayer, undoLastTxn, endGame, eliminatePlayer, undoElimination, deleteGame, syncClock } =
+  const { games, addBuyIn, addCashOut, addPlayer, undoLastTxn, endGame, eliminatePlayer, undoElimination, deleteGame, syncClock, pauseClock, resumeClock, gotoLevel, finishTournamentEarly } =
     useLocalGames();
 
   const game = games.find(g => g.id === gameId);
@@ -73,6 +74,10 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
   const [finalStacks, setFinalStacks] = useState<Record<string, string>>({});
   // Explicit arming required to end with an unbalanced count (replaces the old confirm dialog).
   const [overrideArmed, setOverrideArmed] = useState(false);
+
+  // Tournament end controls
+  const [endSheet, setEndSheet] = useState(false);
+  const [rankOrder, setRankOrder] = useState<string[] | null>(null);
 
   const standings = useMemo(() => {
     if (!game) return [];
@@ -220,6 +225,36 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
     );
   }
 
+  function openFinishEarly() {
+    setRankOrder(remainingPlayerIds(game!));
+  }
+
+  function moveRank(index: number, dir: -1 | 1) {
+    setRankOrder(prev => {
+      if (!prev) return prev;
+      const target = index + dir;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }
+
+  async function confirmFinishEarly() {
+    if (!rankOrder) return;
+    await finishTournamentEarly(game!.id, rankOrder);
+    successNotification();
+    setRankOrder(null);
+    navigation.replace('LocalSessionSummary', { gameId: game!.id });
+  }
+
+  async function toggleClockPause() {
+    const t = game!.tournament!;
+    lightTap();
+    if (t.clock.status === 'running') await pauseClock(game!.id);
+    else await resumeClock(game!.id);
+  }
+
   function openEndFlow() {
     const stacks: Record<string, string> = {};
     for (const p of game!.players) stacks[p.id] = '';
@@ -284,31 +319,86 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
           </Text>
         </View>
 
-        {/* Blind clock (tournaments) */}
+        {/* Tournament dashboard: blind clock + controls + live stats */}
         {isTournament && game.tournament && (() => {
-          const view = clockView(game.tournament.clock, game.tournament.blindLevels, nowMs);
+          const t = game.tournament;
+          const view = clockView(t.clock, t.blindLevels, nowMs);
           const mins = Math.floor(view.secondsRemaining / 60);
           const secs = view.secondsRemaining % 60;
+          const playersLeft = remainingPlayerIds(game).length;
+          const buyinCount = game.txns.filter(tx => tx.kind === 'buyin').length;
+          const pool = prizePoolCents(game);
+          const payouts = payoutAmountsCents(pool, t.payouts);
+          // The next player to bust finishes here; show their payout (or "bubble").
+          const nextOutPosition = playersLeft;
+          const nextOutPayout = nextOutPosition >= 1 && nextOutPosition <= payouts.length
+            ? payouts[nextOutPosition - 1] : 0;
+          const chipsInPlay = t.startingStackChips ? t.startingStackChips * buyinCount : 0;
+          const avgStack = chipsInPlay && playersLeft ? Math.round(chipsInPlay / playersLeft) : 0;
+          const bbLeft = avgStack && view.current.bigBlind ? Math.round(avgStack / view.current.bigBlind) : 0;
+          const atLastLevel = view.levelNumber >= t.blindLevels.length;
+
           return (
-            <View style={styles.blindBanner}>
-              <View style={styles.blindLevelWrap}>
-                <Text style={styles.blindLevelLabel}>
-                  LEVEL {view.levelNumber}{view.paused ? ' · PAUSED' : ''}
-                </Text>
-                <Text style={styles.blindValue}>
-                  {view.current.smallBlind.toLocaleString()} / {view.current.bigBlind.toLocaleString()}
-                  {view.current.ante ? ` (${view.current.ante.toLocaleString()})` : ''}
-                </Text>
-              </View>
-              <View style={styles.blindClockWrap}>
-                <Text style={styles.blindCountdown}>
+            <View style={styles.dashCard}>
+              {/* Clock */}
+              <View style={styles.dashClockRow}>
+                <View style={styles.dashLevelWrap}>
+                  <Text style={styles.dashLevelLabel}>LEVEL {view.levelNumber}{view.paused ? ' · PAUSED' : ''}</Text>
+                  <Text style={styles.dashBlinds}>
+                    {view.current.isBreak ? 'BREAK' : `${view.current.smallBlind.toLocaleString()} / ${view.current.bigBlind.toLocaleString()}`}
+                    {view.current.ante ? ` · ante ${view.current.ante.toLocaleString()}` : ''}
+                  </Text>
+                  {view.next && (
+                    <Text style={styles.dashNext}>
+                      next {view.next.smallBlind.toLocaleString()}/{view.next.bigBlind.toLocaleString()}
+                    </Text>
+                  )}
+                </View>
+                <Text style={[styles.dashCountdown, view.paused && styles.dashCountdownPaused]}>
                   {mins}:{String(secs).padStart(2, '0')}
                 </Text>
-                {view.next && (
-                  <Text style={styles.blindNext}>
-                    next {view.next.smallBlind.toLocaleString()}/{view.next.bigBlind.toLocaleString()}
-                  </Text>
-                )}
+              </View>
+
+              {/* Clock controls */}
+              <View style={styles.dashControls}>
+                <TouchableOpacity
+                  style={styles.dashCtrlBtn}
+                  onPress={() => { lightTap(); gotoLevel(game.id, -1); }}
+                  disabled={view.levelNumber <= 1}
+                  hitSlop={8}
+                >
+                  <Ionicons name="play-skip-back" size={16} color={view.levelNumber <= 1 ? colors.textDim : colors.text} />
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.dashCtrlBtn, styles.dashCtrlPrimary]} onPress={toggleClockPause} hitSlop={8}>
+                  <Ionicons name={view.paused ? 'play' : 'pause'} size={18} color={colors.background} />
+                  <Text style={styles.dashCtrlPrimaryText}>{view.paused ? 'Resume' : 'Pause'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.dashCtrlBtn}
+                  onPress={() => { lightTap(); gotoLevel(game.id, 1); }}
+                  disabled={atLastLevel}
+                  hitSlop={8}
+                >
+                  <Ionicons name="play-skip-forward" size={16} color={atLastLevel ? colors.textDim : colors.text} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Live stats */}
+              <View style={styles.dashStats}>
+                <View style={styles.dashStat}>
+                  <Text style={styles.dashStatValue}>{playersLeft}<Text style={styles.dashStatSub}>/{game.players.length}</Text></Text>
+                  <Text style={styles.dashStatLabel}>LEFT</Text>
+                </View>
+                <View style={styles.dashStatDivider} />
+                <View style={styles.dashStat}>
+                  <Text style={styles.dashStatValue}>{avgStack ? avgStack.toLocaleString() : '—'}</Text>
+                  <Text style={styles.dashStatLabel}>{bbLeft ? `AVG · ${bbLeft} BB` : 'AVG STACK'}</Text>
+                </View>
+                <View style={styles.dashStatDivider} />
+                <View style={styles.dashStat}>
+                  <Text style={styles.dashStatValue}>{nextOutPayout > 0 ? formatCents(nextOutPayout) : 'Bubble'}</Text>
+                  <Text style={styles.dashStatLabel}>NEXT OUT · {nextOutPosition}{nextOutPosition === 1 ? 'ST' : nextOutPosition === 2 ? 'ND' : nextOutPosition === 3 ? 'RD' : 'TH'}</Text>
+                </View>
               </View>
             </View>
           );
@@ -317,9 +407,9 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
         {/* Standings */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{isTournament ? 'IN THE GAME' : 'AT THE TABLE'}</Text>
-          {!isTournament && (
+          {(!isTournament || isLateRegOpen(game)) && (
             <TouchableOpacity onPress={() => openAmountModal({ kind: 'addPlayer' })} hitSlop={8}>
-              <Text style={styles.sectionAction}>+ Add Player</Text>
+              <Text style={styles.sectionAction}>+ {isTournament ? 'Late Reg' : 'Add Player'}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -398,11 +488,78 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
       {/* Bottom action bar */}
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 14 }]}>
         {isTournament ? (
-          <PrimaryButton label="Abort Tournament" onPress={handleAbortTournament} variant="danger" fullWidth={false} style={styles.endBtn} />
+          <PrimaryButton label="End Tournament" onPress={() => setEndSheet(true)} variant="outline" fullWidth={false} style={styles.endBtn} />
         ) : (
           <PrimaryButton label="End Game" onPress={openEndFlow} variant="outline" fullWidth={false} style={styles.endBtn} />
         )}
       </View>
+
+      {/* End Tournament options */}
+      <ActionSheet
+        visible={endSheet}
+        onClose={() => setEndSheet(false)}
+        title="End Tournament"
+        subtitle="Finish and settle, or discard"
+        options={[
+          {
+            label: 'Finish early — rank players',
+            onPress: () => { setEndSheet(false); openFinishEarly(); },
+          },
+          {
+            label: 'Abort & delete',
+            onPress: () => { setEndSheet(false); handleAbortTournament(); },
+            style: 'destructive' as const,
+          },
+          { label: 'Cancel', onPress: () => {}, style: 'cancel' as const },
+        ]}
+      />
+
+      {/* Finish-early ranking modal */}
+      <Modal visible={rankOrder !== null} transparent animationType="fade" onRequestClose={() => setRankOrder(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, styles.endModalCard]}>
+            <View style={styles.finalCountHeader}>
+              <View style={styles.finalCountIcon}>
+                <Ionicons name="podium-outline" size={17} color={colors.gold} />
+              </View>
+              <Text style={styles.finalCountTitle} maxFontSizeMultiplier={1.3}>Final Ranking</Text>
+            </View>
+            <Text style={styles.modalSubtitle}>
+              Order the players still in — top finishes first. Payouts apply by your structure.
+            </Text>
+
+            <ScrollView style={{ maxHeight: Math.min(320, Dimensions.get('window').height * 0.4) }}>
+              {(rankOrder ?? []).map((pid, i) => {
+                const p = game.players.find(pl => pl.id === pid);
+                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
+                return (
+                  <View key={pid} style={styles.rankRow}>
+                    <Text style={styles.rankMedal}>{medal}</Text>
+                    <Avatar name={p?.name ?? '?'} size={34} />
+                    <Text style={styles.rankName} numberOfLines={1}>{p?.name}</Text>
+                    <View style={styles.rankArrows}>
+                      <TouchableOpacity style={styles.rankArrow} onPress={() => moveRank(i, -1)} disabled={i === 0} hitSlop={6}>
+                        <Ionicons name="chevron-up" size={18} color={i === 0 ? colors.textDim : colors.gold} />
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.rankArrow} onPress={() => moveRank(i, 1)} disabled={i === (rankOrder?.length ?? 0) - 1} hitSlop={6}>
+                        <Ionicons name="chevron-down" size={18} color={i === (rankOrder?.length ?? 0) - 1 ? colors.textDim : colors.gold} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              })}
+            </ScrollView>
+
+            <Text style={styles.finalityFooter}>
+              This ends the tournament and pays out the prize pool. It can't be reopened.
+            </Text>
+            <View style={styles.modalActions}>
+              <PrimaryButton label="Cancel" onPress={() => setRankOrder(null)} variant="outline" fullWidth={false} style={styles.modalBtn} />
+              <PrimaryButton label="Finish & Settle" onPress={confirmFinishEarly} variant="gradient" fullWidth={false} style={styles.modalBtnPrimary} />
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Player action sheet */}
       <ActionSheet
@@ -413,14 +570,27 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
         options={
           isTournament
             ? [
-                ...(defaultBuyInCents
+                ...(game.tournament?.rebuysAllowed && defaultBuyInCents
                   ? [{
                       label: `Rebuy ${formatCents(defaultBuyInCents)}`,
                       onPress: () => {
                         const p = sheetPlayer!;
-                        addBuyIn(game.id, p.id, defaultBuyInCents).then(() => {
+                        addBuyIn(game.id, p.id, defaultBuyInCents, 'rebuy').then(() => {
                           lightTap();
                           showToast(`${p.name} rebought for ${formatCents(defaultBuyInCents)}`, 'success');
+                        });
+                      },
+                    }]
+                  : []),
+                ...(game.tournament?.addOnsAllowed && game.tournament?.addOnAmountCents
+                  ? [{
+                      label: `Add-on ${formatCents(game.tournament.addOnAmountCents)}`,
+                      onPress: () => {
+                        const p = sheetPlayer!;
+                        const amt = game.tournament!.addOnAmountCents!;
+                        addBuyIn(game.id, p.id, amt, 'addon').then(() => {
+                          lightTap();
+                          showToast(`${p.name} added on ${formatCents(amt)}`, 'success');
                         });
                       },
                     }]
@@ -634,25 +804,63 @@ const styles = StyleSheet.create({
   },
   potLabel: { fontSize: 11, fontWeight: '700', color: colors.textMuted, letterSpacing: 1.2 },
 
-  // Tournament blind clock
-  blindBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 14,
-    backgroundColor: colors.goldFaint,
+  // Tournament dashboard
+  dashCard: {
+    borderRadius: 16,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.goldMuted,
+    padding: 16,
+    gap: 14,
     marginBottom: 8,
   },
-  blindLevelWrap: { gap: 2 },
-  blindLevelLabel: { fontSize: 10, fontWeight: '800', color: colors.goldLight, letterSpacing: 1.4 },
-  blindValue: { ...typography.amount, color: colors.text, fontVariant: ['tabular-nums'] },
-  blindClockWrap: { alignItems: 'flex-end', gap: 2 },
-  blindCountdown: { ...typography.amount, color: colors.gold, fontVariant: ['tabular-nums'] },
-  blindNext: { fontSize: 11, color: colors.textMuted },
+  dashClockRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  dashLevelWrap: { flex: 1, gap: 3 },
+  dashLevelLabel: { fontSize: 10, fontWeight: '800', color: colors.goldLight, letterSpacing: 1.4 },
+  dashBlinds: { ...typography.amount, color: colors.text, fontVariant: ['tabular-nums'] },
+  dashNext: { fontSize: 11, color: colors.textMuted },
+  dashCountdown: { ...typography.amountHero, fontSize: 40, color: colors.gold, fontVariant: ['tabular-nums'] },
+  dashCountdownPaused: { color: colors.textMuted },
+
+  dashControls: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  dashCtrlBtn: {
+    height: 44,
+    minWidth: 44,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  dashCtrlPrimary: { flex: 1, backgroundColor: colors.gold, borderColor: colors.gold },
+  dashCtrlPrimaryText: { fontSize: 15, fontWeight: '800', color: colors.background },
+
+  dashStats: { flexDirection: 'row', alignItems: 'center' },
+  dashStat: { flex: 1, alignItems: 'center', gap: 3 },
+  dashStatValue: { fontSize: 18, fontWeight: '800', color: colors.text, fontVariant: ['tabular-nums'] },
+  dashStatSub: { fontSize: 13, fontWeight: '700', color: colors.textMuted },
+  dashStatLabel: { fontSize: 9.5, fontWeight: '700', color: colors.textMuted, letterSpacing: 0.6 },
+  dashStatDivider: { width: 1, height: 32, backgroundColor: colors.border },
+
+  // Finish-early ranking
+  rankRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
+  rankMedal: { width: 30, fontSize: 16, textAlign: 'center', fontWeight: '700', color: colors.textMuted },
+  rankName: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.text },
+  rankArrows: { flexDirection: 'row', gap: 4 },
+  rankArrow: {
+    width: 36,
+    height: 36,
+    borderRadius: 9,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   // Tournament busted rows
   playerRowBusted: { opacity: 0.55 },
