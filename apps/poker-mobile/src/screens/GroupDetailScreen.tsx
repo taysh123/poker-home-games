@@ -45,7 +45,7 @@ import { searchUsers, UserSearchResultDto } from '../api/usersApi';
 import SkeletonCard from '../components/SkeletonCard';
 import SkeletonRow from '../components/SkeletonRow';
 import Screen from '../components/Screen';
-import ScreenHeader from '../components/ScreenHeader';
+import BrandHeader from '../components/BrandHeader';
 import Avatar from '../components/Avatar';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupDetail'>;
@@ -166,9 +166,9 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
     }
   }, [showInviteOnLoad, loading, group]);
 
-  // Velvet Table header (replaces the old native navigation header)
+  // Velvet Table header (brand home anchor + back + group title)
   const header = (
-    <ScreenHeader
+    <BrandHeader
       title={group?.name ?? groupName}
       onBack={() => navigation.goBack()}
       right={
