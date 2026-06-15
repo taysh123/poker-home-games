@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  Alert,
   Modal,
   KeyboardAvoidingView,
   Platform,
@@ -69,6 +68,7 @@ import RecapCard from '../components/RecapCard';
 import SkeletonCard from '../components/SkeletonCard';
 import { successNotification, errorNotification, lightTap } from '../utils/haptics';
 import { showToast } from '../utils/toast';
+import { confirmDialog } from '../utils/confirm';
 import { formatMoney, formatPL } from '../utils/formatters';
 import ShareCard, { canShareImages, shareCardImage } from '../components/ShareCard';
 import { useActiveSession } from '../context/ActiveSessionContext';
@@ -369,7 +369,7 @@ export default function SessionScreen({ route, navigation }: Props) {
     if (!txModal.player || !session) return;
     const raw = parseFloat(txAmount);
     if (isNaN(raw) || raw <= 0) {
-      Alert.alert('Invalid amount', 'Enter a valid amount greater than 0.');
+      showToast('Enter a valid amount greater than 0.', 'error');
       return;
     }
     const money = toMoney(raw, session.chipRatio, useChips);
@@ -405,7 +405,7 @@ export default function SessionScreen({ route, navigation }: Props) {
       lightTap();
       await load(true);
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.message ?? 'Failed to add player.');
+      showToast(e?.response?.data?.message ?? 'Failed to add player.', 'error');
     } finally {
       setAddingPlayerId(null);
     }
@@ -423,28 +423,23 @@ export default function SessionScreen({ route, navigation }: Props) {
       setGuestName('');
       await load(true);
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.message ?? 'Failed to add guest.');
+      showToast(e?.response?.data?.message ?? 'Failed to add guest.', 'error');
     } finally {
       setAddingGuest(false);
     }
   }
 
   async function handleRemovePlayer(player: SessionPlayerDto) {
-    Alert.alert('Remove Player', `Remove ${player.username}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove', style: 'destructive', onPress: async () => {
-          try {
-            const token = await SecureStore.getItemAsync('accessToken');
-            if (!token) return;
-            await removePlayer(token, sessionId, player.sessionPlayerId);
-            await load(true);
-          } catch {
-            Alert.alert('Error', 'Failed to remove player.');
-          }
-        },
-      },
-    ]);
+    confirmDialog('Remove Player', `Remove ${player.username}?`, 'Remove', async () => {
+      try {
+        const token = await SecureStore.getItemAsync('accessToken');
+        if (!token) return;
+        await removePlayer(token, sessionId, player.sessionPlayerId);
+        await load(true);
+      } catch {
+        showToast('Failed to remove player.', 'error');
+      }
+    }, { destructive: true });
   }
 
   // ── End Session ──
@@ -468,7 +463,7 @@ export default function SessionScreen({ route, navigation }: Props) {
       await load(true);
     } catch (e: any) {
       errorNotification();
-      Alert.alert('Error', e?.response?.data?.message ?? 'Failed to start session.');
+      showToast(e?.response?.data?.message ?? 'Failed to start session.', 'error');
     } finally {
       setStartLoading(false);
     }
@@ -510,7 +505,7 @@ export default function SessionScreen({ route, navigation }: Props) {
       setEndStep(3);
     } catch (e: any) {
       errorNotification();
-      Alert.alert('Error', e?.response?.data?.message ?? 'Failed to end session.');
+      showToast(e?.response?.data?.message ?? 'Failed to end session.', 'error');
     } finally {
       setEndLoading(false);
     }
@@ -527,7 +522,7 @@ export default function SessionScreen({ route, navigation }: Props) {
   async function handleAddHand() {
     const pot = parseFloat(handPot);
     if (!handWinner || isNaN(pot) || pot <= 0) {
-      Alert.alert('Invalid hand', 'Enter pot amount and select a winner.');
+      showToast('Enter pot amount and select a winner.', 'error');
       return;
     }
     setHandLoading(true);
@@ -541,28 +536,23 @@ export default function SessionScreen({ route, navigation }: Props) {
       const token2 = await SecureStore.getItemAsync('accessToken');
       if (token2) setHands(await getSessionHandHistory(token2, sessionId).catch(() => hands));
     } catch {
-      Alert.alert('Error', 'Failed to log hand.');
+      showToast('Failed to log hand.', 'error');
     } finally {
       setHandLoading(false);
     }
   }
 
   async function handleDeleteHand(handId: string) {
-    Alert.alert('Delete Hand', 'Remove this hand record?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive', onPress: async () => {
-          try {
-            const token = await SecureStore.getItemAsync('accessToken');
-            if (!token) return;
-            await deleteHandRecord(token, sessionId, handId);
-            setHands(h => h.filter(x => x.id !== handId));
-          } catch {
-            Alert.alert('Error', 'Failed to delete hand.');
-          }
-        },
-      },
-    ]);
+    confirmDialog('Delete Hand', 'Remove this hand record?', 'Delete', async () => {
+      try {
+        const token = await SecureStore.getItemAsync('accessToken');
+        if (!token) return;
+        await deleteHandRecord(token, sessionId, handId);
+        setHands(h => h.filter(x => x.id !== handId));
+      } catch {
+        showToast('Failed to delete hand.', 'error');
+      }
+    }, { destructive: true });
   }
 
   // ── Notes ──
@@ -575,7 +565,7 @@ export default function SessionScreen({ route, navigation }: Props) {
       await updateSessionNotes(token, sessionId, notesText || null);
       setEditingNotes(false);
     } catch {
-      Alert.alert('Error', 'Failed to save notes.');
+      showToast('Failed to save notes.', 'error');
     } finally {
       setSavingNotes(false);
     }
@@ -593,7 +583,7 @@ export default function SessionScreen({ route, navigation }: Props) {
       setGuestBalances(result.guestBalances);
       successNotification();
     } catch {
-      Alert.alert('Error', 'Failed to calculate settlements.');
+      showToast('Failed to calculate settlements.', 'error');
     } finally {
       setCalcLoading(false);
     }
@@ -609,20 +599,18 @@ export default function SessionScreen({ route, navigation }: Props) {
       lightTap();
       showToast('Payment confirmed', 'success');
     } catch {
-      Alert.alert('Error', 'Failed to mark as paid.');
+      showToast('Failed to mark as paid.', 'error');
     } finally {
       setMarkingPaidId(null);
     }
   }
 
   function confirmMarkPaid(settlementId: string, payerName: string, receiverName: string, amount: number) {
-    Alert.alert(
+    confirmDialog(
       'Confirm Payment',
       `${payerName} paid ${formatMoney(amount)} to ${receiverName}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Confirm', onPress: () => handleMarkPaid(settlementId) },
-      ],
+      'Confirm',
+      () => handleMarkPaid(settlementId),
     );
   }
 
@@ -656,7 +644,7 @@ export default function SessionScreen({ route, navigation }: Props) {
     try {
       await exportSessionCsv(sessionId, session.name);
     } catch (e: any) {
-      Alert.alert('Export Failed', e?.message ?? 'Could not export session.');
+      showToast(e?.message ?? 'Could not export session.', 'error');
     } finally {
       setExporting(false);
     }
@@ -674,7 +662,7 @@ export default function SessionScreen({ route, navigation }: Props) {
         : '';
       await shareSessionCard(session.name, session.groupName ?? '', date, dur, balances, settlements, recap?.highlights);
     } catch (e: any) {
-      Alert.alert('Share Failed', e?.message ?? 'Could not generate share card.');
+      showToast(e?.message ?? 'Could not generate share card.', 'error');
     } finally {
       setSharing(false);
     }
@@ -694,7 +682,7 @@ export default function SessionScreen({ route, navigation }: Props) {
       });
     } catch (e: any) {
       if (e?.message !== 'The user did not share') {
-        Alert.alert('Error', e?.response?.data?.message ?? 'Failed to generate invite link.');
+        showToast(e?.response?.data?.message ?? 'Failed to generate invite link.', 'error');
       }
     } finally {
       setSharingInvite(false);
@@ -704,28 +692,24 @@ export default function SessionScreen({ route, navigation }: Props) {
   // ── Delete Session ──
 
   function handleDeleteSession() {
-    Alert.alert(
+    confirmDialog(
       'Delete Session',
       'This permanently removes all buy-ins, cash-outs, hand records, and settlements. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete', style: 'destructive',
-          onPress: async () => {
-            setDeleteLoading(true);
-            try {
-              const token = await SecureStore.getItemAsync('accessToken');
-              if (!token) return;
-              await deleteSession(token, sessionId);
-              navigation.goBack();
-            } catch {
-              Alert.alert('Error', 'Failed to delete session.');
-            } finally {
-              setDeleteLoading(false);
-            }
-          },
-        },
-      ],
+      'Delete',
+      async () => {
+        setDeleteLoading(true);
+        try {
+          const token = await SecureStore.getItemAsync('accessToken');
+          if (!token) return;
+          await deleteSession(token, sessionId);
+          navigation.goBack();
+        } catch {
+          showToast('Failed to delete session.', 'error');
+        } finally {
+          setDeleteLoading(false);
+        }
+      },
+      { destructive: true },
     );
   }
 

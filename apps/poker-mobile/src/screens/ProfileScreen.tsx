@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Alert,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
@@ -25,6 +24,8 @@ import Screen from '../components/Screen';
 import ScreenHeader from '../components/ScreenHeader';
 import Avatar from '../components/Avatar';
 import { AVATAR_COLORS } from '../utils/avatarColor';
+import { confirmDialog } from '../utils/confirm';
+import { showToast } from '../utils/toast';
 
 // Curated identity emojis — poker-flavored plus broadly fun picks.
 const IDENTITY_EMOJIS = [
@@ -70,7 +71,7 @@ export default function ProfileScreen({ navigation }: Props) {
       });
       updateUser({ avatarEmoji: response.avatarEmoji, avatarColor: response.avatarColor });
     } catch (err: any) {
-      Alert.alert('Error', err?.response?.data?.message ?? 'Failed to update identity.');
+      showToast(err?.response?.data?.message ?? 'Failed to update identity.', 'error');
     } finally {
       setSavingIdentity(false);
     }
@@ -80,7 +81,7 @@ export default function ProfileScreen({ navigation }: Props) {
     const trimmedUsername = username.trim();
     const trimmedEmail = email.trim().toLowerCase();
     if (!trimmedUsername || !trimmedEmail) {
-      Alert.alert('Missing', 'Username and email are required.');
+      showToast('Username and email are required.', 'error');
       return;
     }
     if (trimmedUsername === user?.username && trimmedEmail === user?.email) {
@@ -99,7 +100,7 @@ export default function ProfileScreen({ navigation }: Props) {
       updateUser({ username: response.username, email: response.email });
       setEditingProfile(false);
     } catch (err: any) {
-      Alert.alert('Error', err?.response?.data?.message ?? 'Failed to update profile.');
+      showToast(err?.response?.data?.message ?? 'Failed to update profile.', 'error');
     } finally {
       setSavingProfile(false);
     }
@@ -113,15 +114,15 @@ export default function ProfileScreen({ navigation }: Props) {
 
   async function handleChangePassword() {
     if (!currentPassword || !newPassword || !confirmPassword) {
-      Alert.alert('Missing', 'Please fill in all password fields.');
+      showToast('Please fill in all password fields.', 'error');
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert('Mismatch', 'New passwords do not match.');
+      showToast('New passwords do not match.', 'error');
       return;
     }
     if (newPassword.length < 8) {
-      Alert.alert('Too short', 'Password must be at least 8 characters.');
+      showToast('Password must be at least 8 characters.', 'error');
       return;
     }
     setSavingPassword(true);
@@ -132,26 +133,21 @@ export default function ProfileScreen({ navigation }: Props) {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      Alert.alert('Success', 'Password changed successfully.');
+      showToast('Password changed successfully.', 'success');
     } catch (err: any) {
-      Alert.alert('Error', err?.response?.data?.message ?? 'Failed to change password.');
+      showToast(err?.response?.data?.message ?? 'Failed to change password.', 'error');
     } finally {
       setSavingPassword(false);
     }
   }
 
   function handleDeleteAccount() {
-    Alert.alert(
+    confirmDialog(
       'Delete Account',
       'This will permanently delete your account and all associated data. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: confirmDelete,
-        },
-      ],
+      'Delete',
+      confirmDelete,
+      { destructive: true },
     );
   }
 
@@ -163,7 +159,7 @@ export default function ProfileScreen({ navigation }: Props) {
       await deleteAccount(token);
       await logout();
     } catch (err: any) {
-      Alert.alert('Error', err?.response?.data?.message ?? 'Failed to delete account.');
+      showToast(err?.response?.data?.message ?? 'Failed to delete account.', 'error');
       setDeletingAccount(false);
     }
   }

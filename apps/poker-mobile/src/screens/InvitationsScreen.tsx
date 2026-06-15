@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   RefreshControl,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -16,6 +15,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
 import { shadows } from '../theme/shadows';
+import { confirmDialog } from '../utils/confirm';
+import { showToast } from '../utils/toast';
 import {
   getMyInvitations,
   acceptInvitation,
@@ -82,36 +83,31 @@ export default function InvitationsScreen({ navigation }: Props) {
       await acceptInvitation(token, inv.invitationId);
       navigation.navigate('GroupDetail', { groupId: inv.groupId, groupName: inv.groupName });
     } catch {
-      Alert.alert('Error', 'Failed to accept invitation.');
+      showToast('Failed to accept invitation.', 'error');
     } finally {
       setActionLoading(null);
     }
   };
 
   const handleDecline = (inv: PendingInvitationDto) => {
-    Alert.alert(
+    confirmDialog(
       'Decline Invitation',
       `Decline the invitation to ${inv.groupName}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Decline',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setActionLoading(inv.invitationId);
-              const token = await SecureStore.getItemAsync('accessToken');
-              if (!token) return;
-              await declineInvitation(token, inv.invitationId);
-              await load();
-            } catch {
-              Alert.alert('Error', 'Failed to decline invitation.');
-            } finally {
-              setActionLoading(null);
-            }
-          },
-        },
-      ],
+      'Decline',
+      async () => {
+        try {
+          setActionLoading(inv.invitationId);
+          const token = await SecureStore.getItemAsync('accessToken');
+          if (!token) return;
+          await declineInvitation(token, inv.invitationId);
+          await load();
+        } catch {
+          showToast('Failed to decline invitation.', 'error');
+        } finally {
+          setActionLoading(null);
+        }
+      },
+      { destructive: true },
     );
   };
 

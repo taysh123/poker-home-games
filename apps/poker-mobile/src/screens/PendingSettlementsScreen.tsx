@@ -1,6 +1,5 @@
 import React, { useCallback, useState } from 'react';
 import {
-  Alert,
   Animated,
   View,
   Text,
@@ -27,6 +26,7 @@ import {
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { successNotification, errorNotification } from '../utils/haptics';
 import { showToast } from '../utils/toast';
+import { confirmDialog } from '../utils/confirm';
 import { formatMoney } from '../utils/formatters';
 import { useScreenEntrance } from '../hooks/useScreenEntrance';
 import SkeletonCard from '../components/SkeletonCard';
@@ -98,31 +98,26 @@ export default function PendingSettlementsScreen() {
     const myDebts = settlements.filter(s => s.payerUserId === user?.userId);
     if (myDebts.length === 0) return;
     const totalAmount = myDebts.reduce((sum, s) => sum + s.amount, 0);
-    Alert.alert(
+    confirmDialog(
       'Settle All',
       `Mark all ${myDebts.length} payment${myDebts.length !== 1 ? 's' : ''} (${formatMoney(totalAmount)} total) as paid?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Settle All',
-          onPress: async () => {
-            setSettleAllLoading(true);
-            try {
-              const token = await SecureStore.getItemAsync('accessToken');
-              if (!token) return;
-              const count = await markAllMySettlementsPaid(token);
-              successNotification();
-              showToast(`${count} settlement${count !== 1 ? 's' : ''} marked as paid`, 'success');
-              setSettlements(prev => prev.filter(s => s.payerUserId !== user?.userId));
-            } catch {
-              errorNotification();
-              showToast('Failed to settle all', 'error');
-            } finally {
-              setSettleAllLoading(false);
-            }
-          },
-        },
-      ],
+      'Settle All',
+      async () => {
+        setSettleAllLoading(true);
+        try {
+          const token = await SecureStore.getItemAsync('accessToken');
+          if (!token) return;
+          const count = await markAllMySettlementsPaid(token);
+          successNotification();
+          showToast(`${count} settlement${count !== 1 ? 's' : ''} marked as paid`, 'success');
+          setSettlements(prev => prev.filter(s => s.payerUserId !== user?.userId));
+        } catch {
+          errorNotification();
+          showToast('Failed to settle all', 'error');
+        } finally {
+          setSettleAllLoading(false);
+        }
+      },
     );
   }
 

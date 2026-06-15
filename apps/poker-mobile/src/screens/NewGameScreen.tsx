@@ -8,7 +8,6 @@ import {
   Platform,
   ActivityIndicator,
   KeyboardAvoidingView,
-  Alert,
   Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -240,7 +239,7 @@ export default function NewGameScreen({ route, navigation }: Props) {
       showToast('Game started!', 'success');
       navigation.replace('Session', { sessionId, groupId });
     } catch {
-      Alert.alert('Failed to start game', 'Please check your connection and try again.');
+      showToast('Failed to start game. Please check your connection and try again.', 'error');
       setStarting(false);
     }
   }
