@@ -11,6 +11,12 @@ import {
   Inter_700Bold,
   Inter_800ExtraBold,
 } from '@expo-google-fonts/inter';
+import {
+  Sora_500Medium,
+  Sora_600SemiBold,
+  Sora_700Bold,
+  Sora_800ExtraBold,
+} from '@expo-google-fonts/sora';
 import * as WebBrowser from 'expo-web-browser';
 import { NavigationContainerRef } from '@react-navigation/native';
 import { applyInterDefault } from './src/theme/fonts';
@@ -45,6 +51,10 @@ export default function App() {
     Inter_600SemiBold,
     Inter_700Bold,
     Inter_800ExtraBold,
+    Sora_500Medium,
+    Sora_600SemiBold,
+    Sora_700Bold,
+    Sora_800ExtraBold,
   });
 
   useEffect(() => {

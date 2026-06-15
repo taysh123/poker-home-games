@@ -15,6 +15,19 @@ export const Inter = {
   '800': 'Inter_800ExtraBold',
 } as const;
 
+/**
+ * Sora — the geometric heading / UI-chrome face (titles, labels, caps, buttons,
+ * tab labels). Set explicitly on typography tokens; the global patch below respects
+ * any explicit family and normalises fontWeight, so these render at their true weight.
+ * Inter stays the body face; DM Serif Display stays the display/hero-numeral face.
+ */
+export const Sora = {
+  '500': 'Sora_500Medium',
+  '600': 'Sora_600SemiBold',
+  '700': 'Sora_700Bold',
+  '800': 'Sora_800ExtraBold',
+} as const;
+
 export function interFamilyForWeight(weight?: TextStyle['fontWeight']): string {
   switch (String(weight ?? '400')) {
     case '100':
