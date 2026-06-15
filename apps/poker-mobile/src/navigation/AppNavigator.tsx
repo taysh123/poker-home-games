@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, Platform } from 'react-native';
-import { NavigationContainer, NavigationContainerRef, useNavigation } from '@react-navigation/native';
+import { NavigationContainer, NavigationContainerRef, useNavigation, LinkingOptions } from '@react-navigation/native';
 import { NativeStackNavigationProp, createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -88,6 +88,21 @@ export type TabParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
+
+// Deep-link / universal-link routing. Maps shareable invite URLs to screens so
+// https://<web>/join/group/:token (and the tpoker:// scheme) open the right join
+// flow. Param name must be `inviteToken` to match RootStackParamList. The guest
+// tree's JoinGroup/JoinSession screens stash a pending invite and resume after
+// sign-in (see consumePendingInvite below).
+const linking: LinkingOptions<RootStackParamList> = {
+  prefixes: ['https://poker-home-games-three.vercel.app', 'tpoker://'],
+  config: {
+    screens: {
+      JoinGroup: 'join/group/:inviteToken',
+      JoinSession: 'join/session/:inviteToken',
+    },
+  },
+};
 
 const stackScreenOptions = {
   contentStyle: { backgroundColor: colors.background },
@@ -346,7 +361,7 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
   }
 
   return (
-    <NavigationContainer ref={navigationRef}>
+    <NavigationContainer ref={navigationRef} linking={linking}>
       <Toast />
       <PushListeners />
       <Stack.Navigator screenOptions={stackScreenOptions}>

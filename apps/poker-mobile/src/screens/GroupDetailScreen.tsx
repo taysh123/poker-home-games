@@ -6,7 +6,6 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   TextInput,
   Share,
   Platform,
@@ -15,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { USE_NATIVE_DRIVER } from '../theme/motion';
 import { showToast } from '../utils/toast';
+import { confirmDialog } from '../utils/confirm';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import * as SecureStore from '../utils/storage';
@@ -153,13 +153,12 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
     if (!showInviteOnLoad || hasAutoInvited.current || loading || !group) return;
     if (group.memberCount <= 1) {
       hasAutoInvited.current = true;
-      Alert.alert(
+      confirmDialog(
         'Group Created!',
         `"${group.name}" is ready. Share the invite link so your friends can join.`,
-        [
-          { text: 'Later', style: 'cancel' },
-          { text: 'Share Invite Link', onPress: handleShareInvite },
-        ],
+        'Share Invite Link',
+        handleShareInvite,
+        { cancelLabel: 'Later' },
       );
     }
   }, [showInviteOnLoad, loading, group]);
@@ -199,13 +198,13 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
       if (!token) return;
       await sendGroupInvitation(token, groupId, username);
       setInviteUsername('');
-      Alert.alert('Invitation Sent', `${username} has been invited.`);
+      showToast(`${username} has been invited.`, 'success');
     } catch (err: any) {
       const msg =
         err?.response?.data?.message ??
         err?.response?.data?.title ??
         'Failed to send invitation.';
-      Alert.alert('Error', msg);
+      showToast(msg, 'error');
     } finally {
       setInviteLoading(false);
     }
@@ -231,73 +230,62 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   };
 
   const handleRemoveMember = (member: GroupMemberDto) => {
-    Alert.alert('Remove Member', `Remove ${member.username} from the group?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            setActionLoading(member.userId);
-            const token = await SecureStore.getItemAsync('accessToken');
-            if (!token) return;
-            await removeGroupMember(token, groupId, member.userId);
-            await load();
-          } catch {
-            Alert.alert('Error', 'Failed to remove member.');
-          } finally {
-            setActionLoading(null);
-          }
-        },
+    confirmDialog(
+      'Remove Member',
+      `Remove ${member.username} from the group?`,
+      'Remove',
+      async () => {
+        try {
+          setActionLoading(member.userId);
+          const token = await SecureStore.getItemAsync('accessToken');
+          if (!token) return;
+          await removeGroupMember(token, groupId, member.userId);
+          await load();
+        } catch {
+          showToast('Failed to remove member.', 'error');
+        } finally {
+          setActionLoading(null);
+        }
       },
-    ]);
+      { destructive: true },
+    );
   };
 
   const handleLeaveGroup = () => {
-    Alert.alert(
+    confirmDialog(
       'Leave Group',
       `Are you sure you want to leave ${group?.name ?? groupName}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Leave',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const token = await SecureStore.getItemAsync('accessToken');
-              if (!token) return;
-              await leaveGroup(token, groupId);
-              navigation.goBack();
-            } catch {
-              Alert.alert('Error', 'Failed to leave group. Please try again.');
-            }
-          },
-        },
-      ],
+      'Leave',
+      async () => {
+        try {
+          const token = await SecureStore.getItemAsync('accessToken');
+          if (!token) return;
+          await leaveGroup(token, groupId);
+          navigation.goBack();
+        } catch {
+          showToast('Failed to leave group. Please try again.', 'error');
+        }
+      },
+      { destructive: true },
     );
   };
 
   const handleDeleteGroup = () => {
-    Alert.alert(
+    confirmDialog(
       'Delete Group',
       `Permanently delete "${group?.name ?? groupName}"? This cannot be undone. All sessions, members, and history will be removed.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const token = await SecureStore.getItemAsync('accessToken');
-              if (!token) return;
-              await deleteGroup(token, groupId);
-              navigation.goBack();
-            } catch {
-              Alert.alert('Error', 'Failed to delete group. Please try again.');
-            }
-          },
-        },
-      ],
+      'Delete',
+      async () => {
+        try {
+          const token = await SecureStore.getItemAsync('accessToken');
+          if (!token) return;
+          await deleteGroup(token, groupId);
+          navigation.goBack();
+        } catch {
+          showToast('Failed to delete group. Please try again.', 'error');
+        }
+      },
+      { destructive: true },
     );
   };
 
@@ -322,7 +310,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
         }
       }
     } catch {
-      Alert.alert('Error', 'Failed to generate invite link. Please try again.');
+      showToast('Failed to generate invite link. Please try again.', 'error');
     } finally {
       setShareLoading(false);
     }
