@@ -15,6 +15,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { USE_NATIVE_DRIVER } from '../theme/motion';
 import { showToast } from '../utils/toast';
 import { confirmDialog } from '../utils/confirm';
+import { typography } from '../theme/typography';
+import { successNotification } from '../utils/haptics';
+import PressableScale from '../components/motion/PressableScale';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import * as SecureStore from '../utils/storage';
@@ -300,6 +303,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
 
       try {
         await Share.share({ message, url });
+        successNotification();
       } catch {
         // Web desktop fallback: use Clipboard API
         if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -401,7 +405,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
 
           {/* Nav buttons */}
           <View style={styles.navRow}>
-            <TouchableOpacity
+            <PressableScale
               style={[styles.navButton, { flex: 1 }]}
               onPress={() =>
                 navigation.navigate('SessionsList', {
@@ -410,7 +414,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                   userRole: group.myRole,
                 })
               }
-              activeOpacity={0.75}
+              haptic="light"
             >
               <View style={styles.navButtonInner}>
                 <View style={styles.navIconWrap}>
@@ -419,12 +423,12 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                 <Text style={styles.navButtonText}>Sessions</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.gold} />
-            </TouchableOpacity>
+            </PressableScale>
             {isAdminOrOwner && (
-              <TouchableOpacity
+              <PressableScale
                 style={[styles.navButton, styles.navButtonGold]}
                 onPress={() => navigation.navigate('NewGame', { groupId, groupName })}
-                activeOpacity={0.75}
+                haptic="medium"
               >
                 <View style={styles.navButtonInner}>
                   <View style={[styles.navIconWrap, styles.navIconWrapGold]}>
@@ -432,7 +436,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                   </View>
                   <Text style={styles.navButtonGoldText}>New Game</Text>
                 </View>
-              </TouchableOpacity>
+              </PressableScale>
             )}
           </View>
 
@@ -442,11 +446,11 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
               <Text style={styles.sectionTitle}>Manage Group</Text>
 
               {/* Share invite link */}
-              <TouchableOpacity
+              <PressableScale
                 style={styles.shareInviteBtn}
                 onPress={handleShareInvite}
                 disabled={shareLoading}
-                activeOpacity={0.7}
+                haptic="light"
               >
                 {shareLoading ? (
                   <ActivityIndicator size="small" color={colors.gold} />
@@ -456,7 +460,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                     <Text style={styles.shareInviteText}>Share Invite Link</Text>
                   </>
                 )}
-              </TouchableOpacity>
+              </PressableScale>
 
               {/* Invite by username */}
               <View style={styles.inviteSection}>
@@ -656,16 +660,16 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
             </View>
           )}
           {!isOwner && (
-            <TouchableOpacity style={styles.leaveButton} onPress={handleLeaveGroup} activeOpacity={0.75}>
+            <PressableScale style={styles.leaveButton} onPress={handleLeaveGroup} haptic="light">
               <Ionicons name="exit-outline" size={16} color={colors.error} />
               <Text style={styles.leaveButtonText}>Leave Group</Text>
-            </TouchableOpacity>
+            </PressableScale>
           )}
           {isOwner && (
-            <TouchableOpacity style={styles.deleteGroupButton} onPress={handleDeleteGroup} activeOpacity={0.75}>
+            <PressableScale style={styles.deleteGroupButton} onPress={handleDeleteGroup} haptic="light">
               <Ionicons name="trash-outline" size={16} color={colors.error} />
               <Text style={styles.deleteGroupButtonText}>Delete Group</Text>
-            </TouchableOpacity>
+            </PressableScale>
           )}
         </View>
       }
@@ -897,7 +901,7 @@ const styles = StyleSheet.create({
     gap: 8,
     ...shadows.md,
   },
-  groupName: { fontSize: 22, fontWeight: '800', color: colors.text, letterSpacing: -0.3 },
+  groupName: { ...typography.displaySerif, fontSize: 27, color: colors.text },
   groupDesc: { fontSize: 14, color: colors.textMuted, lineHeight: 20 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
   metaText: { fontSize: 13, color: colors.textMuted },

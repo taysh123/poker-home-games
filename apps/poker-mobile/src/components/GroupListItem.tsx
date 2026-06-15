@@ -1,9 +1,11 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { formatPL } from '../utils/formatters';
 import Avatar from './Avatar';
+import PressableScale from './motion/PressableScale';
 
 type Props = {
   name: string;
@@ -20,10 +22,10 @@ export default function GroupListItem({ name, memberCount, role, myGroupPL, myGr
   const isAdmin = role === 'Admin';
 
   return (
-    <TouchableOpacity
+    <PressableScale
       style={[styles.row, !isFirst && styles.border]}
       onPress={onPress}
-      activeOpacity={0.7}
+      haptic="light"
     >
       <Avatar name={name} size={40} style={styles.avatar} />
       <View style={styles.content}>
@@ -49,8 +51,8 @@ export default function GroupListItem({ name, memberCount, role, myGroupPL, myGr
           )}
         </View>
       </View>
-      <Text style={styles.chevron}>›</Text>
-    </TouchableOpacity>
+      <Ionicons name="chevron-forward" size={18} color={colors.textDim} style={styles.chevron} />
+    </PressableScale>
   );
 }
 
@@ -122,7 +124,6 @@ const styles = StyleSheet.create({
   plPositive: { color: colors.success },
   plNegative: { color: colors.error },
   chevron: {
-    fontSize: 18,
-    color: colors.textDim,
+    flexShrink: 0,
   },
 });
