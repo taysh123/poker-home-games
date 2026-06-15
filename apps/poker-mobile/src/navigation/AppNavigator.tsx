@@ -14,6 +14,7 @@ import Reanimated, {
   withTiming,
 } from 'react-native-reanimated';
 import { colors } from '../theme/colors';
+import { Inter } from '../theme/fonts';
 import { useAuth } from '../context/AuthContext';
 import { useActiveSession } from '../context/ActiveSessionContext';
 import { useLocalGames } from '../context/LocalGamesContext';
@@ -240,7 +241,10 @@ function tabScreenOptions({ route }: { route: { name: string } }) {
     tabBarInactiveTintColor: colors.textDim,
     tabBarLabelStyle: {
       fontSize: 10,
-      fontWeight: '600' as const,
+      // The tab bar label renders through React Navigation's own text path,
+      // which the global Inter patch doesn't reliably reach on web — set the
+      // family explicitly so tab labels match the rest of the UI.
+      fontFamily: Inter['600'],
       letterSpacing: 0.3,
       marginTop: 2,
     },

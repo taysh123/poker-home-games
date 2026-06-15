@@ -2,9 +2,18 @@ import React, { useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Linking } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { useFonts, DMSerifDisplay_400Regular } from '@expo-google-fonts/dm-serif-display';
+import { DMSerifDisplay_400Regular } from '@expo-google-fonts/dm-serif-display';
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  Inter_800ExtraBold,
+} from '@expo-google-fonts/inter';
 import * as WebBrowser from 'expo-web-browser';
 import { NavigationContainerRef } from '@react-navigation/native';
+import { applyInterDefault } from './src/theme/fonts';
 import { AuthProvider } from './src/context/AuthContext';
 import { ActiveSessionProvider } from './src/context/ActiveSessionContext';
 import { LocalGamesProvider } from './src/context/LocalGamesContext';
@@ -12,6 +21,10 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { RootStackParamList } from './src/navigation/AppNavigator';
 
 WebBrowser.maybeCompleteAuthSession();
+
+// Make Inter the app-wide default for all Text/TextInput (weight → family mapped).
+// Safe at module load — applies once the font files finish loading below.
+applyInterDefault();
 
 function extractDeepLink(url: string): { type: 'session' | 'group'; token: string } | null {
   const s = url.match(/(?:tpoker:\/\/join\/session\/|\/join\/session\/)([A-Za-z0-9_-]+)/);
@@ -25,7 +38,14 @@ export default function App() {
   const navRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
   // Serif display accents (titles + hero numerals). On fontError we proceed —
   // unknown fontFamily falls back to the system font, which is cosmetic only.
-  const [fontsLoaded, fontError] = useFonts({ DMSerifDisplay_400Regular });
+  const [fontsLoaded, fontError] = useFonts({
+    DMSerifDisplay_400Regular,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
+  });
 
   useEffect(() => {
     function handleUrl(url: string) {

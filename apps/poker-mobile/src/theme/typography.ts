@@ -1,13 +1,14 @@
 export const typography = {
   // Display — hero numbers, big headlines
-  hero:    { fontSize: 42, fontWeight: '800' as const, letterSpacing: -1 },
-  display: { fontSize: 32, fontWeight: '800' as const, letterSpacing: -0.5 },
+  hero:    { fontSize: 42, fontWeight: '800' as const, letterSpacing: -1, lineHeight: 46 },
+  display: { fontSize: 32, fontWeight: '800' as const, letterSpacing: -0.6, lineHeight: 38 },
 
-  // Headings
-  h1: { fontSize: 26, fontWeight: '700' as const, letterSpacing: -0.3 },
-  h2: { fontSize: 22, fontWeight: '700' as const, letterSpacing: -0.2 },
-  h3: { fontSize: 18, fontWeight: '700' as const },
-  h4: { fontSize: 16, fontWeight: '600' as const },
+  // Headings — Inter has a tall x-height, so tightened tracking + measured
+  // line-heights keep titles crisp and premium rather than loose.
+  h1: { fontSize: 26, fontWeight: '700' as const, letterSpacing: -0.4, lineHeight: 32 },
+  h2: { fontSize: 22, fontWeight: '700' as const, letterSpacing: -0.3, lineHeight: 28 },
+  h3: { fontSize: 18, fontWeight: '700' as const, letterSpacing: -0.2, lineHeight: 24 },
+  h4: { fontSize: 16, fontWeight: '600' as const, letterSpacing: -0.1, lineHeight: 22 },
 
   // Body
   bodyLarge: { fontSize: 17, fontWeight: '400' as const, lineHeight: 24 },
