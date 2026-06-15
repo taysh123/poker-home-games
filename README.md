@@ -52,8 +52,17 @@ The full shipped-feature ledger lives in [docs/CHANGELOG.md](docs/CHANGELOG.md).
 
 ## Screenshots
 
-> Coming with the store listing — run `npm run web` and play a guest game to see
-> the product in two minutes.
+| Home | Tournament clock | Podium |
+|---|---|---|
+| ![Home](apps/poker-mobile/store-assets/screenshots/play-phone/01-home.png) | ![Tournament](apps/poker-mobile/store-assets/screenshots/play-phone/02-tournament-live.png) | ![Podium](apps/poker-mobile/store-assets/screenshots/play-phone/03-tournament-podium.png) |
+
+| The Final Count | Cash settlements | Stats |
+|---|---|---|
+| ![The Final Count](apps/poker-mobile/store-assets/screenshots/play-phone/04-final-count.png) | ![Cash settlements](apps/poker-mobile/store-assets/screenshots/play-phone/05-cash-summary.png) | ![Stats](apps/poker-mobile/store-assets/screenshots/play-phone/06-stats.png) |
+
+_Captured from the real production web build. Store-sized sets (Play 1080×1920, App
+Store 6.7" 1290×2796 and 5.5" 1242×2208) live in
+[`apps/poker-mobile/store-assets/`](apps/poker-mobile/store-assets/)._
 
 ---
 
@@ -133,7 +142,7 @@ poker-app/
 |-------|-----------|
 | Mobile / Web | Expo SDK 54, React Native 0.81, React 19, TypeScript strict |
 | Motion | Reanimated 4, gesture-handler, expo-haptics, expo-blur, expo-linear-gradient |
-| Typography | System sans + DM Serif Display accents (expo-google-fonts) |
+| Typography | Inter (UI/body) + DM Serif Display (hero titles & numerals), via expo-google-fonts |
 | Backend | ASP.NET Core 8, MediatR CQRS, FluentValidation, EF Core 8, PostgreSQL |
 | Auth | JWT + refresh rotation, Google OAuth, BCrypt |
 | Notifications | In-app inbox + Expo push (native; device tokens, best-effort delivery) |
@@ -221,7 +230,7 @@ the web origin registered in Google Cloud Console — full setup/troubleshooting
 | Target | How |
 |--------|-----|
 | **Backend → Railway** | Root `Dockerfile`; EF migrations run on startup; health check at `/health` via `railway.toml`. Set the backend env vars above. |
-| **Web → Vercel** | Repo-connected; build settings live in the Vercel dashboard (no vercel.json in repo). Set `EXPO_PUBLIC_API_URL` + Google web client ID env vars. Privacy policy ships at `/privacy.html` — **verify it serves the policy (not the app shell) after each deploy config change**. |
+| **Web → Vercel** | Repo-connected, auto-deploys `main`. **Vercel Root Directory = `apps/poker-mobile`**, so the SPA rewrite lives at `apps/poker-mobile/vercel.json` (it routes deep links like `/join/group/:token` to `index.html` — without it they 404). Set `EXPO_PUBLIC_API_URL` + Google web client ID env vars. Privacy policy ships at `/privacy.html` — **verify it serves the policy (not the app shell) after each deploy config change**. |
 | **iOS / Android → EAS** | `eas build --profile production --platform all`, then `eas submit`. Full checklist incl. credentials you must supply: [docs/store-release.md](docs/store-release.md). |
 
 Security posture: hashed refresh tokens, zero JWT clock skew, per-IP rate limits
