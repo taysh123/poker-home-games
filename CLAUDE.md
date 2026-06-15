@@ -292,8 +292,13 @@ All colors in `apps/poker-mobile/src/theme/colors.ts`. Never hardcode hex values
 Gold accents are used **sparingly** — only on primary CTAs, live indicators, and key financial numbers. Overusing gold degrades the premium feel.
 
 Typography: `apps/poker-mobile/src/theme/typography.ts` — never hardcode font sizes.
-`displaySerif`/`amountHero` (DM Serif Display, loaded in App.tsx) are reserved for
-screen titles and hero money numerals ONLY — body text stays system sans.
+**Inter** is the app-wide UI/body typeface; `displaySerif`/`amountHero` (DM Serif
+Display) are reserved for screen titles and hero money numerals ONLY. Both load in
+App.tsx. Inter ships as separate per-weight families, so a global `Text`/`TextInput`
+render patch (`theme/fonts.ts`, applied once in App.tsx) maps each `fontWeight` to the
+right Inter face and pins `fontWeight: normal` (avoids web faux-bold). An explicit
+`fontFamily` (DM Serif, ionicons) is always respected. Amount tokens carry an explicit
+`lineHeight` so Inter's tall ascent isn't clipped on web.
 Spacing/radii: `theme/spacing.ts` (4pt scale) and `theme/radii.ts` — use tokens in new code.
 Icons: Ionicons via `@expo/vector-icons`. No emoji as icons in new/redesigned surfaces.
 Animations: legacy screens use RN `Animated` (`useNativeDriver: true`); new motion goes
@@ -317,21 +322,30 @@ inline override "End anyway with an unbalanced count", finality footer, and the
 
 ## Cross-Platform Rules
 
-### Alert.alert()
+### Alert.alert() — a NO-OP on web, never use it directly
 
-`Alert.alert()` with **3+ buttons** is broken on React Native Web. Use the `ActionSheet` component for any menu with 3+ options.
+`Alert.alert()` is a **complete no-op on react-native-web** (`react-native-web`'s
+`Alert.alert` is literally `static alert(){}`) — regardless of button count. The
+dialog never renders and `onPress` callbacks never fire, so any confirm/destructive
+flow silently does nothing on web (native iOS/Android are unaffected). This bit
+"Leave Group", "Delete Account", "Delete Session", and others before they were migrated.
 
-`Alert.alert()` with exactly 2 buttons (Cancel + action) works on web via `window.confirm()`.
+Use the web-safe helpers instead:
+
+- **Confirmations** (incl. destructive) → `confirmDialog(title, message, confirmLabel, onConfirm, { destructive })` from `utils/confirm.ts` (`window.confirm` on web, native Alert otherwise).
+- **Notices / errors / success** → `showToast(message, 'success'|'error'|'info')` from `utils/toast.ts`.
+- **Menus with 3+ options** → the `ActionSheet` component.
 
 ```typescript
-// ✓ Works everywhere (2 buttons)
-Alert.alert('Delete?', 'This cannot be undone.', [
-  { text: 'Cancel', style: 'cancel' },
-  { text: 'Delete', style: 'destructive', onPress: doDelete },
-]);
+// ✓ Works everywhere
+import { confirmDialog } from '../utils/confirm';
+import { showToast } from '../utils/toast';
 
-// ✗ Broken on web — use <ActionSheet> instead
-Alert.alert('Options', undefined, [buttonA, buttonB, buttonC, cancelButton]);
+confirmDialog('Delete?', 'This cannot be undone.', 'Delete', doDelete, { destructive: true });
+showToast('Saved.', 'success');
+
+// ✗ Broken on web — Alert.alert renders nothing and the callback never fires
+Alert.alert('Delete?', '…', [{ text: 'Cancel' }, { text: 'Delete', onPress: doDelete }]);
 ```
 
 ### Share + Clipboard
@@ -388,9 +402,23 @@ Copy `.env.example` → `.env`. Expo Go in development uses the hardcoded Expo p
 
 ### Web → Vercel
 
-There is **no `vercel.json` in the repo** — build settings live in the Vercel
-dashboard (Build command `cd apps/poker-mobile && npx expo export -p web`, Output
-directory `apps/poker-mobile/dist`). The project auto-deploys `main`.
+Build settings live in the Vercel dashboard (Build command
+`cd apps/poker-mobile && npx expo export -p web`, Output directory
+`apps/poker-mobile/dist`). The project auto-deploys `main`.
+
+**Vercel Root Directory is `apps/poker-mobile`** — so `vercel.json` lives at
+`apps/poker-mobile/vercel.json`, NOT the repo root (a repo-root one is silently
+ignored; verified empirically — see memory `vercel-root-dir`). It holds the SPA
+rewrite `{"source":"/(.*)","destination":"/index.html"}` so deep links like
+`/join/group/:token` and `/join/session/:token` resolve to the app instead of
+404ing on the static host. Vercel checks the filesystem first, so real files
+(`/privacy.html`, JS/asset bundles) still serve before the rewrite.
+
+**Invite-link routing:** the backend builds `https://<WebBaseUrl>/join/group/:token`;
+the SPA rewrite serves the app, and React Navigation's `linking` config (in
+`AppNavigator`, prefixes `https://poker-home-games-three.vercel.app` + `tpoker://`)
+maps the URL to the `JoinGroup`/`JoinSession` screen. Guests are sent to sign-in
+and the join resumes after auth via the pending-invite stash.
 
 Production domain is **`poker-home-games-three.vercel.app`** (NOT `t-poker.vercel.app`
 — that subdomain belongs to an unrelated third-party site we do not own). The

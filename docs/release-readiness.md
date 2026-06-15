@@ -1,6 +1,6 @@
 # T Poker — Store Release Readiness (Google Play + Apple App Store)
 
-_Last updated: June 13, 2026 · Publisher: **True Story Labs** · App version: 1.1.0_
+_Last updated: June 15, 2026 · Publisher: **True Story Labs** · App version: 1.1.0_
 
 Canonical, living readiness report for launching T Poker on both stores. Updated
 as blockers clear.
@@ -15,6 +15,20 @@ as blockers clear.
 
 All code, assets, privacy, and compliance are in place. The remaining points are
 **external actions only you can do** — there are no open in-repo blockers.
+
+### Latest hardening pass (June 15, 2026)
+- **Group flow fixed:** Leave/Delete Group work on web; invite links no longer 404
+  (SPA rewrite at `apps/poker-mobile/vercel.json` + React Navigation `linking`),
+  verified live on production.
+- **App-wide Inter typography** (DM Serif retained for hero titles/numerals) via a
+  global Text font resolver.
+- **Web confirmation bug fixed app-wide:** `Alert.alert` is a no-op on react-native-web,
+  so destructive confirms (incl. **Delete Account**) silently did nothing on the web
+  app — migrated to `confirmDialog`/`showToast` across Profile, Session, Invitations,
+  PendingSettlements, NewGame. (Native store builds were never affected.)
+- **Stat value clip fixed** on web; **store screenshots regenerated** from the final build.
+- Verified: tsc clean · jest 59/59 · `dotnet build` clean · web export clean · guest
+  harness green (0 console errors) · authed live-production drive green (all API screens load).
 
 ## What's done (both stores)
 

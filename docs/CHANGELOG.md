@@ -46,6 +46,9 @@ Newest entries at the bottom of each table.
 | ✅ | Privacy policy page + EAS submit scaffold + store release checklist |
 | ✅ | **The Final Count** — redesigned end-game flow (clear final-stack entry, inline balance indicator, explicit override, finality framing) in both local and group sessions |
 | ✅ | **Velvet Table** visual system — DM Serif Display accents, ambient gradient vignettes, deep navy base, spacing/radius tokens, ScreenHeader/Card/SectionTitle components, gold-gradient CTAs, tab-icon spring pop |
+| ✅ | **App-wide Inter typography** — Inter for all UI/body via a global weight→family Text patch; DM Serif retained for hero titles/numerals |
+| ✅ | **Group flow fixes** — Leave/Delete Group work on web; invite links no longer 404 (Vercel SPA rewrite + React Navigation `linking`); Group-screen polish + motion |
+| ✅ | **Web confirmation correctness** — `Alert.alert` is a no-op on react-native-web; migrated all confirmations/notices (incl. Delete Account, Remove Player, Delete Session) to `confirmDialog`/`showToast` |
 
 ## Phase History
 
@@ -62,3 +65,4 @@ Newest entries at the bottom of each table.
 | 80+ | The Final Count end-game redesign, Velvet Table visual system (serif display type, ambient vignettes, design tokens, unified components), professional README |
 | 90+ | Social layer (unified Avatar + emoji/color identity, activity tap-through + pagination, weekly digest card, image share cards), store readiness (notifications plugin, v1.1.0, expo-doctor clean, EAS preview build), local-first Tournament Mode v1 (prize pools, blind clock, bust-outs, rebuys, podium payouts) |
 | 95+ | Tournament-first UI (dual entry cards, rich wizard mode cards), store asset production (icons, feature graphic, 18 store-size screenshots), complete Play/App Store release guide, mobile-first audit + small-screen fixes, post-v1.1 roadmap |
+| 100+ | Final release hardening — Group flow fixes (web Leave/Delete, invite-link SPA rewrite + linking), app-wide Inter typography, app-wide `Alert.alert`→`confirmDialog`/`showToast` web-correctness migration, stat-value clip fix, screenshot regeneration, docs refresh, authed live-production verification |
