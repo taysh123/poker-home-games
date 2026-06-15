@@ -97,6 +97,10 @@ const styles = StyleSheet.create({
   },
   value: {
     ...typography.amountLarge,
+    // On web, flex children default to flexShrink:1; when a stacked card is
+    // height-constrained the value got vertically squeezed + clipped (overflow
+    // hidden). Pin it so the number always renders at its full line height.
+    flexShrink: 0,
   },
   label: {
     ...typography.caps,

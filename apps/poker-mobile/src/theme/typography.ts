@@ -27,9 +27,10 @@ export const typography = {
     letterSpacing: 1.2,
   },
 
-  // Numeric amounts
-  amount:      { fontSize: 20, fontWeight: '700' as const },
-  amountLarge: { fontSize: 28, fontWeight: '800' as const, letterSpacing: -0.5 },
+  // Numeric amounts — explicit lineHeight so Inter's tall ascent isn't clipped
+  // by a tight line box on web (the ₪ glyph + ExtraBold caps need the headroom).
+  amount:      { fontSize: 20, fontWeight: '700' as const, lineHeight: 26 },
+  amountLarge: { fontSize: 28, fontWeight: '800' as const, letterSpacing: -0.5, lineHeight: 36 },
 
   // Misc — kept for backward compat
   bodyBold: { fontSize: 15, fontWeight: '600' as const },
