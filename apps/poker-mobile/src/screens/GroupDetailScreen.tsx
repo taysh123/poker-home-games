@@ -858,8 +858,10 @@ function RivalryRow({ rivalry }: { rivalry: GroupRivalryDto }) {
 }
 
 function RoleBadge({ role }: { role: string }) {
-  const isOwner = role === 'Owner';
-  const isAdmin = role === 'Admin';
+  if (!role) return null; // no empty pill when role is missing
+  const r = role.toLowerCase();
+  const isOwner = r === 'owner';
+  const isAdmin = r === 'admin';
   return (
     <View
       style={[
@@ -1122,7 +1124,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   badgeText: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
-  badgeTextOwner: { color: colors.gold },
+  badgeTextOwner: { color: colors.goldLight },
   badgeTextMuted: { color: colors.textMuted },
 
   errorText: { fontSize: 15, color: colors.error, textAlign: 'center' },
