@@ -50,6 +50,7 @@ Newest entries at the bottom of each table.
 | ✅ | **Group flow fixes** — Leave/Delete Group work on web; invite links no longer 404 (Vercel SPA rewrite + React Navigation `linking`); Group-screen polish + motion |
 | ✅ | **Web confirmation correctness** — `Alert.alert` is a no-op on react-native-web; migrated all confirmations/notices (incl. Delete Account, Remove Player, Delete Session) to `confirmDialog`/`showToast` |
 | ✅ | **Premium product-wide redesign** — three-role type system (DM Serif Display · **Sora** · Inter); `BrandHeader` logo home anchor on every screen; cinematic heroes (Home/Stats/Profile/Tournament/Group); 5 signature wow moments (bankroll hero, game-over celebration, flagship podium, **Achievement Unlock**, **"Deal 'Em In"** transition); CORS policy allows project Vercel previews |
+| ✅ | **Owner can leave a group** — fixed the 409 that blocked a creator from leaving. Owner leaving with members remaining auto-transfers ownership (prefer Admin, else longest-standing member); a sole owner leaving deletes the now-empty group. `GET /api/groups/{id}` now returns the caller's `myRole` (was always `undefined`, which hid owner affordances and the role badge). "Leave Group" shown to everyone; "Delete Group" stays owner-only |
 
 ## Phase History
 

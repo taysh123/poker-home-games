@@ -107,7 +107,8 @@ paid in-app) and cash pairs for unlinked guests.
 
 Groups have Owner/Admin/Member roles, shareable invite links, single-use session
 invite tokens, a cross-group activity feed, rivalry pairings, and period-filtered
-leaderboards. Personal stats cover lifetime P&L, W/L/E record, win rate, streaks,
+leaderboards. Any member can leave — when an owner leaves, ownership auto-transfers
+(or the group is deleted if they were the last member), so a group is never stranded. Personal stats cover lifetime P&L, W/L/E record, win rate, streaks,
 biggest win/loss, and time played.
 
 ---
