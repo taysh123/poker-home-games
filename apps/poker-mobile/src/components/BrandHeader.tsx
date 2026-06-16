@@ -19,6 +19,8 @@ type Props = {
   onBack?: () => void;
   /** Right-side slot (icon buttons, avatar, badges). */
   right?: React.ReactNode;
+  /** Serif (DM Serif Display) title for top-level screens; compact Sora otherwise. */
+  large?: boolean;
 };
 
 /**
@@ -26,7 +28,7 @@ type Props = {
  * tapping it always returns to Home (MainTabs). Owns its safe-area top inset.
  * Replaces the ad-hoc Home header + ScreenHeader so chrome is consistent.
  */
-export default function BrandHeader({ variant = 'screen', title, subtitle, onBack, right }: Props) {
+export default function BrandHeader({ variant = 'screen', title, subtitle, onBack, right, large = false }: Props) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const goHome = () => {
@@ -56,7 +58,7 @@ export default function BrandHeader({ variant = 'screen', title, subtitle, onBac
         {/* Title block (deep screens, or a labelled tab screen) */}
         {title ? (
           <View style={styles.titles}>
-            <Text style={styles.title} numberOfLines={1} maxFontSizeMultiplier={1.3}>{title}</Text>
+            <Text style={[large ? styles.titleLarge : styles.title]} numberOfLines={1} maxFontSizeMultiplier={1.3}>{title}</Text>
             {subtitle ? <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
           </View>
         ) : (
@@ -115,6 +117,7 @@ const styles = StyleSheet.create({
   },
   titles: { flex: 1, gap: 2 },
   title: { ...typography.h3, color: colors.text },
+  titleLarge: { ...typography.displaySerif, color: colors.text },
   subtitle: { ...typography.bodySmall, color: colors.textMuted },
   spacer: { flex: 1 },
   right: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
