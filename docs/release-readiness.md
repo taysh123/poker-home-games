@@ -1,6 +1,14 @@
 # T Poker — Store Release Readiness (Google Play + Apple App Store)
 
-_Last updated: June 15, 2026 · Publisher: **True Story Labs** · App version: 1.1.0_
+_Last updated: June 16, 2026 · Publisher: **True Story Labs** · App version: 1.1.0_
+
+> **Premium redesign merged + live (June 16, 2026).** PR #1 (typography v2 with Sora,
+> app-wide BrandHeader logo home anchor, per-screen cinematic depth, 5 wow moments)
+> is merged to `main` and deployed to production. Verified end-to-end on the live
+> Vercel + Railway deployment: web SPA + invite routing, `/health` Healthy, CORS active,
+> authed drive (Home/Stats/Sessions/Groups/Notifications/Invitations/Profile) all 200,
+> Leave Group + Achievements live, guest flow 0 console errors. Store screenshots
+> regenerated from the merged build.
 
 Canonical, living readiness report for launching T Poker on both stores. Updated
 as blockers clear.

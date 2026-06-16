@@ -44,9 +44,14 @@ every week and argue about the ledger every time.
   image card for the group chat (plus the existing PDF recap).
 - **Your numbers, forever.** Lifetime P&L, win rate, streaks, time played —
   filterable by week/month/all-time, charted, and badged on every session row.
-- **Premium dark UI ("Velvet Table").** Deep navy with ambient gradients, serif
-  display numerals, gold-gradient CTAs, glass surfaces on iOS, shimmer loading,
-  confetti on game end, haptic micro-interactions throughout.
+- **Premium, App-Store-grade design ("Velvet Table").** A deliberate three-role type
+  system — **DM Serif Display** (hero numerals + display titles), **Sora** (headings,
+  labels, UI chrome), **Inter** (body + tabular figures) — with the T Poker logo as a
+  persistent home anchor on every screen. Deep-navy surfaces, restrained gold accents,
+  glass on iOS, shimmer loading, and a set of signature "wow" moments: a cinematic
+  bankroll hero, a rich game-over celebration, a flagship tournament podium, a
+  rarity-tinted **Achievement Unlock**, and a branded **"Deal 'Em In"** game-start
+  transition — confetti and haptics throughout.
 
 The full shipped-feature ledger lives in [docs/CHANGELOG.md](docs/CHANGELOG.md).
 
@@ -142,7 +147,7 @@ poker-app/
 |-------|-----------|
 | Mobile / Web | Expo SDK 54, React Native 0.81, React 19, TypeScript strict |
 | Motion | Reanimated 4, gesture-handler, expo-haptics, expo-blur, expo-linear-gradient |
-| Typography | Inter (UI/body) + DM Serif Display (hero titles & numerals), via expo-google-fonts |
+| Typography | DM Serif Display (display + hero numerals) · Sora (headings/labels/UI) · Inter (body + tabular), via expo-google-fonts; global weight→family resolver |
 | Backend | ASP.NET Core 8, MediatR CQRS, FluentValidation, EF Core 8, PostgreSQL |
 | Auth | JWT + refresh rotation, Google OAuth, BCrypt |
 | Notifications | In-app inbox + Expo push (native; device tokens, best-effort delivery) |

@@ -49,6 +49,7 @@ Newest entries at the bottom of each table.
 | ✅ | **App-wide Inter typography** — Inter for all UI/body via a global weight→family Text patch; DM Serif retained for hero titles/numerals |
 | ✅ | **Group flow fixes** — Leave/Delete Group work on web; invite links no longer 404 (Vercel SPA rewrite + React Navigation `linking`); Group-screen polish + motion |
 | ✅ | **Web confirmation correctness** — `Alert.alert` is a no-op on react-native-web; migrated all confirmations/notices (incl. Delete Account, Remove Player, Delete Session) to `confirmDialog`/`showToast` |
+| ✅ | **Premium product-wide redesign** — three-role type system (DM Serif Display · **Sora** · Inter); `BrandHeader` logo home anchor on every screen; cinematic heroes (Home/Stats/Profile/Tournament/Group); 5 signature wow moments (bankroll hero, game-over celebration, flagship podium, **Achievement Unlock**, **"Deal 'Em In"** transition); CORS policy allows project Vercel previews |
 
 ## Phase History
 
@@ -66,3 +67,4 @@ Newest entries at the bottom of each table.
 | 90+ | Social layer (unified Avatar + emoji/color identity, activity tap-through + pagination, weekly digest card, image share cards), store readiness (notifications plugin, v1.1.0, expo-doctor clean, EAS preview build), local-first Tournament Mode v1 (prize pools, blind clock, bust-outs, rebuys, podium payouts) |
 | 95+ | Tournament-first UI (dual entry cards, rich wizard mode cards), store asset production (icons, feature graphic, 18 store-size screenshots), complete Play/App Store release guide, mobile-first audit + small-screen fixes, post-v1.1 roadmap |
 | 100+ | Final release hardening — Group flow fixes (web Leave/Delete, invite-link SPA rewrite + linking), app-wide Inter typography, app-wide `Alert.alert`→`confirmDialog`/`showToast` web-correctness migration, stat-value clip fix, screenshot regeneration, docs refresh, authed live-production verification |
+| 110+ | Premium product-wide redesign (merged PR #1) — Sora heading/UI typeface alongside Inter + DM Serif; BrandHeader logo home anchor app-wide; per-screen cinematic depth (Home/Stats/Profile/Tournament/Group); 5 wow moments (bankroll hero, game-over, podium, Achievement Unlock, Deal 'Em In); Vercel-preview CORS predicate; verified end-to-end on the production deployment |
