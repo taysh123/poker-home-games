@@ -7,10 +7,12 @@ import {
   StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
+import { Sora } from '../theme/fonts';
 import { shadows } from '../theme/shadows';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import PrimaryButton from '../components/PrimaryButton';
@@ -85,6 +87,20 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
 
   const playerName = (id: string) => game.players.find(p => p.id === id)?.name ?? 'Unknown';
 
+  // Champion spotlight for the celebration hero (tournament winner or top cash winner).
+  let championName: string | null = null;
+  let championSub: string | null = null;
+  if (podium && podium.length) {
+    const top = podium.find(p => p.position === 1);
+    if (top) {
+      championName = top.player.name;
+      championSub = top.payoutCents > 0 ? `wins ${formatCents(top.payoutCents)}` : formatCentsSigned(top.netCents);
+    }
+  } else if (results.length && results[0].netCents > 0) {
+    championName = results[0].player.name;
+    championSub = formatCentsSigned(results[0].netCents);
+  }
+
   // Confetti only when arriving fresh from ending the game — not when
   // revisiting an old summary from the games list.
   const justEnded = !!game.endedAt && Date.now() - new Date(game.endedAt).getTime() < 60_000;
@@ -152,8 +168,15 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        {/* Game over hero */}
+        {/* Game over hero (celebration) */}
         <View style={styles.heroCard}>
+          <LinearGradient
+            colors={[colors.goldFaint, 'transparent']}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={styles.heroGlow}
+            pointerEvents="none"
+          />
           <Text style={styles.heroLabel}>{isTournament ? 'TOURNAMENT COMPLETE' : 'GAME OVER'}</Text>
           <AnimatedNumber
             value={totalPotCents}
@@ -171,6 +194,13 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
             <Text style={styles.heroMeta}>
               {game.txns.filter(t => t.kind === 'buyin').length} entries · top {game.tournament.payouts.length} paid
             </Text>
+          )}
+          {championName && (
+            <View style={styles.championRow}>
+              <Text style={styles.championTrophy}>🏆</Text>
+              <Text style={styles.championName} numberOfLines={1}>{championName}</Text>
+              {championSub && <Text style={styles.championSub}>{championSub}</Text>}
+            </View>
           )}
         </View>
 
@@ -290,24 +320,29 @@ const styles = StyleSheet.create({
 
   heroCard: {
     alignItems: 'center',
-    paddingVertical: 26,
+    paddingVertical: 28,
     borderRadius: 16,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.goldMuted,
     gap: 4,
     marginBottom: 10,
+    overflow: 'hidden',
     ...shadows.goldSm,
   },
-  heroLabel: { fontSize: 11, fontWeight: '700', color: colors.goldLight, letterSpacing: 2 },
+  heroGlow: { position: 'absolute', top: 0, left: 0, right: 0, height: 150 },
+  heroLabel: { ...typography.caps, color: colors.goldLight, letterSpacing: 2 },
   heroPot: { ...typography.amountHero, color: colors.text },
-  heroMeta: { fontSize: 13, color: colors.textMuted },
+  heroMeta: { ...typography.bodySmall, color: colors.textMuted },
+
+  championRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
+  championTrophy: { fontSize: 16 },
+  championName: { fontFamily: Sora['700'], fontSize: 16, color: colors.goldLight },
+  championSub: { ...typography.amount, fontSize: 14, color: colors.textMuted },
 
   sectionTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...typography.caps,
     color: colors.textMuted,
-    letterSpacing: 1,
     marginTop: 14,
     marginBottom: 2,
   },
