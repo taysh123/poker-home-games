@@ -256,9 +256,16 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   };
 
   const handleLeaveGroup = () => {
+    const name = group?.name ?? groupName;
+    const soleMember = (group?.memberCount ?? 0) <= 1;
+    const message = isOwner
+      ? soleMember
+        ? `You're the only member of ${name}. Leaving will delete this group and its history.`
+        : `Leave ${name}? Ownership will pass to another member — the group stays for everyone else.`
+      : `Are you sure you want to leave ${name}?`;
     confirmDialog(
       'Leave Group',
-      `Are you sure you want to leave ${group?.name ?? groupName}?`,
+      message,
       'Leave',
       async () => {
         try {
@@ -671,12 +678,10 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
               </View>
             </View>
           )}
-          {!isOwner && (
-            <PressableScale style={styles.leaveButton} onPress={handleLeaveGroup} haptic="light">
-              <Ionicons name="exit-outline" size={16} color={colors.error} />
-              <Text style={styles.leaveButtonText}>Leave Group</Text>
-            </PressableScale>
-          )}
+          <PressableScale style={styles.leaveButton} onPress={handleLeaveGroup} haptic="light">
+            <Ionicons name="exit-outline" size={16} color={colors.error} />
+            <Text style={styles.leaveButtonText}>Leave Group</Text>
+          </PressableScale>
           {isOwner && (
             <PressableScale style={styles.deleteGroupButton} onPress={handleDeleteGroup} haptic="light">
               <Ionicons name="trash-outline" size={16} color={colors.error} />

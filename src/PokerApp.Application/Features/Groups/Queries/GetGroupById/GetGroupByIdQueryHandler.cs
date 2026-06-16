@@ -40,6 +40,9 @@ public sealed class GetGroupByIdQueryHandler(
                 .SumAsync(b => b.Amount, cancellationToken)
             : 0;
 
+        var myRole = group.Members
+            .FirstOrDefault(m => m.UserId == callerId)?.Role.ToString() ?? "Member";
+
         return new GetGroupByIdResponse(
             group.Id,
             group.Name,
@@ -48,6 +51,7 @@ public sealed class GetGroupByIdQueryHandler(
             group.Owner.Username,
             group.Members.Count,
             group.CreatedAt,
+            myRole,
             finishedSessionIds.Count,
             totalMoneyMoved);
     }
