@@ -26,8 +26,11 @@ rivalries, activity) · **stats** (lifetime/period P&L, streaks, W/L/E) · **14 
 - **Guest** — opens straight into the app (no login wall); runs full cash/tournament games
   on-device (AsyncStorage); Groups/Stats tabs upsell sign-in.
 - **Account user** — cloud sync, groups, personal stats/achievements, notifications.
-- **Group roles** — `Owner` (one; FK-restricted, can't be deleted while owning), `Admin`,
-  `Member`. Role gates group/session mutations.
+- **Group roles** — `Owner` (one), `Admin`, `Member`. Role gates group/session mutations.
+  Any member — **including the Owner** — can leave their group: when the owner leaves with
+  members remaining, ownership auto-transfers (prefer an Admin, else the longest-standing
+  member); a sole owner leaving deletes the now-empty group. `GET /api/groups/{id}` returns
+  the caller's `myRole`.
 
 ## 2. Architecture
 
@@ -79,8 +82,13 @@ EAS builds native; PostgreSQL is the system of record. Guest data never leaves t
 `src/PokerApp.Infrastructure/Persistence/Migrations`.
 
 **Important business rules.**
-- **Group owner FK is `Restrict`** — a user who owns a group cannot be deleted (must transfer
-  or delete the group first); enforced in `DeleteAccountCommandHandler`.
+- **Group owner FK is `Restrict`** — a user who owns a group cannot have their *account* deleted
+  while owning (must transfer or delete the group first); enforced in `DeleteAccountCommandHandler`.
+  Note this guards account deletion only — **leaving a group is always allowed** (the owner-leave
+  path transfers ownership or deletes the empty group, so a group is never left ownerless).
+- **Leaving vs deleting a group** — *Leave* (`DELETE /api/groups/{id}/members/me`) only removes the
+  caller (auto-transferring ownership when needed); it never deletes a populated group. *Delete*
+  (`DELETE /api/groups/{id}`, owner-only) is the sole way to remove a populated group entirely.
 - **Session lifecycle** `Draft → Active → Finished` (group sessions; guest games skip Draft).
   Finished is read-only except settlement marking.
 - **`SessionPlayer`** is a registered user (`UserId`) or guest (`GuestName`), optionally

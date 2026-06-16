@@ -24,7 +24,13 @@ as blockers clear.
 All code, assets, privacy, and compliance are in place. The remaining points are
 **external actions only you can do** — there are no open in-repo blockers.
 
-### Latest hardening pass (June 15, 2026)
+### Latest hardening pass (June 17, 2026)
+- **Owner can leave a group:** fixed the 409 that blocked a group creator from leaving.
+  Owner leaving with members remaining auto-transfers ownership (prefer Admin, else
+  longest-standing member); a sole owner leaving deletes the empty group. `GET /api/groups/{id}`
+  now returns the caller's `myRole`. Verified on production with `verify-leave-owner.js`.
+
+### Hardening pass (June 15, 2026)
 - **Group flow fixed:** Leave/Delete Group work on web; invite links no longer 404
   (SPA rewrite at `apps/poker-mobile/vercel.json` + React Navigation `linking`),
   verified live on production.

@@ -28,4 +28,7 @@ public class Group : BaseEntity
         Name = name;
         Description = description;
     }
+
+    /// <summary>Reassigns the group owner (e.g. when the current owner leaves and members remain).</summary>
+    public void TransferOwnership(Guid newOwnerId) => OwnerId = newOwnerId;
 }

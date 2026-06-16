@@ -12,5 +12,6 @@ public sealed record GetGroupByIdResponse(
     string OwnerUsername,
     int MemberCount,
     DateTime CreatedAt,
+    string MyRole,
     int TotalSessions = 0,
     decimal TotalMoneyMoved = 0);
