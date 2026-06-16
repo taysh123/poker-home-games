@@ -391,8 +391,12 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
               <Text style={styles.metaText}>
                 {group.memberCount} member{group.memberCount !== 1 ? 's' : ''}
               </Text>
-              <View style={styles.dot} />
-              <RoleBadge role={group.myRole} />
+              {group.myRole ? (
+                <>
+                  <View style={styles.dot} />
+                  <RoleBadge role={group.myRole} />
+                </>
+              ) : null}
             </View>
           </View>
 
