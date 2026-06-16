@@ -22,6 +22,7 @@ import PrimaryButton from '../components/PrimaryButton';
 import StepIndicator from '../components/StepIndicator';
 import GuestNameInput from '../components/GuestNameInput';
 import Screen from '../components/Screen';
+import DealInOverlay from '../components/DealInOverlay';
 import ScreenHeader from '../components/ScreenHeader';
 import { getRecentGuests, recordGuestName } from '../utils/guestHistory';
 import { parseAmountToCents, formatCents } from '../utils/money';
@@ -57,6 +58,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
   const STEP_LABELS = ['Details', 'Players', 'Review'];
   const reviewAnim = useRef(new Animated.Value(0)).current;
   const [starting, setStarting] = useState(false);
+  const [dealtGameId, setDealtGameId] = useState<string | null>(null);
 
   const defaultName = (() => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -228,7 +230,8 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
       }
 
       showToast('Game started!', 'success');
-      navigation.replace('LocalSession', { gameId: game.id });
+      // wow #5: brief branded "Deal 'Em In" beat, then into the live table.
+      setDealtGameId(game.id);
     } catch {
       infoDialog('Failed to start game', 'Please try again.');
       setStarting(false);
@@ -629,6 +632,9 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
         <View style={{ height: 80 }} />
       </ScrollView>
     </KeyboardAvoidingView>
+    {dealtGameId && (
+      <DealInOverlay onDone={() => navigation.replace('LocalSession', { gameId: dealtGameId! })} />
+    )}
     </Screen>
   );
 }

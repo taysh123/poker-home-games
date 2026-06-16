@@ -33,7 +33,13 @@ builder.Services.AddCors(options =>
         policy.SetIsOriginAllowed(_ => true).AllowAnyHeader().AllowAnyMethod());
 
     options.AddPolicy("Prod", policy =>
-        policy.WithOrigins(prodOrigins).AllowAnyHeader().AllowAnyMethod());
+        policy.SetIsOriginAllowed(origin =>
+                prodOrigins.Contains(origin)
+                // Vercel preview deployments for this project (scoped to our Vercel team)
+                // so PR previews can exercise the API without a per-deploy env change.
+                || (origin.StartsWith("https://poker-home-games-", StringComparison.Ordinal)
+                    && origin.EndsWith("-tays-projects-d5aefd6e.vercel.app", StringComparison.Ordinal)))
+            .AllowAnyHeader().AllowAnyMethod());
 });
 
 // ── Rate Limiting ───────────────────────────────────────────────────────────

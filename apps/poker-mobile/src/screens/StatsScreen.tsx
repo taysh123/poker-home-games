@@ -24,6 +24,10 @@ import SessionListItem from '../components/SessionListItem';
 import SkeletonCard from '../components/SkeletonCard';
 import SkeletonRow from '../components/SkeletonRow';
 import Screen from '../components/Screen';
+import AchievementUnlock from '../components/AchievementUnlock';
+import AnimatedNumber from '../components/motion/AnimatedNumber';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useAuth } from '../context/AuthContext';
 import { formatPL, formatDate, formatDuration, formatMinutes } from '../utils/formatters';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -40,6 +44,8 @@ const PERIODS: { key: Period; label: string }[] = [
 export default function StatsScreen() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const [unlockQueue, setUnlockQueue] = useState<AchievementDto[]>([]);
   const [period, setPeriod] = useState<Period>('all');
   const periodRef = useRef<Period>('all');
   const [stats, setStats] = useState<MyStatsDto | null>(null);
@@ -71,7 +77,23 @@ export default function StatsScreen() {
       const data = await getMyStats(token, p === 'all' ? undefined : p);
       setStats(data);
       if (!isRefresh && p === 'all') {
-        getMyAchievements(token).catch(() => null).then(setAchievements);
+        getMyAchievements(token).catch(() => null).then(async (ach) => {
+          setAchievements(ach);
+          if (!ach) return;
+          // Celebrate achievements unlocked since this device last saw them.
+          // First run establishes a baseline (no retroactive burst).
+          const key = `tpoker.seenAch.${user?.userId ?? 'anon'}`;
+          try {
+            const raw = await SecureStore.getItemAsync(key);
+            if (raw == null) {
+              await SecureStore.setItemAsync(key, JSON.stringify(ach.earned.map((a) => a.key)));
+              return;
+            }
+            const seen = new Set<string>(JSON.parse(raw));
+            const fresh = ach.earned.filter((a) => !seen.has(a.key));
+            if (fresh.length > 0) setUnlockQueue(fresh);
+          } catch { /* storage unavailable — skip celebration */ }
+        });
       }
     } catch {
       setError('Failed to load stats.');
@@ -203,9 +225,13 @@ export default function StatsScreen() {
                 <Text style={styles.heroLabel}>
                   {period === 'week' ? 'This Week P&L' : period === 'month' ? 'This Month P&L' : 'Lifetime P&L'}
                 </Text>
-                <Text style={[styles.heroAmount, { color: plColor }]} numberOfLines={1} adjustsFontSizeToFit>
-                  {formatPL(stats.totalProfitLoss)}
-                </Text>
+                <AnimatedNumber
+                  value={stats.totalProfitLoss}
+                  format={formatPL}
+                  style={[styles.heroAmount, { color: plColor }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                />
               </View>
               <View style={styles.sessionCountBadge}>
                 <Text style={styles.sessionCountNum}>{stats.totalSessionsPlayed}</Text>
@@ -248,8 +274,14 @@ export default function StatsScreen() {
               </View>
             )}
           </View>
-          {/* decorative */}
-          <View style={styles.heroCorner} pointerEvents="none" />
+          {/* ambient gold glow (matches Home + game-over heroes) */}
+          <LinearGradient
+            colors={[colors.goldFaint, 'transparent']}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={styles.heroGlow}
+            pointerEvents="none"
+          />
         </View>
 
         {/* ── Key numbers ── */}
@@ -413,6 +445,21 @@ export default function StatsScreen() {
 
       </Animated.View>
     </ScrollView>
+    {unlockQueue.length > 0 && (
+      <AchievementUnlock
+        achievements={unlockQueue}
+        onDone={async () => {
+          const key = `tpoker.seenAch.${user?.userId ?? 'anon'}`;
+          try {
+            const raw = await SecureStore.getItemAsync(key);
+            const seen: string[] = raw ? JSON.parse(raw) : [];
+            const merged = Array.from(new Set([...seen, ...unlockQueue.map((a) => a.key)]));
+            await SecureStore.setItemAsync(key, JSON.stringify(merged));
+          } catch { /* ignore */ }
+          setUnlockQueue([]);
+        }}
+      />
+    )}
     </Screen>
   );
 }
@@ -759,7 +806,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...shadows.md,
   },
-  heroInner: { padding: 24 },
+  heroInner: { padding: 24, zIndex: 1 },
+  heroGlow: { position: 'absolute', top: 0, left: 0, right: 0, height: 150 },
   heroTopRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -772,10 +820,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   heroAmount: {
-    fontSize: 44,
-    fontWeight: '800',
-    letterSpacing: -2,
-    fontVariant: ['tabular-nums'],
+    ...typography.amountHero,
   },
   sessionCountBadge: {
     backgroundColor: colors.surfaceHigh,

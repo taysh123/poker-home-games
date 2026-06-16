@@ -13,9 +13,11 @@ import {
 } from 'react-native';
 import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
+import { typography } from '../theme/typography';
 import { shadows } from '../theme/shadows';
 import { useAuth } from '../context/AuthContext';
 import { updateProfile, changePassword, deleteAccount } from '../api/profileApi';
@@ -178,17 +180,24 @@ export default function ProfileScreen({ navigation }: Props) {
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
-        {/* Avatar */}
+        {/* Identity hero */}
         <View style={styles.avatarWrap}>
+          <LinearGradient
+            colors={[colors.goldFaint, 'transparent']}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={styles.avatarGlow}
+            pointerEvents="none"
+          />
           <Avatar
             name={user?.username ?? '?'}
             emoji={user?.avatarEmoji}
             color={user?.avatarColor}
-            size={84}
+            size={88}
             ring="gold"
           />
-          <Text style={styles.avatarUsername}>{user?.username}</Text>
-          <Text style={styles.avatarEmail}>{user?.email}</Text>
+          <Text style={styles.avatarUsername} numberOfLines={1}>{user?.username}</Text>
+          <Text style={styles.avatarEmail} numberOfLines={1}>{user?.email}</Text>
         </View>
 
         {/* ── Identity section ────────────────────────────────────────── */}
@@ -451,6 +460,7 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 48 },
 
   avatarWrap: { alignItems: 'center', marginBottom: 28, marginTop: 8, gap: 6 },
+  avatarGlow: { position: 'absolute', top: -16, width: 260, height: 150, alignSelf: 'center' },
   // Identity picker
   identityGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   emojiCell: {
@@ -506,8 +516,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: { fontSize: 30, fontWeight: '800', color: colors.gold },
-  avatarUsername: { fontSize: 18, fontWeight: '700', color: colors.text },
-  avatarEmail: { fontSize: 13, color: colors.textMuted },
+  avatarUsername: { ...typography.displaySerif, fontSize: 24, color: colors.text, marginTop: 4 },
+  avatarEmail: { ...typography.bodySmall, color: colors.textMuted },
 
   section: {
     backgroundColor: colors.surface,

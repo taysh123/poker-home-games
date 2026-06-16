@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { USE_NATIVE_DRIVER } from '../theme/motion';
+import { LinearGradient } from 'expo-linear-gradient';
 import { showToast } from '../utils/toast';
 import { confirmDialog } from '../utils/confirm';
 import { typography } from '../theme/typography';
@@ -45,7 +46,7 @@ import { searchUsers, UserSearchResultDto } from '../api/usersApi';
 import SkeletonCard from '../components/SkeletonCard';
 import SkeletonRow from '../components/SkeletonRow';
 import Screen from '../components/Screen';
-import ScreenHeader from '../components/ScreenHeader';
+import BrandHeader from '../components/BrandHeader';
 import Avatar from '../components/Avatar';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupDetail'>;
@@ -166,9 +167,9 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
     }
   }, [showInviteOnLoad, loading, group]);
 
-  // Velvet Table header (replaces the old native navigation header)
+  // Velvet Table header (brand home anchor + back + group title)
   const header = (
-    <ScreenHeader
+    <BrandHeader
       title={group?.name ?? groupName}
       onBack={() => navigation.goBack()}
       right={
@@ -375,6 +376,13 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
         <View style={styles.headerSection}>
           {/* Group info */}
           <View style={styles.groupCard}>
+            <LinearGradient
+              colors={[colors.goldFaint, 'transparent']}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={styles.groupCardGlow}
+              pointerEvents="none"
+            />
             <Text style={styles.groupName}>{group.name}</Text>
             {group.description ? (
               <Text style={styles.groupDesc}>{group.description}</Text>
@@ -383,8 +391,12 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
               <Text style={styles.metaText}>
                 {group.memberCount} member{group.memberCount !== 1 ? 's' : ''}
               </Text>
-              <View style={styles.dot} />
-              <RoleBadge role={group.myRole} />
+              {group.myRole ? (
+                <>
+                  <View style={styles.dot} />
+                  <RoleBadge role={group.myRole} />
+                </>
+              ) : null}
             </View>
           </View>
 
@@ -850,8 +862,10 @@ function RivalryRow({ rivalry }: { rivalry: GroupRivalryDto }) {
 }
 
 function RoleBadge({ role }: { role: string }) {
-  const isOwner = role === 'Owner';
-  const isAdmin = role === 'Admin';
+  if (!role) return null; // no empty pill when role is missing
+  const r = role.toLowerCase();
+  const isOwner = r === 'owner';
+  const isAdmin = r === 'admin';
   return (
     <View
       style={[
@@ -894,13 +908,15 @@ const styles = StyleSheet.create({
   groupCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.goldMuted,
     borderRadius: 16,
     padding: 20,
     marginBottom: 12,
     gap: 8,
+    overflow: 'hidden',
     ...shadows.md,
   },
+  groupCardGlow: { position: 'absolute', top: 0, left: 0, right: 0, height: 120 },
   groupName: { ...typography.displaySerif, fontSize: 27, color: colors.text },
   groupDesc: { fontSize: 14, color: colors.textMuted, lineHeight: 20 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
@@ -1112,7 +1128,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   badgeText: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
-  badgeTextOwner: { color: colors.gold },
+  badgeTextOwner: { color: colors.goldLight },
   badgeTextMuted: { color: colors.textMuted },
 
   errorText: { fontSize: 15, color: colors.error, textAlign: 'center' },

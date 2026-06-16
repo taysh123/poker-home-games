@@ -14,7 +14,7 @@ import Reanimated, {
   withTiming,
 } from 'react-native-reanimated';
 import { colors } from '../theme/colors';
-import { Inter } from '../theme/fonts';
+import { Sora } from '../theme/fonts';
 import { useAuth } from '../context/AuthContext';
 import { useActiveSession } from '../context/ActiveSessionContext';
 import { useLocalGames } from '../context/LocalGamesContext';
@@ -242,9 +242,9 @@ function tabScreenOptions({ route }: { route: { name: string } }) {
     tabBarLabelStyle: {
       fontSize: 10,
       // The tab bar label renders through React Navigation's own text path,
-      // which the global Inter patch doesn't reliably reach on web — set the
-      // family explicitly so tab labels match the rest of the UI.
-      fontFamily: Inter['600'],
+      // which the global font patch doesn't reliably reach on web — set the
+      // family explicitly. Sora is the UI-chrome face.
+      fontFamily: Sora['600'],
       letterSpacing: 0.3,
       marginTop: 2,
     },

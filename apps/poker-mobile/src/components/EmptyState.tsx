@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { typography } from '../theme/typography';
 import PrimaryButton from './PrimaryButton';
 
 type Props = {
@@ -56,7 +57,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   emoji: { fontSize: 52, marginBottom: 4 },
-  title: { fontSize: 20, fontWeight: '700', color: colors.text, textAlign: 'center' },
-  subtitle: { fontSize: 14, color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
+  title: { ...typography.h3, color: colors.text, textAlign: 'center' },
+  subtitle: { ...typography.body, color: colors.textMuted, textAlign: 'center' },
   button: { marginTop: 8 },
 });
