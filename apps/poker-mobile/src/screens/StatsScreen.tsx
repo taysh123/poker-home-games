@@ -25,6 +25,8 @@ import SkeletonCard from '../components/SkeletonCard';
 import SkeletonRow from '../components/SkeletonRow';
 import Screen from '../components/Screen';
 import AchievementUnlock from '../components/AchievementUnlock';
+import AnimatedNumber from '../components/motion/AnimatedNumber';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { formatPL, formatDate, formatDuration, formatMinutes } from '../utils/formatters';
 
@@ -223,9 +225,13 @@ export default function StatsScreen() {
                 <Text style={styles.heroLabel}>
                   {period === 'week' ? 'This Week P&L' : period === 'month' ? 'This Month P&L' : 'Lifetime P&L'}
                 </Text>
-                <Text style={[styles.heroAmount, { color: plColor }]} numberOfLines={1} adjustsFontSizeToFit>
-                  {formatPL(stats.totalProfitLoss)}
-                </Text>
+                <AnimatedNumber
+                  value={stats.totalProfitLoss}
+                  format={formatPL}
+                  style={[styles.heroAmount, { color: plColor }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                />
               </View>
               <View style={styles.sessionCountBadge}>
                 <Text style={styles.sessionCountNum}>{stats.totalSessionsPlayed}</Text>
@@ -268,8 +274,14 @@ export default function StatsScreen() {
               </View>
             )}
           </View>
-          {/* decorative */}
-          <View style={styles.heroCorner} pointerEvents="none" />
+          {/* ambient gold glow (matches Home + game-over heroes) */}
+          <LinearGradient
+            colors={[colors.goldFaint, 'transparent']}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={styles.heroGlow}
+            pointerEvents="none"
+          />
         </View>
 
         {/* ── Key numbers ── */}
@@ -794,7 +806,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...shadows.md,
   },
-  heroInner: { padding: 24 },
+  heroInner: { padding: 24, zIndex: 1 },
+  heroGlow: { position: 'absolute', top: 0, left: 0, right: 0, height: 150 },
   heroTopRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -807,10 +820,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   heroAmount: {
-    fontSize: 44,
-    fontWeight: '800',
-    letterSpacing: -2,
-    fontVariant: ['tabular-nums'],
+    ...typography.amountHero,
   },
   sessionCountBadge: {
     backgroundColor: colors.surfaceHigh,
