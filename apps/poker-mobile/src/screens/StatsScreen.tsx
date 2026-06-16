@@ -24,6 +24,8 @@ import SessionListItem from '../components/SessionListItem';
 import SkeletonCard from '../components/SkeletonCard';
 import SkeletonRow from '../components/SkeletonRow';
 import Screen from '../components/Screen';
+import AchievementUnlock from '../components/AchievementUnlock';
+import { useAuth } from '../context/AuthContext';
 import { formatPL, formatDate, formatDuration, formatMinutes } from '../utils/formatters';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -40,6 +42,8 @@ const PERIODS: { key: Period; label: string }[] = [
 export default function StatsScreen() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const [unlockQueue, setUnlockQueue] = useState<AchievementDto[]>([]);
   const [period, setPeriod] = useState<Period>('all');
   const periodRef = useRef<Period>('all');
   const [stats, setStats] = useState<MyStatsDto | null>(null);
@@ -71,7 +75,23 @@ export default function StatsScreen() {
       const data = await getMyStats(token, p === 'all' ? undefined : p);
       setStats(data);
       if (!isRefresh && p === 'all') {
-        getMyAchievements(token).catch(() => null).then(setAchievements);
+        getMyAchievements(token).catch(() => null).then(async (ach) => {
+          setAchievements(ach);
+          if (!ach) return;
+          // Celebrate achievements unlocked since this device last saw them.
+          // First run establishes a baseline (no retroactive burst).
+          const key = `tpoker.seenAch.${user?.userId ?? 'anon'}`;
+          try {
+            const raw = await SecureStore.getItemAsync(key);
+            if (raw == null) {
+              await SecureStore.setItemAsync(key, JSON.stringify(ach.earned.map((a) => a.key)));
+              return;
+            }
+            const seen = new Set<string>(JSON.parse(raw));
+            const fresh = ach.earned.filter((a) => !seen.has(a.key));
+            if (fresh.length > 0) setUnlockQueue(fresh);
+          } catch { /* storage unavailable — skip celebration */ }
+        });
       }
     } catch {
       setError('Failed to load stats.');
@@ -413,6 +433,21 @@ export default function StatsScreen() {
 
       </Animated.View>
     </ScrollView>
+    {unlockQueue.length > 0 && (
+      <AchievementUnlock
+        achievements={unlockQueue}
+        onDone={async () => {
+          const key = `tpoker.seenAch.${user?.userId ?? 'anon'}`;
+          try {
+            const raw = await SecureStore.getItemAsync(key);
+            const seen: string[] = raw ? JSON.parse(raw) : [];
+            const merged = Array.from(new Set([...seen, ...unlockQueue.map((a) => a.key)]));
+            await SecureStore.setItemAsync(key, JSON.stringify(merged));
+          } catch { /* ignore */ }
+          setUnlockQueue([]);
+        }}
+      />
+    )}
     </Screen>
   );
 }
