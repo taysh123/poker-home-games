@@ -15,6 +15,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
+import { LinearGradient } from 'expo-linear-gradient';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import ActionSheet from '../components/ActionSheet';
 import AppTextInput from '../components/AppTextInput';
@@ -305,6 +306,13 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         {/* Pot summary */}
         <View style={styles.potCard}>
+          <LinearGradient
+            colors={[colors.goldFaint, 'transparent']}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={styles.potGlow}
+            pointerEvents="none"
+          />
           <Text style={styles.potLabel}>{isTournament ? 'PRIZE POOL' : 'TOTAL POT'}</Text>
           <AnimatedNumber
             value={isTournament ? prizePoolCents(game) : totalPotCents}
@@ -801,8 +809,10 @@ const styles = StyleSheet.create({
     borderColor: colors.goldMuted,
     gap: 4,
     marginBottom: 8,
+    overflow: 'hidden',
   },
-  potLabel: { fontSize: 11, fontWeight: '700', color: colors.textMuted, letterSpacing: 1.2 },
+  potGlow: { position: 'absolute', top: 0, left: 0, right: 0, height: 110 },
+  potLabel: { ...typography.caps, color: colors.goldLight },
 
   // Tournament dashboard
   dashCard: {
