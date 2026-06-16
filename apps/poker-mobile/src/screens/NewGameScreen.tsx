@@ -27,6 +27,7 @@ import StepIndicator from '../components/StepIndicator';
 import GuestNameInput from '../components/GuestNameInput';
 import Screen from '../components/Screen';
 import ScreenHeader from '../components/ScreenHeader';
+import DealInOverlay from '../components/DealInOverlay';
 import { getRecentGuests, recordGuestName } from '../utils/guestHistory';
 import { showToast } from '../utils/toast';
 import { useActiveSession } from '../context/ActiveSessionContext';
@@ -56,6 +57,7 @@ export default function NewGameScreen({ route, navigation }: Props) {
     }
   }
   const [starting, setStarting] = useState(false);
+  const [dealtSessionId, setDealtSessionId] = useState<string | null>(null);
 
   // Step 1 state
   const defaultName = (() => {
@@ -237,7 +239,8 @@ export default function NewGameScreen({ route, navigation }: Props) {
       refreshActiveSession();
 
       showToast('Game started!', 'success');
-      navigation.replace('Session', { sessionId, groupId });
+      // wow #5: branded "Deal 'Em In" beat, then into the live session.
+      setDealtSessionId(sessionId);
     } catch {
       showToast('Failed to start game. Please check your connection and try again.', 'error');
       setStarting(false);
@@ -466,6 +469,9 @@ export default function NewGameScreen({ route, navigation }: Props) {
         <View style={{ height: 80 }} />
       </ScrollView>
     </KeyboardAvoidingView>
+    {dealtSessionId && (
+      <DealInOverlay onDone={() => navigation.replace('Session', { sessionId: dealtSessionId!, groupId: selectedGroupId ?? '' })} />
+    )}
     </Screen>
   );
 }
