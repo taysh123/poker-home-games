@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -9,6 +10,7 @@ import {
   RefreshControl,
   Animated,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -16,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
+import { Sora } from '../theme/fonts';
 import { shadows } from '../theme/shadows';
 import { spacing } from '../theme/spacing';
 import { radii } from '../theme/radii';
@@ -187,11 +190,13 @@ export default function HomeScreen() {
       }
       showsVerticalScrollIndicator={false}
     >
-      {/* ── Header ── */}
+      {/* ── Brand bar ── */}
       <Animated.View style={[styles.header, { opacity: heroOpacity, transform: [{ translateY: heroY }] }]}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.greeting}>{greeting}</Text>
-          <Text style={styles.username} numberOfLines={1}>{user?.username ?? 'Player'}</Text>
+        <View style={styles.brandLockup}>
+          <View style={styles.brandLogoRing}>
+            <Image source={require('../../assets/logo.png')} style={styles.brandLogo} resizeMode="contain" />
+          </View>
+          <Text style={styles.brandWordmark}>T POKER</Text>
         </View>
         <View style={styles.headerRight}>
           <TouchableOpacity
@@ -229,9 +234,17 @@ export default function HomeScreen() {
         </View>
       </Animated.View>
 
-      {/* ── Hero P&L Card ── */}
+      {/* ── Hero bankroll card (cinematic) ── */}
       <Animated.View style={[styles.heroCard, { opacity: heroOpacity, transform: [{ translateY: heroY }] }]}>
+        <LinearGradient
+          colors={[colors.goldFaint, 'transparent']}
+          start={{ x: 0.1, y: 0 }}
+          end={{ x: 0.9, y: 1 }}
+          style={styles.heroGlow}
+          pointerEvents="none"
+        />
         <View style={styles.heroCardInner}>
+          <Text style={styles.heroGreeting}>{greeting}, {user?.username ?? 'Player'}</Text>
           <View style={styles.heroTop}>
             <Text style={styles.heroLabel}>Lifetime P&L</Text>
             <View style={styles.heroBadge}>
@@ -746,6 +759,20 @@ const styles = StyleSheet.create({
   headerLeft: { flex: 1 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 
+  // ── Brand lockup (logo + wordmark) ──
+  brandLockup: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
+  brandLogoRing: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.goldMuted,
+    backgroundColor: colors.goldFaint,
+  },
+  brandLogo: { width: 38, height: 38, borderRadius: 11 },
+  brandWordmark: { fontFamily: Sora['700'], fontSize: 18, color: colors.text, letterSpacing: 2 },
+
   greeting: {
     ...typography.caption,
     color: colors.textMuted,
@@ -803,6 +830,18 @@ const styles = StyleSheet.create({
   },
   heroCardInner: {
     zIndex: 1,
+  },
+  heroGlow: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 160,
+  },
+  heroGreeting: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginBottom: 12,
   },
   heroTop: {
     flexDirection: 'row',
