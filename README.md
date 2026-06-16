@@ -244,6 +244,15 @@ amount validation on every transaction. Privacy policy: [PRIVACY.md](PRIVACY.md)
 
 ---
 
+## Documentation
+
+- [docs/HANDOFF.md](docs/HANDOFF.md) — **technical handoff** (architecture, DB, flows, deployment, ops, roadmap)
+- [CLAUDE.md](CLAUDE.md) — conventions, design system, deployment details
+- [docs/store-release.md](docs/store-release.md) — step-by-step store submission guide
+- [docs/release-readiness.md](docs/release-readiness.md) — launch-readiness status
+- [docs/CHANGELOG.md](docs/CHANGELOG.md) — shipped-feature & phase history
+- [PRIVACY.md](PRIVACY.md) — privacy policy
+
 ## Roadmap
 
 Full prioritized roadmap with efforts and release trains: [docs/roadmap-v2.md](docs/roadmap-v2.md).
