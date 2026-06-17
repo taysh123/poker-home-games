@@ -16,9 +16,6 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.tpoker.app",
-      "associatedDomains": [
-        "applinks:poker-home-games-three.vercel.app"
-      ],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
