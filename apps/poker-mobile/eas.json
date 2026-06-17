@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 16.0.0"
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -28,8 +29,8 @@
   "submit": {
     "production": {
       "ios": {
-        "appleTeamId": "SET_ME_APPLE_TEAM_ID",
-        "ascAppId": "SET_ME_ASC_APP_ID"
+        "appleTeamId": "J2MGQU5C7U",
+        "ascAppId": "6781109023"
       },
       "android": {
         "serviceAccountKeyPath": "./play-service-account.json",
