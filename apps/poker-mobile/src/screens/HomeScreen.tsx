@@ -179,7 +179,7 @@ export default function HomeScreen() {
     <Screen>
     <ScrollView
       style={styles.scroll}
-      contentContainerStyle={[styles.container, { paddingTop: insets.top + 20 }]}
+      contentContainerStyle={[styles.container, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 120 }]}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}

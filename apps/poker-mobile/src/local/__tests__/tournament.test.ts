@@ -27,6 +27,7 @@ import {
 import {
   PAYOUT_PRESETS,
   payoutAmountsCents,
+  defaultPayoutSplit,
   prizePoolCents,
   remainingPlayerIds,
   tournamentResult,
@@ -120,6 +121,24 @@ describe('payoutAmountsCents (largest remainder, arbitrary distributions)', () =
 
   it('handles tiny pools without losing cents', () => {
     expect(payoutAmountsCents(1, [50, 30, 20]).reduce((s, n) => s + n, 0)).toBe(1);
+  });
+});
+
+describe('defaultPayoutSplit (dynamic winner counts)', () => {
+  it('winner-takes-all for a single place', () => {
+    expect(defaultPayoutSplit(1)).toEqual([100]);
+  });
+
+  it('always sums to 100 with every place >= 1, for 1..20 winners', () => {
+    for (let n = 1; n <= 20; n++) {
+      const split = defaultPayoutSplit(n);
+      expect(split).toHaveLength(n);
+      expect(split.reduce((s, p) => s + p, 0)).toBe(100);
+      expect(Math.min(...split)).toBeGreaterThanOrEqual(1);
+      expect(split.every(p => Number.isInteger(p))).toBe(true);
+      // top place is never smaller than the last place (broadly descending)
+      expect(split[0]).toBeGreaterThanOrEqual(split[n - 1]);
+    }
   });
 });
 

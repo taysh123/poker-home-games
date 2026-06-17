@@ -29,14 +29,15 @@ import { parseAmountToCents, formatCents } from '../utils/money';
 import { useLocalGames } from '../context/LocalGamesContext';
 import { showToast } from '../utils/toast';
 import { infoDialog } from '../utils/confirm';
-import { PAYOUT_PRESET_LABELS, PAYOUT_PRESETS } from '../local/tournament';
+import { PAYOUT_PRESET_LABELS, PAYOUT_PRESETS, defaultPayoutSplit } from '../local/tournament';
 import { BLIND_PRESET_LABELS, generateBlindLevels, nextBlindLevel } from '../local/blinds';
 import type { BlindLevel, BlindPreset, PayoutPreset } from '../local/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocalNewGame'>;
 
-const WINNERS_MAX = 6;
-/** Sensible default payout splits per winner count (each sums to 100). */
+const WINNERS_MAX = 20;
+/** Curated default payout splits for common winner counts (each sums to 100).
+ *  Counts beyond this fall back to `defaultPayoutSplit(n)`. */
 const DEFAULT_PAYOUTS: Record<number, number[]> = {
   1: [100],
   2: [65, 35],
@@ -85,7 +86,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
   function setWinnerCount(n: number) {
     const clamped = Math.max(1, Math.min(WINNERS_MAX, n));
     setWinners(clamped);
-    setPayoutPcts((DEFAULT_PAYOUTS[clamped] ?? PAYOUT_PRESETS['50-30-20']).map(String));
+    setPayoutPcts((DEFAULT_PAYOUTS[clamped] ?? defaultPayoutSplit(clamped)).map(String));
   }
   function applyPayoutPreset(preset: PayoutPreset) {
     const pcts = PAYOUT_PRESETS[preset];

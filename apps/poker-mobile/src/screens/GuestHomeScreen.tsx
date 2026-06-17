@@ -36,7 +36,7 @@ export default function GuestHomeScreen() {
     <Screen>
     <ScrollView
       style={styles.flex}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + 20 }]}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 120 }]}
     >
       {/* Brand header */}
       <View style={styles.brandRow}>
@@ -141,8 +141,6 @@ export default function GuestHomeScreen() {
         </View>
         <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
       </TouchableOpacity>
-
-      <View style={{ height: 100 }} />
     </ScrollView>
     </Screen>
   );

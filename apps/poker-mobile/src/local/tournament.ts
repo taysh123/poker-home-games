@@ -52,6 +52,32 @@ export function payoutAmountsCents(poolCents: number, percents: number[]): numbe
   return result;
 }
 
+/**
+ * A sensible DEFAULT payout split for any number of paid places: descending
+ * integer percentages that always sum to exactly 100, with every paid place
+ * guaranteed at least 1%. Used to seed the wizard for arbitrary winner counts
+ * (the user can still edit each row). Gives every place a 1% base, then shares
+ * the remainder by descending rank via largest-remainder (same technique as
+ * `payoutAmountsCents`).
+ */
+export function defaultPayoutSplit(n: number): number[] {
+  const places = Math.max(1, Math.floor(n));
+  if (places === 1) return [100];
+  const base = 1; // floor so no paid place is 0%
+  const pool = Math.max(0, 100 - base * places); // remainder shared by rank
+  const weights = Array.from({ length: places }, (_, i) => places - i); // descending
+  const weightSum = weights.reduce((s, w) => s + w, 0);
+  const raw = weights.map(w => (w * pool) / weightSum);
+  const floors = raw.map(Math.floor);
+  let remainder = pool - floors.reduce((s, v) => s + v, 0);
+  const order = raw
+    .map((value, index) => ({ index, frac: value - Math.floor(value) }))
+    .sort((a, b) => b.frac - a.frac || a.index - b.index);
+  const result = floors.map(v => v + base);
+  for (let i = 0; remainder > 0; i++, remainder--) result[order[i % order.length].index] += 1;
+  return result;
+}
+
 /** Cents each player put in (entry + rebuys + add-ons). */
 export function contributionCents(game: Pick<LocalGame, 'txns'>, playerId: string): number {
   return game.txns
