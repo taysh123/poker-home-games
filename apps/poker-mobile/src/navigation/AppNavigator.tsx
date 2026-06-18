@@ -215,8 +215,13 @@ function TabIcon({ name, color, size, focused }: { name: IoniconsName; color: st
   );
 }
 
-/** Shared tab styling for both the authed and guest tab navigators. */
-function tabScreenOptions({ route }: { route: { name: string } }) {
+/**
+ * Shared tab styling for both the authed and guest tab navigators.
+ * Takes the safe-area bottom inset so the iOS tab bar clears the home indicator
+ * (an explicit height/paddingBottom otherwise overrides RN's auto safe-area handling).
+ */
+function makeTabScreenOptions(bottomInset: number) {
+  return function tabScreenOptions({ route }: { route: { name: string } }) {
   const icons: Record<string, { active: IoniconsName; inactive: IoniconsName }> = {
     Home:        { active: 'home',      inactive: 'home-outline' },
     AllSessions: { active: 'card',      inactive: 'card-outline' },
@@ -230,8 +235,8 @@ function tabScreenOptions({ route }: { route: { name: string } }) {
       ...(Platform.OS === 'ios' ? { position: 'absolute' as const } : null),
       borderTopColor: colors.border,
       borderTopWidth: 1,
-      height: TAB_BAR_HEIGHT + (Platform.OS === 'ios' ? 0 : 8),
-      paddingBottom: Platform.OS === 'ios' ? 0 : 4,
+      height: TAB_BAR_HEIGHT + (Platform.OS === 'ios' ? bottomInset : 8),
+      paddingBottom: Platform.OS === 'ios' ? bottomInset : 4,
       paddingTop: 4,
     },
     ...(Platform.OS === 'ios'
@@ -253,12 +258,14 @@ function tabScreenOptions({ route }: { route: { name: string } }) {
       return <TabIcon name={focused ? pair.active : pair.inactive} size={size - 2} color={color} focused={focused} />;
     },
   };
+  };
 }
 
 function TabNavigator() {
+  const insets = useSafeAreaInsets();
   return (
     <View style={{ flex: 1 }}>
-      <Tab.Navigator screenOptions={tabScreenOptions}>
+      <Tab.Navigator screenOptions={makeTabScreenOptions(insets.bottom)}>
         <Tab.Screen
           name="Home"
           component={HomeScreen}
@@ -287,9 +294,10 @@ function TabNavigator() {
 
 /** Tabs for guests (no account): local games + auth-gated Groups, local Stats. */
 function GuestTabNavigator() {
+  const insets = useSafeAreaInsets();
   return (
     <View style={{ flex: 1 }}>
-      <Tab.Navigator screenOptions={tabScreenOptions}>
+      <Tab.Navigator screenOptions={makeTabScreenOptions(insets.bottom)}>
         <Tab.Screen
           name="Home"
           component={GuestHomeScreen}
