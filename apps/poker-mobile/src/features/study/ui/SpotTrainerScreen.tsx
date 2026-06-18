@@ -7,6 +7,7 @@ import BrandHeader from '../../../components/BrandHeader';
 import Card from '../../../components/Card';
 import PrimaryButton from '../../../components/PrimaryButton';
 import PressableScale from '../../../components/motion/PressableScale';
+import Celebration from '../../../components/motion/Celebration';
 import { colors } from '../../../theme/colors';
 import { typography } from '../../../theme/typography';
 import { spacing } from '../../../theme/spacing';
@@ -56,6 +57,7 @@ export default function SpotTrainerScreen() {
     const acc = answered > 0 ? Math.round((correctCount / answered) * 100) : 0;
     return (
       <Screen>
+        {acc >= 70 ? <Celebration /> : null}
         <BrandHeader variant="screen" title="Quiz complete" onBack={() => navigation.goBack()} />
         <View style={styles.center}>
           <Card variant="hero" style={styles.resultCard}>

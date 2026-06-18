@@ -8,6 +8,7 @@ import BrandHeader from '../../../components/BrandHeader';
 import Card from '../../../components/Card';
 import SectionTitle from '../../../components/SectionTitle';
 import PressableScale from '../../../components/motion/PressableScale';
+import AnimatedNumber from '../../../components/motion/AnimatedNumber';
 import { colors } from '../../../theme/colors';
 import { typography } from '../../../theme/typography';
 import { spacing } from '../../../theme/spacing';
@@ -33,7 +34,7 @@ export default function StudyScreen() {
         <Card variant="hero">
           <Text style={styles.heroLabel}>CURRENT STREAK</Text>
           <View style={styles.streakRow}>
-            <Text style={styles.streakNum}>{progress.currentStreak}</Text>
+            <AnimatedNumber value={progress.currentStreak} format={(n) => String(n)} style={styles.streakNum} />
             <Text style={styles.streakFlame}>🔥</Text>
           </View>
           <Text style={styles.heroSub}>

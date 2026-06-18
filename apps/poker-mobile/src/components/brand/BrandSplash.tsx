@@ -77,7 +77,10 @@ export default function BrandSplash({ onDone }: Props) {
         )}
       </Reanimated.View>
 
-      <AImage source={TPOKER_LOGO} style={[styles.tpLogo, tpStyle]} resizeMode="contain" />
+      <Reanimated.View style={[styles.tpFrame, tpStyle]}>
+        <Image source={TPOKER_LOGO} style={styles.tpLogo} resizeMode="contain" />
+        <Text style={styles.tagline}>YOUR HOME GAME, HANDLED</Text>
+      </Reanimated.View>
     </View>
   );
 }
@@ -93,7 +96,9 @@ const styles = StyleSheet.create({
   // Both frames are centered overlays so the second cross-fades in over the first.
   frame: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   tslLogo: { width: 240, height: 132 },
-  tpLogo: { position: 'absolute', width: 168, height: 168 },
+  tpFrame: { position: 'absolute', alignItems: 'center' },
+  tpLogo: { width: 168, height: 168 },
+  tagline: { ...typography.caps, color: colors.goldMuted, letterSpacing: 2.5, marginTop: 4 },
   wordmarkWrap: { alignItems: 'center' },
   wordmark: {
     ...typography.h3,

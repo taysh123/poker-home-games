@@ -10,6 +10,7 @@ import SectionTitle from '../../../components/SectionTitle';
 import PrimaryButton from '../../../components/PrimaryButton';
 import EmptyState from '../../../components/EmptyState';
 import PressableScale from '../../../components/motion/PressableScale';
+import AnimatedNumber from '../../../components/motion/AnimatedNumber';
 import { colors } from '../../../theme/colors';
 import { typography } from '../../../theme/typography';
 import { spacing } from '../../../theme/spacing';
@@ -73,7 +74,7 @@ export default function BankrollScreen() {
         {/* Hero — total P&L */}
         <Card variant="hero">
           <Text style={styles.heroLabel}>TOTAL PROFIT / LOSS</Text>
-          <Text style={[styles.heroAmount, { color: netColor }]}>{formatCentsSigned(net)}</Text>
+          <AnimatedNumber value={net} format={formatCentsSigned} style={[styles.heroAmount, { color: netColor }]} />
           <Text style={styles.heroSub}>
             {summary.sessionCount} session{summary.sessionCount === 1 ? '' : 's'}
             {summary.sessionCount > 0 ? ` · ${summary.winRatePct.toFixed(0)}% winning` : ''}
