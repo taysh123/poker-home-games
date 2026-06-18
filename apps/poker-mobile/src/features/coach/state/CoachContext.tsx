@@ -1,34 +1,46 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useEntitlements } from '../../../context/EntitlementsContext';
+import { useAuth } from '../../../context/AuthContext';
+import { accountKeyFor, isSignedIn } from '../../auth/identity';
 import * as store from '../data/coachStore';
 import { runAnalysis } from '../logic/coachService';
-import { creditsRemaining as calcCredits, type CoachDenyReason, type CoachUsage } from '../logic/limits';
+import { creditsRemaining as calcCredits, type CoachDenyReason, type CoachLimits } from '../logic/limits';
 import { getCoachProvider } from '../providers';
 import { COACH_CONFIG } from '../config';
 import type { CoachAnalysis, CoachInput } from '../types';
 
 /**
- * Coach state — orchestrates provider + usage. Premium tier (via entitlements) selects the
- * limits; cost controls stay dormant while COACH_CONFIG.enforceLimits is false.
+ * Coach state — orchestrates provider + ACCOUNT-BASED AI usage. Usage is keyed by the
+ * signed-in identity (accountKeyFor), so credits can't be farmed by reinstalling or
+ * across devices. The monthly allowance comes from the entitlement TIER; cost controls
+ * + the sign-in gate stay dormant until the server is authoritative.
  */
+type CoachError = CoachDenyReason | 'requires_account';
+
 type CoachContextType = {
   history: CoachAnalysis[];
-  usage: CoachUsage;
   isLoaded: boolean;
   isAnalyzing: boolean;
   enforceLimits: boolean;
+  requiresAccount: boolean;
+  signedIn: boolean;
   creditsRemaining: number;
-  analyze: (input: CoachInput) => Promise<{ analysis?: CoachAnalysis; error?: CoachDenyReason }>;
+  monthlyCredits: number;
+  analyze: (input: CoachInput) => Promise<{ analysis?: CoachAnalysis; error?: CoachError }>;
 };
 
 const CoachContext = createContext<CoachContextType>({
-  history: [], usage: store.emptyFile().usage, isLoaded: false, isAnalyzing: false,
-  enforceLimits: false, creditsRemaining: 0,
+  history: [], isLoaded: false, isAnalyzing: false, enforceLimits: false,
+  requiresAccount: false, signedIn: false, creditsRemaining: 0, monthlyCredits: 0,
   analyze: async () => ({}),
 });
 
 export function CoachProvider({ children }: { children: React.ReactNode }) {
-  const { isPremium } = useEntitlements();
+  const { aiMonthlyCredits, isPremium } = useEntitlements();
+  const { user } = useAuth();
+  const accountKey = accountKeyFor(user);
+  const signedIn = isSignedIn(user);
+
   const [file, setFile] = useState<store.CoachFile>(store.emptyFile());
   const [isLoaded, setIsLoaded] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -46,34 +58,45 @@ export function CoachProvider({ children }: { children: React.ReactNode }) {
     return writeQueue.current;
   }, []);
 
-  const limits = isPremium ? COACH_CONFIG.premiumLimits : COACH_CONFIG.freeLimits;
+  // Monthly credit allowance from the account's tier; rate limit from config.
+  const limits: CoachLimits = useMemo(
+    () => ({ monthlyCredits: aiMonthlyCredits, minIntervalMs: isPremium ? COACH_CONFIG.premiumRateMs : COACH_CONFIG.freeRateMs }),
+    [aiMonthlyCredits, isPremium],
+  );
+
+  const usage = store.getUsage(file, accountKey);
 
   const analyze = useCallback(async (input: CoachInput) => {
+    // Anti-abuse: AI requires a verified account once enabled (free quota tied to identity).
+    if (COACH_CONFIG.requireAccount && !signedIn) return { error: 'requires_account' as const };
     setIsAnalyzing(true);
     try {
-      const provider = getCoachProvider();
-      const out = await runAnalysis(provider, input, {
-        usage: file.usage, limits, enforce: COACH_CONFIG.enforceLimits,
+      const out = await runAnalysis(getCoachProvider(), input, {
+        usage: store.getUsage(file, accountKey),
+        limits,
+        enforce: COACH_CONFIG.enforceLimits,
       });
       if (out.analysis) {
-        await commit(store.recordAnalysis(file, out.analysis, out.usage));
+        await commit(store.recordAnalysis(file, accountKey, out.analysis, out.usage));
         return { analysis: out.analysis };
       }
       return { error: out.error };
     } finally {
       setIsAnalyzing(false);
     }
-  }, [file, limits, commit]);
+  }, [file, accountKey, limits, signedIn, commit]);
 
   return (
     <CoachContext.Provider
       value={{
         history: file.history,
-        usage: file.usage,
         isLoaded,
         isAnalyzing,
         enforceLimits: COACH_CONFIG.enforceLimits,
-        creditsRemaining: calcCredits(file.usage, limits),
+        requiresAccount: COACH_CONFIG.requireAccount,
+        signedIn,
+        creditsRemaining: calcCredits(usage, limits),
+        monthlyCredits: aiMonthlyCredits,
         analyze,
       }}
     >

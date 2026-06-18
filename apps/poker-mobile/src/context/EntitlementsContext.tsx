@@ -11,37 +11,46 @@ import React, { createContext, useContext, useMemo } from 'react';
  * Extend `Entitlement` as premium tiers appear (e.g. 'gto_pro', 'coach_pro').
  */
 export type Entitlement = 'premium';
+export type EntitlementTier = 'free' | 'premium';
 
-const ALL_ENTITLEMENTS: Entitlement[] = ['premium'];
-
-export type EntitlementsContextType = {
-  /** True once entitlement state is resolved (always true today; async later). */
-  isLoaded: boolean;
-  /** Whether the user holds a given entitlement. */
-  has: (entitlement: Entitlement) => boolean;
-  /** Convenience for the single premium tier. */
-  isPremium: boolean;
+/** Per-tier monthly AI analysis allowance (account-based quota; server-authoritative later). */
+export const TIER_AI_MONTHLY_CREDITS: Record<EntitlementTier, number> = {
+  free: 15,
+  premium: 300,
 };
 
-const EntitlementsContext = createContext<EntitlementsContextType>({
-  isLoaded: true,
-  has: () => true,
-  isPremium: true,
-});
+export type EntitlementsContextType = {
+  /** True once entitlement state is resolved (always true today; async/IAP later). */
+  isLoaded: boolean;
+  /** Current entitlement tier. Default 'free' until a real purchase grants 'premium'. */
+  tier: EntitlementTier;
+  /** Whether the user holds a given entitlement. */
+  has: (entitlement: Entitlement) => boolean;
+  /** Convenience for the premium tier. */
+  isPremium: boolean;
+  /** Monthly AI credit allowance for the current tier. */
+  aiMonthlyCredits: number;
+};
+
+function makeValue(tier: EntitlementTier): EntitlementsContextType {
+  return {
+    isLoaded: true,
+    tier,
+    has: (entitlement) => (entitlement === 'premium' ? tier === 'premium' : false),
+    isPremium: tier === 'premium',
+    aiMonthlyCredits: TIER_AI_MONTHLY_CREDITS[tier],
+  };
+}
+
+const EntitlementsContext = createContext<EntitlementsContextType>(makeValue('free'));
 
 export function EntitlementsProvider({ children }: { children: React.ReactNode }) {
-  // Phase 0: grant all entitlements (free / open). Later, back this with stored
-  // receipts or an IAP SDK and the same gates begin to enforce automatically.
-  const granted = useMemo(() => new Set<Entitlement>(ALL_ENTITLEMENTS), []);
-
-  const value = useMemo<EntitlementsContextType>(
-    () => ({
-      isLoaded: true,
-      has: (entitlement: Entitlement) => granted.has(entitlement),
-      isPremium: granted.has('premium'),
-    }),
-    [granted],
-  );
+  // Default 'free' tier. Premium-only FEATURES are still open in V2 dev (nothing is
+  // gated yet), but the AI quota is real + account-based. Wire this to stored
+  // receipts / an IAP SDK later to grant 'premium' — the gates + quotas then enforce
+  // with no screen changes.
+  const tier: EntitlementTier = 'free';
+  const value = useMemo(() => makeValue(tier), [tier]);
 
   return <EntitlementsContext.Provider value={value}>{children}</EntitlementsContext.Provider>;
 }

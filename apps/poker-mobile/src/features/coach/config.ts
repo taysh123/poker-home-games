@@ -12,14 +12,18 @@ export interface CoachConfig {
   provider: CoachProviderId;
   /** Master switch for usage limits / credits / rate limiting (dormant in V1). */
   enforceLimits: boolean;
-  /** Per-tier monthly credits + min interval between requests (rate limit). */
-  freeLimits: CoachLimits;
-  premiumLimits: CoachLimits;
+  /** Require a verified signed-in account before analyzing (anti-abuse). Dormant in V1. */
+  requireAccount: boolean;
+  /** Per-tier minimum interval between requests (rate limit). Monthly credits now come
+   *  from the entitlement tier (account-based quota), not here. */
+  freeRateMs: number;
+  premiumRateMs: number;
 }
 
 export const COACH_CONFIG: CoachConfig = {
   provider: 'mock',
   enforceLimits: false,
-  freeLimits: { monthlyCredits: 20, minIntervalMs: 4000 },
-  premiumLimits: { monthlyCredits: 500, minIntervalMs: 1500 },
+  requireAccount: false,
+  freeRateMs: 4000,
+  premiumRateMs: 1500,
 };

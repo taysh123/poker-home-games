@@ -69,6 +69,7 @@ export default function CoachInputScreen() {
     const input = build();
     if (!input) return;
     const { analysis, error: err } = await analyze(input);
+    if (err === 'requires_account') { showToast('Sign in to use AI Coach.', 'info'); return; }
     if (err === 'rate_limited') { showToast('Slow down a moment, then try again.', 'info'); return; }
     if (err === 'no_credits') { showToast('You are out of analyses this month.', 'error'); return; }
     if (analysis) navigation.replace('CoachResult', { id: analysis.id });
