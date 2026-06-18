@@ -26,6 +26,7 @@ import { LocalGamesProvider } from './src/context/LocalGamesContext';
 import { EntitlementsProvider } from './src/context/EntitlementsContext';
 import { BankrollProvider } from './src/features/bankroll/state/BankrollContext';
 import { StudyProvider } from './src/features/study/state/StudyContext';
+import { CoachProvider } from './src/features/coach/state/CoachContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import { RootStackParamList } from './src/navigation/AppNavigator';
 import { isFeatureEnabled } from './src/config/features';
@@ -98,9 +99,11 @@ export default function App() {
             <LocalGamesProvider>
               <BankrollProvider>
                 <StudyProvider>
-                  <StatusBar style="light" />
-                  <AppNavigator navigationRef={navRef} />
-                  {!splashDone && <BrandSplash onDone={() => setSplashDone(true)} />}
+                  <CoachProvider>
+                    <StatusBar style="light" />
+                    <AppNavigator navigationRef={navRef} />
+                    {!splashDone && <BrandSplash onDone={() => setSplashDone(true)} />}
+                  </CoachProvider>
                 </StudyProvider>
               </BankrollProvider>
             </LocalGamesProvider>

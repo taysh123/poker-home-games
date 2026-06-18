@@ -55,6 +55,10 @@ import BankrollScreen from '../features/bankroll/ui/BankrollScreen';
 import LogSessionScreen from '../features/bankroll/ui/LogSessionScreen';
 import StudyScreen from '../features/study/ui/StudyScreen';
 import SpotTrainerScreen from '../features/study/ui/SpotTrainerScreen';
+import CoachScreen from '../features/coach/ui/CoachScreen';
+import CoachInputScreen from '../features/coach/ui/CoachInputScreen';
+import CoachResultScreen from '../features/coach/ui/CoachResultScreen';
+import type { CoachInputKind } from '../features/coach/types';
 
 export type RootStackParamList = {
   Onboarding: undefined;
@@ -82,6 +86,9 @@ export type RootStackParamList = {
   LogSession: { sessionId?: string } | undefined;
   // V2 — Study (Study pillar)
   StudyTrainer: { mode: 'spot' | 'decision' };
+  // V2 — AI Coach (Improve pillar)
+  CoachInput: { method: CoachInputKind };
+  CoachResult: { id: string };
   // Kept for TypeScript compat on existing screens that navigate to these by name
   Home: undefined;
   AllSessions: undefined;
@@ -94,6 +101,7 @@ export type TabParamList = {
   AllSessions: undefined;
   Bankroll: undefined;
   Study: undefined;
+  Coach: undefined;
   GroupsList: undefined;
   Stats: undefined;
 };
@@ -238,6 +246,7 @@ function makeTabScreenOptions(bottomInset: number) {
     AllSessions: { active: 'card',      inactive: 'card-outline' },
     Bankroll:    { active: 'wallet',    inactive: 'wallet-outline' },
     Study:       { active: 'school',    inactive: 'school-outline' },
+    Coach:       { active: 'sparkles',  inactive: 'sparkles-outline' },
     GroupsList:  { active: 'people',    inactive: 'people-outline' },
     Stats:       { active: 'bar-chart', inactive: 'bar-chart-outline' },
   };
@@ -303,6 +312,13 @@ function TabNavigator() {
             options={{ title: 'Study', headerShown: false }}
           />
         )}
+        {isFeatureEnabled('coach') && (
+          <Tab.Screen
+            name="Coach"
+            component={CoachScreen}
+            options={{ title: 'Coach', headerShown: false }}
+          />
+        )}
         <Tab.Screen
           name="GroupsList"
           component={GroupsListScreen}
@@ -347,6 +363,13 @@ function GuestTabNavigator() {
             name="Study"
             component={StudyScreen}
             options={{ title: 'Study', headerShown: false }}
+          />
+        )}
+        {isFeatureEnabled('coach') && (
+          <Tab.Screen
+            name="Coach"
+            component={CoachScreen}
+            options={{ title: 'Coach', headerShown: false }}
           />
         )}
         <Tab.Screen
@@ -431,6 +454,8 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
             <Stack.Screen name="LocalSessionSummary" component={LocalSessionSummaryScreen} options={{ headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="LogSession" component={LogSessionScreen} options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="StudyTrainer" component={SpotTrainerScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="CoachInput"  component={CoachInputScreen}  options={{ headerShown: false }} />
+            <Stack.Screen name="CoachResult" component={CoachResultScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Login"    component={LoginScreen}    options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="JoinSession" component={JoinSessionScreen} options={{ headerShown: false }} />
@@ -457,6 +482,8 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
             <Stack.Screen name="LocalSessionSummary" component={LocalSessionSummaryScreen} options={{ headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="LogSession" component={LogSessionScreen} options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="StudyTrainer" component={SpotTrainerScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="CoachInput"  component={CoachInputScreen}  options={{ headerShown: false }} />
+            <Stack.Screen name="CoachResult" component={CoachResultScreen} options={{ headerShown: false }} />
           </>
         )}
       </Stack.Navigator>
