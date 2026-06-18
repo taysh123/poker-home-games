@@ -24,6 +24,7 @@ import { AuthProvider } from './src/context/AuthContext';
 import { ActiveSessionProvider } from './src/context/ActiveSessionContext';
 import { LocalGamesProvider } from './src/context/LocalGamesContext';
 import { EntitlementsProvider } from './src/context/EntitlementsContext';
+import { BankrollProvider } from './src/features/bankroll/state/BankrollContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import { RootStackParamList } from './src/navigation/AppNavigator';
 import { isFeatureEnabled } from './src/config/features';
@@ -94,9 +95,11 @@ export default function App() {
         <EntitlementsProvider>
           <ActiveSessionProvider>
             <LocalGamesProvider>
-              <StatusBar style="light" />
-              <AppNavigator navigationRef={navRef} />
-              {!splashDone && <BrandSplash onDone={() => setSplashDone(true)} />}
+              <BankrollProvider>
+                <StatusBar style="light" />
+                <AppNavigator navigationRef={navRef} />
+                {!splashDone && <BrandSplash onDone={() => setSplashDone(true)} />}
+              </BankrollProvider>
             </LocalGamesProvider>
           </ActiveSessionProvider>
         </EntitlementsProvider>

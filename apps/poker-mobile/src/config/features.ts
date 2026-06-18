@@ -24,7 +24,8 @@ const PROD_FLAGS: Record<FeatureFlag, boolean> = {
 
 /** Dev-only previews. Does not affect production builds (`__DEV__ === false`). */
 const DEV_OVERRIDES: Partial<Record<FeatureFlag, boolean>> = {
-  v2Splash: true, // preview the launch splash while developing
+  v2Splash: true,  // preview the launch splash while developing
+  bankroll: true,  // Phase 1 — preview the bankroll tracker in dev (prod stays OFF)
 };
 
 const resolved: Record<FeatureFlag, boolean> = {
