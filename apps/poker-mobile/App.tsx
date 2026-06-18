@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Linking } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -23,8 +23,11 @@ import { applyInterDefault } from './src/theme/fonts';
 import { AuthProvider } from './src/context/AuthContext';
 import { ActiveSessionProvider } from './src/context/ActiveSessionContext';
 import { LocalGamesProvider } from './src/context/LocalGamesContext';
+import { EntitlementsProvider } from './src/context/EntitlementsContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import { RootStackParamList } from './src/navigation/AppNavigator';
+import { isFeatureEnabled } from './src/config/features';
+import BrandSplash from './src/components/brand/BrandSplash';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -42,6 +45,8 @@ function extractDeepLink(url: string): { type: 'session' | 'group'; token: strin
 
 export default function App() {
   const navRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
+  // Dual-brand launch splash (flag-gated). When off, start already "done".
+  const [splashDone, setSplashDone] = useState(!isFeatureEnabled('v2Splash'));
   // Serif display accents (titles + hero numerals). On fontError we proceed —
   // unknown fontFamily falls back to the system font, which is cosmetic only.
   const [fontsLoaded, fontError] = useFonts({
@@ -86,12 +91,15 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
-        <ActiveSessionProvider>
-          <LocalGamesProvider>
-            <StatusBar style="light" />
-            <AppNavigator navigationRef={navRef} />
-          </LocalGamesProvider>
-        </ActiveSessionProvider>
+        <EntitlementsProvider>
+          <ActiveSessionProvider>
+            <LocalGamesProvider>
+              <StatusBar style="light" />
+              <AppNavigator navigationRef={navRef} />
+              {!splashDone && <BrandSplash onDone={() => setSplashDone(true)} />}
+            </LocalGamesProvider>
+          </ActiveSessionProvider>
+        </EntitlementsProvider>
       </AuthProvider>
     </GestureHandlerRootView>
   );

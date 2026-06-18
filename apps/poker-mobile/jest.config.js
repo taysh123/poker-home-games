@@ -4,5 +4,6 @@ module.exports = {
   testMatch: [
     '**/src/local/__tests__/**/*.test.ts',
     '**/src/utils/__tests__/**/*.test.ts',
+    '**/src/features/**/__tests__/**/*.test.ts',
   ],
 };
