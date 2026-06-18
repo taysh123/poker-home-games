@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import {
   BANKROLL_SCHEMA_VERSION,
+  DEFAULT_BANKROLL_ID,
   type BankrollFile,
   type BankrollSession,
   type BankrollSettings,
@@ -79,6 +80,8 @@ export async function saveFile(file: BankrollFile): Promise<void> {
 }
 
 export interface CreateSessionInput {
+  /** Optional; defaults to DEFAULT_BANKROLL_ID. Reserved for future multi-bankroll. */
+  bankrollId?: string;
   gameType: BankrollGameType;
   source: BankrollSource;
   startedAt: string;
@@ -96,6 +99,7 @@ export interface CreateSessionInput {
 function buildSession(input: CreateSessionInput, now: string, currency: string): BankrollSession {
   return {
     id: Crypto.randomUUID(),
+    bankrollId: input.bankrollId ?? DEFAULT_BANKROLL_ID,
     gameType: input.gameType,
     source: input.source,
     currency: input.currency ?? currency,

@@ -131,6 +131,15 @@ describe('filterSessions', () => {
     expect(filterSessions(sessions, { tags: ['casino'] })).toHaveLength(1);
     expect(filterSessions(sessions, { tags: ['nope'] })).toHaveLength(0);
   });
+
+  it('filters by bankroll id (missing id resolves to default)', () => {
+    const mixed = [
+      cash(5000, 9000),                                   // no bankrollId -> default
+      cash(5000, 2000, { bankrollId: 'online' }),
+    ];
+    expect(filterSessions(mixed, { bankrollId: 'default' })).toHaveLength(1);
+    expect(filterSessions(mixed, { bankrollId: 'online' })).toHaveLength(1);
+  });
 });
 
 describe('bankrollOverTime', () => {

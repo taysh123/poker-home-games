@@ -44,6 +44,11 @@ describe('addSession', () => {
     expect(session.createdAt).toBe(session.updatedAt);
   });
 
+  it('assigns the default bankroll id (multi-bankroll-ready) but honors an explicit one', () => {
+    expect(addSession(emptyFile(), cashInput).session.bankrollId).toBe('default');
+    expect(addSession(emptyFile(), { ...cashInput, bankrollId: 'online' }).session.bankrollId).toBe('online');
+  });
+
   it('drops the cash detail when the session is a tournament', () => {
     const { session } = addSession(emptyFile(), {
       gameType: 'tournament',

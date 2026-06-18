@@ -53,6 +53,8 @@ import * as storage from '../utils/storage';
 import { isFeatureEnabled } from '../config/features';
 import BankrollScreen from '../features/bankroll/ui/BankrollScreen';
 import LogSessionScreen from '../features/bankroll/ui/LogSessionScreen';
+import StudyScreen from '../features/study/ui/StudyScreen';
+import SpotTrainerScreen from '../features/study/ui/SpotTrainerScreen';
 
 export type RootStackParamList = {
   Onboarding: undefined;
@@ -78,6 +80,8 @@ export type RootStackParamList = {
   LocalSessionSummary: { gameId: string };
   // V2 — Bankroll tracker (Track pillar)
   LogSession: { sessionId?: string } | undefined;
+  // V2 — Study (Study pillar)
+  StudyTrainer: { mode: 'spot' | 'decision' };
   // Kept for TypeScript compat on existing screens that navigate to these by name
   Home: undefined;
   AllSessions: undefined;
@@ -89,6 +93,7 @@ export type TabParamList = {
   Home: undefined;
   AllSessions: undefined;
   Bankroll: undefined;
+  Study: undefined;
   GroupsList: undefined;
   Stats: undefined;
 };
@@ -232,6 +237,7 @@ function makeTabScreenOptions(bottomInset: number) {
     Home:        { active: 'home',      inactive: 'home-outline' },
     AllSessions: { active: 'card',      inactive: 'card-outline' },
     Bankroll:    { active: 'wallet',    inactive: 'wallet-outline' },
+    Study:       { active: 'school',    inactive: 'school-outline' },
     GroupsList:  { active: 'people',    inactive: 'people-outline' },
     Stats:       { active: 'bar-chart', inactive: 'bar-chart-outline' },
   };
@@ -290,6 +296,13 @@ function TabNavigator() {
             options={{ title: 'Bankroll', headerShown: false }}
           />
         )}
+        {isFeatureEnabled('study') && (
+          <Tab.Screen
+            name="Study"
+            component={StudyScreen}
+            options={{ title: 'Study', headerShown: false }}
+          />
+        )}
         <Tab.Screen
           name="GroupsList"
           component={GroupsListScreen}
@@ -327,6 +340,13 @@ function GuestTabNavigator() {
             name="Bankroll"
             component={BankrollScreen}
             options={{ title: 'Bankroll', headerShown: false }}
+          />
+        )}
+        {isFeatureEnabled('study') && (
+          <Tab.Screen
+            name="Study"
+            component={StudyScreen}
+            options={{ title: 'Study', headerShown: false }}
           />
         )}
         <Tab.Screen
@@ -410,6 +430,7 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
             <Stack.Screen name="LocalSession"        component={LocalSessionScreen}        options={{ headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="LocalSessionSummary" component={LocalSessionSummaryScreen} options={{ headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="LogSession" component={LogSessionScreen} options={{ headerShown: false, presentation: 'modal' }} />
+            <Stack.Screen name="StudyTrainer" component={SpotTrainerScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Login"    component={LoginScreen}    options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="JoinSession" component={JoinSessionScreen} options={{ headerShown: false }} />
@@ -435,6 +456,7 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
             <Stack.Screen name="LocalSession"        component={LocalSessionScreen}        options={{ headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="LocalSessionSummary" component={LocalSessionSummaryScreen} options={{ headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="LogSession" component={LogSessionScreen} options={{ headerShown: false, presentation: 'modal' }} />
+            <Stack.Screen name="StudyTrainer" component={SpotTrainerScreen} options={{ headerShown: false }} />
           </>
         )}
       </Stack.Navigator>

@@ -1,0 +1,187 @@
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import Screen from '../../../components/Screen';
+import BrandHeader from '../../../components/BrandHeader';
+import Card from '../../../components/Card';
+import PrimaryButton from '../../../components/PrimaryButton';
+import PressableScale from '../../../components/motion/PressableScale';
+import { colors } from '../../../theme/colors';
+import { typography } from '../../../theme/typography';
+import { spacing } from '../../../theme/spacing';
+import { radii } from '../../../theme/radii';
+import type { RootStackParamList } from '../../../navigation/AppNavigator';
+import { useStudy } from '../state/StudyContext';
+import { generateSpot, evaluateSpot, type Spot, type SpotResult } from '../logic/trainer';
+import type { RangeAction } from '../types';
+
+type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Rt = RouteProp<RootStackParamList, 'StudyTrainer'>;
+
+const QUIZ_LENGTH = 10;
+const ACTION_LABEL: Record<RangeAction, string> = { fold: 'Fold', call: 'Call', raise: 'Raise' };
+
+export default function SpotTrainerScreen() {
+  const navigation = useNavigation<Nav>();
+  const route = useRoute<Rt>();
+  const mode = route.params?.mode ?? 'spot';
+  const isQuiz = mode === 'spot';
+  const { dataset, recordAnswer } = useStudy();
+
+  const [spot, setSpot] = useState<Spot>(() => generateSpot(dataset, Math.random));
+  const [result, setResult] = useState<SpotResult | null>(null);
+  const [answered, setAnswered] = useState(0);
+  const [correctCount, setCorrectCount] = useState(0);
+  const [done, setDone] = useState(false);
+
+  const raiseLabel = spot.range.scenario === 'vs_RFI' ? 'Raise (3-bet)' : 'Raise';
+
+  async function choose(action: RangeAction) {
+    if (result) return; // already revealed
+    const r = evaluateSpot(spot.range, spot.hand, action);
+    setResult(r);
+    setAnswered(a => a + 1);
+    if (r.correct) setCorrectCount(c => c + 1);
+    await recordAnswer(r.correct);
+  }
+
+  function next() {
+    if (isQuiz && answered >= QUIZ_LENGTH) { setDone(true); return; }
+    setSpot(generateSpot(dataset, Math.random));
+    setResult(null);
+  }
+
+  if (done) {
+    const acc = answered > 0 ? Math.round((correctCount / answered) * 100) : 0;
+    return (
+      <Screen>
+        <BrandHeader variant="screen" title="Quiz complete" onBack={() => navigation.goBack()} />
+        <View style={styles.center}>
+          <Card variant="hero" style={styles.resultCard}>
+            <Text style={styles.resultScore}>{correctCount}/{answered}</Text>
+            <Text style={styles.resultAcc}>{acc}% correct</Text>
+            <Text style={styles.resultSub}>
+              {acc >= 80 ? 'Sharp reads. Keep the streak alive.' : 'Good reps — run it back to improve.'}
+            </Text>
+          </Card>
+          <View style={styles.doneBtns}>
+            <PrimaryButton label="Train again" variant="gradient" onPress={() => {
+              setAnswered(0); setCorrectCount(0); setResult(null); setDone(false);
+              setSpot(generateSpot(dataset, Math.random));
+            }} />
+            <PrimaryButton label="Done" variant="outline" onPress={() => navigation.goBack()} />
+          </View>
+        </View>
+      </Screen>
+    );
+  }
+
+  return (
+    <Screen>
+      <BrandHeader
+        variant="screen"
+        title={isQuiz ? 'Spot Trainer' : 'Decision Trainer'}
+        subtitle={isQuiz ? `${Math.min(answered + (result ? 0 : 1), QUIZ_LENGTH)} / ${QUIZ_LENGTH}` : `✓ ${correctCount} / ${answered}`}
+        onBack={() => navigation.goBack()}
+      />
+      <View style={styles.body}>
+        <Card style={styles.spotCard}>
+          <Text style={styles.context}>{spot.range.stackBb}bb · {spot.range.tableSize}-max</Text>
+          <Text style={styles.prompt}>
+            {spot.range.scenario === 'RFI'
+              ? `${spot.range.heroPosition} — first in. Open or fold?`
+              : `${spot.range.heroPosition} vs ${spot.range.villainPosition} open. Your move?`}
+          </Text>
+          <HandCards hand={spot.hand} />
+          {spot.range.openSizeBb ? (
+            <Text style={styles.sizing}>Open size ≈ {spot.range.openSizeBb}bb</Text>
+          ) : null}
+        </Card>
+
+        {result ? (
+          <Card style={[styles.feedback, result.correct ? styles.feedbackOk : styles.feedbackBad]}>
+            <Text style={[styles.feedbackTitle, { color: result.correct ? colors.success : colors.error }]}>
+              {result.correct ? 'Correct' : 'Not quite'}
+            </Text>
+            <Text style={styles.feedbackBody}>
+              GTO play: {result.strategy.map(s => `${ACTION_LABEL[s.action]} ${Math.round(s.freq * 100)}%`).join(' · ')}
+            </Text>
+          </Card>
+        ) : (
+          <View style={styles.actions}>
+            {spot.options.map(opt => (
+              <PressableScale key={opt} onPress={() => choose(opt)} haptic="medium" style={styles.actionBtn}>
+                <Text style={styles.actionText}>{opt === 'raise' ? raiseLabel : ACTION_LABEL[opt]}</Text>
+              </PressableScale>
+            ))}
+          </View>
+        )}
+
+        {result ? (
+          <PrimaryButton
+            label={isQuiz && answered >= QUIZ_LENGTH ? 'See results' : 'Next spot'}
+            variant="gradient"
+            onPress={next}
+          />
+        ) : null}
+      </View>
+    </Screen>
+  );
+}
+
+const RED = new Set(['♥', '♦']);
+function suitsFor(hand: string): [string, string] {
+  if (hand.length === 2) return ['♠', '♥'];       // pair → two suits
+  return hand.endsWith('s') ? ['♠', '♠'] : ['♠', '♥']; // suited same, offsuit different
+}
+function rankLabel(r: string): string { return r === 'T' ? '10' : r; }
+
+function HandCards({ hand }: { hand: string }) {
+  const r1 = hand[0];
+  const r2 = hand[1];
+  const [s1, s2] = suitsFor(hand);
+  return (
+    <View style={styles.cards}>
+      {[[r1, s1], [r2, s2]].map(([r, s], i) => (
+        <View key={i} style={styles.card}>
+          <Text style={[styles.cardRank, RED.has(s) && styles.cardRed]}>{rankLabel(r)}</Text>
+          <Text style={[styles.cardSuit, RED.has(s) && styles.cardRed]}>{s}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  body: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.sm, gap: spacing.lg },
+  center: { flex: 1, paddingHorizontal: spacing.xl, justifyContent: 'center', gap: spacing.xl },
+  spotCard: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl },
+  context: { ...typography.caps, color: colors.textMuted },
+  prompt: { ...typography.h3, color: colors.text, textAlign: 'center' },
+  sizing: { ...typography.bodySmall, color: colors.textMuted },
+  cards: { flexDirection: 'row', gap: spacing.md, marginVertical: spacing.sm },
+  card: {
+    width: 76, height: 104, borderRadius: radii.md, backgroundColor: colors.surfaceHigh,
+    borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center',
+  },
+  cardRank: { ...typography.amountLarge, color: colors.textHigh },
+  cardSuit: { fontSize: 24, color: colors.textHigh, marginTop: -4 },
+  cardRed: { color: colors.error },
+  actions: { gap: spacing.sm },
+  actionBtn: {
+    paddingVertical: spacing.lg, borderRadius: radii.lg, backgroundColor: colors.surface,
+    borderWidth: 1.5, borderColor: colors.border, alignItems: 'center',
+  },
+  actionText: { ...typography.h4, color: colors.text },
+  feedback: { gap: spacing.xs, borderWidth: 1 },
+  feedbackOk: { borderColor: 'rgba(39,174,96,0.4)' },
+  feedbackBad: { borderColor: colors.errorMuted },
+  feedbackTitle: { ...typography.h4 },
+  feedbackBody: { ...typography.body, color: colors.textHigh },
+  resultCard: { alignItems: 'center', gap: spacing.xs },
+  resultScore: { ...typography.amountHero, color: colors.gold },
+  resultAcc: { ...typography.h3, color: colors.textHigh },
+  resultSub: { ...typography.bodySmall, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xs },
+  doneBtns: { gap: spacing.sm },
+});

@@ -48,8 +48,25 @@ export interface TournamentDetail {
   finishPlace?: number;
 }
 
+/**
+ * Stable id of the "default" bankroll. V2 ships a single implicit bankroll; sessions
+ * without an explicit `bankrollId` belong to it. This lets multiple bankrolls (live /
+ * online / tournament / staking) be introduced later WITHOUT a data migration — the
+ * field already exists and old rows resolve to DEFAULT.
+ */
+export const DEFAULT_BANKROLL_ID = 'default';
+
+/** Future multi-bankroll account (dormant in V2 — no UI). */
+export interface BankrollAccount {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
 export interface BankrollSession {
   id: string;
+  /** Which bankroll this session belongs to. Absent ⇒ DEFAULT_BANKROLL_ID (single-bankroll V2). */
+  bankrollId?: string;
   gameType: BankrollGameType;
   source: BankrollSource;
   /** Currency code (e.g. 'ILS'); kept per-session for future multi-currency support. */
@@ -78,6 +95,8 @@ export interface BankrollSettings {
   startingBankrollCents: number;
   /** Default currency applied to new sessions. */
   currency: string;
+  /** Multi-bankroll accounts (dormant in V2 — reserved so the feature can be enabled later). */
+  bankrolls?: BankrollAccount[];
 }
 
 export const BANKROLL_SCHEMA_VERSION = 1 as const;

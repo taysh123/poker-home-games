@@ -26,6 +26,7 @@ const PROD_FLAGS: Record<FeatureFlag, boolean> = {
 const DEV_OVERRIDES: Partial<Record<FeatureFlag, boolean>> = {
   v2Splash: true,  // preview the launch splash while developing
   bankroll: true,  // Phase 1 — preview the bankroll tracker in dev (prod stays OFF)
+  study: true,     // Phase 2 — preview the study module in dev (prod stays OFF)
 };
 
 const resolved: Record<FeatureFlag, boolean> = {

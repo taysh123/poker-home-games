@@ -4,10 +4,11 @@
  * first UI surfaces (ROI, ABI, ITM%, hourly, bankroll-over-time) so new charts/stats
  * can be added without touching the data model.
  */
-import type {
-  BankrollGameType,
-  BankrollSession,
-  BankrollSource,
+import {
+  DEFAULT_BANKROLL_ID,
+  type BankrollGameType,
+  type BankrollSession,
+  type BankrollSource,
 } from '../types';
 
 /** Total amount invested in a session (all costs), integer cents. */
@@ -60,6 +61,8 @@ export interface BankrollFilter {
   to?: string;
   gameType?: BankrollGameType;
   source?: BankrollSource;
+  /** Match a specific bankroll (defaults resolve to DEFAULT_BANKROLL_ID). Dormant in V2. */
+  bankrollId?: string;
   /** Match sessions carrying ANY of these tags. */
   tags?: string[];
 }
@@ -70,6 +73,7 @@ export function filterSessions(sessions: BankrollSession[], f: BankrollFilter = 
     if (f.to && s.startedAt > f.to) return false;
     if (f.gameType && s.gameType !== f.gameType) return false;
     if (f.source && s.source !== f.source) return false;
+    if (f.bankrollId && (s.bankrollId ?? DEFAULT_BANKROLL_ID) !== f.bankrollId) return false;
     if (f.tags && f.tags.length > 0 && !f.tags.some(t => s.tags.includes(t))) return false;
     return true;
   });
