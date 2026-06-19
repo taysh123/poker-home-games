@@ -1,8 +1,10 @@
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using PokerApp.Application.Common.Interfaces;
+using PokerApp.Infrastructure.Billing;
 using PokerApp.Infrastructure.Identity;
 using PokerApp.Infrastructure.Persistence;
 using PokerApp.Infrastructure.Services;
@@ -51,8 +53,35 @@ public static class DependencyInjection
         services.AddSingleton<IAiCreditPolicyProvider, AiCreditPolicyProvider>();
         services.AddScoped<IEntitlementService, EntitlementService>();
         services.AddScoped<ICreditLedger, CreditLedger>();
-        services.AddScoped<IBillingVerifier, MockBillingVerifier>();
         services.AddScoped<ICoachAiProvider, MockCoachAiProvider>();
+
+        // B3 — real store verification (provider-selected; mock retained for dev/tests).
+        var billingSettings = configuration.GetSection("BillingSettings").Get<BillingSettings>() ?? new BillingSettings();
+        var appleStoreSettings = configuration.GetSection("AppleStoreSettings").Get<AppleStoreSettings>() ?? new AppleStoreSettings();
+        var googlePlaySettings = configuration.GetSection("GooglePlaySettings").Get<GooglePlaySettings>() ?? new GooglePlaySettings();
+        services.AddSingleton(billingSettings);
+        services.AddSingleton(appleStoreSettings);
+        services.AddSingleton(googlePlaySettings);
+
+        var appleRoots = appleStoreSettings.RootCertsPem
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Select(p => X509Certificate2.CreateFromPem(p))
+            .ToList();
+        services.AddSingleton(new AppleJwsVerifier(appleRoots));
+        services.AddSingleton<IOidcKeySource, GoogleOidcKeySource>();
+        services.AddScoped<IGooglePlaySubscriptionsClient, GooglePlaySubscriptionsClient>();
+        services.AddScoped<IStoreNotificationVerifier, StoreNotificationVerifier>();
+
+        if (string.Equals(billingSettings.Provider, "direct", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddScoped<AppleBillingVerifier>();
+            services.AddScoped<GooglePlayBillingVerifier>();
+            services.AddScoped<IBillingVerifier, DirectBillingVerifier>();
+        }
+        else
+        {
+            services.AddScoped<IBillingVerifier, MockBillingVerifier>();
+        }
 
         services.Configure<WebSettings>(configuration.GetSection("AppSettings"));
         services.AddSingleton<IWebSettings>(sp =>

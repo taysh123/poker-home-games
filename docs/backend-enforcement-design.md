@@ -316,3 +316,43 @@ is the source of truth. Fail-closed throughout. Mock verifier + mock AI provider
 **signature verification**; apply the migration to prod; switch the client to the server
 `ICoachProvider`/entitlements (B4 cutover); DB-level concurrency hardening (xmin/row-lock) +
 load test on the decrement path; device-binding/velocity rules; then flip billing/paywall ON.
+
+## B3 — Real verifier + signed webhooks (EXECUTED on `feature/v2-poker-platform`; NO live billing)
+
+Replaces the mock verification seams with real, fail-closed signed-payload crypto. Decision: **direct
+Apple/Google verification behind the vendor-agnostic `IBillingVerifier`** (RevenueCat can drop in later).
+The offline-verifiable crypto is **fully unit-tested**; credential-bound store-API network calls are
+**fail-closed stubs** (verified in a real sandbox at deploy — see "remaining").
+
+- **Crypto primitives (`src/PokerApp.Infrastructure/Billing/`, fully tested):**
+  `AppleJwsVerifier` — verifies Apple ES256 JWS (ASSN V2 `signedPayload` + StoreKit2 `signedTransaction`):
+  parses the `x5c` header chain, validates it to **injected trusted Apple roots** via `X509Chain`
+  (`CustomRootTrust`, `VerificationTime=now`) + leaf ECDsa signature (IEEE-P1363). Empty roots ⇒ fail closed.
+  `GoogleOidcVerifier` — verifies the Pub/Sub push **OIDC JWT** (iss `accounts.google.com`, configured aud,
+  injected signing keys, custom lifetime) offline.
+- **Receipt verifiers:** `AppleBillingVerifier` (signed transaction → `VerifiedSubscription`;
+  Sandbox/Production → `IsSandbox`), `GooglePlayBillingVerifier` (via `IGooglePlaySubscriptionsClient`),
+  dispatched by store in `DirectBillingVerifier`. All fail closed to `null`.
+- **Signed webhooks:** `IStoreNotificationVerifier` (`StoreNotificationVerifier`) — Apple: verify the outer
+  JWS + the **nested `signedTransactionInfo` JWS**, map type/subtype → renew/cancel/expire/grace/refund;
+  Google: OIDC-verify the request, decode the RTDN `data`, map `notificationType` → the same set. Both
+  normalize to the existing `StoreNotificationDto`. `WebhooksController` now accepts **raw signed payloads**
+  (Apple `{ signedPayload }`; Google Pub/Sub `{ message:{ data, messageId } }` + `Authorization`) → verify →
+  `ProcessStoreNotificationCommand`; **any unverifiable payload → `401`, no state change**. Idempotency +
+  out-of-order safety from B2 preserved.
+- **Sandbox vs prod:** `BillingSettings.AcceptSandbox=false` ⇒ Sandbox receipts/events cannot grant prod
+  entitlements (rejected). Production-safe default.
+- **Config (centralized):** `BillingSettings { Provider: "mock"|"direct"; AcceptSandbox }`,
+  `AppleStoreSettings { BundleIds[]; RootCertsPem[] }`, `GooglePlaySettings { PackageName; PubSubAudience;
+  ServiceAccountJson? }`. DI selects mock vs direct by `Provider` (mock retained for dev/tests).
+- **Stubs (fail-closed, TODO-at-deploy, NOT presented as verified):** `GooglePlaySubscriptionsClient`
+  (Play Developer API — returns `null`), `GoogleOidcKeySource` live JWKS fetch (cached, fail-closed to empty).
+- **Tests:** `src/PokerApp.Tests` now **49** (+23 vs B2): Apple JWS valid/tampered/untrusted-root/expired/
+  no-roots, Google OIDC valid/bad-aud/bad-key/expired, notification verifier (Apple valid/tampered/sandbox-
+  reject/cancel-map; Google valid/bad-aud/missing-header), Apple+Google billing verifier mapping +
+  sandbox-reject + fail-closed. `dotnet build` + `dotnet test` green.
+
+**Remaining before paid launch (B3 scope):** wire the live network impls behind the stubs (Apple App Store
+Server API + Google Play Developer API) and verify against real store **sandbox**; supply real Apple root
+PEM(s) + Google Pub/Sub OIDC audience in prod config; flip `Provider="direct"` + `AcceptSandbox=false`.
+Then B4 (client cutover) and B5 (top-ups/fraud/observability).
