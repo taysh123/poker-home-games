@@ -10,12 +10,17 @@ namespace PokerApp.Application.Features.Auth.Commands.Register;
 public sealed class RegisterCommandHandler(
     IApplicationDbContext context,
     IPasswordHasher passwordHasher,
-    IJwtService jwtService) : IRequestHandler<RegisterCommand, RegisterResponse>
+    IJwtService jwtService,
+    IAuthPolicy authPolicy) : IRequestHandler<RegisterCommand, RegisterResponse>
 {
     public async Task<RegisterResponse> Handle(
         RegisterCommand request,
         CancellationToken cancellationToken)
     {
+        // Hardened, fail-closed: no open email self-registration. Verified providers only.
+        if (!authPolicy.AllowEmailRegistration)
+            throw new BadRequestException("Email sign-up is disabled. Please continue with Google or Apple.");
+
         // Check uniqueness before hashing — hashing is expensive (BCrypt ~250ms)
         if (await context.Users.AnyAsync(u => u.Email == request.Email, cancellationToken))
             throw new ConflictException("A user with this email already exists.");

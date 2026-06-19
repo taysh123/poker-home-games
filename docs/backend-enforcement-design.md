@@ -256,3 +256,28 @@ longer obtain AI/premium without a server grant.
   policies. All within the existing CQRS/EF conventions.
 - Client: 3 thin additive providers (server entitlements read, `serverCoachProvider`, post-purchase
   validate) — **no screen rewrites**; existing contexts/components unchanged.
+
+---
+
+## B1 — Auth hardening (EXECUTED on `feature/v2-poker-platform`; no billing)
+
+Verified-only identity foundation, fail-closed. Backend:
+- `User` gains `EmailVerified` + `AppleSubjectId` (+ `CreateWithApple`/`LinkApple`/`MarkEmailVerified`);
+  EF config + migration `B1_AuthHardening` (codegen only — **not applied to any DB**).
+- `IAppleAuthService` + `AppleAuthService` (validates Apple identity JWT vs Apple JWKS: signature,
+  iss=`appleid.apple.com`, aud ∈ `AppleSettings:ClientIds`, exp, optional nonce; JWKS cached; fail-closed).
+- `AppleLogin` command/handler/validator/response + `POST /api/auth/apple` (subject-first match;
+  links to a same-email account only when Apple verifies a real non-relay email; relay/no-email →
+  unique placeholder account; `EmailVerified` set from the provider).
+- `RegisterCommandHandler` gated on `IAuthPolicy.AllowEmailRegistration` (**default false** via
+  `AuthSettings`) → open email signup disabled; legacy `/auth/login` + refresh untouched.
+- `GoogleLoginCommandHandler` sets `EmailVerified=true` + verified-link guard.
+- `IAuthAbuseGuard` seam (logging no-op) on social login / refresh reuse; `/auth/apple` rate-limited
+  via the existing `auth-login` policy. Sessions keep rotating-refresh + token-family revocation.
+- New `src/PokerApp.Tests` (xUnit + EF InMemory + auth fakes): **14 tests** — Apple
+  new/relay/subject-match/invalid/email-link, Google verified-link, register gate, JWT claims, refresh
+  rotation + family revocation. `dotnet build` + `dotnet test` green.
+
+Client: thin `authApi.appleLogin` + `AuthContext.appleLogin` only (no button UI / no
+`expo-apple-authentication` dep yet). Deferred to B2+/later: real IAP + receipts, server entitlements
++ AI credit ledger/atomic decrement + AI proxy, email-verification sending, the client Apple button.

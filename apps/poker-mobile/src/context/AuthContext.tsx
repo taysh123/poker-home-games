@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import * as SecureStore from '../utils/storage';
-import { loginApi, registerApi, logoutApi, googleLoginApi, AuthUser, AuthResponse } from '../api/authApi';
+import { loginApi, registerApi, logoutApi, googleLoginApi, appleLoginApi, AuthUser, AuthResponse } from '../api/authApi';
 import { registerUnauthenticatedCallback } from '../api/apiClient';
 import { registerForPushAsync, unregisterPushAsync } from '../hooks/usePushNotifications';
 
@@ -12,6 +12,7 @@ type AuthContextType = {
   login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   register: (username: string, email: string, password: string) => Promise<void>;
   googleLogin: (idToken: string) => Promise<void>;
+  appleLogin: (identityToken: string, nonce?: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (updates: Partial<AuthUser>) => Promise<void>;
 };
@@ -98,6 +99,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await saveSession(response);
   }
 
+  async function appleLogin(identityToken: string, nonce?: string) {
+    const response = await appleLoginApi(identityToken, nonce);
+    await saveSession(response);
+  }
+
   async function updateUser(updates: Partial<AuthUser>) {
     if (!user) return;
     const updated = { ...user, ...updates };
@@ -129,7 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, googleLogin, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, googleLogin, appleLogin, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

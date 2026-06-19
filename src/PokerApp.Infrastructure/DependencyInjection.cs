@@ -37,6 +37,13 @@ public static class DependencyInjection
         services.AddScoped<ICurrentUserService, CurrentUserService>();
 
         services.AddScoped<IGoogleAuthService, GoogleAuthService>();
+        services.AddScoped<IAppleAuthService, AppleAuthService>();
+        services.AddScoped<IAuthAbuseGuard, AuthAbuseGuard>();
+
+        // Auth policy (verified-only hardening) — fail-closed defaults if section is absent.
+        var authSettings = configuration.GetSection("AuthSettings").Get<AuthSettings>() ?? new AuthSettings();
+        services.AddSingleton(authSettings);
+        services.AddSingleton<IAuthPolicy, AuthPolicy>();
 
         services.Configure<WebSettings>(configuration.GetSection("AppSettings"));
         services.AddSingleton<IWebSettings>(sp =>

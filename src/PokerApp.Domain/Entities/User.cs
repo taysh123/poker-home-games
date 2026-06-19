@@ -16,6 +16,11 @@ public class User : BaseEntity
     public IReadOnlyCollection<RefreshToken> RefreshTokens => _refreshTokens.AsReadOnly();
 
     public string? GoogleId { get; private set; }
+    /// <summary>Apple Sign In subject ('sub') — opaque, stable per Apple ID. Verified identity.</summary>
+    public string? AppleSubjectId { get; private set; }
+    /// <summary>Whether the email is verified (true for Google/Apple-provided emails). Legacy
+    /// email/password accounts default to false (grandfathered for login).</summary>
+    public bool EmailVerified { get; private set; }
 
     public string? AvatarEmoji { get; private set; }
     public string? AvatarColor { get; private set; }
@@ -23,10 +28,13 @@ public class User : BaseEntity
     private User() { }
 
     public static User Create(string username, string email, string passwordHash) =>
-        new() { Username = username, Email = email, PasswordHash = passwordHash };
+        new() { Username = username, Email = email, PasswordHash = passwordHash, EmailVerified = false };
 
     public static User CreateWithGoogle(string username, string email, string googleId) =>
-        new() { Username = username, Email = email, PasswordHash = string.Empty, GoogleId = googleId };
+        new() { Username = username, Email = email, PasswordHash = string.Empty, GoogleId = googleId, EmailVerified = true };
+
+    public static User CreateWithApple(string username, string email, string appleSubjectId, bool emailVerified) =>
+        new() { Username = username, Email = email, PasswordHash = string.Empty, AppleSubjectId = appleSubjectId, EmailVerified = emailVerified };
 
     public void UpdateUsername(string username)
     {
@@ -61,6 +69,19 @@ public class User : BaseEntity
     public void LinkGoogle(string googleId)
     {
         GoogleId = googleId;
+        SetUpdatedAt();
+    }
+
+    public void LinkApple(string appleSubjectId)
+    {
+        AppleSubjectId = appleSubjectId;
+        SetUpdatedAt();
+    }
+
+    public void MarkEmailVerified()
+    {
+        if (EmailVerified) return;
+        EmailVerified = true;
         SetUpdatedAt();
     }
 }

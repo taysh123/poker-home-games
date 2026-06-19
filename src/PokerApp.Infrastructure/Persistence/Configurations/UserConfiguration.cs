@@ -36,6 +36,13 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.GoogleId)
             .HasMaxLength(255);
 
+        builder.Property(u => u.AppleSubjectId)
+            .HasMaxLength(255);
+
+        builder.Property(u => u.EmailVerified)
+            .IsRequired()
+            .HasDefaultValue(false);
+
         builder.Property(u => u.AvatarEmoji)
             .HasMaxLength(16);
 
@@ -53,6 +60,9 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.HasIndex(u => u.GoogleId)
             .HasDatabaseName("IX_Users_GoogleId");
+
+        builder.HasIndex(u => u.AppleSubjectId)
+            .HasDatabaseName("IX_Users_AppleSubjectId");
 
         builder.ToTable("Users");
     }

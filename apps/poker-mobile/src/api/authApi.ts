@@ -38,6 +38,13 @@ export async function googleLoginApi(idToken: string): Promise<AuthResponse> {
   return data;
 }
 
+// Apple Sign In (server validates the identity token). Client button is wired later
+// (needs expo-apple-authentication + an iOS dev build); this plumbing is ready now.
+export async function appleLoginApi(identityToken: string, nonce?: string): Promise<AuthResponse> {
+  const { data } = await api.post<AuthResponse>('/api/auth/apple', { identityToken, nonce });
+  return data;
+}
+
 export async function logoutApi(accessToken: string, refreshToken: string): Promise<void> {
   await api.post(
     '/api/auth/logout',

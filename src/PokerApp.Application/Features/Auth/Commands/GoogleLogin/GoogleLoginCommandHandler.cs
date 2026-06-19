@@ -10,7 +10,9 @@ namespace PokerApp.Application.Features.Auth.Commands.GoogleLogin;
 public sealed class GoogleLoginCommandHandler(
     IApplicationDbContext context,
     IJwtService jwtService,
-    IGoogleAuthService googleAuthService) : IRequestHandler<GoogleLoginCommand, GoogleLoginResponse>
+    IGoogleAuthService googleAuthService,
+    IAuthPolicy authPolicy,
+    IAuthAbuseGuard abuseGuard) : IRequestHandler<GoogleLoginCommand, GoogleLoginResponse>
 {
     public async Task<GoogleLoginResponse> Handle(
         GoogleLoginCommand request,
@@ -34,8 +36,16 @@ public sealed class GoogleLoginCommandHandler(
         }
         else if (user.GoogleId != info.GoogleId)
         {
-            // Found by email — link this Google identity to the existing account
+            // Found by email — Google verifies ownership of that email, so linking is safe.
+            // Guarded by policy; if linking is disabled the email already belongs to an account.
+            if (!authPolicy.AllowEmailLinking)
+                throw new ConflictException("An account already exists for this email.");
             user.LinkGoogle(info.GoogleId);
+            user.MarkEmailVerified();
+        }
+        else
+        {
+            user.MarkEmailVerified();
         }
 
         var accessToken = jwtService.GenerateAccessToken(user);
@@ -44,6 +54,8 @@ public sealed class GoogleLoginCommandHandler(
 
         await context.RefreshTokens.AddAsync(refreshToken, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
+
+        await abuseGuard.RecordSocialLoginAsync("google", user.Id, cancellationToken);
 
         return new GoogleLoginResponse(
             user.Id, user.Username, user.Email, accessToken, refreshTokenPlain,
