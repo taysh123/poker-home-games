@@ -18,7 +18,7 @@ import { timeAgo } from '../utils/formatters';
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 /** Stats tab for guests: table-level stats from local games + account upsell. */
-export default function GuestStatsScreen() {
+export default function GuestStatsScreen({ embedded = false }: { embedded?: boolean } = {}) {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
   const { games } = useLocalGames();
@@ -27,8 +27,8 @@ export default function GuestStatsScreen() {
 
   if (stats.gamesPlayed === 0) {
     return (
-      <Screen style={{ paddingTop: insets.top }}>
-        <Text style={[styles.title, { padding: 20, paddingBottom: 0 }]}>Stats</Text>
+      <Screen style={{ paddingTop: embedded ? 0 : insets.top }}>
+        {!embedded && <Text style={[styles.title, { padding: 20, paddingBottom: 0 }]}>Stats</Text>}
         <EmptyState
           ionicon="bar-chart-outline"
           title="No numbers yet"
@@ -43,8 +43,8 @@ export default function GuestStatsScreen() {
 
   return (
     <Screen>
-    <ScrollView style={styles.flex} contentContainerStyle={[styles.content, { paddingTop: insets.top + 20 }]}>
-      <Text style={styles.title}>Stats</Text>
+    <ScrollView style={styles.flex} contentContainerStyle={[styles.content, { paddingTop: embedded ? 8 : insets.top + 20 }]}>
+      {!embedded && <Text style={styles.title}>Stats</Text>}
       <Text style={styles.subtitle}>From games on this device</Text>
 
       <View style={styles.grid}>

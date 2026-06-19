@@ -30,6 +30,7 @@ import { getMyStats, MyStatsDto, RecentSessionDto } from '../api/statsApi';
 import { getMyPendingSettlements, MyPendingSettlementDto } from '../api/settlementsApi';
 import { getWeeklyDigest, WeeklyDigestDto } from '../api/digestApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { goToSessions, goToStats } from '../navigation/navHelpers';
 import SkeletonCard from '../components/SkeletonCard';
 import StatWidget from '../components/StatWidget';
 import SessionListItem from '../components/SessionListItem';
@@ -502,7 +503,7 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionRow}>
             <Text style={styles.sectionTitle}>Your Numbers</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Stats')}>
+            <TouchableOpacity onPress={() => goToStats(navigation)}>
               <Text style={styles.seeAll}>Full stats</Text>
             </TouchableOpacity>
           </View>
@@ -561,7 +562,7 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionRow}>
             <Text style={styles.sectionTitle}>Recent Sessions</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('AllSessions')}>
+            <TouchableOpacity onPress={() => goToSessions(navigation)}>
               <Text style={styles.seeAll}>See all</Text>
             </TouchableOpacity>
           </View>

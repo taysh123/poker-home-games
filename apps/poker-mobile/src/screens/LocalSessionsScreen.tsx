@@ -19,7 +19,7 @@ import { timeAgo } from '../utils/formatters';
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 /** Sessions tab for guests: every game on this device, live game first. */
-export default function LocalSessionsScreen() {
+export default function LocalSessionsScreen({ embedded = false }: { embedded?: boolean } = {}) {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
   const { games, activeGame } = useLocalGames();
@@ -28,8 +28,8 @@ export default function LocalSessionsScreen() {
 
   if (games.length === 0) {
     return (
-      <Screen style={{ paddingTop: insets.top }}>
-        <Text style={[styles.title, { marginTop: 20, paddingHorizontal: 20 }]}>Sessions</Text>
+      <Screen style={{ paddingTop: embedded ? 0 : insets.top }}>
+        {!embedded && <Text style={[styles.title, { marginTop: 20, paddingHorizontal: 20 }]}>Sessions</Text>}
         <EmptyState
           ionicon="card-outline"
           title="No games yet"
@@ -50,8 +50,8 @@ export default function LocalSessionsScreen() {
 
   return (
     <Screen>
-    <ScrollView style={styles.flex} contentContainerStyle={[styles.content, { paddingTop: insets.top + 20 }]}>
-      <Text style={styles.title}>Sessions</Text>
+    <ScrollView style={styles.flex} contentContainerStyle={[styles.content, { paddingTop: embedded ? 8 : insets.top + 20 }]}>
+      {!embedded && <Text style={styles.title}>Sessions</Text>}
 
       {activeGame && (
         <View style={styles.section}>

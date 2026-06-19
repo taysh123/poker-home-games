@@ -34,7 +34,7 @@ type TypeFilter = 'all' | BankrollGameType;
 
 const pct = (v: number | null) => (v === null ? '—' : `${v >= 0 ? '' : ''}${v.toFixed(1)}%`);
 
-export default function BankrollScreen() {
+export default function BankrollScreen({ embedded = false }: { embedded?: boolean } = {}) {
   const navigation = useNavigation<Nav>();
   const { sessions, settings } = useBankroll();
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
@@ -58,15 +58,17 @@ export default function BankrollScreen() {
 
   return (
     <Screen animated>
-      <BrandHeader
-        variant="brand"
-        title="Bankroll"
-        right={
-          <PressableScale onPress={() => goLog()} haptic="light" style={styles.addBtn}>
-            <Ionicons name="add" size={22} color={colors.gold} />
-          </PressableScale>
-        }
-      />
+      {!embedded && (
+        <BrandHeader
+          variant="brand"
+          title="Bankroll"
+          right={
+            <PressableScale onPress={() => goLog()} haptic="light" style={styles.addBtn}>
+              <Ionicons name="add" size={22} color={colors.gold} />
+            </PressableScale>
+          }
+        />
+      )}
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}

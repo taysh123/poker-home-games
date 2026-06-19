@@ -41,7 +41,7 @@ const PERIODS: { key: Period; label: string }[] = [
   { key: 'all',   label: 'All Time' },
 ];
 
-export default function StatsScreen() {
+export default function StatsScreen({ embedded = false }: { embedded?: boolean } = {}) {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -124,7 +124,7 @@ export default function StatsScreen() {
     });
   }, []);
 
-  const customHeader = (
+  const customHeader = embedded ? null : (
     <View style={[statsHeaderStyles.header, { paddingTop: insets.top + 12 }]}>
       <Text style={statsHeaderStyles.title}>Stats</Text>
     </View>

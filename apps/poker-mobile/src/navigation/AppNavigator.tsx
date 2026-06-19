@@ -60,6 +60,9 @@ import CoachInputScreen from '../features/coach/ui/CoachInputScreen';
 import CoachResultScreen from '../features/coach/ui/CoachResultScreen';
 import type { CoachInputKind } from '../features/coach/types';
 import PaywallScreen from '../features/premium/ui/PaywallScreen';
+import TrackScreen from '../screens/TrackScreen';
+
+type TrackSegment = 'bankroll' | 'sessions' | 'stats';
 
 export type RootStackParamList = {
   Onboarding: undefined;
@@ -92,6 +95,8 @@ export type RootStackParamList = {
   CoachResult: { id: string };
   // V2 — Monetization
   Paywall: undefined;
+  // V2.1 — Track hub (5-tab IA)
+  Track: { segment?: TrackSegment } | undefined;
   // Kept for TypeScript compat on existing screens that navigate to these by name
   Home: undefined;
   AllSessions: undefined;
@@ -103,6 +108,7 @@ export type TabParamList = {
   Home: undefined;
   AllSessions: undefined;
   Bankroll: undefined;
+  Track: { segment?: TrackSegment } | undefined;
   Study: undefined;
   Coach: undefined;
   GroupsList: undefined;
@@ -247,6 +253,7 @@ function makeTabScreenOptions(bottomInset: number) {
   const icons: Record<string, { active: IoniconsName; inactive: IoniconsName }> = {
     Home:        { active: 'home',      inactive: 'home-outline' },
     AllSessions: { active: 'card',      inactive: 'card-outline' },
+    Track:       { active: 'wallet',    inactive: 'wallet-outline' },
     Bankroll:    { active: 'wallet',    inactive: 'wallet-outline' },
     Study:       { active: 'school',    inactive: 'school-outline' },
     Coach:       { active: 'sparkles',  inactive: 'sparkles-outline' },
@@ -288,6 +295,7 @@ function makeTabScreenOptions(bottomInset: number) {
 
 function TabNavigator() {
   const insets = useSafeAreaInsets();
+  const nav5 = isFeatureEnabled('nav5');
   return (
     <View style={{ flex: 1 }}>
       <Tab.Navigator screenOptions={makeTabScreenOptions(insets.bottom)}>
@@ -296,12 +304,20 @@ function TabNavigator() {
           component={HomeScreen}
           options={{ title: 'Home', headerShown: false }}
         />
-        <Tab.Screen
-          name="AllSessions"
-          component={AllSessionsScreen}
-          options={{ title: 'Sessions', headerShown: false }}
-        />
-        {isFeatureEnabled('bankroll') && (
+        {nav5 ? (
+          <Tab.Screen
+            name="Track"
+            component={TrackScreen}
+            options={{ title: 'Track', headerShown: false }}
+          />
+        ) : (
+          <Tab.Screen
+            name="AllSessions"
+            component={AllSessionsScreen}
+            options={{ title: 'Sessions', headerShown: false }}
+          />
+        )}
+        {!nav5 && isFeatureEnabled('bankroll') && (
           <Tab.Screen
             name="Bankroll"
             component={BankrollScreen}
@@ -327,11 +343,13 @@ function TabNavigator() {
           component={GroupsListScreen}
           options={{ title: 'Groups', headerShown: false }}
         />
-        <Tab.Screen
-          name="Stats"
-          component={StatsScreen}
-          options={{ title: 'Stats', headerShown: false }}
-        />
+        {!nav5 && (
+          <Tab.Screen
+            name="Stats"
+            component={StatsScreen}
+            options={{ title: 'Stats', headerShown: false }}
+          />
+        )}
       </Tab.Navigator>
       <LiveGameBar />
     </View>
@@ -341,6 +359,7 @@ function TabNavigator() {
 /** Tabs for guests (no account): local games + auth-gated Groups, local Stats. */
 function GuestTabNavigator() {
   const insets = useSafeAreaInsets();
+  const nav5 = isFeatureEnabled('nav5');
   return (
     <View style={{ flex: 1 }}>
       <Tab.Navigator screenOptions={makeTabScreenOptions(insets.bottom)}>
@@ -349,12 +368,20 @@ function GuestTabNavigator() {
           component={GuestHomeScreen}
           options={{ title: 'Home', headerShown: false }}
         />
-        <Tab.Screen
-          name="AllSessions"
-          component={LocalSessionsScreen}
-          options={{ title: 'Sessions', headerShown: false }}
-        />
-        {isFeatureEnabled('bankroll') && (
+        {nav5 ? (
+          <Tab.Screen
+            name="Track"
+            component={TrackScreen}
+            options={{ title: 'Track', headerShown: false }}
+          />
+        ) : (
+          <Tab.Screen
+            name="AllSessions"
+            component={LocalSessionsScreen}
+            options={{ title: 'Sessions', headerShown: false }}
+          />
+        )}
+        {!nav5 && isFeatureEnabled('bankroll') && (
           <Tab.Screen
             name="Bankroll"
             component={BankrollScreen}
@@ -380,11 +407,13 @@ function GuestTabNavigator() {
           component={GroupsAuthGateScreen}
           options={{ title: 'Groups', headerShown: false }}
         />
-        <Tab.Screen
-          name="Stats"
-          component={GuestStatsScreen}
-          options={{ title: 'Stats', headerShown: false }}
-        />
+        {!nav5 && (
+          <Tab.Screen
+            name="Stats"
+            component={GuestStatsScreen}
+            options={{ title: 'Stats', headerShown: false }}
+          />
+        )}
       </Tab.Navigator>
       <LiveGameBar />
     </View>
