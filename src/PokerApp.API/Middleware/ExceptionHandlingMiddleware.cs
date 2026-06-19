@@ -47,6 +47,14 @@ public class ExceptionHandlingMiddleware(
                 HttpStatusCode.Unauthorized,
                 new ErrorResponse(ue.Message, null)),
 
+            QuotaExceededException qee => (
+                HttpStatusCode.PaymentRequired,
+                new ErrorResponse(qee.Message, null)),
+
+            TooManyRequestsException tmre => (
+                HttpStatusCode.TooManyRequests,
+                new ErrorResponse(tmre.Message, null)),
+
             UnauthorizedAccessException => (
                 HttpStatusCode.Forbidden,
                 new ErrorResponse("Access denied.", null)),

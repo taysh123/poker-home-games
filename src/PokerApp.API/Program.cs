@@ -70,6 +70,15 @@ builder.Services.AddRateLimiter(options =>
         opt.QueueLimit = 0;
         opt.AutoReplenishment = true;
     });
+
+    // AI analyses: cap request rate (cost control is also enforced per-account in the credit ledger).
+    options.AddFixedWindowLimiter("coach-analyze", opt =>
+    {
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.PermitLimit = 12;
+        opt.QueueLimit = 0;
+        opt.AutoReplenishment = true;
+    });
 });
 
 // ── Response compression + controllers + Swagger ────────────────────────────

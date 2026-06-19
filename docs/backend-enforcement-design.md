@@ -281,3 +281,38 @@ Verified-only identity foundation, fail-closed. Backend:
 Client: thin `authApi.appleLogin` + `AuthContext.appleLogin` only (no button UI / no
 `expo-apple-authentication` dep yet). Deferred to B2+/later: real IAP + receipts, server entitlements
 + AI credit ledger/atomic decrement + AI proxy, email-verification sending, the client Apple button.
+
+---
+
+## B2 — Server-authoritative enforcement (EXECUTED on `feature/v2-poker-platform`; NO live billing)
+
+The layer that makes paid launch safe. Client credits/entitlements are now UX-only; the server
+is the source of truth. Fail-closed throughout. Mock verifier + mock AI provider behind the seams.
+
+- **Entities (+ EF config + migration `B2_MonetizationEnforcement`, codegen only — NOT applied):**
+  `Subscription` (entitlement source: status/period/store/originalTransactionId, out-of-order-safe
+  via `LatestEventAtUtc`), append-only `CreditLedgerEntry` (+ unique `IdempotencyKey`), materialized
+  `CreditBalance` (per user+period), `StoreWebhookEvent` (dedupe).
+- **Entitlements:** `IEntitlementService` computes premium from the newest `IsPremiumActive` subscription
+  (Active/Grace/Canceled within period; Refunded/Expired → free). `GET /api/entitlements`.
+- **AI credits:** `ICreditLedger` (`CreditLedger`) — lazy per-period grants (free `lifetime`=1 /
+  premium `premium:yyyy-MM`=30, **configurable via `AiCreditSettings`**), **atomic decrement** in a
+  serializable transaction, **idempotent** (unique key → no double-charge), **refund-on-failure**,
+  rate limit, top-up support. `GET /api/coach/credits`.
+- **AI proxy + key protection:** `ICoachAiProvider` (`MockCoachAiProvider`; vendor key server-only).
+  `POST /api/coach/analyze` ([Authorize] → no anonymous AI) reserves a credit, then calls the model;
+  refunds on provider failure. Deny → `402` (QuotaExceeded) / `429` (rate). `coach-analyze` rate policy.
+- **Receipts + lifecycle:** `IBillingVerifier` (`MockBillingVerifier`) + `POST /api/billing/validate`
+  (verify → upsert Subscription → entitlement). `POST /api/webhooks/{apple|google}` →
+  `ProcessStoreNotification` (idempotent renew/cancel/expire/grace/refund; signature verification is a
+  deferred seam).
+- **Fraud:** account-based credits (verified identity from B1, not device), atomic+idempotent ledger,
+  per-account rate limits, fail-closed. Device-binding signal = remaining work.
+- **Tests:** `src/PokerApp.Tests` now **26** (14 B1 + 12 B2): entitlement compute, lifetime/monthly
+  caps + reset, idempotency, rate limit, refund, analyze gate + refund-on-failure, validate-purchase,
+  webhook refund + dedupe. `dotnet build` + `dotnet test` green.
+
+**Remaining before paid launch:** real `IBillingVerifier` (Apple/Google/RevenueCat) + store webhook
+**signature verification**; apply the migration to prod; switch the client to the server
+`ICoachProvider`/entitlements (B4 cutover); DB-level concurrency hardening (xmin/row-lock) +
+load test on the decrement path; device-binding/velocity rules; then flip billing/paywall ON.

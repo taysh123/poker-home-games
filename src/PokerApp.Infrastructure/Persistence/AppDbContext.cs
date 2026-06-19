@@ -25,6 +25,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<UserAchievement> UserAchievements => Set<UserAchievement>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<DeviceToken> DeviceTokens => Set<DeviceToken>();
+    public DbSet<Subscription> Subscriptions => Set<Subscription>();
+    public DbSet<CreditLedgerEntry> CreditLedgerEntries => Set<CreditLedgerEntry>();
+    public DbSet<CreditBalance> CreditBalances => Set<CreditBalance>();
+    public DbSet<StoreWebhookEvent> StoreWebhookEvents => Set<StoreWebhookEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

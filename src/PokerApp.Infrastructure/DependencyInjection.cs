@@ -45,6 +45,15 @@ public static class DependencyInjection
         services.AddSingleton(authSettings);
         services.AddSingleton<IAuthPolicy, AuthPolicy>();
 
+        // B2 — server-authoritative monetization enforcement.
+        var aiCreditSettings = configuration.GetSection("AiCreditSettings").Get<AiCreditSettings>() ?? new AiCreditSettings();
+        services.AddSingleton(aiCreditSettings);
+        services.AddSingleton<IAiCreditPolicyProvider, AiCreditPolicyProvider>();
+        services.AddScoped<IEntitlementService, EntitlementService>();
+        services.AddScoped<ICreditLedger, CreditLedger>();
+        services.AddScoped<IBillingVerifier, MockBillingVerifier>();
+        services.AddScoped<ICoachAiProvider, MockCoachAiProvider>();
+
         services.Configure<WebSettings>(configuration.GetSection("AppSettings"));
         services.AddSingleton<IWebSettings>(sp =>
             sp.GetRequiredService<IOptions<WebSettings>>().Value);
