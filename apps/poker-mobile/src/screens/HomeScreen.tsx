@@ -31,6 +31,7 @@ import { getMyPendingSettlements, MyPendingSettlementDto } from '../api/settleme
 import { getWeeklyDigest, WeeklyDigestDto } from '../api/digestApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { goToSessions, goToStats } from '../navigation/navHelpers';
+import RankBadge from '../components/RankBadge';
 import SkeletonCard from '../components/SkeletonCard';
 import StatWidget from '../components/StatWidget';
 import SessionListItem from '../components/SessionListItem';
@@ -498,6 +499,9 @@ export default function HomeScreen() {
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.gold} />
         </TouchableOpacity>
+
+        {/* Rank / XP (retention only; renders null when off) */}
+        <RankBadge onPress={() => navigation.navigate('Achievements')} />
 
         {/* ── Stats Widgets ── */}
         <View style={styles.section}>

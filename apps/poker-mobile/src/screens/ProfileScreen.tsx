@@ -25,6 +25,7 @@ import { updateProfile, changePassword, deleteAccount } from '../api/profileApi'
 import { RootStackParamList } from '../navigation/AppNavigator';
 import Screen from '../components/Screen';
 import ScreenHeader from '../components/ScreenHeader';
+import RankBadge from '../components/RankBadge';
 import Avatar from '../components/Avatar';
 import { AVATAR_COLORS } from '../utils/avatarColor';
 import { confirmDialog } from '../utils/confirm';
@@ -200,6 +201,9 @@ export default function ProfileScreen({ navigation }: Props) {
           <Text style={styles.avatarUsername} numberOfLines={1}>{user?.username}</Text>
           <Text style={styles.avatarEmail} numberOfLines={1}>{user?.email}</Text>
         </View>
+
+        {/* Rank / XP — tap for all achievements (retention only; renders null when off) */}
+        <RankBadge onPress={() => navigation.navigate('Achievements')} />
 
         {/* ── Identity section ────────────────────────────────────────── */}
         <View style={styles.section}>

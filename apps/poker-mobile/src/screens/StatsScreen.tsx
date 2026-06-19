@@ -19,6 +19,7 @@ import { shadows } from '../theme/shadows';
 import { fadeIn, slideUp, pulse } from '../theme/motion';
 import { getMyStats, MyStatsDto, RecentSessionDto } from '../api/statsApi';
 import { getMyAchievements, AchievementDto, MyAchievementsDto } from '../api/achievementsApi';
+import { isFeatureEnabled } from '../config/features';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import SessionListItem from '../components/SessionListItem';
 import SkeletonCard from '../components/SkeletonCard';
@@ -400,7 +401,11 @@ export default function StatsScreen({ embedded = false }: { embedded?: boolean }
           <View style={[styles.section, styles.lastSection]}>
             <View style={achStyles.headerRow}>
               <Text style={styles.sectionTitle}>Achievements</Text>
-              {achievements.earned.length > 0 && (
+              {isFeatureEnabled('retention') ? (
+                <TouchableOpacity onPress={() => navigation.navigate('Achievements')} accessibilityRole="button" accessibilityLabel="See all achievements">
+                  <Text style={achStyles.earnedCount}>See all ›</Text>
+                </TouchableOpacity>
+              ) : achievements.earned.length > 0 && (
                 <Text style={achStyles.earnedCount}>{achievements.earned.length} earned</Text>
               )}
             </View>
