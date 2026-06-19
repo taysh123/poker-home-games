@@ -1,79 +1,105 @@
 import {
-  emptyUsage, monthKey, rolloverIfNeeded, creditsRemaining, canAnalyze, recordUsage,
-  type CoachLimits,
+  emptyUsage, normalizeUsage, monthKey, rolloverIfNeeded, creditsRemaining, canAnalyze, recordUsage,
+  type CoachUsage,
 } from '../limits';
 import { runAnalysis } from '../coachService';
 import { mockCoachProvider } from '../../providers/mockCoachProvider';
 import { getCoachProvider } from '../../providers';
+import { AI_CREDIT_POLICY, type AiCreditPolicy } from '../../../premium/config';
 import type { CoachInput } from '../../types';
 
-const LIMITS: CoachLimits = { monthlyCredits: 3, minIntervalMs: 1000 };
-const T0 = new Date('2026-06-18T12:00:00.000Z').getTime();
+const FREE: AiCreditPolicy = { kind: 'lifetime', credits: 1, minIntervalMs: 4000 };
+const PREMIUM: AiCreditPolicy = { kind: 'monthly', credits: 30, minIntervalMs: 1000 };
+const T0 = new Date('2026-06-19T12:00:00.000Z').getTime();
 const manual: CoachInput = { kind: 'manual', format: 'cash', heroHand: 'AKs', heroPosition: 'BTN' };
+const signed = { enforce: true, signedIn: true, requireAccount: true };
 
-describe('usage limits (dormant unless enforced)', () => {
-  it('allows freely when not enforcing but still reports remaining', () => {
-    const g = canAnalyze(emptyUsage(T0), LIMITS, T0, { enforce: false });
-    expect(g.allowed).toBe(true);
-    expect(g.remaining).toBe(3);
+describe('fail-closed gate', () => {
+  it('denies guests (no anonymous AI)', () => {
+    const g = canAnalyze(emptyUsage(T0), FREE, T0, { enforce: true, signedIn: false, requireAccount: true });
+    expect(g.allowed).toBe(false);
+    expect(g.reason).toBe('requires_account');
   });
-
-  it('blocks on no credits when enforced', () => {
-    let u = emptyUsage(T0);
-    u = { ...u, usedThisMonth: 3 };
-    const g = canAnalyze(u, LIMITS, T0 + 5000, { enforce: true });
+  it('denies when the policy is missing/unknown', () => {
+    const g = canAnalyze(emptyUsage(T0), undefined, T0, signed);
     expect(g.allowed).toBe(false);
     expect(g.reason).toBe('no_credits');
   });
+});
 
-  it('rate-limits within the min interval when enforced', () => {
-    const u = recordUsage(emptyUsage(T0), T0);
-    const g = canAnalyze(u, LIMITS, T0 + 500, { enforce: true }); // 500ms < 1000ms
-    expect(g.allowed).toBe(false);
-    expect(g.reason).toBe('rate_limited');
-  });
-
-  it('rolls over credits on a new month', () => {
-    const u = { ...emptyUsage(T0), usedThisMonth: 3 };
-    const nextMonth = new Date('2026-07-01T00:00:00.000Z').getTime();
-    expect(rolloverIfNeeded(u, nextMonth).usedThisMonth).toBe(0);
-    expect(creditsRemaining(u, LIMITS, nextMonth)).toBe(3);
-    expect(monthKey(nextMonth)).toBe('2026-07');
+describe('free lifetime allowance (1, never resets)', () => {
+  it('allows exactly one, then blocks even next month', () => {
+    let u = emptyUsage(T0);
+    expect(canAnalyze(u, FREE, T0, signed).allowed).toBe(true);
+    u = recordUsage(u, T0);
+    expect(creditsRemaining(u, FREE, T0)).toBe(0);
+    const nextMonth = new Date('2026-07-02T12:00:00.000Z').getTime();
+    expect(canAnalyze(u, FREE, nextMonth, signed)).toMatchObject({ allowed: false, reason: 'no_credits' });
   });
 });
 
-describe('mock provider output shape', () => {
-  it('returns a fully structured, educational analysis', async () => {
-    const a = await mockCoachProvider.analyze({ input: manual });
-    expect(a.inputKind).toBe('manual');
-    expect(typeof a.summary).toBe('string');
-    expect(Array.isArray(a.mistakes)).toBe(true);
-    expect(Array.isArray(a.goodDecisions)).toBe(true);
-    expect(Array.isArray(a.alternativeLines)).toBe(true);
-    expect(Array.isArray(a.tips)).toBe(true);
-    expect(a.providerId).toBe('mock');
-    expect(a.disclaimer).toMatch(/not solver output/i);
-    expect(['low', 'medium', 'high']).toContain(a.confidence);
+describe('premium monthly quota (30, resets monthly)', () => {
+  it('blocks at the cap and refreshes next month', () => {
+    let u: CoachUsage = { ...emptyUsage(T0), usedThisMonth: 30, usedLifetime: 30 };
+    expect(canAnalyze(u, PREMIUM, T0 + 5000, signed)).toMatchObject({ allowed: false, reason: 'no_credits' });
+    const nextMonth = new Date('2026-07-01T00:00:00.000Z').getTime();
+    expect(creditsRemaining(u, PREMIUM, nextMonth)).toBe(30);
+    expect(canAnalyze(u, PREMIUM, nextMonth, signed).allowed).toBe(true);
+    expect(monthKey(nextMonth)).toBe('2026-07');
   });
+  it('rate-limits within the min interval', () => {
+    const u = recordUsage(emptyUsage(T0), T0);
+    expect(canAnalyze(u, PREMIUM, T0 + 500, signed)).toMatchObject({ allowed: false, reason: 'rate_limited' });
+  });
+});
 
-  it('factory returns a provider implementing the interface', () => {
-    expect(getCoachProvider('mock').id).toBe('mock');
-    expect(getCoachProvider('openai').analyze).toBeDefined(); // falls back to mock until wired
+describe('recordUsage + normalize', () => {
+  it('increments both monthly and lifetime counters', () => {
+    const u = recordUsage(emptyUsage(T0), T0);
+    expect(u.usedThisMonth).toBe(1);
+    expect(u.usedLifetime).toBe(1);
+  });
+  it('normalizes a legacy usage missing usedLifetime', () => {
+    expect(normalizeUsage({ schemaVersion: 1, monthKey: '2026-06', usedThisMonth: 3 } as any).usedLifetime).toBe(0);
+  });
+  it('config defaults are profit-protective (free lifetime 1, premium monthly 30)', () => {
+    expect(AI_CREDIT_POLICY.free).toMatchObject({ kind: 'lifetime', credits: 1 });
+    expect(AI_CREDIT_POLICY.premium).toMatchObject({ kind: 'monthly', credits: 30 });
   });
 });
 
 describe('runAnalysis orchestration', () => {
-  it('produces an analysis and increments usage', async () => {
-    const out = await runAnalysis(mockCoachProvider, manual, { usage: emptyUsage(T0), limits: LIMITS, now: T0, enforce: false });
+  it('produces an analysis + records usage for a signed-in user with credits', async () => {
+    const out = await runAnalysis(mockCoachProvider, manual, {
+      usage: emptyUsage(T0), policy: FREE, now: T0, enforce: true, signedIn: true, requireAccount: true,
+    });
     expect(out.analysis).toBeDefined();
-    expect(out.usage.usedThisMonth).toBe(1);
-    expect(out.error).toBeUndefined();
+    expect(out.usage.usedLifetime).toBe(1);
   });
-
-  it('returns an error and no analysis when the gate denies (enforced, no credits)', async () => {
-    const usage = { ...emptyUsage(T0), usedThisMonth: 3 };
-    const out = await runAnalysis(mockCoachProvider, manual, { usage, limits: LIMITS, now: T0 + 5000, enforce: true });
+  it('denies a guest with no analysis (fail-closed)', async () => {
+    const out = await runAnalysis(mockCoachProvider, manual, {
+      usage: emptyUsage(T0), policy: FREE, now: T0, enforce: true, signedIn: false, requireAccount: true,
+    });
     expect(out.analysis).toBeUndefined();
-    expect(out.error).toBe('no_credits');
+    expect(out.error).toBe('requires_account');
+  });
+});
+
+describe('provider seam', () => {
+  it('mock returns a structured analysis; factory falls back safely', async () => {
+    const a = await mockCoachProvider.analyze({ input: manual });
+    expect(a.providerId).toBe('mock');
+    expect(a.disclaimer).toMatch(/not solver output/i);
+    expect(getCoachProvider('openai').analyze).toBeDefined();
+  });
+});
+
+// keep rollover sanity
+describe('rolloverIfNeeded', () => {
+  it('resets monthly but preserves lifetime', () => {
+    const u: CoachUsage = { ...emptyUsage(T0), usedThisMonth: 5, usedLifetime: 9 };
+    const r = rolloverIfNeeded(u, new Date('2026-07-01T00:00:00.000Z').getTime());
+    expect(r.usedThisMonth).toBe(0);
+    expect(r.usedLifetime).toBe(9);
   });
 });

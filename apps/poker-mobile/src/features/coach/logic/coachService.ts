@@ -1,24 +1,19 @@
 /**
- * Coach orchestrator — pure-ish glue between the limits layer and a provider. Checks the
- * (dormant) usage gate, calls the provider, records usage. Vendor- and UI-agnostic.
+ * Coach orchestrator — pure glue between the credit engine and a provider. Fail-closed:
+ * checks the gate (account required, credits, rate limit) BEFORE calling the provider, then
+ * records usage. Vendor- and UI-agnostic.
  */
-import type { CoachInput, ICoachProvider } from '../types';
-import {
-  canAnalyze,
-  recordUsage,
-  rolloverIfNeeded,
-  type CoachLimits,
-  type CoachUsage,
-  type CoachDenyReason,
-} from './limits';
-import type { CoachAnalysis } from '../types';
+import type { CoachInput, ICoachProvider, CoachAnalysis } from '../types';
+import type { AiCreditPolicy } from '../../premium/config';
+import { canAnalyze, recordUsage, rolloverIfNeeded, type CoachUsage, type CoachDenyReason } from './limits';
 
 export interface AnalyzeContext {
   usage: CoachUsage;
-  limits: CoachLimits;
+  policy: AiCreditPolicy | undefined;
   now?: number;
-  /** Master cost-control switch (COACH_CONFIG.enforceLimits). Dormant in V1. */
-  enforce?: boolean;
+  enforce: boolean;
+  signedIn: boolean;
+  requireAccount: boolean;
 }
 
 export interface AnalyzeOutcome {
@@ -34,7 +29,11 @@ export async function runAnalysis(
 ): Promise<AnalyzeOutcome> {
   const now = ctx.now ?? Date.now();
   const rolled = rolloverIfNeeded(ctx.usage, now);
-  const gate = canAnalyze(rolled, ctx.limits, now, { enforce: ctx.enforce });
+  const gate = canAnalyze(rolled, ctx.policy, now, {
+    enforce: ctx.enforce,
+    signedIn: ctx.signedIn,
+    requireAccount: ctx.requireAccount,
+  });
   if (!gate.allowed) return { usage: rolled, error: gate.reason };
 
   const analysis = await provider.analyze({ input });

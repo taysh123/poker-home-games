@@ -3,7 +3,7 @@
  * analysis history. Mirrors the local-games / bankroll / study store pattern.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { emptyUsage, type CoachUsage } from '../logic/limits';
+import { normalizeUsage, type CoachUsage } from '../logic/limits';
 import { GUEST_ACCOUNT_KEY } from '../../auth/identity';
 import type { CoachAnalysis } from '../types';
 
@@ -40,9 +40,9 @@ function migrateToCurrent(parsed: { usageByAccount?: Record<string, CoachUsage>;
   };
 }
 
-/** Usage for an account key (empty if first time). */
+/** Usage for an account key (normalized; empty if first time). */
 export function getUsage(file: CoachFile, accountKey: string): CoachUsage {
-  return file.usageByAccount[accountKey] ?? emptyUsage();
+  return normalizeUsage(file.usageByAccount[accountKey]);
 }
 
 export async function loadFile(): Promise<CoachFile> {

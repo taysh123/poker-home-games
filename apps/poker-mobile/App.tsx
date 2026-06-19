@@ -24,6 +24,7 @@ import { AuthProvider } from './src/context/AuthContext';
 import { ActiveSessionProvider } from './src/context/ActiveSessionContext';
 import { LocalGamesProvider } from './src/context/LocalGamesContext';
 import { EntitlementsProvider } from './src/context/EntitlementsContext';
+import { PremiumProvider } from './src/features/premium/state/PremiumContext';
 import { BankrollProvider } from './src/features/bankroll/state/BankrollContext';
 import { StudyProvider } from './src/features/study/state/StudyContext';
 import { CoachProvider } from './src/features/coach/state/CoachContext';
@@ -94,6 +95,7 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
+        <PremiumProvider>
         <EntitlementsProvider>
           <ActiveSessionProvider>
             <LocalGamesProvider>
@@ -109,6 +111,7 @@ export default function App() {
             </LocalGamesProvider>
           </ActiveSessionProvider>
         </EntitlementsProvider>
+        </PremiumProvider>
       </AuthProvider>
     </GestureHandlerRootView>
   );

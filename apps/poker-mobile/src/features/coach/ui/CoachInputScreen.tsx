@@ -14,6 +14,7 @@ import { typography } from '../../../theme/typography';
 import { spacing } from '../../../theme/spacing';
 import { radii } from '../../../theme/radii';
 import { showToast } from '../../../utils/toast';
+import { isFeatureEnabled } from '../../../config/features';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
 import { useCoach } from '../state/CoachContext';
 import type { CoachInput } from '../types';
@@ -71,7 +72,11 @@ export default function CoachInputScreen() {
     const { analysis, error: err } = await analyze(input);
     if (err === 'requires_account') { showToast('Sign in to use AI Coach.', 'info'); return; }
     if (err === 'rate_limited') { showToast('Slow down a moment, then try again.', 'info'); return; }
-    if (err === 'no_credits') { showToast('You are out of analyses this month.', 'error'); return; }
+    if (err === 'no_credits') {
+      showToast('You are out of AI analyses.', 'info');
+      if (isFeatureEnabled('paywall')) navigation.replace('Paywall');
+      return;
+    }
     if (analysis) navigation.replace('CoachResult', { id: analysis.id });
   }
 

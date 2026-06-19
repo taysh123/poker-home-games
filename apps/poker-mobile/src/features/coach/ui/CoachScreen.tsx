@@ -14,6 +14,7 @@ import { typography } from '../../../theme/typography';
 import { spacing } from '../../../theme/spacing';
 import { radii } from '../../../theme/radii';
 import { timeAgo } from '../../../utils/formatters';
+import { isFeatureEnabled } from '../../../config/features';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
 import { useCoach } from '../state/CoachContext';
 import type { CoachInputKind } from '../types';
@@ -28,7 +29,13 @@ const METHODS: { kind: CoachInputKind; icon: React.ComponentProps<typeof Ionicon
 
 export default function CoachScreen() {
   const navigation = useNavigation<Nav>();
-  const { history, enforceLimits, creditsRemaining } = useCoach();
+  const { history, creditsRemaining, totalCredits, policyKind, signedIn } = useCoach();
+  const showUpgrade = isFeatureEnabled('paywall') && policyKind === 'lifetime';
+  const creditsLabel = !signedIn
+    ? 'Sign in to use AI Coach'
+    : policyKind === 'lifetime'
+      ? (creditsRemaining > 0 ? `${creditsRemaining} free analysis` : 'Free analysis used')
+      : `${creditsRemaining} / ${totalCredits} analyses this month`;
 
   return (
     <Screen animated>
@@ -44,9 +51,12 @@ export default function CoachScreen() {
 
         <View style={styles.creditsRow}>
           <Ionicons name="flash-outline" size={14} color={colors.textMuted} />
-          <Text style={styles.creditsText}>
-            {enforceLimits ? `${creditsRemaining} analyses left this month` : 'Unlimited analyses (beta)'}
-          </Text>
+          <Text style={styles.creditsText}>{creditsLabel}</Text>
+          {showUpgrade ? (
+            <PressableScale onPress={() => navigation.navigate('Paywall')} hitSlop={8}>
+              <Text style={styles.upgradeLink}> · Go Premium</Text>
+            </PressableScale>
+          ) : null}
         </View>
 
         <View style={styles.section}>
@@ -101,6 +111,7 @@ const styles = StyleSheet.create({
   disclaimerText: { ...typography.bodySmall, color: colors.textMuted, flex: 1 },
   creditsRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.xs },
   creditsText: { ...typography.bodySmall, color: colors.textMuted },
+  upgradeLink: { ...typography.labelSmall, color: colors.gold },
   section: { gap: spacing.sm },
   methodCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   methodIcon: { width: 44, height: 44, borderRadius: radii.sm, backgroundColor: colors.goldFaint, alignItems: 'center', justifyContent: 'center' },

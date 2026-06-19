@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
+import { isFeatureEnabled } from '../config/features';
 import { typography } from '../theme/typography';
 import { shadows } from '../theme/shadows';
 import { useAuth } from '../context/AuthContext';
@@ -378,6 +379,25 @@ export default function ProfileScreen({ navigation }: Props) {
               : <Text style={styles.btnPrimaryText}>Change Password</Text>}
           </TouchableOpacity>
         </View>
+
+        {/* ── Subscription & usage (flag-gated) ─────────────────────────── */}
+        {isFeatureEnabled('paywall') && (
+          <View style={styles.section}>
+            <View style={[styles.sectionHeader, { marginBottom: 12 }]}>
+              <View style={styles.sectionTitleRow}>
+                <View style={styles.sectionIconWrap}>
+                  <Ionicons name="sparkles-outline" size={14} color={colors.gold} />
+                </View>
+                <Text style={styles.sectionTitle}>Subscription & usage</Text>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.aboutRow} onPress={() => navigation.navigate('Paywall')} activeOpacity={0.7}>
+              <Ionicons name="star-outline" size={16} color={colors.textMuted} />
+              <Text style={styles.aboutRowText}>T Poker Premium</Text>
+              <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* ── About & Support ─────────────────────────────────────────── */}
         <View style={styles.section}>

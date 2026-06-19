@@ -12,6 +12,7 @@ export type FeatureFlag =
   | 'bankroll'  // Track pillar — bankroll / session tracker (Phase 1)
   | 'study'     // Study pillar — preflop GTO (Phase 2)
   | 'coach'     // Improve pillar — AI hand-analysis coach (Phase 3)
+  | 'paywall'   // Monetization — premium paywall + upgrade prompts (Phase 5)
   | 'v2Splash'; // dual-brand (True Story Labs → T Poker) launch splash
 
 /** Production defaults — every new surface OFF so prod behaves exactly as today. */
@@ -19,6 +20,7 @@ const PROD_FLAGS: Record<FeatureFlag, boolean> = {
   bankroll: false,
   study: false,
   coach: false,
+  paywall: false,
   v2Splash: false,
 };
 
@@ -28,6 +30,7 @@ const DEV_OVERRIDES: Partial<Record<FeatureFlag, boolean>> = {
   bankroll: true,  // Phase 1 — preview the bankroll tracker in dev (prod stays OFF)
   study: true,     // Phase 2 — preview the study module in dev (prod stays OFF)
   coach: true,     // Phase 3 — preview the AI coach scaffolding in dev (prod stays OFF)
+  paywall: true,   // Phase 5 — preview the paywall + upgrade flow in dev (prod stays OFF)
 };
 
 const resolved: Record<FeatureFlag, boolean> = {
