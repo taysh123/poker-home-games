@@ -72,6 +72,7 @@ export default function CoachInputScreen() {
     const { analysis, error: err } = await analyze(input);
     if (err === 'requires_account') { showToast('Sign in to use AI Coach.', 'info'); return; }
     if (err === 'rate_limited') { showToast('Slow down a moment, then try again.', 'info'); return; }
+    if (err === 'unavailable') { showToast('AI Coach is unavailable right now. Try again.', 'error'); return; }
     if (err === 'no_credits') {
       showToast('You are out of AI analyses.', 'info');
       if (isFeatureEnabled('paywall')) navigation.replace('Paywall');

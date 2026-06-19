@@ -4,7 +4,7 @@
  * the (flag-gated) coach feature. The AI credit allowance + rate limit come from the
  * entitlement tier's AiCreditPolicy (premium/config), not here.
  */
-export type CoachProviderId = 'mock' | 'openai' | 'anthropic' | 'gemini' | 'self';
+export type CoachProviderId = 'mock' | 'server' | 'openai' | 'anthropic' | 'gemini' | 'self';
 
 export interface CoachConfig {
   /** Active AI provider. 'mock' until a vendor is wired. */

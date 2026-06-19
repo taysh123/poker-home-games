@@ -15,6 +15,7 @@ import { radii } from '../../../theme/radii';
 import { showToast } from '../../../utils/toast';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
 import { usePremium } from '../state/PremiumContext';
+import { useEntitlements } from '../../../context/EntitlementsContext';
 import { PRICING, PREMIUM_FEATURES } from '../config';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -22,17 +23,25 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export default function PaywallScreen() {
   const navigation = useNavigation<Nav>();
   const { isPremium, purchasing, purchase, restore } = usePremium();
+  const { refresh: refreshEntitlement } = useEntitlements();
   const [plan, setPlan] = useState<'yearly' | 'monthly'>('yearly');
 
   const productId = plan === 'yearly' ? PRICING.yearly.productId : PRICING.monthly.productId;
 
   async function upgrade() {
     const res = await purchase(productId);
-    if (res.ok) { showToast('Welcome to T Poker Premium ✦', 'success'); navigation.goBack(); }
-    else showToast('Purchase could not be completed.', 'error');
+    if (res.ok) {
+      // Server is authority — refresh the entitlement so the whole app re-reads server truth.
+      await refreshEntitlement();
+      showToast('Welcome to T Poker Premium ✦', 'success');
+      navigation.goBack();
+    } else {
+      showToast('Purchase could not be completed.', 'error');
+    }
   }
   async function onRestore() {
     const res = await restore();
+    if (res.ok) await refreshEntitlement();
     showToast(res.ok ? 'Premium restored.' : 'No purchase to restore.', res.ok ? 'success' : 'info');
   }
 

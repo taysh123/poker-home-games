@@ -6,9 +6,12 @@
 import type { ICoachProvider } from '../types';
 import { COACH_CONFIG, type CoachProviderId } from '../config';
 import { mockCoachProvider } from './mockCoachProvider';
+import { serverCoachProvider } from './serverCoachProvider';
 
 export function getCoachProvider(id: CoachProviderId = COACH_CONFIG.provider): ICoachProvider {
   switch (id) {
+    case 'server':
+      return serverCoachProvider; // B4 — analysis + enforcement run server-side
     case 'mock':
       return mockCoachProvider;
     // case 'openai':    return openAiCoachProvider;     // TODO: implement ICoachProvider

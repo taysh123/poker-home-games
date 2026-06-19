@@ -356,3 +356,35 @@ The offline-verifiable crypto is **fully unit-tested**; credential-bound store-A
 Server API + Google Play Developer API) and verify against real store **sandbox**; supply real Apple root
 PEM(s) + Google Pub/Sub OIDC audience in prod config; flip `Provider="direct"` + `AcceptSandbox=false`.
 Then B4 (client cutover) and B5 (top-ups/fraud/observability).
+
+## B4 — Client cutover to server enforcement (EXECUTED on `feature/v2-poker-platform`; NO live billing)
+
+The client stops deciding premium/credits locally; it reads from the server and routes analyses through
+the server proxy. The local credit engine remains ONLY as a fail-closed offline cache, never authority.
+Coach itself stays flag-gated (`coach` OFF in prod) so nothing user-facing changes in prod yet.
+
+- **Authority flag:** `SERVER_AUTHORITATIVE = true` (`features/premium/config.ts`) — single switch for the cutover.
+- **API (`api/monetizationApi.ts`):** typed wrappers over `GET /api/entitlements`, `GET /api/coach/credits`,
+  `POST /api/coach/analyze` on the shared `apiClient` (401 auto-refresh + retry). `mapCoachError` →
+  `402→no_credits`, `429→rate_limited`, `401/403→requires_account`, **network/5xx/unknown → `unavailable`**
+  (deny, no false paywall). `analyzeHand` throws `ServerCoachError { reason }`.
+- **Server provider (`features/coach/providers/serverCoachProvider.ts`):** implements the existing client
+  `ICoachProvider`; calls the proxy and maps `CoachAnalysisResult` → client `CoachAnalysis`. No token ⇒
+  `requires_account` (no anonymous AI). Registered as provider id `server`.
+- **Entitlements (`context/EntitlementsContext.tsx`):** signed-in tier from `GET /api/entitlements` via the
+  pure, fail-closed `resolveEntitlement` (`features/premium/entitlementResolve.ts`) — server is authority;
+  offline ⇒ last-known cache, **never upgrades on uncertainty**; guests always free. `refresh()` exposed
+  (called from the paywall post-purchase/restore). AI credit POLICY still from config (one tunable source).
+- **Coach state (`features/coach/state/CoachContext.tsx`):** credits from `GET /api/coach/credits`
+  (`creditsRemaining`/`totalCredits`/`policyKind` reflect server numbers, local as offline fallback);
+  `analyze()` runs through `serverCoachProvider`, catches `ServerCoachError` → `{ error }`, refreshes credits
+  after each analysis. Guests denied before any network call.
+- **UI:** `CoachInputScreen` handles the new `unavailable` reason (error toast); paywall calls
+  `refreshEntitlement()` after purchase/restore. UI structure otherwise unchanged.
+- **Tests (mobile):** 3 new suites, **+19 tests** (150 total): `monetizationApi` error mapping + proxy,
+  `serverCoachProvider` mapping/fail-closed/rethrow, `entitlementResolve` fail-closed resolution. Existing
+  local coach engine tests retained (offline path). `npx tsc --noEmit` + `npx jest` green.
+
+**Remaining before paid launch (B4 scope):** none structurally — the client is server-authoritative behind
+`SERVER_AUTHORITATIVE`. Flipping the `coach` feature flag ON (and a real AI provider server-side) lights it
+up. B5 adds top-ups, fraud/velocity, and observability.

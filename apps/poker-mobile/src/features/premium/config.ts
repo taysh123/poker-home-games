@@ -5,6 +5,13 @@
  */
 export type PremiumTier = 'free' | 'premium';
 
+/**
+ * B4 — when true, the SERVER is the single source of truth for entitlements + AI credits. The client
+ * fetches `GET /api/entitlements` + `GET /api/coach/credits` and routes analyses through
+ * `POST /api/coach/analyze`; local state is only a fail-closed offline cache, never authority.
+ */
+export const SERVER_AUTHORITATIVE = true;
+
 export type AiCreditKind = 'lifetime' | 'monthly';
 export interface AiCreditPolicy {
   /** 'lifetime' = a one-time allowance (free onboarding taste); 'monthly' = resets each month. */

@@ -1,7 +1,13 @@
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { usePremium } from '../features/premium/state/PremiumContext';
+import { useAuth } from './AuthContext';
+import { isSignedIn } from '../features/auth/identity';
+import { resolveEntitlement } from '../features/premium/entitlementResolve';
+import { getEntitlements, type ServerEntitlement } from '../api/monetizationApi';
+import * as SecureStore from '../utils/storage';
 import {
   AI_CREDIT_POLICY,
+  SERVER_AUTHORITATIVE,
   type AiCreditPolicy,
   type PremiumFeatureKey,
   type PremiumTier,
@@ -9,9 +15,9 @@ import {
 
 /**
  * Entitlements (V2 monetization seam) — the single read API for "what can this user do".
- * Tier comes from PremiumContext (mock billing now, real IAP later); premium features +
- * the AI credit POLICY come from the premium config (one tunable source). Gate UI with
- * <PremiumGate> or read `useEntitlements()`.
+ * B4: when SERVER_AUTHORITATIVE, the tier comes from `GET /api/entitlements` for signed-in users
+ * (with the local mock entitlement as a fail-closed offline cache); the AI credit POLICY still
+ * comes from config (one tunable source). Gate UI with <PremiumGate> or read `useEntitlements()`.
  */
 export type EntitlementTier = PremiumTier;
 /** Anything gateable: the premium features, or the generic 'premium'. */
@@ -25,6 +31,8 @@ export type EntitlementsContextType = {
   has: (entitlement: Entitlement) => boolean;
   /** AI Coach credit policy for the current tier (lifetime free / monthly premium). */
   aiCreditPolicy: AiCreditPolicy;
+  /** Re-fetch the server entitlement (call after a purchase/restore). No-op in local mode. */
+  refresh: () => Promise<void>;
 };
 
 const EntitlementsContext = createContext<EntitlementsContextType>({
@@ -33,21 +41,60 @@ const EntitlementsContext = createContext<EntitlementsContextType>({
   isPremium: false,
   has: () => false,
   aiCreditPolicy: AI_CREDIT_POLICY.free,
+  refresh: async () => {},
 });
 
 export function EntitlementsProvider({ children }: { children: React.ReactNode }) {
-  const { plan, isLoaded } = usePremium();
+  const { plan, isLoaded: premiumLoaded } = usePremium();
+  const { user } = useAuth();
+  const signedIn = isSignedIn(user);
+  const userId = user?.userId;
+
+  const [server, setServer] = useState<ServerEntitlement | null>(null);
+  const [serverLoaded, setServerLoaded] = useState(false);
+
+  const refresh = useCallback(async () => {
+    if (!SERVER_AUTHORITATIVE || !signedIn) {
+      setServer(null);
+      setServerLoaded(true);
+      return;
+    }
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!token) throw new Error('no_token');
+      const ent = await getEntitlements(token);
+      setServer(ent);
+    } catch {
+      setServer(null); // fail-closed — resolve falls back to the local cache, never up
+    } finally {
+      setServerLoaded(true);
+    }
+  }, [signedIn]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setServerLoaded(false);
+    refresh().finally(() => { if (cancelled) { /* state already guarded by refresh */ } });
+    return () => { cancelled = true; };
+  }, [refresh, userId]);
+
   const value = useMemo<EntitlementsContextType>(() => {
-    const isPremium = plan === 'premium';
+    const cachedPremium = plan === 'premium';
+    const resolved = SERVER_AUTHORITATIVE
+      ? resolveEntitlement({ signedIn, server, cachedPremium })
+      : { tier: plan, isPremium: plan === 'premium' };
+    // In server mode for a signed-in user, wait for the first server answer before claiming loaded.
+    const isLoaded = premiumLoaded && (SERVER_AUTHORITATIVE && signedIn ? serverLoaded : true);
     return {
       isLoaded,
-      tier: plan,
-      isPremium,
+      tier: resolved.tier,
+      isPremium: resolved.isPremium,
       // All premium features unlock together for the premium tier (single tier today).
-      has: () => isPremium,
-      aiCreditPolicy: AI_CREDIT_POLICY[plan],
+      has: () => resolved.isPremium,
+      aiCreditPolicy: AI_CREDIT_POLICY[resolved.tier],
+      refresh,
     };
-  }, [plan, isLoaded]);
+  }, [plan, premiumLoaded, signedIn, server, serverLoaded, refresh]);
 
   return <EntitlementsContext.Provider value={value}>{children}</EntitlementsContext.Provider>;
 }
