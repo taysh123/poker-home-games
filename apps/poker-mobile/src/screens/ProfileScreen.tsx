@@ -403,6 +403,24 @@ export default function ProfileScreen({ navigation }: Props) {
           </View>
         )}
 
+        {isFeatureEnabled('reminders') && (
+          <View style={styles.section}>
+            <View style={[styles.sectionHeader, { marginBottom: 12 }]}>
+              <View style={styles.sectionTitleRow}>
+                <View style={styles.sectionIconWrap}>
+                  <Ionicons name="notifications-outline" size={14} color={colors.gold} />
+                </View>
+                <Text style={styles.sectionTitle}>Reminders</Text>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.aboutRow} onPress={() => navigation.navigate('NotificationPreferences')} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Reminder preferences">
+              <Ionicons name="alarm-outline" size={16} color={colors.textMuted} />
+              <Text style={styles.aboutRowText}>Reminder preferences</Text>
+              <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* ── About & Support ─────────────────────────────────────────── */}
         <View style={styles.section}>
           <View style={[styles.sectionHeader, { marginBottom: 12 }]}>

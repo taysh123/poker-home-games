@@ -63,6 +63,7 @@ import type { CoachInputKind } from '../features/coach/types';
 import PaywallScreen from '../features/premium/ui/PaywallScreen';
 import TrackScreen from '../screens/TrackScreen';
 import AchievementsScreen from '../screens/AchievementsScreen';
+import NotificationPreferencesScreen from '../screens/NotificationPreferencesScreen';
 
 type TrackSegment = 'bankroll' | 'sessions' | 'stats';
 
@@ -101,6 +102,7 @@ export type RootStackParamList = {
   Track: { segment?: TrackSegment } | undefined;
   // V2.1 STEP 3 — retention
   Achievements: undefined;
+  NotificationPreferences: undefined;
   // Kept for TypeScript compat on existing screens that navigate to these by name
   Home: undefined;
   AllSessions: undefined;
@@ -498,6 +500,7 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
             <Stack.Screen name="CoachResult" component={CoachResultScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Paywall"     component={PaywallScreen}     options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="Achievements" component={AchievementsScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Login"    component={LoginScreen}    options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="JoinSession" component={JoinSessionScreen} options={{ headerShown: false }} />
@@ -528,6 +531,7 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
             <Stack.Screen name="CoachResult" component={CoachResultScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Paywall"     component={PaywallScreen}     options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="Achievements" component={AchievementsScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} options={{ headerShown: false }} />
           </>
         )}
       </Stack.Navigator>

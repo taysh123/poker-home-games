@@ -29,6 +29,7 @@ import { BankrollProvider } from './src/features/bankroll/state/BankrollContext'
 import { StudyProvider } from './src/features/study/state/StudyContext';
 import { CoachProvider } from './src/features/coach/state/CoachContext';
 import { EngagementProvider } from './src/features/engagement/state/EngagementContext';
+import { ReminderScheduler } from './src/hooks/useReminderScheduler';
 import AppNavigator from './src/navigation/AppNavigator';
 import { RootStackParamList } from './src/navigation/AppNavigator';
 import { isFeatureEnabled } from './src/config/features';
@@ -105,6 +106,7 @@ export default function App() {
                   <CoachProvider>
                     <EngagementProvider>
                       <StatusBar style="light" />
+                      <ReminderScheduler />
                       <AppNavigator navigationRef={navRef} />
                       {!splashDone && <BrandSplash onDone={() => setSplashDone(true)} />}
                     </EngagementProvider>
