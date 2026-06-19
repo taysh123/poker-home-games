@@ -16,15 +16,18 @@ import { radii } from '../../../theme/radii';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
 import { useStudy } from '../state/StudyContext';
 import { studyStats } from '../logic/progress';
+import { isFeatureEnabled } from '../../../config/features';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 const todayKey = () => new Date().toISOString().slice(0, 10);
 
 export default function StudyScreen() {
   const navigation = useNavigation<Nav>();
-  const { progress, dataset } = useStudy();
+  const { progress, dataset, setDailyGoal } = useStudy();
   const stats = studyStats(progress, todayKey());
   const goalPct = Math.min(1, progress.dailyGoal > 0 ? stats.answeredToday / progress.dailyGoal : 0);
+  const retention = isFeatureEnabled('retention');
+  const freezeTokens = progress.freezeTokens ?? 0;
 
   return (
     <Screen animated>
@@ -43,14 +46,48 @@ export default function StudyScreen() {
               : `day${progress.currentStreak === 1 ? '' : 's'} in a row · best ${progress.longestStreak}`}
           </Text>
 
+          {retention && freezeTokens > 0 && (
+            <View style={styles.freezeChip}>
+              <Ionicons name="snow-outline" size={12} color={colors.gold} />
+              <Text style={styles.freezeText}>
+                {freezeTokens} streak freeze{freezeTokens === 1 ? '' : 's'} ready
+              </Text>
+            </View>
+          )}
+
           {/* Daily goal */}
           <View style={styles.goalWrap}>
             <View style={styles.goalTrack}>
               <View style={[styles.goalFill, { width: `${goalPct * 100}%` }]} />
             </View>
-            <Text style={styles.goalText}>
-              {stats.goalMetToday ? '✓ Daily goal met' : `${stats.answeredToday} / ${progress.dailyGoal} today`}
-            </Text>
+            <View style={styles.goalRow}>
+              <Text style={styles.goalText}>
+                {stats.goalMetToday ? '✓ Daily goal met' : `${stats.answeredToday} / ${progress.dailyGoal} today`}
+              </Text>
+              {retention && (
+                <View style={styles.stepper}>
+                  <PressableScale
+                    onPress={() => setDailyGoal(progress.dailyGoal - 1)}
+                    haptic="light"
+                    style={styles.stepBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel="Decrease daily goal"
+                  >
+                    <Ionicons name="remove" size={16} color={colors.gold} />
+                  </PressableScale>
+                  <Text style={styles.stepVal}>{progress.dailyGoal}</Text>
+                  <PressableScale
+                    onPress={() => setDailyGoal(progress.dailyGoal + 1)}
+                    haptic="light"
+                    style={styles.stepBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel="Increase daily goal"
+                  >
+                    <Ionicons name="add" size={16} color={colors.gold} />
+                  </PressableScale>
+                </View>
+              )}
+            </View>
           </View>
         </Card>
 
@@ -127,7 +164,19 @@ const styles = StyleSheet.create({
   goalWrap: { marginTop: spacing.lg, gap: spacing.sm },
   goalTrack: { height: 8, borderRadius: radii.pill, backgroundColor: colors.surfaceHigh, overflow: 'hidden' },
   goalFill: { height: '100%', borderRadius: radii.pill, backgroundColor: colors.gold },
+  goalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   goalText: { ...typography.bodySmall, color: colors.textMuted },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  stepBtn: {
+    width: 30, height: 30, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.goldFaint, borderWidth: 1, borderColor: colors.goldMuted,
+  },
+  stepVal: { ...typography.label, color: colors.text, minWidth: 20, textAlign: 'center' },
+  freezeChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: spacing.sm,
+    backgroundColor: colors.goldFaint, borderRadius: radii.pill, paddingHorizontal: spacing.sm, paddingVertical: 3,
+  },
+  freezeText: { ...typography.bodySmall, color: colors.gold, fontSize: 11 },
   statRow: { flexDirection: 'row', gap: spacing.sm },
   statCard: { flex: 1, alignItems: 'center', paddingVertical: spacing.md },
   statValue: { ...typography.amount, color: colors.textHigh },

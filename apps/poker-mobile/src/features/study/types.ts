@@ -61,6 +61,13 @@ export interface StudyProgress {
   lastStudyDate?: string;
   currentStreak: number;
   longestStreak: number;
+  // STEP 3.1 — streak freeze (additive; absent on v1 data, defaulted on load).
+  /** yyyy-mm-dd days bridged by a freeze (count as "studied" for streak continuity). */
+  frozenDays?: string[];
+  /** Remaining freeze tokens this ISO week. */
+  freezeTokens?: number;
+  /** ISO week the tokens were last refilled (so weekly refill is idempotent). */
+  freezeWeekKey?: string;
 }
 
 export interface StudyFile {
