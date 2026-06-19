@@ -26,6 +26,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import Screen from '../components/Screen';
 import ScreenHeader from '../components/ScreenHeader';
 import RankBadge from '../components/RankBadge';
+import { useCurrency } from '../context/CurrencyContext';
 import Avatar from '../components/Avatar';
 import { AVATAR_COLORS } from '../utils/avatarColor';
 import { confirmDialog } from '../utils/confirm';
@@ -42,6 +43,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Profile'>;
 
 export default function ProfileScreen({ navigation }: Props) {
   const { user, updateUser, logout } = useAuth();
+  const { code: currencyCode } = useCurrency();
 
   // Profile edit state
   const [editingProfile, setEditingProfile] = useState(false);
@@ -421,6 +423,25 @@ export default function ProfileScreen({ navigation }: Props) {
           </View>
         )}
 
+        {isFeatureEnabled('currencyPrefs') && (
+          <View style={styles.section}>
+            <View style={[styles.sectionHeader, { marginBottom: 12 }]}>
+              <View style={styles.sectionTitleRow}>
+                <View style={styles.sectionIconWrap}>
+                  <Ionicons name="cash-outline" size={14} color={colors.gold} />
+                </View>
+                <Text style={styles.sectionTitle}>Display</Text>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.aboutRow} onPress={() => navigation.navigate('CurrencyPicker')} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={`Preferred currency, currently ${currencyCode}`}>
+              <Ionicons name="globe-outline" size={16} color={colors.textMuted} />
+              <Text style={styles.aboutRowText}>Currency</Text>
+              <Text style={styles.aboutRowValue}>{currencyCode}</Text>
+              <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* ── About & Support ─────────────────────────────────────────── */}
         <View style={styles.section}>
           <View style={[styles.sectionHeader, { marginBottom: 12 }]}>
@@ -642,6 +663,7 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   aboutRowText: { flex: 1, fontSize: 14, color: colors.textHigh, fontWeight: '500' },
+  aboutRowValue: { fontSize: 13, color: colors.gold, fontWeight: '600', marginRight: 6 },
   aboutResponsible: {
     fontSize: 12,
     color: colors.textDim,

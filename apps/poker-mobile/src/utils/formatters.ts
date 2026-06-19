@@ -1,10 +1,14 @@
-export function formatPL(value: number): string {
+import { getActiveCurrency, formatIntlMajor, type CurrencyCode } from './currency';
+
+export function formatPL(value: number, code: CurrencyCode = getActiveCurrency()): string {
   const abs = Math.abs(Math.round(value));
-  return `${value >= 0 ? '+' : '-'}₪${abs.toLocaleString()}`;
+  if (code === 'ILS') return `${value >= 0 ? '+' : '-'}₪${abs.toLocaleString()}`;
+  return `${value >= 0 ? '+' : '-'}${formatIntlMajor(abs, code, 0)}`;
 }
 
-export function formatMoney(value: number): string {
-  return `₪${Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+export function formatMoney(value: number, code: CurrencyCode = getActiveCurrency()): string {
+  if (code === 'ILS') return `₪${Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+  return formatIntlMajor(Math.abs(value), code, 2);
 }
 
 export function formatDate(dateStr: string): string {

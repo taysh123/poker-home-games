@@ -1,7 +1,9 @@
-/** Helpers for integer-cent amounts used by local (guest-mode) games. */
+/** Helpers for integer-cent amounts. Currency-aware (V2.1 STEP 3.5): ILS keeps its bespoke format
+ *  (unchanged); other currencies use Intl. `code` defaults to the active currency (ILS until set). */
+import { getActiveCurrency, formatIntlCents, type CurrencyCode } from './currency';
 
-/** 5050 → "₪50.50", 5000 → "₪50", -4000 → "-₪40" */
-export function formatCents(cents: number): string {
+/** ILS bespoke format (legacy, unchanged): 5050 → "₪50.50", 5000 → "₪50", -4000 → "-₪40". */
+function formatIls(cents: number): string {
   const sign = cents < 0 ? '-' : '';
   const abs = Math.abs(cents);
   const whole = Math.floor(abs / 100);
@@ -11,9 +13,13 @@ export function formatCents(cents: number): string {
     : `${sign}₪${whole}.${String(frac).padStart(2, '0')}`;
 }
 
-/** Signed variant for P&L display: 4000 → "+₪40". */
-export function formatCentsSigned(cents: number): string {
-  return cents > 0 ? `+${formatCents(cents)}` : formatCents(cents);
+export function formatCents(cents: number, code: CurrencyCode = getActiveCurrency()): string {
+  return code === 'ILS' ? formatIls(cents) : formatIntlCents(cents, code);
+}
+
+/** Signed variant for P&L display: 4000 → "+₪40" / "+$40". */
+export function formatCentsSigned(cents: number, code: CurrencyCode = getActiveCurrency()): string {
+  return cents > 0 ? `+${formatCents(cents, code)}` : formatCents(cents, code);
 }
 
 /** "50" → 5000, "50.5" → 5050, "" / "abc" / negative → null. */

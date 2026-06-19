@@ -70,6 +70,7 @@ import { successNotification, errorNotification, lightTap } from '../utils/hapti
 import { showToast } from '../utils/toast';
 import { confirmDialog } from '../utils/confirm';
 import { formatMoney, formatPL } from '../utils/formatters';
+import { currencySymbol } from '../utils/currency';
 import ShareCard, { canShareImages, shareCardImage } from '../components/ShareCard';
 import { useActiveSession } from '../context/ActiveSessionContext';
 
@@ -158,6 +159,7 @@ export default function SessionScreen({ route, navigation }: Props) {
   const { sessionId, groupId } = route.params;
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
+  const sym = currencySymbol();
   const { refresh: refreshActiveSession, clear: clearActiveSession } = useActiveSession();
 
   const [session, setSession] = useState<SessionDetailDto | null>(null);
@@ -851,7 +853,7 @@ export default function SessionScreen({ route, navigation }: Props) {
         {/* ── Session meta ── */}
         <View style={styles.metaRow}>
           {session.chipRatio && (
-            <MetaChip label={`${session.chipRatio} chips/₪`} />
+            <MetaChip label={`${session.chipRatio} chips/${sym}`} />
           )}
           {session.defaultBuyIn && (
             <MetaChip label={`Default buy-in: ${formatMoney(session.defaultBuyIn)}`} />
@@ -872,7 +874,7 @@ export default function SessionScreen({ route, navigation }: Props) {
               style={[styles.chipPill, !useChips && styles.chipPillActive]}
               onPress={() => setUseChips(false)}
             >
-              <Text style={[styles.chipPillText, !useChips && styles.chipPillTextActive]}>₪ Money</Text>
+              <Text style={[styles.chipPillText, !useChips && styles.chipPillTextActive]}>{sym} Money</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.chipPill, useChips && styles.chipPillActive]}
@@ -1380,7 +1382,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                       style={[styles.toggleBtn, !useChips && styles.toggleBtnActive]}
                       onPress={() => setUseChips(false)}
                     >
-                      <Text style={[styles.toggleBtnText, !useChips && styles.toggleBtnTextActive]}>₪ Money</Text>
+                      <Text style={[styles.toggleBtnText, !useChips && styles.toggleBtnTextActive]}>{sym} Money</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.toggleBtn, useChips && styles.toggleBtnActive]}
@@ -1414,7 +1416,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                           onPress={() => setTxAmount(String(p))}
                         >
                           <Text style={[styles.presetChipText, txAmount === String(p) && styles.presetChipTextActive]}>
-                            ₪{p.toLocaleString()}
+                            {sym}{p.toLocaleString()}
                           </Text>
                         </TouchableOpacity>
                       ))}
@@ -1427,7 +1429,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                     = {formatMoney(toMoney(parseFloat(txAmount), session.chipRatio, true))}
                   </Text>
                 ) : (
-                  <Text style={styles.txUnit}>{useChips ? 'chips' : '₪'}</Text>
+                  <Text style={styles.txUnit}>{useChips ? 'chips' : sym}</Text>
                 )}
 
                 <View style={styles.sheetActions}>
@@ -1597,7 +1599,7 @@ export default function SessionScreen({ route, navigation }: Props) {
             {session.chipRatio && (
               <View style={styles.toggleRow}>
                 <TouchableOpacity style={[styles.toggleBtn, !useChips && styles.toggleBtnActive]} onPress={() => setUseChips(false)}>
-                  <Text style={[styles.toggleBtnText, !useChips && styles.toggleBtnTextActive]}>₪ Money</Text>
+                  <Text style={[styles.toggleBtnText, !useChips && styles.toggleBtnTextActive]}>{sym} Money</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.toggleBtn, useChips && styles.toggleBtnActive]} onPress={() => setUseChips(true)}>
                   <View style={styles.toggleBtnInner}>
@@ -1618,7 +1620,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                     <Avatar name={p.username} size={32} />
                     <View style={styles.endPlayerNameWrap}>
                       <Text style={styles.endPlayerName} numberOfLines={1}>{p.username}</Text>
-                      {isEmpty && <Text style={styles.endBustedHint}>Busted · {session.chipRatio && useChips ? '0 chips' : '₪0'}</Text>}
+                      {isEmpty && <Text style={styles.endBustedHint}>Busted · {session.chipRatio && useChips ? '0 chips' : `${sym}0`}</Text>}
                     </View>
                     {hasCashOut ? (
                       <Text style={styles.endPlayerCashed}>Cashed {formatMoney(bal!.totalCashOut)}</Text>
@@ -1631,7 +1633,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                           setOverrideBalance(false);
                         }}
                         keyboardType="decimal-pad"
-                        placeholder={session.chipRatio && useChips ? 'chips' : '₪'}
+                        placeholder={session.chipRatio && useChips ? 'chips' : sym}
                         placeholderTextColor={colors.textDim}
                       />
                     )}
@@ -1653,7 +1655,7 @@ export default function SessionScreen({ route, navigation }: Props) {
               const hasAnyEntered = Object.values(finalStacks).some(v => v.trim() !== '');
               const diff = totalEntered - expectedInUnits;
               const isBalanced = !hasAnyEntered || Math.abs(diff) < 0.5;
-              const unitLabel = session.chipRatio && useChips ? 'chips' : '₪';
+              const unitLabel = session.chipRatio && useChips ? 'chips' : sym;
               const fmt = (n: number) => session.chipRatio && useChips
                 ? Math.round(n).toLocaleString()
                 : formatMoney(n);
@@ -1921,7 +1923,7 @@ export default function SessionScreen({ route, navigation }: Props) {
               value={handPot}
               onChangeText={setHandPot}
               keyboardType="decimal-pad"
-              placeholder="₪"
+              placeholder={sym}
               placeholderTextColor={colors.textDim}
             />
 

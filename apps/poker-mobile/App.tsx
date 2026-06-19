@@ -21,6 +21,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { NavigationContainerRef } from '@react-navigation/native';
 import { applyInterDefault } from './src/theme/fonts';
 import { AuthProvider } from './src/context/AuthContext';
+import { CurrencyProvider } from './src/context/CurrencyContext';
 import { ActiveSessionProvider } from './src/context/ActiveSessionContext';
 import { LocalGamesProvider } from './src/context/LocalGamesContext';
 import { EntitlementsProvider } from './src/context/EntitlementsContext';
@@ -96,6 +97,7 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <CurrencyProvider>
       <AuthProvider>
         <PremiumProvider>
         <EntitlementsProvider>
@@ -118,6 +120,7 @@ export default function App() {
         </EntitlementsProvider>
         </PremiumProvider>
       </AuthProvider>
+      </CurrencyProvider>
     </GestureHandlerRootView>
   );
 }

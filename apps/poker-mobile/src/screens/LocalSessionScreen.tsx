@@ -25,6 +25,7 @@ import { useLocalGames } from '../context/LocalGamesContext';
 import { computeBalances } from '../local/settlements';
 import type { LocalPlayer } from '../local/types';
 import { formatCents, formatCentsSigned, parseAmountToCents } from '../utils/money';
+import { currencySymbol } from '../utils/currency';
 import { timeAgo } from '../utils/formatters';
 import { lightTap, successNotification } from '../utils/haptics';
 import { showToast } from '../utils/toast';
@@ -47,6 +48,7 @@ type AmountModalState =
 export default function LocalSessionScreen({ route, navigation }: Props) {
   const { gameId } = route.params;
   const insets = useSafeAreaInsets();
+  const sym = currencySymbol();
   const { games, addBuyIn, addCashOut, addPlayer, undoLastTxn, endGame, eliminatePlayer, undoElimination, deleteGame, syncClock, pauseClock, resumeClock, gotoLevel, finishTournamentEarly } =
     useLocalGames();
 
@@ -645,7 +647,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
               onChangeText={setAmountInput}
               placeholder={amountModal?.kind === 'addPlayer' ? 'Player name...' : '0'}
               keyboardType={amountModal?.kind === 'addPlayer' ? 'default' : 'decimal-pad'}
-              prefix={amountModal?.kind === 'addPlayer' ? undefined : '₪'}
+              prefix={amountModal?.kind === 'addPlayer' ? undefined : sym}
               error={amountError}
               autoFocus
             />
@@ -686,7 +688,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
                   <View key={p.id} style={styles.stackRow}>
                     <View style={styles.stackNameWrap}>
                       <Text style={styles.stackName} numberOfLines={1}>{p.name}</Text>
-                      {isEmpty && <Text style={styles.bustedHint}>Busted · ₪0</Text>}
+                      {isEmpty && <Text style={styles.bustedHint}>Busted · {sym}0</Text>}
                     </View>
                     <View style={styles.stackInputWrap}>
                       <AppTextInput
@@ -695,7 +697,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
                         onChangeText={v => setFinalStacks(prev => ({ ...prev, [p.id]: v }))}
                         placeholder="0"
                         keyboardType="decimal-pad"
-                        prefix="₪"
+                        prefix={sym}
                       />
                     </View>
                   </View>

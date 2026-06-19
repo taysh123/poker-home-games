@@ -26,6 +26,7 @@ import DealInOverlay from '../components/DealInOverlay';
 import ScreenHeader from '../components/ScreenHeader';
 import { getRecentGuests, recordGuestName } from '../utils/guestHistory';
 import { parseAmountToCents, formatCents } from '../utils/money';
+import { currencySymbol } from '../utils/currency';
 import { useLocalGames } from '../context/LocalGamesContext';
 import { showToast } from '../utils/toast';
 import { infoDialog } from '../utils/confirm';
@@ -53,6 +54,7 @@ const DEFAULT_PAYOUTS: Record<number, number[]> = {
  */
 export default function LocalNewGameScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const sym = currencySymbol();
   const { startGame, activeGame } = useLocalGames();
 
   const [step, setStep] = useState(1);
@@ -318,7 +320,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                   onChangeText={setEntryFee}
                   placeholder="50"
                   keyboardType="decimal-pad"
-                  prefix="₪"
+                  prefix={sym}
                   error={entryFeeError}
                   hint="everyone pays this into the prize pool"
                 />
@@ -490,7 +492,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                     onChangeText={setAddOnAmount}
                     placeholder="50"
                     keyboardType="decimal-pad"
-                    prefix="₪"
+                    prefix={sym}
                     hint="added to the prize pool"
                   />
                 )}
@@ -504,7 +506,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                     onChangeText={setChipRatio}
                     placeholder="e.g. 100"
                     keyboardType="decimal-pad"
-                    hint="chips per ₪"
+                    hint={`chips per ${sym}`}
                   />
                 </View>
                 <View style={styles.halfField}>
@@ -514,7 +516,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                     onChangeText={setDefaultBuyIn}
                     placeholder="0"
                     keyboardType="decimal-pad"
-                    prefix="₪"
+                    prefix={sym}
                     error={buyInError}
                   />
                 </View>
@@ -599,7 +601,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                       {defaultBuyIn && parseAmountToCents(defaultBuyIn) !== null
                         ? <Text style={styles.reviewChip}>{formatCents(parseAmountToCents(defaultBuyIn)!)} buy-in</Text>
                         : null}
-                      {chipRatio ? <Text style={styles.reviewChip}>{chipRatio} chips/₪</Text> : null}
+                      {chipRatio ? <Text style={styles.reviewChip}>{chipRatio} chips/{sym}</Text> : null}
                     </>
                   )}
                 </View>
