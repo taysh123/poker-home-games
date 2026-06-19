@@ -388,3 +388,37 @@ Coach itself stays flag-gated (`coach` OFF in prod) so nothing user-facing chang
 **Remaining before paid launch (B4 scope):** none structurally — the client is server-authoritative behind
 `SERVER_AUTHORITATIVE`. Flipping the `coach` feature flag ON (and a real AI provider server-side) lights it
 up. B5 adds top-ups, fraud/velocity, and observability.
+
+## B5 — Top-ups, fraud tuning, observability (EXECUTED on `feature/v2-poker-platform`; NO live billing)
+
+The safe-launch hardening layer. All new surfaces are fail-closed and OFF by default (top-ups disabled,
+fraud blocking advisory) — detection + audit always run, but nothing blocks real users or grants credits
+until explicitly configured.
+
+- **Top-ups (config-driven):** `TopUpSettings { Enabled=false; Bundles[] }` (default disabled + empty ⇒
+  redeem always fails closed). `ITopUpCatalog`/`TopUpCatalog` bridges config → handlers.
+  `GET /api/billing/topups` (`GetTopUpBundlesQuery`) lists bundles; `POST /api/billing/topups/redeem`
+  (`RedeemTopUpCommand`) grants via `ICreditLedger.GrantTopUpAsync` (idempotent on `topup:{store}:{token}`),
+  audits `CreditTopUp`, returns `TopUpResultDto`. Unknown/disabled product ⇒ 400. **Consumable receipt
+  verification is a deploy-time seam** — safe because top-ups are disabled by default.
+- **Fraud / abuse:** `DeviceBinding` entity (unique `(UserId, DeviceId)`) — migration
+  `B5_FraudAndObservability` (**codegen only — NOT applied**). `FraudSettings` (tunable thresholds +
+  weights; `EnforceBlocking=false` by default). Pure `FraudScoring.Evaluate(accountsOnDevice,
+  analysesInWindow, settings)` → `AbuseAssessment(Score, ShouldBlock, Signals)` (multi-account + velocity;
+  `ShouldBlock` only when enforced AND over `BlockScore`). `IFraudEvaluator`/`FraudEvaluator` records
+  bindings + scores from the ledger, audits `Fraud` signals. Wired into `AnalyzeHand` via an OPTIONAL
+  `DeviceId?` (backward-compatible): record + evaluate; blocks only when enforcement is on (advisory by default).
+- **Observability / audit:** `IAuditLog`/`AuditLog` (structured, alert-ready, never throws). Categories:
+  `CreditSpend`, `CreditTopUp`, `AiUsage`, `AiCost` (cost hook for future paid providers),
+  `SubscriptionLifecycle`, `WebhookProcessing`, `Fraud`. Wired into `AnalyzeHand` (spend + usage + cost),
+  `ProcessStoreNotification` (webhook processed/duplicate + lifecycle), `ValidatePurchase` (lifecycle),
+  `RedeemTopUp` (top-up), `FraudEvaluator` (signals).
+- **Tests:** `src/PokerApp.Tests` now **66** (+17): fraud scoring (signals/thresholds/block-gating),
+  fraud evaluator (binding upsert, multi-account, velocity, audit), top-ups (catalog fail-closed,
+  list, redeem disabled/unknown/known + idempotent + audit), audit wiring on analyze/validate, and
+  `AnalyzeHand` block-when-enforced. `dotnet build` + `dotnet test` green.
+
+**Remaining before paid launch (B5 scope):** apply the migration to prod; wire consumable receipt
+verification before enabling top-ups; tune `FraudSettings` against real traffic before flipping
+`EnforceBlocking=true`; ship the device id from the client into `AnalyzeHand.DeviceId` to activate
+device-based signals end-to-end.

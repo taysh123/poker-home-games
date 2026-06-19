@@ -52,3 +52,12 @@ internal sealed class PlainPasswordHasher : IPasswordHasher
     public string Hash(string password) => "hash:" + password;
     public bool Verify(string password, string hash) => hash == "hash:" + password;
 }
+
+/// <summary>Captures audit events so tests can assert observability wiring.</summary>
+internal sealed class CapturingAuditLog : IAuditLog
+{
+    public readonly List<(AuditCategory Category, string Action, Guid? UserId)> Events = new();
+    public void Record(AuditCategory category, string action, Guid? userId = null, object? data = null)
+        => Events.Add((category, action, userId));
+    public bool Has(AuditCategory category) => Events.Exists(e => e.Category == category);
+}

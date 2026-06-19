@@ -31,6 +31,8 @@ public interface IApplicationDbContext
     DbSet<CreditLedgerEntry> CreditLedgerEntries { get; }
     DbSet<CreditBalance> CreditBalances { get; }
     DbSet<StoreWebhookEvent> StoreWebhookEvents { get; }
+    // B5 — fraud / abuse
+    DbSet<DeviceBinding> DeviceBindings { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

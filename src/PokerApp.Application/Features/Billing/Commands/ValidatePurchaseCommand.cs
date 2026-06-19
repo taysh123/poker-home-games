@@ -26,6 +26,7 @@ public sealed class ValidatePurchaseCommandHandler(
     IBillingVerifier verifier,
     IApplicationDbContext context,
     IEntitlementService entitlements,
+    IAuditLog audit,
     ICurrentUserService currentUser) : IRequestHandler<ValidatePurchaseCommand, EntitlementDto>
 {
     public async Task<EntitlementDto> Handle(ValidatePurchaseCommand request, CancellationToken cancellationToken)
@@ -53,6 +54,8 @@ public sealed class ValidatePurchaseCommandHandler(
         }
 
         await context.SaveChangesAsync(cancellationToken);
+        audit.Record(AuditCategory.SubscriptionLifecycle, "validated", currentUser.UserId,
+            new { store = request.Store, verified.ProductId, verified.IsSandbox, status = verified.Status.ToString() });
         return await entitlements.GetAsync(currentUser.UserId, cancellationToken);
     }
 }

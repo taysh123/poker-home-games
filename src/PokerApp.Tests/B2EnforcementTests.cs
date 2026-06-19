@@ -8,6 +8,7 @@ using PokerApp.Domain.Enums;
 using PokerApp.Infrastructure.Identity;
 using PokerApp.Infrastructure.Persistence;
 using PokerApp.Infrastructure.Services;
+using PokerApp.Infrastructure.Settings;
 using Xunit;
 
 namespace PokerApp.Tests;
@@ -150,8 +151,12 @@ public class AnalyzeHandTests
             Premium = new AiCreditPolicySettings { Kind = "monthly", Credits = 30, MinIntervalSeconds = 0 },
         });
 
-    private static AnalyzeHandCommandHandler Handler(AppDbContext ctx, Guid uid, ICoachAiProvider provider) =>
-        new(new EntitlementService(ctx), Policies(), new CreditLedger(ctx), provider, new FakeCurrentUser(uid));
+    private static AnalyzeHandCommandHandler Handler(AppDbContext ctx, Guid uid, ICoachAiProvider provider)
+    {
+        var audit = new CapturingAuditLog();
+        var fraud = new FraudEvaluator(ctx, new FraudSettings(), audit);
+        return new(new EntitlementService(ctx), Policies(), new CreditLedger(ctx), provider, fraud, audit, new FakeCurrentUser(uid));
+    }
 
     private static AnalyzeHandCommand Cmd(string key) => new("manual", null, "AKs", "BTN", null, key);
 
@@ -192,7 +197,7 @@ public class BillingFlowTests
         using var ctx = TestInfra.NewContext();
         var uid = Guid.NewGuid();
         var handler = new ValidatePurchaseCommandHandler(
-            new MockBillingVerifier(), ctx, new EntitlementService(ctx), new FakeCurrentUser(uid));
+            new MockBillingVerifier(), ctx, new EntitlementService(ctx), new CapturingAuditLog(), new FakeCurrentUser(uid));
 
         var ent = await handler.Handle(new ValidatePurchaseCommand("apple", "receipt-xyz"), default);
         Assert.True(ent.IsPremium);
@@ -208,7 +213,7 @@ public class BillingFlowTests
             DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(20), true, true, DateTime.UtcNow));
         await ctx.SaveChangesAsync();
 
-        var handler = new ProcessStoreNotificationCommandHandler(ctx);
+        var handler = new ProcessStoreNotificationCommandHandler(ctx, new CapturingAuditLog());
         var notif = new StoreNotificationDto("uuid-1", "refund", "txn-9", DateTime.UtcNow.AddMinutes(1), null);
 
         await handler.Handle(new ProcessStoreNotificationCommand("apple", notif), default);

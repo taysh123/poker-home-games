@@ -83,6 +83,15 @@ public static class DependencyInjection
             services.AddScoped<IBillingVerifier, MockBillingVerifier>();
         }
 
+        // B5 — fraud/abuse + observability + top-ups (safe defaults: blocking off, top-ups disabled).
+        var fraudSettings = configuration.GetSection("FraudSettings").Get<FraudSettings>() ?? new FraudSettings();
+        var topUpSettings = configuration.GetSection("TopUpSettings").Get<TopUpSettings>() ?? new TopUpSettings();
+        services.AddSingleton(fraudSettings);
+        services.AddSingleton(topUpSettings);
+        services.AddSingleton<ITopUpCatalog, TopUpCatalog>();
+        services.AddSingleton<IAuditLog, AuditLog>();
+        services.AddScoped<IFraudEvaluator, FraudEvaluator>();
+
         services.Configure<WebSettings>(configuration.GetSection("AppSettings"));
         services.AddSingleton<IWebSettings>(sp =>
             sp.GetRequiredService<IOptions<WebSettings>>().Value);

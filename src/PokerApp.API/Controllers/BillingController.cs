@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PokerApp.Application.Common.Interfaces;
 using PokerApp.Application.Features.Billing.Commands;
+using PokerApp.Application.Features.Billing.Commands.RedeemTopUp;
+using PokerApp.Application.Features.Billing.Queries.GetTopUpBundles;
 using PokerApp.Application.Features.Entitlements.Queries;
 
 namespace PokerApp.API.Controllers;
@@ -23,5 +25,18 @@ public class BillingController(IMediator mediator) : ControllerBase
     [ProducesResponseType(typeof(EntitlementDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Validate([FromBody] ValidatePurchaseCommand command, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(command, cancellationToken));
+
+    /// <summary>List configured consumable AI-credit bundles (empty when top-ups are disabled).</summary>
+    [HttpGet("billing/topups")]
+    [ProducesResponseType(typeof(IReadOnlyList<TopUpBundleDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetTopUps(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetTopUpBundlesQuery(), cancellationToken));
+
+    /// <summary>Redeem a consumable top-up bundle (fails closed when disabled / unknown product).</summary>
+    [HttpPost("billing/topups/redeem")]
+    [ProducesResponseType(typeof(TopUpResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> RedeemTopUp([FromBody] RedeemTopUpCommand command, CancellationToken cancellationToken)
         => Ok(await mediator.Send(command, cancellationToken));
 }

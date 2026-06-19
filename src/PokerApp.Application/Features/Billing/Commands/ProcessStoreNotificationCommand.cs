@@ -19,7 +19,8 @@ public sealed record ProcessStoreNotificationCommand(string Store, StoreNotifica
 
 /// <summary>Idempotent webhook processing → drives server-authoritative subscription state.</summary>
 public sealed class ProcessStoreNotificationCommandHandler(
-    IApplicationDbContext context) : IRequestHandler<ProcessStoreNotificationCommand, Unit>
+    IApplicationDbContext context,
+    IAuditLog audit) : IRequestHandler<ProcessStoreNotificationCommand, Unit>
 {
     public async Task<Unit> Handle(ProcessStoreNotificationCommand request, CancellationToken cancellationToken)
     {
@@ -28,7 +29,11 @@ public sealed class ProcessStoreNotificationCommandHandler(
 
         // Idempotency / replay protection.
         if (await context.StoreWebhookEvents.AnyAsync(e => e.NotificationUuid == n.NotificationUuid, cancellationToken))
+        {
+            audit.Record(AuditCategory.WebhookProcessing, "duplicate_ignored", null,
+                new { store = request.Store, n.NotificationUuid });
             return Unit.Value;
+        }
 
         var sub = await context.Subscriptions.FirstOrDefaultAsync(
             s => s.Store == store && s.OriginalTransactionId == n.OriginalTransactionId, cancellationToken);
@@ -51,6 +56,12 @@ public sealed class ProcessStoreNotificationCommandHandler(
         await context.StoreWebhookEvents.AddAsync(
             StoreWebhookEvent.Create(store, n.NotificationUuid, n.Type), cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
+
+        audit.Record(AuditCategory.WebhookProcessing, "processed", sub?.UserId,
+            new { store = request.Store, n.Type, n.OriginalTransactionId });
+        if (sub is not null)
+            audit.Record(AuditCategory.SubscriptionLifecycle, n.Type, sub.UserId,
+                new { store = request.Store, status = sub.Status.ToString() });
         return Unit.Value;
     }
 }
