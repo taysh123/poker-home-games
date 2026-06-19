@@ -13,6 +13,8 @@ import { typography } from '../../../theme/typography';
 import { spacing } from '../../../theme/spacing';
 import { radii } from '../../../theme/radii';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
+import CrossPillarCTA from '../../../components/CrossPillarCTA';
+import { isFeatureEnabled } from '../../../config/features';
 import { useStudy } from '../state/StudyContext';
 import { generateSpot, evaluateSpot, type Spot, type SpotResult } from '../logic/trainer';
 import type { RangeAction } from '../types';
@@ -73,6 +75,14 @@ export default function SpotTrainerScreen() {
               setSpot(generateSpot(dataset, Math.random));
             }} />
             <PrimaryButton label="Done" variant="outline" onPress={() => navigation.goBack()} />
+            {isFeatureEnabled('retention') && isFeatureEnabled('coach') && (
+              <CrossPillarCTA
+                icon="sparkles"
+                label="Try a real hand with AI Coach"
+                sub="Turn this study into a live read"
+                onPress={() => navigation.navigate('CoachInput', { method: 'manual' })}
+              />
+            )}
           </View>
         </View>
       </Screen>

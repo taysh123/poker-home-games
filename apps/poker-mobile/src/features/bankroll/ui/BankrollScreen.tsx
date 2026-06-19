@@ -9,6 +9,8 @@ import Card from '../../../components/Card';
 import SectionTitle from '../../../components/SectionTitle';
 import PrimaryButton from '../../../components/PrimaryButton';
 import EmptyState from '../../../components/EmptyState';
+import CrossPillarCTA from '../../../components/CrossPillarCTA';
+import { isFeatureEnabled } from '../../../config/features';
 import PressableScale from '../../../components/motion/PressableScale';
 import AnimatedNumber from '../../../components/motion/AnimatedNumber';
 import { colors } from '../../../theme/colors';
@@ -138,6 +140,17 @@ export default function BankrollScreen({ embedded = false }: { embedded?: boolea
         </View>
 
         <PrimaryButton label="Log a Session" variant="gradient" onPress={() => goLog()} />
+
+        {isFeatureEnabled('retention') && isFeatureEnabled('study') && (
+          <View style={{ marginTop: spacing.md }}>
+            <CrossPillarCTA
+              icon="school-outline"
+              label="Sharpen up — drill a spot"
+              sub="A few preflop reps between sessions"
+              onPress={() => navigation.navigate('StudyTrainer', { mode: 'spot' })}
+            />
+          </View>
+        )}
       </ScrollView>
     </Screen>
   );

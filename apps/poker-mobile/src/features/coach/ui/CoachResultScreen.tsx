@@ -13,6 +13,8 @@ import { typography } from '../../../theme/typography';
 import { spacing } from '../../../theme/spacing';
 import { radii } from '../../../theme/radii';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
+import CrossPillarCTA from '../../../components/CrossPillarCTA';
+import { isFeatureEnabled } from '../../../config/features';
 import { useCoach } from '../state/CoachContext';
 import type { CoachPoint } from '../types';
 
@@ -78,6 +80,17 @@ export default function CoachResultScreen() {
                 </View>
               ))}
             </Card>
+          </View>
+        )}
+
+        {isFeatureEnabled('retention') && isFeatureEnabled('study') && (
+          <View style={{ marginTop: spacing.md }}>
+            <CrossPillarCTA
+              icon="school-outline"
+              label="Drill this spot"
+              sub="Practice the preflop decision in Study"
+              onPress={() => navigation.navigate('StudyTrainer', { mode: 'spot' })}
+            />
           </View>
         )}
 

@@ -21,6 +21,8 @@ import { useLocalGames } from '../context/LocalGamesContext';
 import { settleGame } from '../local/settlements';
 import { contributionCents, tournamentResult } from '../local/tournament';
 import ShareCard, { canShareImages, shareCardImage, ShareCardData } from '../components/ShareCard';
+import CrossPillarCTA from '../components/CrossPillarCTA';
+import { isFeatureEnabled } from '../config/features';
 import { formatDate } from '../utils/formatters';
 import { formatCents, formatCentsSigned } from '../utils/money';
 import { formatDuration } from '../utils/formatters';
@@ -280,6 +282,26 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
         )}
 
         <View style={{ height: 32 }} />
+        {isFeatureEnabled('retention') && (isFeatureEnabled('bankroll') || isFeatureEnabled('coach')) && (
+          <View style={{ gap: 10, marginBottom: 16 }}>
+            {isFeatureEnabled('bankroll') && (
+              <CrossPillarCTA
+                icon="wallet-outline"
+                label="Log to Bankroll"
+                sub="Track this session in your bankroll"
+                onPress={() => navigation.navigate('LogSession')}
+              />
+            )}
+            {isFeatureEnabled('coach') && (
+              <CrossPillarCTA
+                icon="sparkles"
+                label="Analyze a hand"
+                sub="Get an AI read on a tough spot"
+                onPress={() => navigation.navigate('CoachInput', { method: 'manual' })}
+              />
+            )}
+          </View>
+        )}
         <PrimaryButton label="Done" onPress={() => navigation.popToTop()} />
         <View style={{ height: 40 }} />
       </ScrollView>
