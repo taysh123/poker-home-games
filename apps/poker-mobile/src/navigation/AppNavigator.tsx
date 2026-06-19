@@ -39,6 +39,7 @@ import JoinSessionScreen from '../screens/JoinSessionScreen';
 import JoinGroupScreen from '../screens/JoinGroupScreen';
 import PlayerProfileScreen from '../screens/PlayerProfileScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
+import OnboardingV2Screen from '../screens/OnboardingV2Screen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import LocalNewGameScreen from '../screens/LocalNewGameScreen';
 import LocalSessionScreen from '../screens/LocalSessionScreen';
@@ -478,7 +479,11 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
           // run on-device; Groups/Stats upsell sign-in; Login is a modal, not a wall.
           <>
             {!hasSeenOnboarding && (
-              <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false, gestureEnabled: false }} />
+              <Stack.Screen
+                name="Onboarding"
+                component={isFeatureEnabled('onboardingV2') ? OnboardingV2Screen : OnboardingScreen}
+                options={{ headerShown: false, gestureEnabled: false }}
+              />
             )}
             <Stack.Screen name="MainTabs" component={GuestTabNavigator} options={{ headerShown: false }} />
             <Stack.Screen name="LocalNewGame"        component={LocalNewGameScreen}        options={{ headerShown: false }} />

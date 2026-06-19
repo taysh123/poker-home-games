@@ -21,6 +21,7 @@ import { useLocalGames } from '../context/LocalGamesContext';
 import { gameResult } from '../local/localStats';
 import { formatCents } from '../utils/money';
 import { timeAgo } from '../utils/formatters';
+import { markSignupIntent } from '../utils/analytics';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -128,8 +129,8 @@ export default function GuestHomeScreen() {
         </View>
       )}
 
-      {/* Sign-in upsell */}
-      <TouchableOpacity style={styles.upsellCard} onPress={() => navigation.navigate('Login')} activeOpacity={0.85}>
+      {/* Sign-in upsell — contextual account creation (value already shown) */}
+      <TouchableOpacity style={styles.upsellCard} onPress={() => { markSignupIntent(); navigation.navigate('Login'); }} activeOpacity={0.85}>
         <View style={styles.upsellIconWrap}>
           <Ionicons name="cloud-upload-outline" size={20} color={colors.gold} />
         </View>

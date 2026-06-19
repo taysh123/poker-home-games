@@ -3,6 +3,7 @@ import * as SecureStore from '../utils/storage';
 import { loginApi, registerApi, logoutApi, googleLoginApi, appleLoginApi, AuthUser, AuthResponse } from '../api/authApi';
 import { registerUnauthenticatedCallback } from '../api/apiClient';
 import { registerForPushAsync, unregisterPushAsync } from '../hooks/usePushNotifications';
+import { track, consumeSignupIntent } from '../utils/analytics';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -56,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Persist tokens + user info to encrypted storage and update state
-  async function saveSession(response: AuthResponse) {
+  async function saveSession(response: AuthResponse, opts: { method: string; isNewAccount?: boolean }) {
     const { accessToken, refreshToken, ...userData } = response;
     setUser(userData); // update state immediately — drives navigation to Home
     try {
@@ -71,6 +72,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     // Best-effort push registration (native only; no-op on web)
     registerForPushAsync(accessToken);
+    // Funnel: account_created fires for a definite new account (email register) or when the
+    // user entered sign-in with onboarding signup intent (social — no isNewUser flag yet).
+    const hadIntent = await consumeSignupIntent();
+    if (opts.isNewAccount || hadIntent) track('account_created', { method: opts.method });
   }
 
   // Wipe all stored auth data and clear state
@@ -86,22 +91,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function login(email: string, password: string, rememberMe = true) {
     SecureStore.setSessionMode(!rememberMe);
     const response = await loginApi(email, password);
-    await saveSession(response);
+    await saveSession(response, { method: 'email' });
   }
 
   async function register(username: string, email: string, password: string) {
     const response = await registerApi(username, email, password);
-    await saveSession(response);
+    await saveSession(response, { method: 'email', isNewAccount: true });
   }
 
   async function googleLogin(idToken: string) {
     const response = await googleLoginApi(idToken);
-    await saveSession(response);
+    await saveSession(response, { method: 'google' });
   }
 
   async function appleLogin(identityToken: string, nonce?: string) {
     const response = await appleLoginApi(identityToken, nonce);
-    await saveSession(response);
+    await saveSession(response, { method: 'apple' });
   }
 
   async function updateUser(updates: Partial<AuthUser>) {

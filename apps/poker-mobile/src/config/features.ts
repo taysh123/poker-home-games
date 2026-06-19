@@ -14,6 +14,7 @@ export type FeatureFlag =
   | 'coach'     // Improve pillar — AI hand-analysis coach (Phase 3)
   | 'paywall'   // Monetization — premium paywall + upgrade prompts (Phase 5)
   | 'nav5'      // V2.1 — 5-tab IA (Home/Track/Study/Coach/Groups) + Track hub
+  | 'onboardingV2' // V2.1 — pillar-led onboarding + starting-point router
   | 'v2Splash'; // dual-brand (True Story Labs → T Poker) launch splash
 
 /** Production defaults — every new surface OFF so prod behaves exactly as today. */
@@ -23,6 +24,7 @@ const PROD_FLAGS: Record<FeatureFlag, boolean> = {
   coach: false,
   paywall: false,
   nav5: false,
+  onboardingV2: false,
   v2Splash: false,
 };
 
@@ -34,6 +36,7 @@ const DEV_OVERRIDES: Partial<Record<FeatureFlag, boolean>> = {
   coach: true,     // Phase 3 — preview the AI coach scaffolding in dev (prod stays OFF)
   paywall: true,   // Phase 5 — preview the paywall + upgrade flow in dev (prod stays OFF)
   nav5: true,      // V2.1 — preview the 5-tab IA + Track hub in dev (prod stays OFF)
+  onboardingV2: true, // V2.1 — preview the pillar-led onboarding in dev (prod stays OFF)
 };
 
 const resolved: Record<FeatureFlag, boolean> = {

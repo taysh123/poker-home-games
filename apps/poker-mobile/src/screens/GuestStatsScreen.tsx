@@ -14,6 +14,7 @@ import { useLocalGames } from '../context/LocalGamesContext';
 import { computeLocalStats } from '../local/localStats';
 import { formatCents } from '../utils/money';
 import { timeAgo } from '../utils/formatters';
+import { markSignupIntent } from '../utils/analytics';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -35,7 +36,7 @@ export default function GuestStatsScreen({ embedded = false }: { embedded?: bool
           subtitle={
             'Finish a game and your table stats show up here.\n\nWant lifetime P&L, win rate, and head-to-head records? That comes with a free account.'
           }
-          action={{ label: 'Sign In', onPress: () => navigation.navigate('Login') }}
+          action={{ label: 'Sign In', onPress: () => { markSignupIntent(); navigation.navigate('Login'); } }}
         />
       </Screen>
     );
