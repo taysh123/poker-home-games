@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Linking } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { DMSerifDisplay_400Regular } from '@expo-google-fonts/dm-serif-display';
 import {
   useFonts,
@@ -97,6 +98,7 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
       <CurrencyProvider>
       <AuthProvider>
         <PremiumProvider>
@@ -121,6 +123,7 @@ export default function App() {
         </PremiumProvider>
       </AuthProvider>
       </CurrencyProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
