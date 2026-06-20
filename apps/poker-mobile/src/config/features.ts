@@ -20,6 +20,7 @@ export type FeatureFlag =
   | 'currencyPrefs' // V2.1 STEP 3.5 — preferred currency + Intl formatting (off ⇒ ₪ ILS)
   | 'polish'    // V2.1 STEP 4 — UX polish (error/offline states, contrast, reduced-motion, etc.)
   | 'coachScreenshot' // V2.1 STEP 4 — Coach screenshot input (hidden until real image pipeline ships)
+  | 'immersive' // V2.1 STEP 5.3 — immersive poker-table presentation (session/study/training/coach)
   | 'v2Splash'; // dual-brand (True Story Labs → T Poker) launch splash
 
 /** Production defaults — every new surface OFF so prod behaves exactly as today. */
@@ -35,7 +36,29 @@ const PROD_FLAGS: Record<FeatureFlag, boolean> = {
   currencyPrefs: false,
   polish: false,
   coachScreenshot: false,
+  immersive: false,
   v2Splash: false,
+};
+
+/**
+ * Beta release profile (EAS `beta` profile sets EXPO_PUBLIC_APP_VARIANT=beta). Enables the full V2
+ * testing experience in a REAL release build while keeping billing/paywall OFF and the screenshot
+ * placeholder hidden. Production builds (no variant) are unaffected → behave exactly as today.
+ */
+const BETA_FLAGS: Partial<Record<FeatureFlag, boolean>> = {
+  nav5: true,
+  onboardingV2: true,
+  bankroll: true,
+  study: true,
+  coach: true,            // shown only as a clearly-labeled DEMO (mock provider)
+  retention: true,
+  reminders: true,
+  currencyPrefs: true,
+  polish: true,
+  immersive: true,
+  v2Splash: true,
+  paywall: false,         // OFF in beta — no production paywall
+  coachScreenshot: false, // OFF — partial upload not exposed
 };
 
 /** Dev-only previews. Does not affect production builds (`__DEV__ === false`). */
@@ -51,11 +74,19 @@ const DEV_OVERRIDES: Partial<Record<FeatureFlag, boolean>> = {
   reminders: true, // V2.1 STEP 3 — preview local reminders in dev (prod stays OFF)
   currencyPrefs: true, // V2.1 STEP 3.5 — preview currency prefs in dev (prod stays OFF)
   polish: true,    // V2.1 STEP 4 — preview UX polish in dev (prod stays OFF)
+  immersive: true, // V2.1 STEP 5.3 — preview the immersive poker-table UI in dev (prod stays OFF)
   // coachScreenshot intentionally OFF in dev too — hidden until the real image pipeline ships.
 };
 
+/**
+ * Resolution order (later wins): production defaults → beta overrides (release beta builds) →
+ * dev overrides. Production builds get PROD_FLAGS only, so prod behavior is byte-identical.
+ */
+const isBeta = process.env.EXPO_PUBLIC_APP_VARIANT === 'beta';
+
 const resolved: Record<FeatureFlag, boolean> = {
   ...PROD_FLAGS,
+  ...(isBeta ? BETA_FLAGS : {}),
   ...(__DEV__ ? DEV_OVERRIDES : {}),
 };
 

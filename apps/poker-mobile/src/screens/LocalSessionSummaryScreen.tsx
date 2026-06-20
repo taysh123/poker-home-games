@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -22,6 +23,8 @@ import { settleGame } from '../local/settlements';
 import { contributionCents, tournamentResult } from '../local/tournament';
 import ShareCard, { canShareImages, shareCardImage, ShareCardData } from '../components/ShareCard';
 import CrossPillarCTA from '../components/CrossPillarCTA';
+import TableScene from '../components/table/TableScene';
+import type { SeatProps } from '../components/table/TableSeat';
 import { isFeatureEnabled } from '../config/features';
 import { formatDate } from '../utils/formatters';
 import { formatCents, formatCentsSigned } from '../utils/money';
@@ -31,6 +34,9 @@ import AnimatedNumber from '../components/motion/AnimatedNumber';
 import Celebration from '../components/motion/Celebration';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocalSessionSummary'>;
+
+const TABLE_W = Dimensions.get('window').width - 40;
+const TABLE_H = Math.round(TABLE_W * 0.62);
 
 /** Results + cash settlements for a finished local game. */
 export default function LocalSessionSummaryScreen({ route, navigation }: Props) {
@@ -88,6 +94,11 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
   }
 
   const playerName = (id: string) => game.players.find(p => p.id === id)?.name ?? 'Unknown';
+
+  // Immersive: seat each player around the table with their net result; pot = total pot.
+  const tableSeats: SeatProps[] = (
+    (podium && podium.length ? podium : results) as Array<{ player: { name: string }; netCents: number }>
+  ).map(s => ({ name: s.player.name, sub: formatCentsSigned(s.netCents) }));
 
   // Champion spotlight for the celebration hero (tournament winner or top cash winner).
   let championName: string | null = null;
@@ -170,6 +181,15 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+        {isFeatureEnabled('immersive') && tableSeats.length > 0 && (
+          <TableScene
+            players={tableSeats}
+            width={TABLE_W}
+            height={TABLE_H}
+            potCents={totalPotCents}
+            style={styles.tableScene}
+          />
+        )}
         {/* Game over hero (celebration) */}
         <View style={styles.heroCard}>
           <LinearGradient
@@ -339,6 +359,7 @@ const styles = StyleSheet.create({
 
   scroll: { flex: 1 },
   content: { padding: 20, gap: 10 },
+  tableScene: { alignSelf: 'center', marginBottom: 16 },
 
   heroCard: {
     alignItems: 'center',

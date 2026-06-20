@@ -17,6 +17,7 @@ import type { RootStackParamList } from '../../../navigation/AppNavigator';
 import { useStudy } from '../state/StudyContext';
 import { studyStats } from '../logic/progress';
 import { isFeatureEnabled } from '../../../config/features';
+import TableBackdrop from '../../../components/table/TableBackdrop';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 const todayKey = () => new Date().toISOString().slice(0, 10);
@@ -31,6 +32,7 @@ export default function StudyScreen() {
 
   return (
     <Screen animated>
+      {isFeatureEnabled('immersive') && <TableBackdrop />}
       <BrandHeader variant="brand" title="Study" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Streak hero */}

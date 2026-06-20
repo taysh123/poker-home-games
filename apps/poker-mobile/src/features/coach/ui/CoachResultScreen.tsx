@@ -14,6 +14,7 @@ import { spacing } from '../../../theme/spacing';
 import { radii } from '../../../theme/radii';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
 import CrossPillarCTA from '../../../components/CrossPillarCTA';
+import TableBackdrop from '../../../components/table/TableBackdrop';
 import { isFeatureEnabled } from '../../../config/features';
 import { useCoach } from '../state/CoachContext';
 import type { CoachPoint } from '../types';
@@ -38,6 +39,7 @@ export default function CoachResultScreen() {
 
   return (
     <Screen>
+      {isFeatureEnabled('immersive') && <TableBackdrop />}
       <BrandHeader variant="screen" title="Coaching" subtitle={analysis.inputSummary} onBack={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.demoBanner}>

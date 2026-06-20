@@ -23,6 +23,15 @@ export const colors = {
   bgOverlay: 'rgba(15,25,35,0.6)',
   // ── Velvet Table additions (additive — never rename the tokens above) ──
   backgroundDeep: '#0A111B',
+  // ── Immersive poker-table (STEP 5.3) — deep green felt that stays on-brand with navy/gold ──
+  felt: '#15413A',
+  feltDeep: '#0C2A26',
+  feltRim: '#0A211D',
+};
+
+/** Felt table gradient (center → edge) for the immersive PokerTable surface. */
+export const tableGradients = {
+  felt: ['#1A4B43', '#15413A', '#0C2A26'] as const,
 };
 
 /** Static gradient stops for expo-linear-gradient (Velvet Table system). */

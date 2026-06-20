@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Screen from '../../../components/Screen';
@@ -19,11 +19,18 @@ import { useStudy } from '../state/StudyContext';
 import { track } from '../../../utils/analytics';
 import { generateSpot, evaluateSpot, type Spot, type SpotResult } from '../logic/trainer';
 import type { RangeAction } from '../types';
+import PokerTable from '../../../components/table/PokerTable';
+import TableSeat from '../../../components/table/TableSeat';
+import { HoleCards } from '../../../components/table/PlayingCard';
+import type { PokerPosition, PlayerAction } from '../../../utils/pokerTable';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Rt = RouteProp<RootStackParamList, 'StudyTrainer'>;
 
 const QUIZ_LENGTH = 10;
+const SCREEN_W = Dimensions.get('window').width;
+const TABLE_W = SCREEN_W - spacing.xl * 2;
+const TABLE_H = Math.round(TABLE_W * 0.6);
 const ACTION_LABEL: Record<RangeAction, string> = { fold: 'Fold', call: 'Call', raise: 'Raise' };
 
 export default function SpotTrainerScreen() {
@@ -123,18 +130,51 @@ export default function SpotTrainerScreen() {
             <Text style={styles.statItem}>Accuracy <Text style={styles.statVal}>{answered > 0 ? `${Math.round((correctCount / answered) * 100)}%` : '—'}</Text></Text>
           </View>
         )}
-        <Card style={styles.spotCard}>
-          <Text style={styles.context}>{spot.range.stackBb}bb · {spot.range.tableSize}-max</Text>
-          <Text style={styles.prompt}>
-            {spot.range.scenario === 'RFI'
-              ? `${spot.range.heroPosition} — first in. Open or fold?`
-              : `${spot.range.heroPosition} vs ${spot.range.villainPosition} open. Your move?`}
-          </Text>
-          <HandCards hand={spot.hand} />
-          {spot.range.openSizeBb ? (
-            <Text style={styles.sizing}>Open size ≈ {spot.range.openSizeBb}bb</Text>
-          ) : null}
-        </Card>
+        {isFeatureEnabled('immersive') ? (
+          <View style={styles.tableWrap}>
+            <Text style={styles.context}>{spot.range.stackBb}bb · {spot.range.tableSize}-max</Text>
+            <Text style={styles.prompt}>
+              {spot.range.scenario === 'RFI'
+                ? `${spot.range.heroPosition} — first in. Open or fold?`
+                : `${spot.range.heroPosition} vs ${spot.range.villainPosition} open. Your move?`}
+            </Text>
+            <PokerTable
+              width={TABLE_W}
+              height={TABLE_H}
+              seats={
+                <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                  <TableSeat
+                    x={TABLE_W / 2}
+                    y={TABLE_H - 20}
+                    name="You"
+                    position={spot.range.heroPosition as PokerPosition}
+                    action={result ? (result.chosen as PlayerAction) : undefined}
+                    isDealer
+                    active
+                  />
+                </View>
+              }
+            >
+              <HoleCards hand={spot.hand} />
+            </PokerTable>
+            {spot.range.openSizeBb ? (
+              <Text style={styles.sizing}>Open size ≈ {spot.range.openSizeBb}bb</Text>
+            ) : null}
+          </View>
+        ) : (
+          <Card style={styles.spotCard}>
+            <Text style={styles.context}>{spot.range.stackBb}bb · {spot.range.tableSize}-max</Text>
+            <Text style={styles.prompt}>
+              {spot.range.scenario === 'RFI'
+                ? `${spot.range.heroPosition} — first in. Open or fold?`
+                : `${spot.range.heroPosition} vs ${spot.range.villainPosition} open. Your move?`}
+            </Text>
+            <HandCards hand={spot.hand} />
+            {spot.range.openSizeBb ? (
+              <Text style={styles.sizing}>Open size ≈ {spot.range.openSizeBb}bb</Text>
+            ) : null}
+          </Card>
+        )}
 
         {result ? (
           <Card style={[styles.feedback, result.correct ? styles.feedbackOk : styles.feedbackBad]}>
@@ -194,6 +234,7 @@ const styles = StyleSheet.create({
   body: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.sm, gap: spacing.lg },
   center: { flex: 1, paddingHorizontal: spacing.xl, justifyContent: 'center', gap: spacing.xl },
   spotCard: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl },
+  tableWrap: { alignItems: 'center', gap: spacing.sm },
   context: { ...typography.caps, color: colors.textMuted },
   prompt: { ...typography.h3, color: colors.text, textAlign: 'center' },
   sizing: { ...typography.bodySmall, color: colors.textMuted },
