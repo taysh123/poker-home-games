@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { isFeatureEnabled } from '../../config/features';
 import Reanimated, {
   useAnimatedStyle,
   useSharedValue,
@@ -65,8 +66,16 @@ export default function BrandSplash({ onDone }: Props) {
     transform: [{ scale: tpScale.value }],
   }));
 
+  // STEP 4.6: under `polish`, the splash is interruptible (tap to skip); otherwise pass-through as before.
+  const skippable = isFeatureEnabled('polish');
   return (
-    <View style={styles.root} pointerEvents="none">
+    <Pressable
+      style={styles.root}
+      pointerEvents={skippable ? 'auto' : 'none'}
+      onPress={skippable ? onDone : undefined}
+      accessibilityRole={skippable ? 'button' : undefined}
+      accessibilityLabel={skippable ? 'Skip intro' : undefined}
+    >
       <Reanimated.View style={[styles.frame, tslStyle]}>
         {TSL_LOGO ? (
           <AImage source={TSL_LOGO} style={styles.tslLogo} resizeMode="contain" />
@@ -81,7 +90,7 @@ export default function BrandSplash({ onDone }: Props) {
         <Image source={TPOKER_LOGO} style={styles.tpLogo} resizeMode="contain" />
         <Text style={styles.tagline}>YOUR HOME GAME, HANDLED</Text>
       </Reanimated.View>
-    </View>
+    </Pressable>
   );
 }
 

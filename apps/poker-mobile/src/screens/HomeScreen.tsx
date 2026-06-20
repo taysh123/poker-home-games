@@ -32,6 +32,7 @@ import { getWeeklyDigest, WeeklyDigestDto } from '../api/digestApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { goToSessions, goToStats } from '../navigation/navHelpers';
 import RankBadge from '../components/RankBadge';
+import { isFeatureEnabled } from '../config/features';
 import SkeletonCard from '../components/SkeletonCard';
 import StatWidget from '../components/StatWidget';
 import SessionListItem from '../components/SessionListItem';
@@ -86,7 +87,16 @@ export default function HomeScreen() {
     pulse(pulseAnim).start();
   }, []);
 
+  const hasAnimated = useRef(false);
   const runEntranceAnimation = useCallback(() => {
+    // STEP 4.6: under `polish`, animate once per mount — don't re-run on every tab focus.
+    if (isFeatureEnabled('polish') && hasAnimated.current) {
+      heroOpacity.setValue(1);
+      heroY.setValue(0);
+      contentOpacity.setValue(1);
+      return;
+    }
+    hasAnimated.current = true;
     heroOpacity.setValue(0);
     heroY.setValue(20);
     contentOpacity.setValue(0);
