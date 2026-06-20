@@ -40,6 +40,10 @@ export default function CoachResultScreen() {
     <Screen>
       <BrandHeader variant="screen" title="Coaching" subtitle={analysis.inputSummary} onBack={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.demoBanner}>
+          <Ionicons name="flask-outline" size={15} color={colors.warning} />
+          <Text style={styles.demoText}>Demo Analysis — Not Live AI Yet</Text>
+        </View>
         <View style={styles.metaRow}>
           <View style={styles.chip}><Text style={styles.chipText}>{analysis.confidence} confidence</Text></View>
           <View style={styles.chip}><Text style={styles.chipText}>via {analysis.providerId}</Text></View>
@@ -125,6 +129,12 @@ function PointSection({ title, icon, tint, points }: {
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: 100, gap: spacing.lg },
+  demoBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
+    backgroundColor: 'rgba(243,156,18,0.12)', borderWidth: 1, borderColor: colors.warning,
+    borderRadius: radii.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+  },
+  demoText: { ...typography.labelSmall, color: colors.warning },
   metaRow: { flexDirection: 'row', gap: spacing.sm },
   chip: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radii.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   chipText: { ...typography.caps, color: colors.textMuted },

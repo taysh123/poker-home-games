@@ -10,6 +10,7 @@ import { creditsRemaining as calcCredits } from '../logic/limits';
 import { getCoachProvider } from '../providers';
 import { serverCoachProvider } from '../providers/serverCoachProvider';
 import { getCoachCredits, ServerCoachError, type ServerCoachCredits } from '../../../api/monetizationApi';
+import { track } from '../../../utils/analytics';
 import { COACH_CONFIG } from '../config';
 import type { CoachAnalysis, CoachInput } from '../types';
 
@@ -84,18 +85,24 @@ export function CoachProvider({ children }: { children: React.ReactNode }) {
 
   const analyze = useCallback(async (input: CoachInput) => {
     setIsAnalyzing(true);
+    track('coach_analysis_requested', { kind: input.kind });
     try {
       if (SERVER_AUTHORITATIVE) {
         // No anonymous AI — deny before any network call.
-        if (!signedIn) return { error: 'requires_account' as CoachError };
+        if (!signedIn) {
+          track('coach_analysis_failed', { reason: 'requires_account' });
+          return { error: 'requires_account' as CoachError };
+        }
         try {
           const analysis = await serverCoachProvider.analyze({ input });
           // Record to local history only (server owns credit usage); keep usage untouched.
           await commit(store.recordAnalysis(file, accountKey, analysis, store.getUsage(file, accountKey)));
           await refreshCredits();
+          track('coach_analysis_completed', { kind: input.kind, provider: analysis.providerId });
           return { analysis };
         } catch (e) {
           const reason = (e instanceof ServerCoachError ? e.reason : 'unavailable') as CoachError;
+          track('coach_analysis_failed', { reason });
           return { error: reason };
         }
       }
@@ -110,8 +117,10 @@ export function CoachProvider({ children }: { children: React.ReactNode }) {
       });
       if (out.analysis) {
         await commit(store.recordAnalysis(file, accountKey, out.analysis, out.usage));
+        track('coach_analysis_completed', { kind: input.kind, provider: out.analysis.providerId });
         return { analysis: out.analysis };
       }
+      track('coach_analysis_failed', { reason: out.error ?? 'unavailable' });
       return { error: out.error };
     } finally {
       setIsAnalyzing(false);

@@ -397,7 +397,7 @@ export default function ProfileScreen({ navigation }: Props) {
                 <Text style={styles.sectionTitle}>Subscription & usage</Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.aboutRow} onPress={() => navigation.navigate('Paywall')} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.aboutRow} onPress={() => navigation.navigate('Paywall', { trigger: 'profile' })} activeOpacity={0.7}>
               <Ionicons name="star-outline" size={16} color={colors.textMuted} />
               <Text style={styles.aboutRowText}>T Poker Premium</Text>
               <Ionicons name="chevron-forward" size={15} color={colors.textDim} />

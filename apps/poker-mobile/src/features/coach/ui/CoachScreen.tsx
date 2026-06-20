@@ -41,6 +41,11 @@ export default function CoachScreen() {
     <Screen animated>
       <BrandHeader variant="brand" title="AI Coach" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.demoBanner}>
+          <Ionicons name="flask-outline" size={15} color={colors.warning} />
+          <Text style={styles.demoText}>Demo Analysis — Not Live AI Yet</Text>
+        </View>
+
         <Card style={styles.disclaimer}>
           <Ionicons name="sparkles-outline" size={18} color={colors.gold} />
           <Text style={styles.disclaimerText}>
@@ -53,7 +58,7 @@ export default function CoachScreen() {
           <Ionicons name="flash-outline" size={14} color={colors.textMuted} />
           <Text style={styles.creditsText}>{creditsLabel}</Text>
           {showUpgrade ? (
-            <PressableScale onPress={() => navigation.navigate('Paywall')} hitSlop={8}>
+            <PressableScale onPress={() => navigation.navigate('Paywall', { trigger: 'coach_upgrade' })} hitSlop={8}>
               <Text style={styles.upgradeLink}> · Go Premium</Text>
             </PressableScale>
           ) : null}
@@ -109,6 +114,12 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: 140, gap: spacing.lg },
   disclaimer: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' },
   disclaimerText: { ...typography.bodySmall, color: colors.textMuted, flex: 1 },
+  demoBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
+    backgroundColor: 'rgba(243,156,18,0.12)', borderWidth: 1, borderColor: colors.warning,
+    borderRadius: radii.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+  },
+  demoText: { ...typography.labelSmall, color: colors.warning },
   creditsRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.xs },
   creditsText: { ...typography.bodySmall, color: colors.textMuted },
   upgradeLink: { ...typography.labelSmall, color: colors.gold },

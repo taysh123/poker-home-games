@@ -75,7 +75,7 @@ export default function CoachInputScreen() {
     if (err === 'unavailable') { showToast('AI Coach is unavailable right now. Try again.', 'error'); return; }
     if (err === 'no_credits') {
       showToast('You are out of AI analyses.', 'info');
-      if (isFeatureEnabled('paywall')) navigation.replace('Paywall');
+      if (isFeatureEnabled('paywall')) navigation.replace('Paywall', { trigger: 'coach_no_credits' });
       return;
     }
     if (analysis) navigation.replace('CoachResult', { id: analysis.id });

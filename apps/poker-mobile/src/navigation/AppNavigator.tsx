@@ -99,7 +99,7 @@ export type RootStackParamList = {
   CoachInput: { method: CoachInputKind };
   CoachResult: { id: string };
   // V2 — Monetization
-  Paywall: undefined;
+  Paywall: { trigger?: string } | undefined;
   // V2.1 — Track hub (5-tab IA)
   Track: { segment?: TrackSegment } | undefined;
   // V2.1 STEP 3 — retention

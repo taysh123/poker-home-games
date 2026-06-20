@@ -16,6 +16,19 @@ export type AnalyticsEvent =
   | 'onboarding_skipped'
   | 'first_action_completed'
   | 'account_created'
+  // STEP 5.1 — Tier 1 (revenue + core loop)
+  | 'paywall_viewed'
+  | 'paywall_plan_selected'
+  | 'purchase_started'
+  | 'purchase_completed'
+  | 'purchase_failed'
+  | 'restore_started'
+  | 'restore_result'
+  | 'coach_analysis_requested'
+  | 'coach_analysis_completed'
+  | 'coach_analysis_failed'
+  | 'local_game_started'
+  | 'local_game_finished'
   | (string & {});
 
 export type AnalyticsProps = Record<string, string | number | boolean | null | undefined>;

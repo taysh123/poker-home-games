@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Linking } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../../../components/Screen';
@@ -13,38 +13,55 @@ import { typography } from '../../../theme/typography';
 import { spacing } from '../../../theme/spacing';
 import { radii } from '../../../theme/radii';
 import { showToast } from '../../../utils/toast';
+import { track } from '../../../utils/analytics';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
 import { usePremium } from '../state/PremiumContext';
 import { useEntitlements } from '../../../context/EntitlementsContext';
 import { PRICING, PREMIUM_FEATURES } from '../config';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Rt = RouteProp<RootStackParamList, 'Paywall'>;
 
 export default function PaywallScreen() {
   const navigation = useNavigation<Nav>();
+  const route = useRoute<Rt>();
   const { isPremium, purchasing, purchase, restore } = usePremium();
   const { refresh: refreshEntitlement } = useEntitlements();
   const [plan, setPlan] = useState<'yearly' | 'monthly'>('yearly');
   const [restoring, setRestoring] = useState(false);
 
+  useEffect(() => {
+    track('paywall_viewed', { trigger: route.params?.trigger ?? 'unknown' });
+  }, [route.params?.trigger]);
+
+  function selectPlan(p: 'yearly' | 'monthly') {
+    setPlan(p);
+    track('paywall_plan_selected', { plan: p });
+  }
+
   const productId = plan === 'yearly' ? PRICING.yearly.productId : PRICING.monthly.productId;
 
   async function upgrade() {
+    track('purchase_started', { plan });
     const res = await purchase(productId);
     if (res.ok) {
       // Server is authority — refresh the entitlement so the whole app re-reads server truth.
       await refreshEntitlement();
+      track('purchase_completed', { plan });
       showToast('Welcome to T Poker Premium ✦', 'success');
       navigation.goBack();
     } else {
+      track('purchase_failed', { plan, reason: res.error ?? 'unknown' });
       showToast('Purchase could not be completed.', 'error');
     }
   }
   async function onRestore() {
     setRestoring(true);
+    track('restore_started');
     try {
       const res = await restore();
       if (res.ok) await refreshEntitlement();
+      track('restore_result', { ok: res.ok });
       showToast(res.ok ? 'Premium restored.' : 'No purchase to restore.', res.ok ? 'success' : 'info');
     } finally {
       setRestoring(false);
@@ -85,12 +102,12 @@ export default function PaywallScreen() {
             {/* Plan toggle */}
             <View style={styles.plans}>
               <PlanCard
-                selected={plan === 'yearly'} onPress={() => setPlan('yearly')}
+                selected={plan === 'yearly'} onPress={() => selectPlan('yearly')}
                 title="Annual" price={PRICING.yearly.price} sub={`${PRICING.yearly.perMonth}/mo · save ${PRICING.yearly.savePct}%`}
                 badge="Best value"
               />
               <PlanCard
-                selected={plan === 'monthly'} onPress={() => setPlan('monthly')}
+                selected={plan === 'monthly'} onPress={() => selectPlan('monthly')}
                 title="Monthly" price={PRICING.monthly.price} sub="billed monthly"
               />
             </View>
