@@ -38,43 +38,82 @@ export type SeatState = 'hero' | 'active' | 'folded' | 'empty';
 
 export interface TrainerSeat { position: PokerPosition; state: SeatState }
 
-// Preflop action order (earliest → latest to act). Used to decide, in an RFI spot,
-// which seats have already folded (acted before hero) vs are still to act (after hero).
-const PREFLOP_ACTION_ORDER: PokerPosition[] = ['UTG', 'UTG1', 'MP', 'LJ', 'HJ', 'CO', 'BTN', 'SB', 'BB'];
-function actionRank(p: PokerPosition): number {
+export type TrainerScenario = 'RFI' | 'vs_RFI';
+
+// Preflop action order (earliest → latest to act). Used to decide, in an RFI spot, which seats have
+// already folded (acted before hero) vs are still to act (after hero), and to walk a hand to hero.
+export const PREFLOP_ACTION_ORDER: PokerPosition[] = ['UTG', 'UTG1', 'MP', 'LJ', 'HJ', 'CO', 'BTN', 'SB', 'BB'];
+export function preflopActionRank(p: PokerPosition): number {
   const i = PREFLOP_ACTION_ORDER.indexOf(p);
   return i < 0 ? 99 : i;
 }
 
 /**
- * Build a full ring of seats for a preflop trainer spot so the table shows EVERY player, not just
- * hero. Hero always sits at index 0 (bottom seat); the remaining seats keep clockwise order, so when
- * paired with `seatPositions` they radiate around the table. State rules (clear at a glance):
+ * Canonical seat ring rotated so hero sits at index 0 (bottom seat); the rest keep clockwise order, so
+ * paired with `seatPositions` they radiate around the table. If the position isn't in the canonical ring
+ * (data drift) hero is seated first defensively.
+ */
+export function rotateRingToHero(tableSize: number, heroPosition: PokerPosition): PokerPosition[] {
+  const ring = positionsForSeats(tableSize);
+  const heroIdx = ring.indexOf(heroPosition);
+  return heroIdx >= 0
+    ? [...ring.slice(heroIdx), ...ring.slice(0, heroIdx)]
+    : [heroPosition, ...ring.filter(p => p !== heroPosition)];
+}
+
+/**
+ * Presence of a single seat in a preflop trainer spot (shared by `buildTrainerSeats` + `buildTrainerHand`):
  *  - hero seat → `hero`
  *  - vs_RFI: the villain (opener) → `active`; every other seat → `folded`
  *  - RFI (folded to hero): seats yet to act after hero → `active`; earlier seats (already folded) → `folded`
  */
+export function seatStateFor(
+  position: PokerPosition,
+  scenario: TrainerScenario,
+  heroPosition: PokerPosition,
+  villainPosition?: PokerPosition,
+): SeatState {
+  if (position === heroPosition) return 'hero';
+  if (villainPosition && position === villainPosition) return 'active';
+  if (scenario === 'RFI') return preflopActionRank(position) > preflopActionRank(heroPosition) ? 'active' : 'folded';
+  return 'folded';
+}
+
+/**
+ * Build a full ring of seats for a preflop trainer spot so the table shows EVERY player, not just hero.
+ * Hero at index 0; clockwise from there. Presence rules live in `seatStateFor` (single source of truth).
+ */
 export function buildTrainerSeats(
   tableSize: number,
-  scenario: 'RFI' | 'vs_RFI',
+  scenario: TrainerScenario,
   heroPosition: PokerPosition,
   villainPosition?: PokerPosition,
 ): TrainerSeat[] {
-  const ring = positionsForSeats(tableSize);
-  const heroIdx = ring.indexOf(heroPosition);
-  // Rotate so hero is index 0; if the position isn't in the canonical ring (data drift), seat hero first.
-  const ordered: PokerPosition[] = heroIdx >= 0
-    ? [...ring.slice(heroIdx), ...ring.slice(0, heroIdx)]
-    : [heroPosition, ...ring.filter(p => p !== heroPosition)];
-  const heroRank = actionRank(heroPosition);
-  return ordered.map(position => {
-    let state: SeatState;
-    if (position === heroPosition) state = 'hero';
-    else if (villainPosition && position === villainPosition) state = 'active';
-    else if (scenario === 'RFI') state = actionRank(position) > heroRank ? 'active' : 'folded';
-    else state = 'folded';
-    return { position, state };
-  });
+  return rotateRingToHero(tableSize, heroPosition).map(position => ({
+    position,
+    state: seatStateFor(position, scenario, heroPosition, villainPosition),
+  }));
+}
+
+/**
+ * Position color system — subtle, desaturated, on-brand tints so each position reads natively on the felt.
+ * `bg` is a low-alpha fill over the table; `text` is the legible label color. Single source of truth shared
+ * by `PositionBadge` across Study, Trainer, Summary, and future replay screens.
+ */
+export const POSITION_COLORS: Record<PokerPosition, { bg: string; text: string }> = {
+  UTG:  { bg: 'rgba(120,144,156,0.20)', text: '#AEC2CC' }, // steel
+  UTG1: { bg: 'rgba(120,144,156,0.20)', text: '#AEC2CC' },
+  MP:   { bg: 'rgba(155,110,232,0.18)', text: '#BFA6EE' }, // violet
+  LJ:   { bg: 'rgba(155,110,232,0.18)', text: '#BFA6EE' },
+  HJ:   { bg: 'rgba(230,126,34,0.18)',  text: '#E8AE78' }, // orange
+  CO:   { bg: 'rgba(243,156,18,0.20)',  text: '#F4C065' }, // amber
+  BTN:  { bg: colors.goldSubtle,        text: colors.goldLight }, // the premium seat
+  SB:   { bg: 'rgba(78,170,220,0.20)',  text: '#86C7EC' }, // blue
+  BB:   { bg: 'rgba(39,174,96,0.20)',   text: '#5FD08C' }, // teal/green
+};
+
+export function positionColor(position?: PokerPosition): { bg: string; text: string } {
+  return (position && POSITION_COLORS[position]) || { bg: colors.surfaceHigh, text: colors.textMuted };
 }
 
 export type PlayerAction = 'raise' | 'call' | 'check' | 'fold' | 'allin';

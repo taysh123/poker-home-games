@@ -1,4 +1,4 @@
-import { seatPositions } from '../seatLayout';
+import { seatPositions, pointToward } from '../seatLayout';
 
 const BOX = { width: 300, height: 200 };
 
@@ -31,5 +31,17 @@ describe('seatPositions', () => {
     const [, top] = seatPositions(2, BOX);
     expect(top.x).toBeCloseTo(BOX.width / 2, 5);
     expect(top.y).toBeLessThan(BOX.height / 2); // above center
+  });
+});
+
+describe('pointToward', () => {
+  const from = { x: 0, y: 0 };
+  const to = { x: 10, y: 20 };
+  it('returns the start at t=0 and the end at t=1', () => {
+    expect(pointToward(from, to, 0)).toEqual({ x: 0, y: 0 });
+    expect(pointToward(from, to, 1)).toEqual({ x: 10, y: 20 });
+  });
+  it('interpolates linearly at the midpoint', () => {
+    expect(pointToward(from, to, 0.5)).toEqual({ x: 5, y: 10 });
   });
 });

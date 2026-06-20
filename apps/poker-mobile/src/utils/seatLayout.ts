@@ -21,3 +21,11 @@ export function seatPositions(
     return { x: cx + rx * Math.cos(angle), y: cy + ry * Math.sin(angle) };
   });
 }
+
+/**
+ * Point a fraction `t` (0..1) of the way from `from` toward `to`. Used to place a seat's committed
+ * "bet chip" partway between the seat and the table center. PURE.
+ */
+export function pointToward(from: Point, to: Point, t: number): Point {
+  return { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t };
+}

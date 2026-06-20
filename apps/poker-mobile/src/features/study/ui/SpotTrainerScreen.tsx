@@ -20,9 +20,11 @@ import { track } from '../../../utils/analytics';
 import { generateSpot, evaluateSpot, type Spot, type SpotResult } from '../logic/trainer';
 import type { RangeAction } from '../types';
 import TableScene from '../../../components/table/TableScene';
+import ActionTimeline from '../../../components/table/ActionTimeline';
 import type { SeatProps } from '../../../components/table/TableSeat';
 import { HoleCards } from '../../../components/table/PlayingCard';
-import { buildTrainerSeats, type PokerPosition, type PlayerAction } from '../../../utils/pokerTable';
+import { buildTrainerHand } from '../../../utils/trainerHand';
+import type { PokerPosition, PlayerAction } from '../../../utils/pokerTable';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Rt = RouteProp<RootStackParamList, 'StudyTrainer'>;
@@ -30,7 +32,7 @@ type Rt = RouteProp<RootStackParamList, 'StudyTrainer'>;
 const QUIZ_LENGTH = 10;
 const SCREEN_W = Dimensions.get('window').width;
 const TABLE_W = SCREEN_W - spacing.xl * 2;
-const TABLE_H = Math.round(TABLE_W * 0.64);
+const TABLE_H = Math.round(TABLE_W * 0.72);
 const ACTION_LABEL: Record<RangeAction, string> = { fold: 'Fold', call: 'Call', raise: 'Raise' };
 
 export default function SpotTrainerScreen() {
@@ -48,24 +50,53 @@ export default function SpotTrainerScreen() {
 
   const raiseLabel = spot.range.scenario === 'vs_RFI' ? 'Raise (3-bet)' : 'Raise';
 
-  // Full ring of seats so the table shows every player — hero, the in-hand opponent(s), and who folded.
+  // Derive a full preflop hand from the range: stacks, committed chips, pot, action order up to hero.
   const villainPos = spot.range.villainPosition as PokerPosition | undefined;
+  const snapshot = useMemo(
+    () =>
+      buildTrainerHand({
+        tableSize: spot.range.tableSize,
+        scenario: spot.range.scenario,
+        heroPosition: spot.range.heroPosition as PokerPosition,
+        villainPosition: villainPos,
+        stackBb: spot.range.stackBb,
+        openSizeBb: spot.range.openSizeBb,
+      }),
+    [spot.range, villainPos],
+  );
+
+  // Full ring of seats so the table shows every player — hero, the in-hand opponent(s), stacks, and who folded.
   const trainerSeats: SeatProps[] = useMemo(
     () =>
-      buildTrainerSeats(spot.range.tableSize, spot.range.scenario, spot.range.heroPosition as PokerPosition, villainPos).map(s => {
+      snapshot.seats.map(s => {
         const isHero = s.state === 'hero';
         const isVillain = !!villainPos && s.position === villainPos;
+        // Reveal hero's chosen action after answering; show opponents' live actions (raise) but not folds (the
+        // dimmed seat + timeline already convey folds).
+        const seatAction = isHero
+          ? result
+            ? (result.chosen as PlayerAction)
+            : undefined
+          : s.action && s.action !== 'fold'
+            ? s.action
+            : undefined;
         return {
           name: isHero ? 'You' : isVillain ? 'Villain' : s.state === 'active' ? 'To act' : '',
           position: s.position,
           state: s.state,
           anonymous: !isHero,
           isDealer: s.position === 'BTN',
-          action: isHero && result ? (result.chosen as PlayerAction) : undefined,
+          stackBb: s.stackBb,
+          committedBb: s.committedBb,
+          isNext: s.isNext && !result,
+          allin: s.allin,
+          action: seatAction,
         };
       }),
-    [spot.range, villainPos, result],
+    [snapshot, villainPos, result],
   );
+
+  const toCallLabel = Number.isInteger(snapshot.toCallBb) ? String(snapshot.toCallBb) : snapshot.toCallBb.toFixed(1);
 
   useEffect(() => {
     track('study_trainer_started', { mode });
@@ -157,19 +188,19 @@ export default function SpotTrainerScreen() {
                 ? `${spot.range.heroPosition} — first in. Open or fold?`
                 : `${spot.range.heroPosition} vs ${spot.range.villainPosition} open. Your move?`}
             </Text>
+            <ActionTimeline steps={snapshot.timeline} />
             <TableScene
               players={trainerSeats}
               width={TABLE_W}
               height={TABLE_H}
-              center={<HoleCards hand={spot.hand} />}
+              potBb={snapshot.potBb}
+              heroCards={<HoleCards hand={spot.hand} />}
               style={styles.tableScene}
             />
             <Text style={styles.seatLegend}>
-              Your hand is shown · opponents' cards stay hidden
+              {snapshot.toCallBb > 0 ? `Facing ${toCallLabel}bb to call · ` : 'First to act · '}
+              opponents' cards stay hidden
             </Text>
-            {spot.range.openSizeBb ? (
-              <Text style={styles.sizing}>Open size ≈ {spot.range.openSizeBb}bb</Text>
-            ) : null}
           </View>
         ) : (
           <Card style={styles.spotCard}>

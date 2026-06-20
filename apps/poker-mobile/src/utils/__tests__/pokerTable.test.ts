@@ -1,4 +1,4 @@
-import { positionsForSeats, buildTrainerSeats, ACTION_META, chipBreakdown, type PokerPosition } from '../pokerTable';
+import { positionsForSeats, buildTrainerSeats, positionColor, POSITION_COLORS, ACTION_META, chipBreakdown, type PokerPosition } from '../pokerTable';
 
 describe('positionsForSeats', () => {
   it('returns exactly `count` positions', () => {
@@ -63,6 +63,23 @@ describe('buildTrainerSeats', () => {
     const seats = buildTrainerSeats(9, 'vs_RFI', 'UTG', 'BTN');
     expect(new Set(seats.map(s => s.position)).size).toBe(9);
     expect(seats[0].position).toBe('UTG');
+  });
+});
+
+describe('positionColor', () => {
+  it('has a color pair for every poker position', () => {
+    (['UTG', 'UTG1', 'MP', 'LJ', 'HJ', 'CO', 'BTN', 'SB', 'BB'] as PokerPosition[]).forEach(p => {
+      expect(POSITION_COLORS[p].bg).toBeTruthy();
+      expect(POSITION_COLORS[p].text).toBeTruthy();
+    });
+  });
+  it('returns the position pair for a known position', () => {
+    expect(positionColor('BTN')).toEqual(POSITION_COLORS.BTN);
+  });
+  it('falls back to a neutral pair when position is missing', () => {
+    const c = positionColor(undefined);
+    expect(c.bg).toBeTruthy();
+    expect(c.text).toBeTruthy();
   });
 });
 

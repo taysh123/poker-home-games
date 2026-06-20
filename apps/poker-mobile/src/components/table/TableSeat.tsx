@@ -11,6 +11,8 @@ import Avatar from '../Avatar';
 import DealerButton from './DealerButton';
 import ActionBadge from './ActionBadge';
 import PlayerSilhouette from './PlayerSilhouette';
+import PositionBadge from './PositionBadge';
+import StackBadge from './StackBadge';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -29,6 +31,15 @@ export interface SeatProps {
   state?: SeatState;
   /** Render an anonymous person silhouette instead of an initials/emoji avatar (trainer opponents). */
   anonymous?: boolean;
+  /** Stack readout — bb (study/training) or cents (cash/summary). */
+  stackBb?: number;
+  stackCents?: number;
+  /** Chips committed this street — surfaced for a11y; the visible chip is drawn by TableScene. */
+  committedBb?: number;
+  committedCents?: number;
+  /** This seat is the player to act (hero) — shows a "TO ACT" cue until an action is revealed. */
+  isNext?: boolean;
+  allin?: boolean;
   /** Legacy flag — gold ring. `state` supersedes this when provided. */
   active?: boolean;
   isDealer?: boolean;
@@ -62,6 +73,11 @@ export default function TableSeat({
   action,
   state,
   anonymous,
+  stackBb,
+  stackCents,
+  committedBb,
+  isNext,
+  allin,
   active,
   isDealer,
 }: SeatProps & { x: number; y: number }) {
@@ -97,7 +113,18 @@ export default function TableSeat({
   );
 
   const label = isEmpty ? 'Open' : hasName ? name : isHero ? 'You' : isActive ? 'In hand' : 'Folded';
-  const a11y = [label, position ?? '', STATE_WORD[isEmpty ? 'empty' : isHero ? 'hero' : isActive ? 'active' : 'folded'], sub ?? '']
+  const showStack = !isEmpty && (stackBb != null || stackCents != null || allin);
+  const showToAct = isNext && !action && !isEmpty;
+  const stackWords = allin ? 'all in' : stackBb != null ? `${stackBb} big blinds` : '';
+  const a11y = [
+    label,
+    position ?? '',
+    STATE_WORD[isEmpty ? 'empty' : isHero ? 'hero' : isActive ? 'active' : 'folded'],
+    showToAct ? 'to act' : '',
+    committedBb ? `committed ${committedBb}bb` : '',
+    stackWords,
+    sub ?? '',
+  ]
     .filter(Boolean)
     .join(', ');
 
@@ -118,18 +145,19 @@ export default function TableSeat({
         >
           {inner}
         </View>
-        {position && !isEmpty ? (
-          <View style={styles.posPill}>
-            <Text style={[styles.posText, isFolded && styles.posTextMuted]}>{position}</Text>
-          </View>
-        ) : null}
+        {position && !isEmpty ? <PositionBadge position={position} size="sm" style={styles.posBadge} /> : null}
         {isDealer && !isEmpty ? <DealerButton style={styles.dealer} /> : null}
       </View>
       <Text style={[styles.name, isHero && styles.nameHero, (isFolded || isEmpty) && styles.nameMuted]} numberOfLines={1}>
         {label}
       </Text>
+      {showStack ? <StackBadge bb={stackBb} cents={stackCents} allin={allin} /> : null}
       {sub ? <Text style={styles.sub} numberOfLines={1}>{sub}</Text> : null}
-      {action ? <View style={styles.action}><ActionBadge action={action} /></View> : null}
+      {action ? (
+        <View style={styles.action}><ActionBadge action={action} /></View>
+      ) : showToAct ? (
+        <View style={styles.toAct}><Text style={styles.toActText}>TO ACT</Text></View>
+      ) : null}
     </View>
   );
 }
@@ -170,19 +198,16 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 0 },
   },
-  posPill: {
-    position: 'absolute', top: -8, alignSelf: 'center', left: 0, right: 0,
-    alignItems: 'center',
-  },
-  posText: {
-    ...typography.caps, fontSize: 9, color: colors.backgroundDeep, overflow: 'hidden',
-    backgroundColor: colors.goldLight, borderRadius: radii.pill, paddingHorizontal: 6, paddingVertical: 1,
-  },
-  posTextMuted: { color: colors.textMuted, backgroundColor: colors.surfaceHigh },
+  posBadge: { position: 'absolute', top: -10, alignSelf: 'center' },
   dealer: { position: 'absolute', bottom: -4, right: -8 },
   name: { ...typography.labelSmall, fontSize: 11, color: colors.textHigh, maxWidth: SEAT_W, textAlign: 'center' },
   nameHero: { color: colors.goldLight },
   nameMuted: { color: colors.textMuted },
   sub: { ...typography.bodySmall, fontSize: 10, color: colors.goldLight },
   action: { marginTop: 2 },
+  toAct: {
+    marginTop: 2, backgroundColor: colors.goldSubtle, borderWidth: 1, borderColor: colors.goldMuted,
+    borderRadius: radii.pill, paddingHorizontal: 7, paddingVertical: 1,
+  },
+  toActText: { ...typography.caps, fontSize: 9, color: colors.goldLight },
 });
