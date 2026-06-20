@@ -1,0 +1,5 @@
+# Git LFS — large binary content artifacts
+# The T Poker content workbook (source of truth) is versioned via LFS so the repo
+# stays lean while the binary is tracked. Handoff/release docs (*.md) stay in normal
+# git so they remain reviewable through standard diffs.
+content/**/*.xlsx filter=lfs diff=lfs merge=lfs -text
