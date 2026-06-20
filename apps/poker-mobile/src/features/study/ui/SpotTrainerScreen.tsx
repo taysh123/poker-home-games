@@ -19,10 +19,10 @@ import { useStudy } from '../state/StudyContext';
 import { track } from '../../../utils/analytics';
 import { generateSpot, evaluateSpot, type Spot, type SpotResult } from '../logic/trainer';
 import type { RangeAction } from '../types';
-import PokerTable from '../../../components/table/PokerTable';
-import TableSeat from '../../../components/table/TableSeat';
+import TableScene from '../../../components/table/TableScene';
+import type { SeatProps } from '../../../components/table/TableSeat';
 import { HoleCards } from '../../../components/table/PlayingCard';
-import type { PokerPosition, PlayerAction } from '../../../utils/pokerTable';
+import { buildTrainerSeats, type PokerPosition, type PlayerAction } from '../../../utils/pokerTable';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Rt = RouteProp<RootStackParamList, 'StudyTrainer'>;
@@ -30,7 +30,7 @@ type Rt = RouteProp<RootStackParamList, 'StudyTrainer'>;
 const QUIZ_LENGTH = 10;
 const SCREEN_W = Dimensions.get('window').width;
 const TABLE_W = SCREEN_W - spacing.xl * 2;
-const TABLE_H = Math.round(TABLE_W * 0.6);
+const TABLE_H = Math.round(TABLE_W * 0.64);
 const ACTION_LABEL: Record<RangeAction, string> = { fold: 'Fold', call: 'Call', raise: 'Raise' };
 
 export default function SpotTrainerScreen() {
@@ -47,6 +47,25 @@ export default function SpotTrainerScreen() {
   const [done, setDone] = useState(false);
 
   const raiseLabel = spot.range.scenario === 'vs_RFI' ? 'Raise (3-bet)' : 'Raise';
+
+  // Full ring of seats so the table shows every player — hero, the in-hand opponent(s), and who folded.
+  const villainPos = spot.range.villainPosition as PokerPosition | undefined;
+  const trainerSeats: SeatProps[] = useMemo(
+    () =>
+      buildTrainerSeats(spot.range.tableSize, spot.range.scenario, spot.range.heroPosition as PokerPosition, villainPos).map(s => {
+        const isHero = s.state === 'hero';
+        const isVillain = !!villainPos && s.position === villainPos;
+        return {
+          name: isHero ? 'You' : isVillain ? 'Villain' : s.state === 'active' ? 'To act' : '',
+          position: s.position,
+          state: s.state,
+          anonymous: !isHero,
+          isDealer: s.position === 'BTN',
+          action: isHero && result ? (result.chosen as PlayerAction) : undefined,
+        };
+      }),
+    [spot.range, villainPos, result],
+  );
 
   useEffect(() => {
     track('study_trainer_started', { mode });
@@ -138,25 +157,16 @@ export default function SpotTrainerScreen() {
                 ? `${spot.range.heroPosition} — first in. Open or fold?`
                 : `${spot.range.heroPosition} vs ${spot.range.villainPosition} open. Your move?`}
             </Text>
-            <PokerTable
+            <TableScene
+              players={trainerSeats}
               width={TABLE_W}
               height={TABLE_H}
-              seats={
-                <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                  <TableSeat
-                    x={TABLE_W / 2}
-                    y={TABLE_H - 20}
-                    name="You"
-                    position={spot.range.heroPosition as PokerPosition}
-                    action={result ? (result.chosen as PlayerAction) : undefined}
-                    isDealer
-                    active
-                  />
-                </View>
-              }
-            >
-              <HoleCards hand={spot.hand} />
-            </PokerTable>
+              center={<HoleCards hand={spot.hand} />}
+              style={styles.tableScene}
+            />
+            <Text style={styles.seatLegend}>
+              Your hand is shown · opponents' cards stay hidden
+            </Text>
             {spot.range.openSizeBb ? (
               <Text style={styles.sizing}>Open size ≈ {spot.range.openSizeBb}bb</Text>
             ) : null}
@@ -235,6 +245,8 @@ const styles = StyleSheet.create({
   center: { flex: 1, paddingHorizontal: spacing.xl, justifyContent: 'center', gap: spacing.xl },
   spotCard: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl },
   tableWrap: { alignItems: 'center', gap: spacing.sm },
+  tableScene: { alignItems: 'center', justifyContent: 'center', paddingTop: spacing.lg, paddingBottom: spacing.xl + spacing.md },
+  seatLegend: { ...typography.bodySmall, fontSize: 11, color: colors.textMuted, textAlign: 'center' },
   context: { ...typography.caps, color: colors.textMuted },
   prompt: { ...typography.h3, color: colors.text, textAlign: 'center' },
   sizing: { ...typography.bodySmall, color: colors.textMuted },

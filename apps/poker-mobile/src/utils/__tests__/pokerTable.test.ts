@@ -1,4 +1,4 @@
-import { positionsForSeats, ACTION_META, chipBreakdown, type PokerPosition } from '../pokerTable';
+import { positionsForSeats, buildTrainerSeats, ACTION_META, chipBreakdown, type PokerPosition } from '../pokerTable';
 
 describe('positionsForSeats', () => {
   it('returns exactly `count` positions', () => {
@@ -24,6 +24,45 @@ describe('positionsForSeats', () => {
   });
   it('falls back to 6-max for unknown sizes', () => {
     expect(positionsForSeats(99)).toEqual(positionsForSeats(6));
+  });
+});
+
+describe('buildTrainerSeats', () => {
+  it('returns one seat per table size with hero at index 0', () => {
+    const seats = buildTrainerSeats(9, 'RFI', 'CO');
+    expect(seats).toHaveLength(9);
+    expect(seats[0]).toEqual({ position: 'CO', state: 'hero' });
+    expect(seats.filter(s => s.state === 'hero')).toHaveLength(1);
+  });
+
+  it('always seats hero even if the position is not in the canonical ring', () => {
+    // 2-max ring is [BTN, BB] — asking for SB should still produce a hero seat.
+    const seats = buildTrainerSeats(2, 'vs_RFI', 'SB', 'BTN');
+    expect(seats[0]).toEqual({ position: 'SB', state: 'hero' });
+    expect(seats.some(s => s.state === 'hero')).toBe(true);
+  });
+
+  it('vs_RFI: only the villain is active, everyone else folded', () => {
+    const seats = buildTrainerSeats(6, 'vs_RFI', 'BB', 'CO');
+    expect(seats.find(s => s.position === 'CO')?.state).toBe('active');
+    expect(seats.filter(s => s.state === 'active')).toHaveLength(1);
+    const folded = seats.filter(s => s.state === 'folded').map(s => s.position).sort();
+    expect(folded).toEqual(['BTN', 'HJ', 'SB', 'UTG']);
+  });
+
+  it('RFI: seats yet to act after hero are active, earlier seats folded', () => {
+    // Hero opens from CO 6-max → BTN/SB/BB still to act; UTG/HJ already folded.
+    const seats = buildTrainerSeats(6, 'RFI', 'CO');
+    const active = seats.filter(s => s.state === 'active').map(s => s.position).sort();
+    const folded = seats.filter(s => s.state === 'folded').map(s => s.position).sort();
+    expect(active).toEqual(['BB', 'BTN', 'SB']);
+    expect(folded).toEqual(['HJ', 'UTG']);
+  });
+
+  it('keeps every position unique and clockwise from hero', () => {
+    const seats = buildTrainerSeats(9, 'vs_RFI', 'UTG', 'BTN');
+    expect(new Set(seats.map(s => s.position)).size).toBe(9);
+    expect(seats[0].position).toBe('UTG');
   });
 });
 

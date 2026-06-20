@@ -27,6 +27,56 @@ export function positionsForSeats(count: number): PokerPosition[] {
   return POSITION_SETS[count] ?? POSITION_SETS[6];
 }
 
+/**
+ * Visual presence of a seat around the table — drives how `TableSeat` renders it.
+ *  - `hero`   the studying player (premium gold highlight + glow)
+ *  - `active` a player still in the hand (brighter avatar + active ring)
+ *  - `folded` seated but out of the hand (dimmed silhouette, no ring)
+ *  - `empty`  no player seated (dashed placeholder)
+ */
+export type SeatState = 'hero' | 'active' | 'folded' | 'empty';
+
+export interface TrainerSeat { position: PokerPosition; state: SeatState }
+
+// Preflop action order (earliest → latest to act). Used to decide, in an RFI spot,
+// which seats have already folded (acted before hero) vs are still to act (after hero).
+const PREFLOP_ACTION_ORDER: PokerPosition[] = ['UTG', 'UTG1', 'MP', 'LJ', 'HJ', 'CO', 'BTN', 'SB', 'BB'];
+function actionRank(p: PokerPosition): number {
+  const i = PREFLOP_ACTION_ORDER.indexOf(p);
+  return i < 0 ? 99 : i;
+}
+
+/**
+ * Build a full ring of seats for a preflop trainer spot so the table shows EVERY player, not just
+ * hero. Hero always sits at index 0 (bottom seat); the remaining seats keep clockwise order, so when
+ * paired with `seatPositions` they radiate around the table. State rules (clear at a glance):
+ *  - hero seat → `hero`
+ *  - vs_RFI: the villain (opener) → `active`; every other seat → `folded`
+ *  - RFI (folded to hero): seats yet to act after hero → `active`; earlier seats (already folded) → `folded`
+ */
+export function buildTrainerSeats(
+  tableSize: number,
+  scenario: 'RFI' | 'vs_RFI',
+  heroPosition: PokerPosition,
+  villainPosition?: PokerPosition,
+): TrainerSeat[] {
+  const ring = positionsForSeats(tableSize);
+  const heroIdx = ring.indexOf(heroPosition);
+  // Rotate so hero is index 0; if the position isn't in the canonical ring (data drift), seat hero first.
+  const ordered: PokerPosition[] = heroIdx >= 0
+    ? [...ring.slice(heroIdx), ...ring.slice(0, heroIdx)]
+    : [heroPosition, ...ring.filter(p => p !== heroPosition)];
+  const heroRank = actionRank(heroPosition);
+  return ordered.map(position => {
+    let state: SeatState;
+    if (position === heroPosition) state = 'hero';
+    else if (villainPosition && position === villainPosition) state = 'active';
+    else if (scenario === 'RFI') state = actionRank(position) > heroRank ? 'active' : 'folded';
+    else state = 'folded';
+    return { position, state };
+  });
+}
+
 export type PlayerAction = 'raise' | 'call' | 'check' | 'fold' | 'allin';
 
 export interface ActionMeta { label: string; tint: string; icon: string }
