@@ -38,6 +38,8 @@ export default function TableScene({
   const pts = seatPositions(players.length, { width, height });
   const tableCenter = { x: width / 2, y: height / 2 };
   const centerNode = potBb != null ? <Pot bb={potBb} /> : potCents != null ? <Pot amountCents={potCents} /> : center;
+  // When hero cards sit at the hero seat, lift the pot into the upper-center so the two never compete.
+  const liftPot = heroCards != null;
 
   return (
     <View style={style}>
@@ -46,11 +48,13 @@ export default function TableScene({
         height={height}
         seats={
           <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-            {/* Committed chips, drawn between each seat and the pot. */}
+            {/* Committed chips, drawn between each seat and the pot. Hero's commitment is conveyed by the
+                stack + to-call text, so we skip a chip over the hero cards (i === 0). */}
             {players.map((p, i) => {
+              if (i === 0) return null;
               const hasBet = (p.committedBb ?? 0) > 0 || (p.committedCents ?? 0) > 0;
               if (!hasBet) return null;
-              const spot = pointToward(pts[i], tableCenter, 0.42);
+              const spot = pointToward(pts[i], tableCenter, 0.5);
               return (
                 <View key={`bet-${i}`} style={[styles.betLayer, { left: spot.x - 24, top: spot.y - 14 }]} pointerEvents="none">
                   <BetChip amountBb={p.committedBb} amountCents={p.committedCents} />
@@ -61,19 +65,16 @@ export default function TableScene({
             {players.map((p, i) => (
               <TableSeat key={i} x={pts[i].x} y={pts[i].y} {...p} isDealer={p.isDealer ?? i === dealerSeat} />
             ))}
-            {/* Hero hole cards, in front of the hero seat. */}
+            {/* Hero hole cards, in the band just above the hero seat (in front of hero). */}
             {heroCards && pts.length > 0 ? (
-              <View
-                style={[styles.heroCards, { left: pts[0].x - 60, top: pointToward(pts[0], tableCenter, 0.34).y - 30 }]}
-                pointerEvents="none"
-              >
+              <View style={[styles.heroCards, { left: pts[0].x - 52, top: pts[0].y - 112 }]} pointerEvents="none">
                 {heroCards}
               </View>
             ) : null}
           </View>
         }
       >
-        {centerNode}
+        {centerNode ? <View style={liftPot ? styles.potLift : undefined}>{centerNode}</View> : null}
       </PokerTable>
     </View>
   );
@@ -81,5 +82,6 @@ export default function TableScene({
 
 const styles = StyleSheet.create({
   betLayer: { position: 'absolute', width: 48, alignItems: 'center' },
-  heroCards: { position: 'absolute', width: 120, alignItems: 'center' },
+  heroCards: { position: 'absolute', width: 104, alignItems: 'center' },
+  potLift: { transform: [{ translateY: -20 }] },
 });

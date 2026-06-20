@@ -22,10 +22,11 @@ export default function Pot({
 }) {
   const { format } = useMoney();
   const text = bb != null ? `${Number.isInteger(bb) ? bb : bb.toFixed(1)} BB` : format(amountCents ?? 0);
-  const cueCents = amountCents != null ? amountCents : bb != null ? Math.max(1, Math.round(bb)) * 100 : 0;
   return (
     <View style={styles.pot} accessibilityLabel={`${label} ${text}`}>
-      <ChipStack amountCents={cueCents} chipWidth={26} />
+      {/* Chip stack only in currency mode (summary). In bb mode the gold amount is the focal point and the
+          per-seat bet chips already supply the chip visuals — a monochrome bb chip-blob just adds noise. */}
+      {amountCents != null ? <ChipStack amountCents={amountCents} chipWidth={26} /> : null}
       <Text style={styles.amount}>{text}</Text>
       <Text style={styles.label}>{label}</Text>
     </View>

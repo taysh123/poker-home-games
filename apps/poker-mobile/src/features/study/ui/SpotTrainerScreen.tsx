@@ -32,7 +32,7 @@ type Rt = RouteProp<RootStackParamList, 'StudyTrainer'>;
 const QUIZ_LENGTH = 10;
 const SCREEN_W = Dimensions.get('window').width;
 const TABLE_W = SCREEN_W - spacing.xl * 2;
-const TABLE_H = Math.round(TABLE_W * 0.72);
+const TABLE_H = Math.round(TABLE_W * 0.86);
 const ACTION_LABEL: Record<RangeAction, string> = { fold: 'Fold', call: 'Call', raise: 'Raise' };
 
 export default function SpotTrainerScreen() {
@@ -194,7 +194,7 @@ export default function SpotTrainerScreen() {
               width={TABLE_W}
               height={TABLE_H}
               potBb={snapshot.potBb}
-              heroCards={<HoleCards hand={spot.hand} />}
+              heroCards={<HoleCards hand={spot.hand} size="sm" />}
               style={styles.tableScene}
             />
             <Text style={styles.seatLegend}>
