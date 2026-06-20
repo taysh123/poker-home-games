@@ -28,3 +28,7 @@ out/
 
 ## Stray editor/OS junk
 **/New Text Document*.txt
+
+## Generated content exports (reproducible from the LFS workbook via tools/content-export)
+content/release-*/exports/
+__pycache__/
