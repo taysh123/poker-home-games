@@ -26,6 +26,7 @@ import { CurrencyProvider } from './src/context/CurrencyContext';
 import { ActiveSessionProvider } from './src/context/ActiveSessionContext';
 import { LocalGamesProvider } from './src/context/LocalGamesContext';
 import { EntitlementsProvider } from './src/context/EntitlementsContext';
+import { ContentProvider } from './src/context/ContentContext';
 import { PremiumProvider } from './src/features/premium/state/PremiumContext';
 import { BankrollProvider } from './src/features/bankroll/state/BankrollContext';
 import { StudyProvider } from './src/features/study/state/StudyContext';
@@ -103,6 +104,7 @@ export default function App() {
       <AuthProvider>
         <PremiumProvider>
         <EntitlementsProvider>
+          <ContentProvider>
           <ActiveSessionProvider>
             <LocalGamesProvider>
               <BankrollProvider>
@@ -119,6 +121,7 @@ export default function App() {
               </BankrollProvider>
             </LocalGamesProvider>
           </ActiveSessionProvider>
+          </ContentProvider>
         </EntitlementsProvider>
         </PremiumProvider>
       </AuthProvider>

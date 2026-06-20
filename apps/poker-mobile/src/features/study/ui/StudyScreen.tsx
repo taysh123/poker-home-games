@@ -115,6 +115,14 @@ export default function StudyScreen() {
             sub="Continuous drilling — build instinct"
             onPress={() => navigation.navigate('StudyTrainer', { mode: 'decision' })}
           />
+          {isFeatureEnabled('content') && (
+            <TrainCard
+              icon="book"
+              title="Lessons"
+              sub="Read study modules"
+              onPress={() => navigation.navigate('LessonModules')}
+            />
+          )}
         </View>
 
         <View style={styles.noteRow}>

@@ -57,6 +57,8 @@ import BankrollScreen from '../features/bankroll/ui/BankrollScreen';
 import LogSessionScreen from '../features/bankroll/ui/LogSessionScreen';
 import StudyScreen from '../features/study/ui/StudyScreen';
 import SpotTrainerScreen from '../features/study/ui/SpotTrainerScreen';
+import LessonModulesScreen from '../features/study/ui/LessonModulesScreen';
+import LessonReaderScreen from '../features/study/ui/LessonReaderScreen';
 import CoachScreen from '../features/coach/ui/CoachScreen';
 import CoachInputScreen from '../features/coach/ui/CoachInputScreen';
 import CoachResultScreen from '../features/coach/ui/CoachResultScreen';
@@ -95,6 +97,9 @@ export type RootStackParamList = {
   LogSession: { sessionId?: string } | undefined;
   // V2 — Study (Study pillar)
   StudyTrainer: { mode: 'spot' | 'decision' };
+  // V2.2 — Content platform (Lessons; content flag)
+  LessonModules: undefined;
+  LessonReader: { moduleId: string; moduleName?: string };
   // V2 — AI Coach (Improve pillar)
   CoachInput: { method: CoachInputKind };
   CoachResult: { id: string };
@@ -500,6 +505,8 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
             <Stack.Screen name="LocalSessionSummary" component={LocalSessionSummaryScreen} options={{ headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="LogSession" component={LogSessionScreen} options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="StudyTrainer" component={SpotTrainerScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="LessonModules" component={LessonModulesScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="LessonReader" component={LessonReaderScreen} options={{ headerShown: false }} />
             <Stack.Screen name="CoachInput"  component={CoachInputScreen}  options={{ headerShown: false }} />
             <Stack.Screen name="CoachResult" component={CoachResultScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Paywall"     component={PaywallScreen}     options={{ headerShown: false, presentation: 'modal' }} />
@@ -532,6 +539,8 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
             <Stack.Screen name="LocalSessionSummary" component={LocalSessionSummaryScreen} options={{ headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="LogSession" component={LogSessionScreen} options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="StudyTrainer" component={SpotTrainerScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="LessonModules" component={LessonModulesScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="LessonReader" component={LessonReaderScreen} options={{ headerShown: false }} />
             <Stack.Screen name="CoachInput"  component={CoachInputScreen}  options={{ headerShown: false }} />
             <Stack.Screen name="CoachResult" component={CoachResultScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Paywall"     component={PaywallScreen}     options={{ headerShown: false, presentation: 'modal' }} />
