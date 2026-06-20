@@ -59,7 +59,8 @@
         {
           "color": "#C9A84C"
         }
-      ]
+      ],
+      "expo-sqlite"
     ],
     "extra": {
       "eas": {

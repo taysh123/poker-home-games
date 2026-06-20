@@ -6,5 +6,7 @@ module.exports = {
     '**/src/utils/__tests__/**/*.test.ts',
     '**/src/features/**/__tests__/**/*.test.ts',
     '**/src/api/__tests__/**/*.test.ts',
+    '**/src/content/__tests__/**/*.test.ts',
+    '**/src/analytics/__tests__/**/*.test.ts',
   ],
 };
