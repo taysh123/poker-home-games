@@ -28,9 +28,22 @@ Tier-1 (revenue + core loop) events from `docs/v2-analytics-event-model.md`, plu
 - **Independent code review — PASS** on all checks: coverage (all 11 emitted), name/prop correctness, **PII-free** (all categorical/bucketed — no emails/names/raw amounts/tokens/device ids), purely additive (no flow logic changed), no double-fire (coach server/legacy paths mutually exclusive; `paywall_viewed` once per mount), demo label present on CoachScreen + CoachResultScreen.
 - Minor doc note: the model's `restore_started/restore_result {ok}` formatting was ambiguous; implemented as `restore_started` (no props) + `restore_result {ok}` — reasonable (result unknown at start).
 
-## Missing events (not yet instrumented — register)
-**Tier 2 (engagement loop — recommended next):** `study_trainer_started {mode}`, `study_spot_answered {mode, correct}`, `study_trainer_finished {mode, score_band}`, `bankroll_session_logged {gameType, source}`, `group_created`, `group_joined`, `achievement_unlocked {key, rarity, source}`, `rank_up {rank}`.
-**Tier 3 (retention — post-beta):** `reminder_enabled {kind}`, `reminder_tapped {kind}`, `streak_milestone {days}`, `currency_changed {code}`.
+## Tier-2 events implemented & verified (STEP 5.2)
+| Event | Props | Fires at |
+|---|---|---|
+| `study_trainer_started` | `{ mode }` | SpotTrainerScreen mount (once) |
+| `study_spot_answered` | `{ mode, correct }` | each answered spot |
+| `study_trainer_finished` | `{ mode, score_band }` | quiz complete / Decision-Trainer Finish (bucketed band) |
+| `bankroll_session_logged` | `{ gameType, source }` | new session save only (not edit) |
+| `group_created` | — | CreateGroup success |
+| `group_joined` | — | JoinGroup (invite link) success |
+| `achievement_unlocked` | `{ key, rarity, source }` | local (EngagementContext) + server (StatsScreen fresh unlocks) |
+| `rank_up` | `{ rank }` | rank index increases |
+
+Verified: tsc clean; jest 190/190; **code-review PASS** (coverage/correctness/PII/additive/no-double-fire/dual-source consistency). All guarded against double-fire (mount-once, `seenAchievements` cache, rank-index comparison, new-add-only).
+
+## Missing events (register — Tier 3, post-beta)
+`reminder_enabled {kind}`, `reminder_tapped {kind}`, `streak_milestone {days}`, `currency_changed {code}`.
 
 ## Not done by design
 - **No analytics vendor wired** — `dispatch()` is still a no-op (per instruction). Wiring (provider key + `identify`/`reset`) is an RC task; the seam is ready and needs no call-site changes.

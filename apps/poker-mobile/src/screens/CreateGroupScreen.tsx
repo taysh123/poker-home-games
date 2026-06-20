@@ -14,6 +14,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
 import { createGroup } from '../api/groupsApi';
+import { track } from '../utils/analytics';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import Screen from '../components/Screen';
 import ScreenHeader from '../components/ScreenHeader';
@@ -48,6 +49,7 @@ export default function CreateGroupScreen({ navigation }: Props) {
       const token = await SecureStore.getItemAsync('accessToken');
       if (!token) throw new Error('Not authenticated');
       const group = await createGroup(token, trimmedName, description.trim() || undefined);
+      track('group_created');
       navigation.replace('GroupDetail', {
         groupId: group.id,
         groupName: group.name,

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -16,6 +16,7 @@ import type { RootStackParamList } from '../../../navigation/AppNavigator';
 import CrossPillarCTA from '../../../components/CrossPillarCTA';
 import { isFeatureEnabled } from '../../../config/features';
 import { useStudy } from '../state/StudyContext';
+import { track } from '../../../utils/analytics';
 import { generateSpot, evaluateSpot, type Spot, type SpotResult } from '../logic/trainer';
 import type { RangeAction } from '../types';
 
@@ -40,17 +41,29 @@ export default function SpotTrainerScreen() {
 
   const raiseLabel = spot.range.scenario === 'vs_RFI' ? 'Raise (3-bet)' : 'Raise';
 
+  useEffect(() => {
+    track('study_trainer_started', { mode });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function finishSession() {
+    const acc = answered > 0 ? Math.round((correctCount / answered) * 100) : 0;
+    track('study_trainer_finished', { mode, score_band: acc >= 80 ? '80-100' : acc >= 50 ? '50-79' : '0-49' });
+    setDone(true);
+  }
+
   async function choose(action: RangeAction) {
     if (result) return; // already revealed
     const r = evaluateSpot(spot.range, spot.hand, action);
     setResult(r);
     setAnswered(a => a + 1);
     if (r.correct) setCorrectCount(c => c + 1);
+    track('study_spot_answered', { mode, correct: r.correct });
     await recordAnswer(r.correct);
   }
 
   function next() {
-    if (isQuiz && answered >= QUIZ_LENGTH) { setDone(true); return; }
+    if (isQuiz && answered >= QUIZ_LENGTH) { finishSession(); return; }
     setSpot(generateSpot(dataset, Math.random));
     setResult(null);
   }
@@ -97,7 +110,7 @@ export default function SpotTrainerScreen() {
         subtitle={isQuiz ? `${Math.min(answered + (result ? 0 : 1), QUIZ_LENGTH)} / ${QUIZ_LENGTH}` : `✓ ${correctCount} / ${answered}`}
         onBack={() => navigation.goBack()}
         right={!isQuiz && answered > 0 ? (
-          <PressableScale onPress={() => setDone(true)} hitSlop={8} accessibilityRole="button" accessibilityLabel="Finish session">
+          <PressableScale onPress={finishSession} hitSlop={8} accessibilityRole="button" accessibilityLabel="Finish session">
             <Text style={styles.finishText}>Finish</Text>
           </PressableScale>
         ) : undefined}

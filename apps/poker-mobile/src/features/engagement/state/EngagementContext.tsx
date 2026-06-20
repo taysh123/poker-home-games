@@ -8,6 +8,7 @@ import { sessionNetCents } from '../../bankroll/logic/bankrollAnalytics';
 import { computeXp, rankForXp, type RankInfo } from '../logic/xp';
 import { LOCAL_ACHIEVEMENTS, evaluate, eligibleKeys, findAchievement } from '../logic/achievements';
 import * as store from '../data/engagementStore';
+import { track } from '../../../utils/analytics';
 import AchievementUnlock from '../../../components/AchievementUnlock';
 import Celebration from '../../../components/motion/Celebration';
 import type { EngagementSignals, EngagementState } from '../types';
@@ -101,10 +102,12 @@ export function EngagementProvider({ children }: { children: React.ReactNode }) 
       newly.forEach(k => { seen[k] = now; });
       next = { ...next, seenAchievements: seen };
       setUnlockQueue(q => [...q, ...newly.map(k => toDto(k, now))]);
+      newly.forEach(k => track('achievement_unlocked', { key: k, rarity: findAchievement(k)?.rarity, source: 'local' }));
     }
     if (rankForXp(xpTotal).index > rankForXp(state.lastXp).index) {
       setCelebrate(true);
       setTimeout(() => setCelebrate(false), 2600);
+      track('rank_up', { rank: rankForXp(xpTotal).rank.name });
     }
     if (next.lastXp !== xpTotal) next = { ...next, lastXp: xpTotal };
     if (next !== state) { setState(next); store.saveState(next).catch(() => {}); }

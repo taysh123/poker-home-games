@@ -29,6 +29,15 @@ export type AnalyticsEvent =
   | 'coach_analysis_failed'
   | 'local_game_started'
   | 'local_game_finished'
+  // STEP 5.2 — Tier 2 (engagement loop)
+  | 'study_trainer_started'
+  | 'study_spot_answered'
+  | 'study_trainer_finished'
+  | 'bankroll_session_logged'
+  | 'group_created'
+  | 'group_joined'
+  | 'achievement_unlocked'
+  | 'rank_up'
   | (string & {});
 
 export type AnalyticsProps = Record<string, string | number | boolean | null | undefined>;

@@ -21,6 +21,7 @@ import { getMyStats, MyStatsDto, RecentSessionDto } from '../api/statsApi';
 import { getMyAchievements, AchievementDto, MyAchievementsDto } from '../api/achievementsApi';
 import { isFeatureEnabled } from '../config/features';
 import ErrorState from '../components/ErrorState';
+import { track } from '../utils/analytics';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import SessionListItem from '../components/SessionListItem';
 import SkeletonCard from '../components/SkeletonCard';
@@ -93,7 +94,10 @@ export default function StatsScreen({ embedded = false }: { embedded?: boolean }
             }
             const seen = new Set<string>(JSON.parse(raw));
             const fresh = ach.earned.filter((a) => !seen.has(a.key));
-            if (fresh.length > 0) setUnlockQueue(fresh);
+            if (fresh.length > 0) {
+              setUnlockQueue(fresh);
+              fresh.forEach(a => track('achievement_unlocked', { key: a.key, rarity: a.rarity, source: 'server' }));
+            }
           } catch { /* storage unavailable — skip celebration */ }
         });
       }

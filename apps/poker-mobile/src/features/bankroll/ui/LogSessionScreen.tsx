@@ -17,6 +17,7 @@ import { spacing } from '../../../theme/spacing';
 import { radii } from '../../../theme/radii';
 import { confirmDialog } from '../../../utils/confirm';
 import { showToast } from '../../../utils/toast';
+import { track } from '../../../utils/analytics';
 import { isFeatureEnabled } from '../../../config/features';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
 import { useBankroll } from '../state/BankrollContext';
@@ -131,6 +132,7 @@ export default function LogSessionScreen() {
       showToast('Session updated.', 'success');
     } else {
       await addSession(input);
+      track('bankroll_session_logged', { gameType: input.gameType, source: input.source });
       showToast('Session logged.', 'success');
     }
     navigation.goBack();
