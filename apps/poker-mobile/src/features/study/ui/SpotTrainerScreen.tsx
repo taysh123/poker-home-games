@@ -60,7 +60,7 @@ export default function SpotTrainerScreen() {
     return (
       <Screen>
         {acc >= 70 ? <Celebration /> : null}
-        <BrandHeader variant="screen" title="Quiz complete" onBack={() => navigation.goBack()} />
+        <BrandHeader variant="screen" title={isQuiz ? 'Quiz complete' : 'Session complete'} onBack={() => navigation.goBack()} />
         <View style={styles.center}>
           <Card variant="hero" style={styles.resultCard}>
             <Text style={styles.resultScore}>{correctCount}/{answered}</Text>
@@ -96,8 +96,20 @@ export default function SpotTrainerScreen() {
         title={isQuiz ? 'Spot Trainer' : 'Decision Trainer'}
         subtitle={isQuiz ? `${Math.min(answered + (result ? 0 : 1), QUIZ_LENGTH)} / ${QUIZ_LENGTH}` : `✓ ${correctCount} / ${answered}`}
         onBack={() => navigation.goBack()}
+        right={!isQuiz && answered > 0 ? (
+          <PressableScale onPress={() => setDone(true)} hitSlop={8} accessibilityRole="button" accessibilityLabel="Finish session">
+            <Text style={styles.finishText}>Finish</Text>
+          </PressableScale>
+        ) : undefined}
       />
       <View style={styles.body}>
+        {!isQuiz && (
+          <View style={styles.statsStrip}>
+            <Text style={styles.statItem}>Answered <Text style={styles.statVal}>{answered}</Text></Text>
+            <Text style={styles.statItem}>Correct <Text style={styles.statVal}>{correctCount}</Text></Text>
+            <Text style={styles.statItem}>Accuracy <Text style={styles.statVal}>{answered > 0 ? `${Math.round((correctCount / answered) * 100)}%` : '—'}</Text></Text>
+          </View>
+        )}
         <Card style={styles.spotCard}>
           <Text style={styles.context}>{spot.range.stackBb}bb · {spot.range.tableSize}-max</Text>
           <Text style={styles.prompt}>
@@ -196,4 +208,13 @@ const styles = StyleSheet.create({
   resultAcc: { ...typography.h3, color: colors.textHigh },
   resultSub: { ...typography.bodySmall, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xs },
   doneBtns: { gap: spacing.sm },
+  finishText: { ...typography.label, color: colors.gold },
+  statsStrip: {
+    flexDirection: 'row', justifyContent: 'space-between', backgroundColor: colors.surface,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radii.md,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
+  },
+  statItem: { ...typography.bodySmall, color: colors.textMuted },
+  statVal: { ...typography.label, color: colors.text },
 });
+

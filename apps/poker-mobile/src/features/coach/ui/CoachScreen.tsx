@@ -61,7 +61,7 @@ export default function CoachScreen() {
 
         <View style={styles.section}>
           <SectionTitle>ANALYZE A HAND</SectionTitle>
-          {METHODS.map(m => (
+          {METHODS.filter(m => m.kind !== 'screenshot' || isFeatureEnabled('coachScreenshot')).map(m => (
             <PressableScale key={m.kind} onPress={() => navigation.navigate('CoachInput', { method: m.kind })} haptic="light">
               <Card style={styles.methodCard}>
                 <View style={styles.methodIcon}>
