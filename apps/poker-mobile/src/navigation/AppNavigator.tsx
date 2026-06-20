@@ -50,6 +50,7 @@ import GroupsAuthGateScreen from '../screens/GroupsAuthGateScreen';
 import GuestStatsScreen from '../screens/GuestStatsScreen';
 import GlassView from '../components/motion/GlassView';
 import Toast from '../components/Toast';
+import OfflineBanner from '../components/OfflineBanner';
 import * as storage from '../utils/storage';
 import { isFeatureEnabled } from '../config/features';
 import BankrollScreen from '../features/bankroll/ui/BankrollScreen';
@@ -479,6 +480,7 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
   return (
     <NavigationContainer ref={navigationRef} linking={linking}>
       <Toast />
+      <OfflineBanner />
       <PushListeners />
       <Stack.Navigator screenOptions={stackScreenOptions}>
         {user === null ? (

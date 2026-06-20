@@ -20,6 +20,7 @@ import { fadeIn, slideUp, pulse } from '../theme/motion';
 import { getMyStats, MyStatsDto, RecentSessionDto } from '../api/statsApi';
 import { getMyAchievements, AchievementDto, MyAchievementsDto } from '../api/achievementsApi';
 import { isFeatureEnabled } from '../config/features';
+import ErrorState from '../components/ErrorState';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import SessionListItem from '../components/SessionListItem';
 import SkeletonCard from '../components/SkeletonCard';
@@ -164,13 +165,7 @@ export default function StatsScreen({ embedded = false }: { embedded?: boolean }
     return (
       <Screen>
         {customHeader}
-        <View style={styles.center}>
-          <Ionicons name="alert-circle-outline" size={40} color={colors.textDim} />
-          <Text style={styles.errorText}>{error ?? 'Something went wrong.'}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
-            <Text style={styles.retryText}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
+        <ErrorState message={error ?? undefined} onRetry={() => load()} />
       </Screen>
     );
   }
