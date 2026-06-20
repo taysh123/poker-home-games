@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Screen from '../../../components/Screen';
@@ -15,6 +17,7 @@ import { spacing } from '../../../theme/spacing';
 import { radii } from '../../../theme/radii';
 import { confirmDialog } from '../../../utils/confirm';
 import { showToast } from '../../../utils/toast';
+import { isFeatureEnabled } from '../../../config/features';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
 import { useBankroll } from '../state/BankrollContext';
 import type { BankrollGameType, BankrollSource } from '../types';
@@ -67,8 +70,10 @@ export default function LogSessionScreen() {
   // Common
   const [fees, setFees] = useState(existing ? String(existing.feesCents / 100) : '');
   const [error, setError] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const isCash = gameType === 'cash';
+  const useNativeDate = isFeatureEnabled('polish') && Platform.OS !== 'web';
 
   function build(): CreateSessionInput | null {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { setError('Enter a valid date (YYYY-MM-DD).'); return null; }
@@ -156,7 +161,35 @@ export default function LogSessionScreen() {
         />
 
         <Card style={styles.formCard}>
-          <AppTextInput label="Date" value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" autoCapitalize="none" />
+          {useNativeDate ? (
+            <View>
+              <Text style={styles.fieldLabel}>Date</Text>
+              <PressableScale
+                style={styles.dateBtn}
+                onPress={() => setShowDatePicker(true)}
+                accessibilityRole="button"
+                accessibilityLabel={`Date, ${date}`}
+              >
+                <Ionicons name="calendar-outline" size={16} color={colors.gold} />
+                <Text style={styles.dateText}>
+                  {new Date(`${date}T12:00:00`).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                </Text>
+              </PressableScale>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={new Date(`${date}T12:00:00`)}
+                  mode="date"
+                  maximumDate={new Date()}
+                  onChange={(_, d) => {
+                    setShowDatePicker(Platform.OS === 'ios');
+                    if (d) setDate(d.toISOString().slice(0, 10));
+                  }}
+                />
+              )}
+            </View>
+          ) : (
+            <AppTextInput label="Date" value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" autoCapitalize="none" />
+          )}
           <AppTextInput label="Venue / site (optional)" value={venue} onChangeText={setVenue} placeholder="Aria, Home game, PokerStars…" />
 
           {isCash ? (
@@ -233,6 +266,13 @@ const styles = StyleSheet.create({
   pairRow: { flexDirection: 'row', gap: spacing.md },
   pairItem: { flex: 1 },
   error: { ...typography.bodySmall, color: colors.error },
+  fieldLabel: { ...typography.labelSmall, color: colors.textMuted, marginBottom: 6 },
+  dateBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    borderRadius: radii.md, paddingHorizontal: spacing.md, paddingVertical: 14, minHeight: 48,
+  },
+  dateText: { ...typography.body, color: colors.text },
   deleteBtn: { alignItems: 'center', paddingVertical: spacing.md },
   deleteText: { ...typography.label, color: colors.error },
 });
