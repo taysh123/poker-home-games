@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tpoker.app/schemas/content-pack.schema.json",
+  "title": "ContentPack",
+  "description": "The delivery envelope for T Poker content. Carries a manifest plus optional typed content arrays. Tolerant: unknown top-level fields are ignored (forward-compatible). See docs/content-architecture/03-json-schema-specification.md.",
+  "type": "object",
+  "required": ["manifest"],
+  "properties": {
+    "manifest": {
+      "type": "object",
+      "required": ["id", "version", "schemaVersion", "name", "locale", "isIllustrative", "entitlements"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "description": "Stable kebab-case pack id." },
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$", "description": "Content semver." },
+        "schemaVersion": { "type": "integer", "minimum": 1, "description": "Structure version (migration axis)." },
+        "name": { "type": "string", "minLength": 1 },
+        "locale": { "type": "string", "minLength": 2 },
+        "isIllustrative": { "type": "boolean", "description": "Mirrors RangeDataset.isIllustrative." },
+        "entitlements": {
+          "type": "array",
+          "description": "PremiumFeatureKey[] required to access this pack. [] = free. Known keys: advanced_gto, ai_coach, advanced_bankroll, cloud_sync, premium_learning.",
+          "items": { "type": "string" }
+        },
+        "minAppVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "checksum": { "type": "string", "description": "Set by the build pipeline; SHA-256 of the canonical body." },
+        "signature": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "ranges":    { "type": "array", "items": { "$ref": "https://tpoker.app/schemas/range-doc.schema.json" } },
+    "lessons":   { "type": "array", "items": { "$ref": "https://tpoker.app/schemas/lesson-doc.schema.json" } },
+    "quizzes":   { "type": "array", "items": { "$ref": "https://tpoker.app/schemas/quiz-doc.schema.json" } },
+    "paths":     { "type": "array", "items": { "$ref": "https://tpoker.app/schemas/learning-path-doc.schema.json" } },
+    "knowledge": { "type": "array", "items": { "$ref": "https://tpoker.app/schemas/coach-knowledge-doc.schema.json" } }
+  }
+}

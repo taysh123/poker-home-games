@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tpoker.app/schemas/coach-knowledge-doc.schema.json",
+  "title": "CoachKnowledgeDoc",
+  "description": "A server-resident coach knowledge entry the ICoachAiProvider retrieves to ground analyses. Commercial IP — delivered to the server, not the device. Tolerant: unknown fields ignored.",
+  "type": "object",
+  "required": ["id", "topic", "concept"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "topic": { "type": "string", "minLength": 1 },
+    "concept": { "type": "string", "minLength": 1, "description": "Markdown explanation used to ground/cite coach output." },
+    "appliesTo": {
+      "type": "object",
+      "description": "Optional retrieval filters.",
+      "properties": {
+        "scenario": { "type": "string" },
+        "position": { "type": "string" },
+        "street": { "type": "string", "enum": ["preflop", "flop", "turn", "river", "general"] }
+      }
+    },
+    "rangeRefs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Ids of RangeDocs this knowledge relates to (same pack)."
+    },
+    "tags": { "type": "array", "items": { "type": "string" } }
+  }
+}

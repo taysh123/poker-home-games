@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tpoker.app/schemas/range-doc.schema.json",
+  "title": "RangeDoc",
+  "description": "A preflop range. Superset of the app's PreflopRange (apps/poker-mobile/src/features/study/types.ts) so existing trainer/quiz consumers work unchanged. Tolerant: unknown fields are ignored (forward-compatible).",
+  "type": "object",
+  "required": ["id", "format", "tableSize", "stackBb", "scenario", "heroPosition", "label", "strategy"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "format": { "type": "string", "enum": ["cash", "mtt"] },
+    "tableSize": { "type": "integer", "minimum": 2, "maximum": 10 },
+    "stackBb": { "type": "number", "exclusiveMinimum": 0 },
+    "scenario": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Open string. 'RFI' | 'vs_RFI' today; extensible (e.g. '3bet', 'vs_3bet') without a schema bump."
+    },
+    "heroPosition": { "type": "string", "minLength": 1 },
+    "villainPosition": { "type": "string", "minLength": 1 },
+    "openSizeBb": { "type": "number", "exclusiveMinimum": 0 },
+    "label": { "type": "string", "minLength": 1 },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "strategy": {
+      "type": "object",
+      "description": "HandKey -> ActionFrequency[]. Per-hand frequencies should sum to ~1 (CI checks).",
+      "propertyNames": { "pattern": "^[2-9TJQKA]{2}[so]?$" },
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "required": ["action", "freq"],
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "Recommended set: fold|call|raise|check|allin. Open string for forward-compat."
+            },
+            "freq": { "type": "number", "minimum": 0, "maximum": 1 },
+            "sizeBb": { "type": "number", "exclusiveMinimum": 0 }
+          }
+        }
+      }
+    }
+  }
+}

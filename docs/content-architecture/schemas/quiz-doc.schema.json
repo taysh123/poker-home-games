@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tpoker.app/schemas/quiz-doc.schema.json",
+  "title": "QuizDoc",
+  "description": "An authored quiz: an ordered list of questions. Replaces/augments the RNG-sampled trainer with curated content. Tolerant: unknown fields ignored.",
+  "type": "object",
+  "required": ["id", "title", "questions"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "passThresholdPct": { "type": "number", "minimum": 0, "maximum": 100 },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "questions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "kind"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "kind": { "type": "string", "enum": ["range_spot", "multiple_choice"] },
+          "prompt": { "type": "string" },
+          "explanation": { "type": "string" },
+          "rangeId": { "type": "string", "description": "range_spot: references a RangeDoc.id in the same pack." },
+          "hand": { "type": "string", "pattern": "^[2-9TJQKA]{2}[so]?$", "description": "range_spot: the hand to decide." },
+          "correctActions": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional explicit correct actions (else graded against the referenced range's strategy)."
+          },
+          "choices": { "type": "array", "items": { "type": "string" }, "description": "multiple_choice options." },
+          "correctIndex": { "type": "integer", "minimum": 0, "description": "multiple_choice: index into choices." }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "kind": { "const": "range_spot" } } },
+            "then": { "required": ["rangeId", "hand"] }
+          },
+          {
+            "if": { "properties": { "kind": { "const": "multiple_choice" } } },
+            "then": { "required": ["choices", "correctIndex"] }
+          }
+        ]
+      }
+    }
+  }
+}

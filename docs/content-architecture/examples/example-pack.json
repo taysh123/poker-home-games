@@ -1,0 +1,91 @@
+{
+  "_comment": "SYNTHETIC ILLUSTRATIVE FIXTURE — not commercial workbook content. Exists only to validate the JSON Schemas in ../schemas. Safe to delete.",
+  "manifest": {
+    "id": "example-cash-6max",
+    "version": "1.0.0",
+    "schemaVersion": 1,
+    "name": "Example Cash 6-max (illustrative)",
+    "locale": "en",
+    "isIllustrative": true,
+    "entitlements": ["advanced_gto"],
+    "minAppVersion": "1.4.0",
+    "checksum": "sha256:PLACEHOLDER",
+    "createdAt": "2026-01-01T00:00:00Z"
+  },
+  "ranges": [
+    {
+      "id": "rfi-co-6max-100",
+      "format": "cash",
+      "tableSize": 6,
+      "stackBb": 100,
+      "scenario": "RFI",
+      "heroPosition": "CO",
+      "openSizeBb": 2.5,
+      "label": "CO open · 6-max 100bb",
+      "tags": ["preflop", "rfi"],
+      "strategy": {
+        "AA": [{ "action": "raise", "freq": 1 }],
+        "AKs": [{ "action": "raise", "freq": 1 }],
+        "T9s": [{ "action": "raise", "freq": 0.6 }, { "action": "fold", "freq": 0.4 }],
+        "72o": [{ "action": "fold", "freq": 1 }]
+      }
+    }
+  ],
+  "lessons": [
+    {
+      "id": "lesson-position",
+      "title": "Why position matters",
+      "body": "Acting last lets you make better decisions with more information. **Play tighter out of position.**",
+      "tags": ["fundamentals"],
+      "estMinutes": 4
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "quiz-co-opens",
+      "title": "CO opening decisions",
+      "passThresholdPct": 70,
+      "tags": ["preflop"],
+      "questions": [
+        {
+          "id": "q1",
+          "kind": "range_spot",
+          "prompt": "CO, folded to you. T9s — open or fold?",
+          "rangeId": "rfi-co-6max-100",
+          "hand": "T9s",
+          "explanation": "T9s is a frequent open from the CO — a strong suited connector with playability."
+        },
+        {
+          "id": "q2",
+          "kind": "multiple_choice",
+          "prompt": "What most increases your opening range?",
+          "choices": ["Earlier position", "Later position", "Shorter stacks", "More limpers"],
+          "correctIndex": 1,
+          "explanation": "Later position = more fold equity and position postflop, so you open wider."
+        }
+      ]
+    }
+  ],
+  "paths": [
+    {
+      "id": "path-preflop-basics",
+      "title": "Preflop basics",
+      "tags": ["beginner"],
+      "steps": [
+        { "id": "s1", "ref": { "type": "lesson", "id": "lesson-position" }, "unlock": { "type": "always" } },
+        { "id": "s2", "ref": { "type": "quiz", "id": "quiz-co-opens" }, "unlock": { "type": "always" } },
+        { "id": "s3", "ref": { "type": "range_drill", "id": "rfi-co-6max-100" }, "unlock": { "type": "min_quiz_pct", "quizId": "quiz-co-opens", "pct": 70 } }
+      ]
+    }
+  ],
+  "knowledge": [
+    {
+      "id": "kb-co-rfi",
+      "topic": "CO RFI strategy",
+      "concept": "From the cutoff you open a wide range of suited connectors and broadways because you only have the button and blinds left to act behind you.",
+      "appliesTo": { "scenario": "RFI", "position": "CO", "street": "preflop" },
+      "rangeRefs": ["rfi-co-6max-100"],
+      "tags": ["preflop", "rfi"]
+    }
+  ]
+}
