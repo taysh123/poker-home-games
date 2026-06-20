@@ -205,6 +205,8 @@ export default function HomeScreen() {
             style={styles.notifBtn}
             onPress={() => navigation.navigate('Notifications')}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={unreadNotifications > 0 ? `Notifications, ${unreadNotifications} unread` : 'Notifications'}
           >
             <Ionicons name="notifications-outline" size={20} color={unreadNotifications > 0 ? colors.gold : colors.textMuted} />
             {(unreadNotifications > 0 || invitations.length > 0) && (
@@ -214,6 +216,8 @@ export default function HomeScreen() {
           <TouchableOpacity
             onPress={() => navigation.navigate('Profile')}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Profile"
           >
             <Avatar
               name={user?.username ?? '?'}
@@ -228,6 +232,8 @@ export default function HomeScreen() {
             onPress={handleLogout}
             disabled={loggingOut}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Log out"
           >
             {loggingOut
               ? <ActivityIndicator color={colors.textMuted} size="small" />

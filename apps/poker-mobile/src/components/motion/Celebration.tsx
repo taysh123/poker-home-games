@@ -8,6 +8,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { successNotification } from '../../utils/haptics';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { isFeatureEnabled } from '../../config/features';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -67,6 +69,7 @@ type Props = {
  */
 export default function Celebration({ haptic = true }: Props) {
   const [done, setDone] = useState(false);
+  const reducedMotion = useReducedMotion();
 
   const particles = useMemo<ParticleSpec[]>(
     () =>
@@ -88,7 +91,8 @@ export default function Celebration({ haptic = true }: Props) {
     return () => clearTimeout(timer);
   }, [haptic]);
 
-  if (done) return null;
+  // Respect the OS "reduce motion" setting (gated behind `polish` so prod is unchanged when off).
+  if (done || (isFeatureEnabled('polish') && reducedMotion)) return null;
 
   return (
     // overflow hidden: drifting particles must never widen the page (web)
