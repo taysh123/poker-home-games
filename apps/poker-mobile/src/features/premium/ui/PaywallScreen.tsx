@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +25,7 @@ export default function PaywallScreen() {
   const { isPremium, purchasing, purchase, restore } = usePremium();
   const { refresh: refreshEntitlement } = useEntitlements();
   const [plan, setPlan] = useState<'yearly' | 'monthly'>('yearly');
+  const [restoring, setRestoring] = useState(false);
 
   const productId = plan === 'yearly' ? PRICING.yearly.productId : PRICING.monthly.productId;
 
@@ -40,9 +41,14 @@ export default function PaywallScreen() {
     }
   }
   async function onRestore() {
-    const res = await restore();
-    if (res.ok) await refreshEntitlement();
-    showToast(res.ok ? 'Premium restored.' : 'No purchase to restore.', res.ok ? 'success' : 'info');
+    setRestoring(true);
+    try {
+      const res = await restore();
+      if (res.ok) await refreshEntitlement();
+      showToast(res.ok ? 'Premium restored.' : 'No purchase to restore.', res.ok ? 'success' : 'info');
+    } finally {
+      setRestoring(false);
+    }
   }
 
   return (
@@ -93,13 +99,21 @@ export default function PaywallScreen() {
               label={plan === 'yearly' ? `Go Premium — ${PRICING.yearly.price}/yr` : `Go Premium — ${PRICING.monthly.price}/mo`}
               variant="gradient" loading={purchasing} onPress={upgrade}
             />
-            <PressableScale onPress={onRestore} style={styles.restore}>
-              <Text style={styles.restoreText}>Restore purchases</Text>
+            <PressableScale onPress={onRestore} disabled={restoring} style={styles.restore} accessibilityRole="button" accessibilityLabel="Restore purchases">
+              <Text style={styles.restoreText}>{restoring ? 'Restoring…' : 'Restore purchases'}</Text>
             </PressableScale>
             <Text style={styles.fine}>
               Subscriptions renew until cancelled. Cancel anytime in your store account. AI analyses
               are subject to a fair-use monthly quota.
             </Text>
+            <PressableScale
+              onPress={() => Linking.openURL('mailto:truestorylabs@gmail.com?subject=Purchase%20help')}
+              style={styles.helpLink}
+              accessibilityRole="button"
+              accessibilityLabel="Get help with a purchase"
+            >
+              <Text style={styles.helpText}>Need help with a purchase?</Text>
+            </PressableScale>
           </>
         )}
       </ScrollView>
@@ -141,6 +155,8 @@ const styles = StyleSheet.create({
   planSub: { ...typography.bodySmall, color: colors.textMuted },
   restore: { alignItems: 'center', paddingVertical: spacing.sm },
   restoreText: { ...typography.label, color: colors.gold },
+  helpLink: { alignItems: 'center', paddingVertical: spacing.xs },
+  helpText: { ...typography.bodySmall, color: colors.textMuted, textDecorationLine: 'underline' },
   fine: { ...typography.bodySmall, color: colors.textDim, textAlign: 'center' },
   activeCard: { alignItems: 'center', gap: spacing.xs },
   activeTitle: { ...typography.h2, color: colors.text },
