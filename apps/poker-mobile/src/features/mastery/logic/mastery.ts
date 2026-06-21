@@ -1,5 +1,5 @@
 /**
- * Mastery engine (PR #7) — PURE implementation of Mastery_Model MM-01..05 (Release 0.8.0).
+ * Mastery engine (PR #7) — PURE implementation of Mastery_Model MM-01..05 (Release 0.8.1).
  * Computed from attempt aggregates + content structure (passed in by callers), never from the workbook.
  * Foundation only: not yet wired to live analytics events (that arrives with the analytics PR).
  *

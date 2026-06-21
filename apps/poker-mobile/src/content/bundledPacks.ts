@@ -7,12 +7,12 @@
  * the bundle's load path until bootstrap (itself flag-gated) calls this; a missing artifact → [].
  */
 import type { ContentPack } from './types';
+import { quizSamplePackArtifact } from './bundledArtifacts';
 
 export function bundledPacks(): ContentPack[] {
   const packs: ContentPack[] = [];
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    packs.push(require('../../assets/content/0.8.0/quiz_sample.pack.json') as ContentPack);
+    packs.push(quizSamplePackArtifact() as ContentPack);
   } catch {
     /* artifact not bundled → no quizzes (runner shows an honest empty state) */
   }

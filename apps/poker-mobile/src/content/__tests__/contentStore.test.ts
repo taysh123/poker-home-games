@@ -10,7 +10,7 @@ describe('ContentStore — ingest lifecycle (memory backend)', () => {
     const s = store();
     const res = await s.ingest([validRfiPack(), compositePack()]);
     expect(res.every(r => r.ok)).toBe(true);
-    expect(await s.datasetVersion()).toBe('0.8.0');
+    expect(await s.datasetVersion()).toBe('0.8.1');
     expect((await s.tables()).sort()).toEqual(['content_packs', 'rfi_ranges']);
     expect(await s.getAll('rfi_ranges')).toHaveLength(2);
     expect(await s.getById('rfi_ranges', { RowID: 'RFI-0002' })).toMatchObject({ Hand: 'T9s' });

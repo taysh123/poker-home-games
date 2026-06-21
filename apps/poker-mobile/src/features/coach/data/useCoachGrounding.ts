@@ -23,7 +23,7 @@ export type GroundedClaimView = Omit<GroundedClaim, 'assertion_template'>;
 const toView = ({ assertion_template, ...rest }: GroundedClaim): GroundedClaimView => rest;
 
 export interface CoachGrounding {
-  /** Dataset version of the bundled artifact (e.g. "0.8.0"). */
+  /** Dataset version of the bundled artifact (e.g. "0.8.1"). */
   datasetVersion: string;
   /** All safe-to-assert sentences for a concept (verbatim, caveat-bearing). The only fact path. */
   assertionsForConcept: (conceptId: string) => string[];

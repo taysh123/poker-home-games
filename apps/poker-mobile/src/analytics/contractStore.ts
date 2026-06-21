@@ -6,6 +6,7 @@
  * tests without the loader. Bundled (not network) → web + native, no I/O.
  */
 import { isFeatureEnabled } from '../config/features';
+import { analyticsContractArtifact } from '../content/bundledArtifacts';
 import { buildAnalyticsContract, type AnalyticsContract, type AnalyticsContractData } from './contract';
 
 let cached: AnalyticsContract | null = null;
@@ -16,8 +17,7 @@ export function loadAnalyticsContract(): AnalyticsContract | null {
   if (attempted) return cached;
   attempted = true;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const data = require('../../assets/content/0.8.0/analytics_contract.json') as AnalyticsContractData;
+    const data = analyticsContractArtifact() as AnalyticsContractData;
     cached = buildAnalyticsContract(data);
   } catch {
     cached = null;

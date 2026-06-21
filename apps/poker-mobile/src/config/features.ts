@@ -21,7 +21,7 @@ export type FeatureFlag =
   | 'polish'    // V2.1 STEP 4 — UX polish (error/offline states, contrast, reduced-motion, etc.)
   | 'coachScreenshot' // V2.1 STEP 4 — Coach screenshot input (hidden until real image pipeline ships)
   | 'immersive' // V2.1 STEP 5.3 — immersive poker-table presentation (session/study/training/coach)
-  | 'content'   // V2.2 — content platform (workbook 0.8.0): ContentStore / lessons / quizzes / packs (prod OFF)
+  | 'content'   // V2.2 — content platform (workbook 0.8.1): ContentStore / lessons / quizzes / packs (prod OFF)
   | 'mastery'   // V2.2 — analytics → mastery engine (prod OFF)
   | 'v2Splash'; // dual-brand (True Story Labs → T Poker) launch splash
 

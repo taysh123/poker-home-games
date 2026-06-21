@@ -1,6 +1,6 @@
 /**
  * Analytics contract (PR #8) — PURE mapping from the workbook's canonical analytics events
- * (Analytics_Events sheet, 0.8.0) to their warehouse ExportTable + required/optional field contracts.
+ * (Analytics_Events sheet, 0.8.1) to their warehouse ExportTable + required/optional field contracts.
  *
  * This is the vendor-NEUTRAL spine: it knows nothing about Amplitude/PostHog/Segment or the app's live
  * `track()` seam. It turns the exported contract into typed lookups so a later sink can validate and route

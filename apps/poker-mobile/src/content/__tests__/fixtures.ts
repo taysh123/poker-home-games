@@ -15,7 +15,7 @@ export function makePack(opts: {
   const { schema, rows } = opts;
   return {
     manifest: {
-      dataset_version: opts.dsv ?? '0.8.0',
+      dataset_version: opts.dsv ?? '0.8.1',
       pack_id: opts.packId ?? 'pack.test',
       source_sheet: opts.sheet ?? 'Test_Sheet',
       row_count: opts.rowCountOverride ?? rows.length,

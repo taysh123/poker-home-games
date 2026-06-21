@@ -15,9 +15,7 @@ from collections import Counter
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from export import read_workbook, schema_registry  # noqa: E402
-
-REPO = os.path.abspath(os.path.join(HERE, "..", ".."))
-WB = os.path.join(REPO, "content", "release-0.8.0", "TPoker_Content_Database.xlsx")
+from paths import WORKBOOK as WB, REPO  # noqa: E402
 
 
 def main():

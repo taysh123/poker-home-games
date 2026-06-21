@@ -1,5 +1,5 @@
 /**
- * Mastery types (PR #7) — the five Mastery_Model dimensions (MM-01..05) from Release 0.8.0.
+ * Mastery types (PR #7) — the five Mastery_Model dimensions (MM-01..05) from Release 0.8.1.
  * Pure data; no content/store coupling. The engine (logic/mastery.ts) computes these states from
  * per-objective attempt aggregates + the content structure (objective→concept/pack/track) supplied by callers.
  */

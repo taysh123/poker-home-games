@@ -7,7 +7,7 @@ labels are copied verbatim; only Published/Approved rows are exported. content_h
 (byte-identical to the app's hash.ts). Stdlib only (no deps).
 
 Usage:  python tools/content-export/export.py
-Output: content/release-0.8.0/exports/<dataset_version>/
+Output: content/<release>/exports/<dataset_version>/  (release dir set in paths.py)
 """
 import json
 import os
@@ -18,9 +18,7 @@ import xml.etree.ElementTree as ET
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from canonical import content_hash  # noqa: E402
-
-ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-WORKBOOK = os.path.join(ROOT, "content", "release-0.8.0", "TPoker_Content_Database.xlsx")
+from paths import WORKBOOK, exports_dir  # noqa: E402  (single source for the canonical release path)
 M = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 PR = "http://schemas.openxmlformats.org/package/2006/relationships"
@@ -243,7 +241,7 @@ def main():
     wb = read_workbook(WORKBOOK)
     dsv, release_date = dataset_version(wb)
     schemas = schema_registry(wb)
-    out_dir = os.path.join(ROOT, "content", "release-0.8.0", "exports", dsv)
+    out_dir = exports_dir(dsv)
     packs_dir = os.path.join(out_dir, "packs")
     os.makedirs(packs_dir, exist_ok=True)
 

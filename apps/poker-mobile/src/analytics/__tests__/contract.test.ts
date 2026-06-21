@@ -17,7 +17,7 @@ import {
 import { mapToExportRecord, missingRequired } from '../adapter';
 import { loadAnalyticsContract, __resetAnalyticsContractForTests } from '../contractStore';
 
-const realArtifact = require('../../../assets/content/0.8.0/analytics_contract.json') as AnalyticsContractData;
+const realArtifact = require('../../../assets/content/0.8.1/analytics_contract.json') as AnalyticsContractData;
 const mockFlag = isFeatureEnabled as jest.Mock;
 
 describe('parseFieldList', () => {
@@ -33,7 +33,7 @@ describe('buildAnalyticsContract — real artifact (11 events)', () => {
   const contract = buildAnalyticsContract(realArtifact);
 
   it('loads all 11 events with the dataset version', () => {
-    expect(contract.datasetVersion).toBe('0.8.0');
+    expect(contract.datasetVersion).toBe('0.8.1');
     expect(contract.events.length).toBe(11);
   });
 

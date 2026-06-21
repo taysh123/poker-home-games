@@ -7,6 +7,7 @@
  * artifact is bundled (not network/sqlite) so this works on web and native with no I/O.
  */
 import { isFeatureEnabled } from '../../../config/features';
+import { coachGroundingArtifact } from '../../../content/bundledArtifacts';
 import { buildGroundingIndex, type GroundingDataset, type GroundingIndex } from '../logic/grounding';
 
 let cached: GroundingIndex | null = null;
@@ -23,8 +24,7 @@ export function loadGroundingIndex(): GroundingIndex | null {
   if (attempted) return cached;
   attempted = true;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const data = require('../../../../assets/content/0.8.0/coach_grounding.json') as GroundingDataset;
+    const data = coachGroundingArtifact() as GroundingDataset;
     cached = buildGroundingIndex(data);
   } catch {
     cached = null; // missing/corrupt artifact → no grounding (coach keeps its ungrounded path)

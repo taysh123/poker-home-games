@@ -1,6 +1,6 @@
 {
   "manifest": {
-    "dataset_version": "0.8.0",
+    "dataset_version": "0.8.1",
     "pack_id": "quiz_sample",
     "source_sheet": "Quiz_Bank",
     "exported": "2026-06-20",

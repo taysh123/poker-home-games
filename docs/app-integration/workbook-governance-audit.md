@@ -1,7 +1,12 @@
-# Workbook Governance Audit — enum contradictions (Release 0.8.0)
+# Workbook Governance Audit — enum contradictions (Release 0.8.0 → RESOLVED in 0.8.1)
 
-**Status:** READ-ONLY audit. This document **recommends**; it does **not** modify the workbook,
-`Schema_Registry`, any cell value, or any `AllowedValues`. All remediation is content-team / workbook-side.
+> **✅ RESOLVED in workbook 0.8.1.** All 12 contradictions below were reconciled workbook-side. Verified by
+> `python tools/content-export/audit_governance.py` (0 contradictions) and a full `export.py` run
+> (`total_validation_errors=0`, ALL PACKS VALID) against `content/release-0.8.1/TPoker_Content_Database.xlsx`.
+> The analysis below is retained as the historical record of what was fixed and why.
+
+**Status:** READ-ONLY audit (historical). This document **recommended**; it did **not** modify the workbook,
+`Schema_Registry`, any cell value, or any `AllowedValues`. Remediation was content-team / workbook-side (0.8.1).
 
 **Source of truth:** `content/release-0.8.0/TPoker_Content_Database.xlsx`
 **Method:** `python tools/content-export/audit_governance.py` — reuses the exporter's `read_workbook` +

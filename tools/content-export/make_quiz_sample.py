@@ -10,7 +10,7 @@ Rows are copied verbatim — no fabrication, no edits. content_hash is recompute
 (byte-identical to the app's hash.ts) so the pack passes validate().
 
 Run: python tools/content-export/make_quiz_sample.py
-Out: apps/poker-mobile/assets/content/0.8.0/quiz_sample.pack.json
+Out: apps/poker-mobile/assets/content/<dataset_version>/quiz_sample.pack.json  (paths via paths.py)
 """
 import json
 import os
@@ -19,10 +19,12 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from canonical import content_hash  # noqa: E402
+from paths import WORKBOOK, exports_dir, assets_dir  # noqa: E402
+from export import read_workbook, dataset_version  # noqa: E402
 
-REPO = os.path.abspath(os.path.join(HERE, "..", ".."))
-SRC = os.path.join(REPO, "content", "release-0.8.0", "exports", "0.8.0", "packs", "quiz_bank.pack.json")
-OUT = os.path.join(REPO, "apps", "poker-mobile", "assets", "content", "0.8.0", "quiz_sample.pack.json")
+DSV = dataset_version(read_workbook(WORKBOOK))[0]  # canonical dataset version from the workbook
+SRC = os.path.join(exports_dir(DSV), "packs", "quiz_bank.pack.json")
+OUT = os.path.join(assets_dir(DSV), "quiz_sample.pack.json")
 
 SAMPLE_SIZE = 30
 
@@ -67,7 +69,7 @@ def main():
         json.dump(out, f, ensure_ascii=False, indent=2)
         f.write("\n")
 
-    print("wrote %s (%d rows, hash %s…)" % (os.path.relpath(OUT, REPO), len(rows), chash[:12]))
+    print("wrote %s (%d rows, hash %s…)" % (OUT, len(rows), chash[:12]))
 
 
 if __name__ == "__main__":
