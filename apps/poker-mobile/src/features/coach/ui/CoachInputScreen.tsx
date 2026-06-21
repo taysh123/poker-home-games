@@ -74,8 +74,13 @@ export default function CoachInputScreen() {
     if (err === 'rate_limited') { showToast('Slow down a moment, then try again.', 'info'); return; }
     if (err === 'unavailable') { showToast('AI Coach is unavailable right now. Try again.', 'error'); return; }
     if (err === 'no_credits') {
-      showToast('You are out of AI analyses.', 'info');
-      if (isFeatureEnabled('paywall')) navigation.replace('Paywall', { trigger: 'coach_no_credits' });
+      if (isFeatureEnabled('paywall')) {
+        showToast('You are out of AI analyses.', 'info');
+        navigation.replace('Paywall', { trigger: 'coach_no_credits' });
+      } else {
+        // No paywall yet → don't dead-end on a bare toast; set an honest expectation.
+        showToast("That's your free analysis used — more is coming with Premium.", 'info');
+      }
       return;
     }
     if (analysis) navigation.replace('CoachResult', { id: analysis.id });

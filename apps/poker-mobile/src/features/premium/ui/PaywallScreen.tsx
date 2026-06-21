@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Screen from '../../../components/Screen';
 import BrandHeader from '../../../components/BrandHeader';
 import Card from '../../../components/Card';
+import Chip from '../../../components/Chip';
 import PrimaryButton from '../../../components/PrimaryButton';
 import PressableScale from '../../../components/motion/PressableScale';
 import { colors } from '../../../theme/colors';
@@ -82,7 +83,7 @@ export default function PaywallScreen() {
           <>
             <Card variant="hero">
               <Text style={styles.heroTitle}>Go deeper. Play → Track → Study → Improve.</Text>
-              <Text style={styles.heroSub}>Unlock AI coaching, advanced GTO, deeper analytics and cloud sync.</Text>
+              <Text style={styles.heroSub}>Here's what Premium unlocks as features roll out.</Text>
             </Card>
 
             <View style={styles.features}>
@@ -92,7 +93,10 @@ export default function PaywallScreen() {
                     <Ionicons name={f.icon as React.ComponentProps<typeof Ionicons>['name']} size={18} color={colors.gold} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.featureTitle}>{f.title}</Text>
+                    <View style={styles.featureTitleRow}>
+                      <Text style={styles.featureTitle}>{f.title}</Text>
+                      {f.comingSoon && <Chip label="Soon" tone="neutral" />}
+                    </View>
                     <Text style={styles.featureDesc}>{f.desc}</Text>
                   </View>
                 </View>
@@ -160,6 +164,7 @@ const styles = StyleSheet.create({
   features: { gap: spacing.md },
   featureRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   featureIcon: { width: 38, height: 38, borderRadius: radii.sm, backgroundColor: colors.goldFaint, alignItems: 'center', justifyContent: 'center' },
+  featureTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   featureTitle: { ...typography.label, color: colors.text },
   featureDesc: { ...typography.bodySmall, color: colors.textMuted },
   plans: { flexDirection: 'row', gap: spacing.sm },
