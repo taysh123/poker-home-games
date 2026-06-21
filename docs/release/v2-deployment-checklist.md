@@ -11,11 +11,14 @@
 - [ ] Confirm the feature-flag matrix: production env sets no `EXPO_PUBLIC_APP_VARIANT=beta` → all V2 flags OFF.
 
 ## Before flipping the `paywall` flag (store IAP compliance — gated)
-- [ ] Terms of Service + Privacy Policy links rendered **on the PaywallScreen** (Privacy URL exists; Terms page may need authoring). Apple/Play require functional links on the purchase screen.
-- [ ] "Cancel anytime" + renewal terms shown near the CTA (present in fine print today — surface it).
-- [ ] Real billing provider wired behind `IBillingProvider` (today `mockBillingProvider` always succeeds; `restore()` is a no-op).
-- [ ] Localized store pricing (replace hard-coded `$11.99`/`$79.99` with SDK-provided prices).
-- [ ] Every `PREMIUM_FEATURES` benefit either genuinely live or still flagged `comingSoon` (no charging for unshipped benefits). See `docs/design-audit.md`.
+> Master status: [`commercial-readiness.md`](commercial-readiness.md). Architecture:
+> [`commercial/billing-architecture.md`](../commercial/billing-architecture.md),
+> [`commercial/ai-architecture.md`](../commercial/ai-architecture.md).
+- [x] Terms of Service + Privacy Policy links rendered **on the PaywallScreen** (both linked; Privacy live, Terms is a counsel-owned DRAFT `terms.html`). **EXTERNAL:** counsel must finalize the Terms copy before charging.
+- [x] "Cancel anytime" + renewal terms shown near the CTA (present in the paywall fine print).
+- [ ] Real billing provider wired behind `IBillingProvider` (RevenueCat/Stripe stubs scaffolded — they throw "not configured"; `mockBillingProvider` is still the active provider; `restore()` is a no-op). **EXTERNAL:** SDK + accounts + keys + products.
+- [ ] Localized store pricing (replace hard-coded `$11.99`/`$79.99` with SDK/Stripe-provided prices). **EXTERNAL:** live products.
+- [x] Every `PREMIUM_FEATURES` benefit either genuinely live or still flagged `comingSoon` (all `comingSoon` today → won't charge for unshipped benefits). See `docs/design-audit.md`.
 
 ## Web → Vercel
 - [ ] Root Directory = `apps/poker-mobile` (so `apps/poker-mobile/vercel.json` is the active config; a repo-root one is ignored).
@@ -41,6 +44,6 @@
 - [ ] Confirm prod-visible visual changes render as intended (per the ledger).
 
 ## Rollback
-- [ ] Web: redeploy the previous Vercel build (or revert the merge commit → auto-redeploy).
-- [ ] Backend: redeploy previous Railway image / revert; restore DB from backup if a migration must be undone.
-- [ ] Git: `git revert <merge-commit>` (additive/flag-gated changes revert cleanly) or reset `main` to the pre-v2 tag.
+See the dedicated **[`rollback-recovery.md`](rollback-recovery.md)** runbook (flag kill-switch → revert merge →
+full restore; additive migrations are safe to leave in place). Quick path: flip flags OFF via config, or
+`git revert -m 1 <merge-commit>` → Vercel auto-redeploys.

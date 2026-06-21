@@ -1,8 +1,10 @@
 # App Store / Play Store Release Readiness
 
-First-class review track (Phase D2). Read-only audit. Verdict: **code + config are submission-ready**; the only
-code-blocking item is a **Terms of Service URL** (needed for real IAP); everything else outstanding is **external
-setup** (store accounts, signing, service-account key) or gated on real billing.
+First-class review track (Phase D2). Originally read-only; updated after the commercial phase. Verdict: **code +
+config are submission-ready**. The former code-blocker — a **Terms of Service URL** — is now **resolved**: a
+counsel-owned DRAFT `terms.html` exists and is linked on the paywall + profile (counsel must finalize the copy
+before charging). Everything else outstanding is **external setup** (store accounts, signing, service-account
+key) or gated on real billing.
 
 ## Config (READY)
 `app.json`: name "T Poker", version 1.1.0, iOS `com.tpoker.app` + Android `com.tpoker.app`, scheme `tpoker`,
@@ -25,9 +27,10 @@ External: Play Console account + service-account JSON (`play-service-account.jso
 
 ## Subscriptions / IAP compliance
 Paywall built but `paywall` flag OFF + **mock billing**; all 5 premium features `comingSoon` (won't charge for
-unshipped — fixed in the commercial phase); restore button present; auto-renew disclosure in fine print; **real
-Privacy link now on the paywall**. **MISSING (code-blocking for real IAP):** a **Terms of Service** page + link
-on the paywall. Plus the real billing SDK + localized pricing (external — see integration-boundaries doc).
+unshipped); restore button present; auto-renew disclosure in fine print; **Privacy + Terms links now on the
+paywall** (Terms is a counsel-owned DRAFT — `terms.html`). **Remaining (external, not code):** counsel-final
+Terms copy, the real billing SDK + accounts/keys + products, and localized pricing (see
+`commercial/billing-architecture.md` + `release/commercial-readiness.md`).
 
 ## Privacy (READY)
 Live policy (`/privacy.html`), discloses account data + guest-on-device-only + deletion (in-app + email) + no

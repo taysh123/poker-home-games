@@ -22,3 +22,4 @@ the eventual merge is a deliberate, reviewable release of the live app's new app
 | 2026-06-21 | `StatsScreen` | Entrance animation respects Reduce Motion | Reduce-Motion ON → no fade/slide (instant). OFF → unchanged | (phase 3) | self (a11y) |
 | 2026-06-21 | `SessionScreen` | End-game winner spotlight spring respects Reduce Motion | Reduce-Motion ON → winner row no longer springs (instant final scale). OFF → unchanged | (phase 3) | self (a11y) |
 | 2026-06-21 | Profile / Bankroll | (no change) | Audited — no animations; already motion-safe | — | self |
+| 2026-06-21 | `ProfileScreen` (About & Support) | Added a **Terms of Service** row opening `terms.html`, under Privacy Policy | One new tappable row (icon + label + chevron); opens the counsel-owned Terms DRAFT. ⚠ Finalize Terms copy before merge (HARD GATE in merge-readiness) | `a0c0ee4` | self (legal surface) |

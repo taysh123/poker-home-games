@@ -47,11 +47,11 @@ All V2 surfaces are gated OFF in production (`src/config/features.ts` → `PROD_
 
 ## Pre-merge checklist (to complete before the eventual cutover)
 - [x] UI/UX polish program complete (design system, content + prod surfaces, a11y) + independent review resolved.
-- [ ] `prod-visible-changes.md` ledger reviewed and accepted (incl. the SessionListItem/GroupListItem chip restyle).
-- [ ] Commercial buildout reviewed (mastery persistence, pack detail, provider-driven pricing, legal links) +
-      the four review-track audits read: `docs/review/{backend-readiness, cost-scalability, security-abuse, store-readiness}.md`.
-- [ ] Pre-flip dependencies accepted or resolved: real billing SDK + Terms/EULA + localized pricing (gates the
-      `paywall` flip — see `v2-deployment-checklist.md`); real AI vendor (gates retiring the coach demo).
+- [x] Backend security hardening subset implemented (JWT fail-closed + BCrypt 13 + CORS visibility) — `docs/review/security-abuse.md`, commit `5f3d1b8`.
+- [ ] `prod-visible-changes.md` ledger reviewed and accepted (incl. the SessionListItem/GroupListItem chip restyle + the Profile **Terms of Service** link).
+- [ ] Commercial readiness reviewed — master: `docs/release/commercial-readiness.md`; architecture: `docs/commercial/{billing,ai}-architecture.md`; the four review-track audits: `docs/review/{backend-readiness, cost-scalability, security-abuse, store-readiness}.md`.
+- [ ] **HARD GATE — counsel-final Terms.** `apps/poker-mobile/public/terms.html` is a counsel-owned DRAFT and is linked from the **production-visible Profile screen**. Replace with attorney-approved copy **before merge** (not just before the paywall flip).
+- [ ] Pre-flip dependencies accepted or resolved: real billing SDK + accounts/keys + localized pricing (gates the `paywall` flip — see `v2-deployment-checklist.md` + `commercial-readiness.md`); real AI vendor key/budget (gates retiring the coach demo).
 - [ ] Final `tsc` + `jest` + `expo export -p web` green at the merge SHA.
-- [ ] `v2-deployment-checklist.md` walked (env vars, migrations, rollback).
+- [ ] `v2-deployment-checklist.md` walked (env vars, migrations) + `rollback-recovery.md` safety net created.
 - [ ] Backup tag + branch created at `main` pre-merge (rollback target).
