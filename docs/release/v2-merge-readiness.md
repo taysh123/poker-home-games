@@ -12,7 +12,7 @@ tsc clean · 367 jest / 42 suites · web export clean). Always re-run gates at t
 |-------|--------|
 | Source branch | `feature/v2-poker-platform` |
 | Target | `main` |
-| Ahead of `main` | 67 commits (grows as the program adds commits) |
+| Ahead of `main` | 73 commits at last audit — grows each commit; check with `git rev-list --count origin/main..HEAD` |
 | Behind `main` | **0** commits |
 | merge-base vs `main` HEAD | identical (`5ece98d7b`) → **clean fast-forward, 0 conflicts** |
 | Open PR | **#2** (`OPEN`) — github.com/taysh123/poker-home-games/pull/2 |
