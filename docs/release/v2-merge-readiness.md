@@ -12,7 +12,7 @@ tsc clean · 367 jest / 42 suites · web export clean). Always re-run gates at t
 |-------|--------|
 | Source branch | `feature/v2-poker-platform` |
 | Target | `main` |
-| Ahead of `main` | 56 commits |
+| Ahead of `main` | 67 commits (grows as the program adds commits) |
 | Behind `main` | **0** commits |
 | merge-base vs `main` HEAD | identical (`5ece98d7b`) → **clean fast-forward, 0 conflicts** |
 | Open PR | **#2** (`OPEN`) — github.com/taysh123/poker-home-games/pull/2 |
@@ -20,8 +20,8 @@ tsc clean · 367 jest / 42 suites · web export clean). Always re-run gates at t
 | CI | Vercel deployment check **pass** (preview built) |
 
 Because `main` has not advanced since the branch diverged, the merge is conflict-free. Recommended strategy at
-cutover time: **merge commit (`--no-ff`)** to preserve the 56-commit / per-PR history and the PR boundary
-(squash would collapse the granular content-platform history — not recommended).
+cutover time: **merge commit (`--no-ff`)** to preserve the full per-PR commit history and the PR boundary
+(squash would collapse the granular content-platform + polish history — not recommended).
 
 ## Local quality gates (current — re-verify at the merge SHA)
 | Gate | Result |
@@ -46,8 +46,12 @@ All V2 surfaces are gated OFF in production (`src/config/features.ts` → `PROD_
   design-system review, final QA, and release review are complete.
 
 ## Pre-merge checklist (to complete before the eventual cutover)
-- [ ] Polish program complete (Phases 1–6) + Phase 7 independent review findings resolved.
-- [ ] `prod-visible-changes.md` ledger reviewed and accepted.
+- [x] UI/UX polish program complete (design system, content + prod surfaces, a11y) + independent review resolved.
+- [ ] `prod-visible-changes.md` ledger reviewed and accepted (incl. the SessionListItem/GroupListItem chip restyle).
+- [ ] Commercial buildout reviewed (mastery persistence, pack detail, provider-driven pricing, legal links) +
+      the four review-track audits read: `docs/review/{backend-readiness, cost-scalability, security-abuse, store-readiness}.md`.
+- [ ] Pre-flip dependencies accepted or resolved: real billing SDK + Terms/EULA + localized pricing (gates the
+      `paywall` flip — see `v2-deployment-checklist.md`); real AI vendor (gates retiring the coach demo).
 - [ ] Final `tsc` + `jest` + `expo export -p web` green at the merge SHA.
 - [ ] `v2-deployment-checklist.md` walked (env vars, migrations, rollback).
 - [ ] Backup tag + branch created at `main` pre-merge (rollback target).
