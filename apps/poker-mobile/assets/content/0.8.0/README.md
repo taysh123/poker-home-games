@@ -9,6 +9,7 @@ the app bundle (the exporter's `exports/` output dir is gitignored).
 |------|--------------|----------|
 | `coach_grounding.json` | `Coach_Grounding` | `src/features/coach` — grounded, safe-to-assert claims |
 | `quiz_sample.pack.json` | `Quiz_Bank` (sample) | `src/features/study` — quiz runner (ContentStore pack) |
+| `analytics_contract.json` | `Analytics_Events` | `src/analytics` — event → ExportTable contract mapping |
 
 **Do not edit by hand.** To update: change the workbook, re-run `python tools/content-export/export.py`,
 then copy `content/release-0.8.0/exports/0.8.0/coach_grounding.json` here. Verbatim only — no
