@@ -26,6 +26,8 @@ import { radii } from '../../../theme/radii';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
 import { useContent } from '../../../context/ContentContext';
 import { useReducedMotion } from '../../../hooks/useReducedMotion';
+import { useMastery } from '../../mastery/state/MasteryContext';
+import type { ObjectiveMastery } from '../../mastery/types';
 import {
   normalizeQuestions,
   selectQuestions,
@@ -42,12 +44,25 @@ type R = RouteProp<RootStackParamList, 'QuizRunner'>;
 
 const RUN_LIMIT = 10; // questions per run
 
+/** Objective key for mastery: the LearningObjectiveID when present, else a labeled category proxy.
+ *  (The bundled quiz sample lacks LearningObjectiveID — the `cat:` proxy is honest + clearly category-level.) */
+function objectiveKeyOf(q: QuizQuestion): string {
+  if (q.learningObjectiveId) return q.learningObjectiveId;
+  return q.category ? `cat:${q.category}` : '';
+}
+
+/** Human label for an objective key (strip the category-proxy prefix). */
+function objectiveLabel(key: string): string {
+  return key.startsWith('cat:') ? key.slice(4) : key;
+}
+
 type Phase = 'pick' | 'run' | 'results';
 
 export default function QuizRunnerScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<R>();
   const { enabled, isLoaded, query } = useContent();
+  const mastery = useMastery();
 
   const [all, setAll] = useState<QuizQuestion[] | null>(null);
   const [error, setError] = useState(false);
@@ -94,7 +109,9 @@ export default function QuizRunnerScreen() {
   const answer = (choice: QuizChoice) => {
     if (chosen) return; // lock after first selection
     setChosen(choice);
-    setOutcomes(prev => [...prev, gradeAnswer(run[idx], choice).correct]);
+    const correct = gradeAnswer(run[idx], choice).correct;
+    setOutcomes(prev => [...prev, correct]);
+    mastery.record(objectiveKeyOf(run[idx]), correct); // no-op when the mastery flag is OFF
   };
 
   const next = () => {
@@ -134,7 +151,14 @@ export default function QuizRunnerScreen() {
               isLast={idx + 1 >= run.length}
             />
           ) : (
-            <ResultsView run={run} outcomes={outcomes} onRestart={restart} onDone={() => navigation.goBack()} />
+            <ResultsView
+              run={run}
+              outcomes={outcomes}
+              masteryEnabled={mastery.enabled}
+              masteryFor={mastery.masteryFor}
+              onRestart={restart}
+              onDone={() => navigation.goBack()}
+            />
           )}
         </StateView>
       </ScrollView>
@@ -266,9 +290,19 @@ function Feedback({ correct, correctKey, explanation }: { correct: boolean; corr
   );
 }
 
-function ResultsView({ run, outcomes, onRestart, onDone }: { run: QuizQuestion[]; outcomes: boolean[]; onRestart: () => void; onDone: () => void }) {
+function ResultsView({ run, outcomes, masteryEnabled, masteryFor, onRestart, onDone }: {
+  run: QuizQuestion[]; outcomes: boolean[];
+  masteryEnabled: boolean; masteryFor: (key: string) => ObjectiveMastery | null;
+  onRestart: () => void; onDone: () => void;
+}) {
   const score = scoreQuiz(outcomes);
   const breakdown = runBreakdown(run, outcomes);
+  // Honest mastery readout — ONLY from real recorded attempts (mastery flag on); distinct keys touched this run.
+  const masteryRows = masteryEnabled
+    ? Array.from(new Set(run.map(objectiveKeyOf).filter(Boolean)))
+        .map(key => ({ key, state: masteryFor(key) }))
+        .filter((r): r is { key: string; state: ObjectiveMastery } => r.state !== null)
+    : [];
   return (
     <>
       <Card variant="hero">
@@ -284,6 +318,18 @@ function ResultsView({ run, outcomes, onRestart, onDone }: { run: QuizQuestion[]
             <View key={b.category} style={styles.breakdownRow}>
               <Text style={styles.breakdownCat} numberOfLines={1}>{b.category}</Text>
               <Text style={styles.breakdownVal}>{b.correct}/{b.total}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {masteryRows.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>YOUR MASTERY · BASED ON YOUR ATTEMPTS SO FAR</Text>
+          {masteryRows.map(r => (
+            <View key={r.key} style={styles.breakdownRow}>
+              <Text style={styles.breakdownCat} numberOfLines={1}>{objectiveLabel(r.key)}</Text>
+              <Chip label={r.state} tone={r.state === 'Mastered' ? 'gold' : r.state === 'Proficient' ? 'success' : 'neutral'} solid={r.state === 'Mastered'} />
             </View>
           ))}
         </View>

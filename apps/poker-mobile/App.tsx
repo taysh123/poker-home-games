@@ -31,6 +31,7 @@ import { PremiumProvider } from './src/features/premium/state/PremiumContext';
 import { BankrollProvider } from './src/features/bankroll/state/BankrollContext';
 import { StudyProvider } from './src/features/study/state/StudyContext';
 import { CoachProvider } from './src/features/coach/state/CoachContext';
+import { MasteryProvider } from './src/features/mastery/state/MasteryContext';
 import { EngagementProvider } from './src/features/engagement/state/EngagementContext';
 import { ReminderScheduler } from './src/hooks/useReminderScheduler';
 import AppNavigator from './src/navigation/AppNavigator';
@@ -109,6 +110,7 @@ export default function App() {
             <LocalGamesProvider>
               <BankrollProvider>
                 <StudyProvider>
+                  <MasteryProvider>
                   <CoachProvider>
                     <EngagementProvider>
                       <StatusBar style="light" />
@@ -117,6 +119,7 @@ export default function App() {
                       {!splashDone && <BrandSplash onDone={() => setSplashDone(true)} />}
                     </EngagementProvider>
                   </CoachProvider>
+                  </MasteryProvider>
                 </StudyProvider>
               </BankrollProvider>
             </LocalGamesProvider>
