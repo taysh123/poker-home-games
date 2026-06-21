@@ -10,7 +10,7 @@ import Screen from '../../../components/Screen';
 import BrandHeader from '../../../components/BrandHeader';
 import Card from '../../../components/Card';
 import EmptyState from '../../../components/EmptyState';
-import SkeletonRow from '../../../components/SkeletonRow';
+import StateView from '../../../components/StateView';
 import Markdown from '../../../components/Markdown';
 import { colors } from '../../../theme/colors';
 import { typography } from '../../../theme/typography';
@@ -30,35 +30,39 @@ export default function LessonReaderScreen() {
   const [sections, setSections] = useState<LessonSection[] | null>(null);
   const [error, setError] = useState(false);
 
+  const [reloadKey, setReloadKey] = useState(0);
+
   useEffect(() => {
     if (!isLoaded || !query) return;
     let cancelled = false;
+    setError(false);
+    setSections(null);
     query.find('lesson_content', { ModuleID: moduleId })
       .then(rows => { if (!cancelled) setSections(sortSections(rows)); })
       .catch(() => { if (!cancelled) setError(true); });
     return () => { cancelled = true; };
-  }, [isLoaded, query, moduleId]);
+  }, [isLoaded, query, moduleId, reloadKey]);
 
   const loading = enabled && !error && (!isLoaded || sections === null);
 
   return (
-    <Screen>
+    <Screen animated>
       <BrandHeader variant="screen" title={moduleName || 'Lesson'} subtitle="Lesson" onBack={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {error ? (
-          <EmptyState ionicon="alert-circle-outline" title="Couldn't load this lesson" subtitle="Please try again in a moment." />
-        ) : loading ? (
-          <>{[0, 1, 2].map(i => <SkeletonRow key={i} isFirst={i === 0} />)}</>
-        ) : !enabled || !sections || sections.length === 0 ? (
-          <EmptyState ionicon="book-outline" title="No lesson content" subtitle="Lessons arrive with the next content update." />
-        ) : (
-          sections.map(s => (
+        <StateView
+          loading={loading}
+          error={error}
+          isEmpty={!enabled || !sections || sections.length === 0}
+          empty={<EmptyState ionicon="book-outline" title="No lesson content" subtitle="Lessons arrive with the next content update." />}
+          onRetry={() => setReloadKey(k => k + 1)}
+        >
+          {(sections ?? []).map(s => (
             <Card key={s.id} style={styles.section}>
               {s.heading ? <Text style={styles.heading}>{s.heading}</Text> : null}
               <Markdown>{s.body}</Markdown>
             </Card>
-          ))
-        )}
+          ))}
+        </StateView>
       </ScrollView>
     </Screen>
   );

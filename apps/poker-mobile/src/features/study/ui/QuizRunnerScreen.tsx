@@ -15,7 +15,8 @@ import Screen from '../../../components/Screen';
 import BrandHeader from '../../../components/BrandHeader';
 import Card from '../../../components/Card';
 import EmptyState from '../../../components/EmptyState';
-import SkeletonRow from '../../../components/SkeletonRow';
+import StateView from '../../../components/StateView';
+import Chip from '../../../components/Chip';
 import PrimaryButton from '../../../components/PrimaryButton';
 import PressableScale from '../../../components/motion/PressableScale';
 import { colors } from '../../../theme/colors';
@@ -100,35 +101,36 @@ export default function QuizRunnerScreen() {
   const restart = () => { setPhase('pick'); setCategory(null); setRun([]); setIdx(0); setChosen(null); setOutcomes([]); };
 
   return (
-    <Screen>
+    <Screen animated>
       <BrandHeader variant="screen" title="Quiz" subtitle={subtitleFor(phase, category)} onBack={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {error ? (
-          <EmptyState ionicon="alert-circle-outline" title="Couldn't load quizzes" subtitle="Please try again in a moment." />
-        ) : loading ? (
-          <>{[0, 1, 2, 3].map(i => <SkeletonRow key={i} isFirst={i === 0} />)}</>
-        ) : !enabled || !all || all.length === 0 ? (
-          <EmptyState ionicon="help-circle-outline" title="No quizzes yet" subtitle="Quizzes arrive with the next content update." />
-        ) : phase === 'pick' ? (
-          <PickView
-            total={all.length}
-            categories={categories}
-            onStartAll={() => startRun(null)}
-            onStartCategory={(c) => startRun(c)}
-          />
-        ) : phase === 'run' ? (
-          <RunView
-            question={run[idx]}
-            index={idx}
-            count={run.length}
-            chosen={chosen}
-            onAnswer={answer}
-            onNext={next}
-            isLast={idx + 1 >= run.length}
-          />
-        ) : (
-          <ResultsView outcomes={outcomes} onRestart={restart} onDone={() => navigation.goBack()} />
-        )}
+        <StateView
+          loading={loading}
+          error={error}
+          isEmpty={!enabled || !all || all.length === 0}
+          empty={<EmptyState ionicon="help-circle-outline" title="No quizzes yet" subtitle="Quizzes arrive with the next content update." />}
+        >
+          {phase === 'pick' ? (
+            <PickView
+              total={all?.length ?? 0}
+              categories={categories}
+              onStartAll={() => startRun(null)}
+              onStartCategory={(c) => startRun(c)}
+            />
+          ) : phase === 'run' ? (
+            <RunView
+              question={run[idx]}
+              index={idx}
+              count={run.length}
+              chosen={chosen}
+              onAnswer={answer}
+              onNext={next}
+              isLast={idx + 1 >= run.length}
+            />
+          ) : (
+            <ResultsView outcomes={outcomes} onRestart={restart} onDone={() => navigation.goBack()} />
+          )}
+        </StateView>
       </ScrollView>
     </Screen>
   );
@@ -181,7 +183,7 @@ function RunView({ question, index, count, chosen, onAnswer, onNext, isLast }: {
     <>
       <View style={styles.progressRow}>
         <Text style={styles.progressText}>Question {index + 1} of {count}</Text>
-        {!!question.difficulty && <Text style={styles.difficultyChip}>{question.difficulty}</Text>}
+        {!!question.difficulty && <Chip label={question.difficulty} tone="gold" />}
       </View>
 
       <Card style={styles.questionCard}>
@@ -283,10 +285,6 @@ const styles = StyleSheet.create({
   rowName: { ...typography.h4, color: colors.text, flex: 1 },
   progressRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   progressText: { ...typography.bodySmall, color: colors.textMuted },
-  difficultyChip: {
-    ...typography.bodySmall, color: colors.gold, backgroundColor: colors.goldFaint,
-    borderRadius: radii.pill, paddingHorizontal: spacing.sm, paddingVertical: 2, overflow: 'hidden',
-  },
   questionCard: { paddingVertical: spacing.lg },
   questionText: { ...typography.h4, color: colors.text, lineHeight: 26 },
   options: { gap: spacing.sm },
