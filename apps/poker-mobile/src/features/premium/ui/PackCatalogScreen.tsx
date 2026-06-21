@@ -19,6 +19,7 @@ import EmptyState from '../../../components/EmptyState';
 import StateView from '../../../components/StateView';
 import ListRow from '../../../components/ListRow';
 import Chip from '../../../components/Chip';
+import PackTierChip from './PackTierChip';
 import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
 import { infoDialog } from '../../../utils/confirm';
@@ -57,14 +58,9 @@ export default function PackCatalogScreen() {
   const ordered = useMemo(() => packs ?? [], [packs]);
 
   const onPress = (pack: Pack, availability: PackAvailability) => {
-    if (availability === 'locked') return navigation.navigate('Paywall', { trigger: 'pack_catalog' });
     if (availability === 'coming_soon') return infoDialog(pack.name, 'This pack is coming soon.');
-    const meta = [
-      pack.difficulty && `Difficulty: ${pack.difficulty}`,
-      pack.estimatedHours && `~${pack.estimatedHours}h`,
-      pack.sourceSheets.length > 0 && `Includes: ${pack.sourceSheets.join(', ')}`,
-    ].filter(Boolean).join('\n');
-    infoDialog(pack.name, meta || pack.marketableAs);
+    // Available + locked both open the detail screen (locked shows the upgrade CTA there).
+    navigation.navigate('PackDetail', { packId: pack.id });
   };
 
   return (
@@ -98,7 +94,7 @@ export default function PackCatalogScreen() {
                 }
                 chips={
                   <View style={styles.chipRow}>
-                    <TierChip pack={pack} />
+                    <PackTierChip pack={pack} />
                     {locked && <Chip label="Premium" tone="gold" />}
                   </View>
                 }
@@ -109,13 +105,6 @@ export default function PackCatalogScreen() {
       </ScrollView>
     </Screen>
   );
-}
-
-/** Verbatim MarketableAs as a Chip; gold solid + shield ONLY for the verified tier (honesty gate). */
-function TierChip({ pack }: { pack: Pack }) {
-  if (pack.tierBadge === 'gto_verified') return <Chip label={pack.marketableAs} tone="gold" solid icon="shield-checkmark" />;
-  if (pack.tierBadge === 'expert_calibrated') return <Chip label={pack.marketableAs} tone="gold" />;
-  return <Chip label={pack.marketableAs} tone="neutral" />;
 }
 
 const styles = StyleSheet.create({

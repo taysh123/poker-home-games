@@ -11,6 +11,7 @@ import {
   isOpenable,
   isVerified,
   parsePct,
+  packById,
   GTO_VERIFIED_THRESHOLD,
   type Pack,
 } from '../marketableLabel';
@@ -102,6 +103,11 @@ describe('buildPackCatalog — real 17-pack truth table', () => {
   it('builds all 17 packs, sorted by id', () => {
     expect(packs.length).toBe(17);
     expect(packs.map(p => p.id)).toEqual([...packs.map(p => p.id)].sort());
+  });
+
+  it('packById finds a pack (detail screen) and returns null for unknown', () => {
+    expect(packById(packs, packs[0].id)).toBe(packs[0]);
+    expect(packById(packs, 'PACK-NOPE')).toBeNull();
   });
 
   it('GTO/Verified treatment is granted to EXACTLY the ≥95% packs (honesty gate)', () => {

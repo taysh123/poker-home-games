@@ -61,6 +61,7 @@ import LessonModulesScreen from '../features/study/ui/LessonModulesScreen';
 import LessonReaderScreen from '../features/study/ui/LessonReaderScreen';
 import QuizRunnerScreen from '../features/study/ui/QuizRunnerScreen';
 import PackCatalogScreen from '../features/premium/ui/PackCatalogScreen';
+import PackDetailScreen from '../features/premium/ui/PackDetailScreen';
 import CoachScreen from '../features/coach/ui/CoachScreen';
 import CoachInputScreen from '../features/coach/ui/CoachInputScreen';
 import CoachResultScreen from '../features/coach/ui/CoachResultScreen';
@@ -105,6 +106,7 @@ export type RootStackParamList = {
   LessonReader: { moduleId: string; moduleName?: string };
   QuizRunner: { quizId?: string; collectionId?: string } | undefined;
   PackCatalog: undefined;
+  PackDetail: { packId: string };
   // V2 — AI Coach (Improve pillar)
   CoachInput: { method: CoachInputKind };
   CoachResult: { id: string };
@@ -515,6 +517,7 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
             <Stack.Screen name="LessonReader" component={LessonReaderScreen} options={{ headerShown: false }} />
             <Stack.Screen name="QuizRunner" component={QuizRunnerScreen} options={{ headerShown: false }} />
             <Stack.Screen name="PackCatalog" component={PackCatalogScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="PackDetail" component={PackDetailScreen} options={{ headerShown: false }} />
             <Stack.Screen name="CoachInput"  component={CoachInputScreen}  options={{ headerShown: false }} />
             <Stack.Screen name="CoachResult" component={CoachResultScreen} options={{ headerShown: false }} />
             <Stack.Screen name="CoachGrounding" component={CoachGroundingScreen} options={{ headerShown: false }} />
@@ -552,6 +555,7 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
             <Stack.Screen name="LessonReader" component={LessonReaderScreen} options={{ headerShown: false }} />
             <Stack.Screen name="QuizRunner" component={QuizRunnerScreen} options={{ headerShown: false }} />
             <Stack.Screen name="PackCatalog" component={PackCatalogScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="PackDetail" component={PackDetailScreen} options={{ headerShown: false }} />
             <Stack.Screen name="CoachInput"  component={CoachInputScreen}  options={{ headerShown: false }} />
             <Stack.Screen name="CoachResult" component={CoachResultScreen} options={{ headerShown: false }} />
             <Stack.Screen name="CoachGrounding" component={CoachGroundingScreen} options={{ headerShown: false }} />

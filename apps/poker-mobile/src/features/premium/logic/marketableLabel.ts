@@ -126,6 +126,11 @@ export function buildPackCatalog(manifests: Row[], catalogRows: Row[]): Pack[] {
   return packs;
 }
 
+/** Find one pack by id (for the detail screen). */
+export function packById(packs: Pack[], id: string): Pack | null {
+  return packs.find(p => p.id === id) ?? null;
+}
+
 /** Availability for a given entitlement. FAIL-CLOSED: premium content is locked unless explicitly entitled. */
 export function availabilityOf(pack: Pack, hasPremium: boolean): PackAvailability {
   switch (pack.accessClass) {
