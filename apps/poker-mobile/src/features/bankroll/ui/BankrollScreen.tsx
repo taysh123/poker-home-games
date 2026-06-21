@@ -129,6 +129,7 @@ export default function BankrollScreen({ embedded = false }: { embedded?: boolea
               ionicon="receipt-outline"
               title="No sessions yet"
               subtitle="Log your first session to start tracking your bankroll."
+              action={{ label: 'Log a Session', onPress: () => goLog() }}
             />
           ) : (
             <View style={{ gap: spacing.sm }}>

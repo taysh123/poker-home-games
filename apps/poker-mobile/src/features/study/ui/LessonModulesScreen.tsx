@@ -47,7 +47,7 @@ export default function LessonModulesScreen() {
           loading={loading}
           error={error}
           isEmpty={!enabled || !modules || modules.length === 0}
-          empty={<EmptyState ionicon="book-outline" title="No lessons yet" subtitle="Lessons arrive with the next content update." />}
+          empty={<EmptyState ionicon="book-outline" title="No lessons yet" subtitle="Lessons arrive with the next content update." action={{ label: 'Try the Spot Trainer', onPress: () => navigation.navigate('StudyTrainer', { mode: 'spot' }) }} />}
           onRetry={() => setReloadKey(k => k + 1)}
         >
           {(modules ?? []).map(m => (

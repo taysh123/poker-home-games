@@ -130,7 +130,7 @@ export default function QuizRunnerScreen() {
           loading={loading}
           error={error}
           isEmpty={!enabled || !all || all.length === 0}
-          empty={<EmptyState ionicon="help-circle-outline" title="No quizzes yet" subtitle="Quizzes arrive with the next content update." />}
+          empty={<EmptyState ionicon="help-circle-outline" title="No quizzes yet" subtitle="Quizzes arrive with the next content update." action={{ label: 'Try the Spot Trainer', onPress: () => navigation.navigate('StudyTrainer', { mode: 'spot' }) }} />}
           onRetry={() => setReloadKey(k => k + 1)}
         >
           {phase === 'pick' ? (

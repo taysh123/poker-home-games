@@ -71,7 +71,7 @@ export default function PackCatalogScreen() {
           loading={loading}
           error={error}
           isEmpty={!enabled || ordered.length === 0}
-          empty={<EmptyState ionicon="cube-outline" title="No packs yet" subtitle="Content packs arrive with the next update." />}
+          empty={<EmptyState ionicon="cube-outline" title="No packs yet" subtitle="Content packs arrive with the next update." action={{ label: 'Try the Spot Trainer', onPress: () => navigation.navigate('StudyTrainer', { mode: 'spot' }) }} />}
           onRetry={() => setReloadKey(k => k + 1)}
         >
           {ordered.map(pack => {
