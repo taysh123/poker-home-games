@@ -26,10 +26,14 @@ type Rt = RouteProp<RootStackParamList, 'Paywall'>;
 export default function PaywallScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Rt>();
-  const { isPremium, purchasing, purchase, restore } = usePremium();
+  const { isPremium, purchasing, purchase, restore, products } = usePremium();
   const { refresh: refreshEntitlement } = useEntitlements();
   const [plan, setPlan] = useState<'yearly' | 'monthly'>('yearly');
   const [restoring, setRestoring] = useState(false);
+
+  // Provider-supplied (store-localized) price when available; config string is the fallback only.
+  const priceFor = (p: 'yearly' | 'monthly') =>
+    products.find(pr => pr.id === PRICING[p].productId)?.price ?? PRICING[p].price;
 
   useEffect(() => {
     track('paywall_viewed', { trigger: route.params?.trigger ?? 'unknown' });
@@ -107,17 +111,17 @@ export default function PaywallScreen() {
             <View style={styles.plans}>
               <PlanCard
                 selected={plan === 'yearly'} onPress={() => selectPlan('yearly')}
-                title="Annual" price={PRICING.yearly.price} sub={`${PRICING.yearly.perMonth}/mo · save ${PRICING.yearly.savePct}%`}
+                title="Annual" price={priceFor('yearly')} sub={`${PRICING.yearly.perMonth}/mo · save ${PRICING.yearly.savePct}%`}
                 badge="Best value"
               />
               <PlanCard
                 selected={plan === 'monthly'} onPress={() => selectPlan('monthly')}
-                title="Monthly" price={PRICING.monthly.price} sub="billed monthly"
+                title="Monthly" price={priceFor('monthly')} sub="billed monthly"
               />
             </View>
 
             <PrimaryButton
-              label={plan === 'yearly' ? `Go Premium — ${PRICING.yearly.price}/yr` : `Go Premium — ${PRICING.monthly.price}/mo`}
+              label={plan === 'yearly' ? `Go Premium — ${priceFor('yearly')}/yr` : `Go Premium — ${priceFor('monthly')}/mo`}
               variant="gradient" loading={purchasing} onPress={upgrade}
             />
             <PressableScale onPress={onRestore} disabled={restoring} style={styles.restore} hitSlop={12} accessibilityRole="button" accessibilityLabel="Restore purchases">
@@ -127,15 +131,21 @@ export default function PaywallScreen() {
               Subscriptions renew until cancelled. Cancel anytime in your store account. AI analyses
               are subject to a fair-use monthly quota.
             </Text>
-            <PressableScale
-              onPress={() => Linking.openURL('mailto:truestorylabs@gmail.com?subject=Purchase%20help')}
-              style={styles.helpLink}
-              hitSlop={12}
-              accessibilityRole="button"
-              accessibilityLabel="Get help with a purchase"
-            >
-              <Text style={styles.helpText}>Need help with a purchase?</Text>
-            </PressableScale>
+            <View style={styles.legalRow}>
+              <PressableScale
+                onPress={() => Linking.openURL('https://poker-home-games-three.vercel.app/privacy.html')}
+                hitSlop={12} accessibilityRole="link" accessibilityLabel="Privacy Policy"
+              >
+                <Text style={styles.helpText}>Privacy Policy</Text>
+              </PressableScale>
+              <Text style={styles.legalDot}>·</Text>
+              <PressableScale
+                onPress={() => Linking.openURL('mailto:truestorylabs@gmail.com?subject=Purchase%20help')}
+                hitSlop={12} accessibilityRole="button" accessibilityLabel="Get help with a purchase"
+              >
+                <Text style={styles.helpText}>Need help?</Text>
+              </PressableScale>
+            </View>
           </>
         )}
       </ScrollView>
@@ -178,7 +188,8 @@ const styles = StyleSheet.create({
   planSub: { ...typography.bodySmall, color: colors.textMuted },
   restore: { alignItems: 'center', paddingVertical: spacing.sm },
   restoreText: { ...typography.label, color: colors.gold },
-  helpLink: { alignItems: 'center', paddingVertical: spacing.xs },
+  legalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.xs },
+  legalDot: { ...typography.bodySmall, color: colors.textDim },
   helpText: { ...typography.bodySmall, color: colors.textMuted, textDecorationLine: 'underline' },
   fine: { ...typography.bodySmall, color: colors.textDim, textAlign: 'center' },
   activeCard: { alignItems: 'center', gap: spacing.xs },
