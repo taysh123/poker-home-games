@@ -53,7 +53,16 @@ public static class DependencyInjection
         services.AddSingleton<IAiCreditPolicyProvider, AiCreditPolicyProvider>();
         services.AddScoped<IEntitlementService, EntitlementService>();
         services.AddScoped<ICreditLedger, CreditLedger>();
-        services.AddScoped<ICoachAiProvider, MockCoachAiProvider>();
+
+        // AI Coach provider (vendor-neutral; key lives server-side only). Default = deterministic mock
+        // (fail-closed, unchanged behaviour); "vendor" selects the real adapter (a stub today that throws
+        // until wired). Mirrors the billing provider config switch below.
+        var coachAiSettings = configuration.GetSection("CoachAiSettings").Get<CoachAiSettings>() ?? new CoachAiSettings();
+        services.AddSingleton(coachAiSettings);
+        if (coachAiSettings.UseVendor)
+            services.AddScoped<ICoachAiProvider, VendorCoachAiProvider>();
+        else
+            services.AddScoped<ICoachAiProvider, MockCoachAiProvider>();
 
         // B3 — real store verification (provider-selected; mock retained for dev/tests).
         var billingSettings = configuration.GetSection("BillingSettings").Get<BillingSettings>() ?? new BillingSettings();
