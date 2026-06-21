@@ -23,6 +23,7 @@ import { shadows } from '../theme/shadows';
 import { spacing } from '../theme/spacing';
 import { radii } from '../theme/radii';
 import { pulse, fadeIn, slideUp } from '../theme/motion';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useAuth } from '../context/AuthContext';
 import { getMyGroups, getMyInvitations, getCrossGroupActivity, MyGroupDto, PendingInvitationDto, CrossGroupActivityDto } from '../api/groupsApi';
 import { getMyNotifications } from '../api/notificationsApi';
@@ -63,6 +64,7 @@ export default function HomeScreen() {
   const navigation = useNavigation<HomeNav>();
   const insets = useSafeAreaInsets();
   const { refresh: refreshActiveSession } = useActiveSession();
+  const reducedMotion = useReducedMotion();
 
   const [loggingOut, setLoggingOut] = useState(false);
   const [groups, setGroups] = useState<MyGroupDto[]>([]);
@@ -84,13 +86,17 @@ export default function HomeScreen() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    pulse(pulseAnim).start();
-  }, []);
+    // Respect OS Reduce Motion — keep the live indicator steady instead of pulsing.
+    if (reducedMotion) { pulseAnim.setValue(1); return; }
+    const loop = pulse(pulseAnim);
+    loop.start();
+    return () => loop.stop();
+  }, [reducedMotion]);
 
   const hasAnimated = useRef(false);
   const runEntranceAnimation = useCallback(() => {
-    // STEP 4.6: under `polish`, animate once per mount — don't re-run on every tab focus.
-    if (isFeatureEnabled('polish') && hasAnimated.current) {
+    // Reduced motion (or already-animated this mount): show final state instantly, no entrance.
+    if (reducedMotion || (isFeatureEnabled('polish') && hasAnimated.current)) {
       heroOpacity.setValue(1);
       heroY.setValue(0);
       contentOpacity.setValue(1);
@@ -107,7 +113,7 @@ export default function HomeScreen() {
       ]),
       fadeIn(contentOpacity, { duration: 300 }),
     ]).start();
-  }, []);
+  }, [reducedMotion]);
 
   const loadAll = useCallback(async (isRefresh = false) => {
     if (!isRefresh) setStatsLoading(true);
