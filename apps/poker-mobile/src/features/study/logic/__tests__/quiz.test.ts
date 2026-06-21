@@ -8,6 +8,7 @@ import {
   selectQuestions,
   scoreQuiz,
   categoriesOf,
+  runBreakdown,
   type QuizQuestion,
 } from '../quiz';
 import type { Row } from '../../../../content/types';
@@ -119,5 +120,23 @@ describe('scoreQuiz', () => {
     expect(scoreQuiz([true, false, true, true])).toEqual({ total: 4, correct: 3, pct: 75 });
     expect(scoreQuiz([])).toEqual({ total: 0, correct: 0, pct: 0 });
     expect(scoreQuiz([false, false])).toEqual({ total: 2, correct: 0, pct: 0 });
+  });
+});
+
+describe('runBreakdown — this-run per-category summary', () => {
+  const qs = normalizeQuestions([
+    rawRow({ QuizID: 'Q1', Category: 'RFI' }),
+    rawRow({ QuizID: 'Q2', Category: 'ICM' }),
+    rawRow({ QuizID: 'Q3', Category: 'RFI' }),
+  ]);
+  it('tallies correct/total per category in first-seen order', () => {
+    expect(runBreakdown(qs, [true, false, true])).toEqual([
+      { category: 'RFI', correct: 2, total: 2 },
+      { category: 'ICM', correct: 0, total: 1 },
+    ]);
+  });
+  it('handles empty + mismatched lengths safely', () => {
+    expect(runBreakdown([], [])).toEqual([]);
+    expect(runBreakdown(qs, [true])).toEqual([{ category: 'RFI', correct: 1, total: 1 }]);
   });
 });

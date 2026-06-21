@@ -6,8 +6,8 @@
  * Pure logic (normalize / grade / select / score) lives in ../logic/quiz.ts and is unit-tested; this
  * screen is presentation + flow only. Grading is read-only — no writes, no mastery side effects yet.
  */
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, ScrollView, StyleSheet, Animated, Easing } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,12 +25,14 @@ import { spacing } from '../../../theme/spacing';
 import { radii } from '../../../theme/radii';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
 import { useContent } from '../../../context/ContentContext';
+import { useReducedMotion } from '../../../hooks/useReducedMotion';
 import {
   normalizeQuestions,
   selectQuestions,
   gradeAnswer,
   scoreQuiz,
   categoriesOf,
+  runBreakdown,
   type QuizQuestion,
   type QuizChoice,
 } from '../logic/quiz';
@@ -128,7 +130,7 @@ export default function QuizRunnerScreen() {
               isLast={idx + 1 >= run.length}
             />
           ) : (
-            <ResultsView outcomes={outcomes} onRestart={restart} onDone={() => navigation.goBack()} />
+            <ResultsView run={run} outcomes={outcomes} onRestart={restart} onDone={() => navigation.goBack()} />
           )}
         </StateView>
       </ScrollView>
@@ -181,6 +183,9 @@ function RunView({ question, index, count, chosen, onAnswer, onNext, isLast }: {
   const answered = chosen !== null;
   return (
     <>
+      <View style={styles.progressTrack}>
+        <View style={[styles.progressFill, { width: `${(((index + 1) / Math.max(count, 1)) * 100)}%` }]} />
+      </View>
       <View style={styles.progressRow}>
         <Text style={styles.progressText}>Question {index + 1} of {count}</Text>
         {!!question.difficulty && <Chip label={question.difficulty} tone="gold" />}
@@ -220,12 +225,11 @@ function RunView({ question, index, count, chosen, onAnswer, onNext, isLast }: {
       </View>
 
       {answered && (
-        <Card style={styles.feedback}>
-          <Text style={styles.feedbackTitle}>
-            {chosen === question.correct ? 'Correct' : `Correct answer: ${question.correct}`}
-          </Text>
-          {!!question.explanation && <Text style={styles.feedbackBody}>{question.explanation}</Text>}
-        </Card>
+        <Feedback
+          correct={chosen === question.correct}
+          correctKey={question.correct}
+          explanation={question.explanation}
+        />
       )}
 
       {answered && (
@@ -237,8 +241,30 @@ function RunView({ question, index, count, chosen, onAnswer, onNext, isLast }: {
   );
 }
 
-function ResultsView({ outcomes, onRestart, onDone }: { outcomes: boolean[]; onRestart: () => void; onDone: () => void }) {
+/** Answer feedback with a subtle entrance (fade + rise). Respects reduced motion (renders instantly). */
+function Feedback({ correct, correctKey, explanation }: { correct: boolean; correctKey: QuizChoice; explanation: string }) {
+  const reduced = useReducedMotion();
+  const anim = useRef(new Animated.Value(reduced ? 1 : 0)).current;
+  useEffect(() => {
+    if (reduced) { anim.setValue(1); return; }
+    Animated.timing(anim, { toValue: 1, duration: 200, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+  }, [reduced, anim]);
+  return (
+    <Animated.View style={{ opacity: anim, transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }] }}>
+      <Card style={styles.feedback}>
+        <View style={styles.feedbackHead}>
+          <Ionicons name={correct ? 'checkmark-circle' : 'close-circle'} size={18} color={correct ? colors.success : colors.error} />
+          <Text style={styles.feedbackTitle}>{correct ? 'Correct' : `Correct answer: ${correctKey}`}</Text>
+        </View>
+        {!!explanation && <Text style={styles.feedbackBody}>{explanation}</Text>}
+      </Card>
+    </Animated.View>
+  );
+}
+
+function ResultsView({ run, outcomes, onRestart, onDone }: { run: QuizQuestion[]; outcomes: boolean[]; onRestart: () => void; onDone: () => void }) {
   const score = scoreQuiz(outcomes);
+  const breakdown = runBreakdown(run, outcomes);
   return (
     <>
       <Card variant="hero">
@@ -246,6 +272,19 @@ function ResultsView({ outcomes, onRestart, onDone }: { outcomes: boolean[]; onR
         <Text style={styles.heroNum}>{score.pct}%</Text>
         <Text style={styles.heroSub}>{score.correct} of {score.total} correct</Text>
       </Card>
+
+      {breakdown.length > 1 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>THIS RUN BY CATEGORY</Text>
+          {breakdown.map(b => (
+            <View key={b.category} style={styles.breakdownRow}>
+              <Text style={styles.breakdownCat} numberOfLines={1}>{b.category}</Text>
+              <Text style={styles.breakdownVal}>{b.correct}/{b.total}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
       <View style={{ gap: spacing.sm, marginTop: spacing.md }}>
         <PrimaryButton label="Try another" variant="gradient" onPress={onRestart} />
         <PrimaryButton label="Done" variant="outline" onPress={onDone} />
@@ -283,6 +322,8 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   icon: { width: 40, height: 40, borderRadius: radii.sm, backgroundColor: colors.goldFaint, alignItems: 'center', justifyContent: 'center' },
   rowName: { ...typography.h4, color: colors.text, flex: 1 },
+  progressTrack: { height: 6, borderRadius: radii.pill, backgroundColor: colors.surfaceHigh, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: radii.pill, backgroundColor: colors.gold },
   progressRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   progressText: { ...typography.bodySmall, color: colors.textMuted },
   questionCard: { paddingVertical: spacing.lg },
@@ -301,6 +342,10 @@ const styles = StyleSheet.create({
   optionText: { ...typography.body, color: colors.textHigh, flex: 1 },
   optionTextActive: { color: colors.text },
   feedback: { marginTop: spacing.sm, gap: spacing.xs },
+  feedbackHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   feedbackTitle: { ...typography.h4, color: colors.text },
   feedbackBody: { ...typography.bodySmall, color: colors.textMuted, lineHeight: 20 },
+  breakdownRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.xs },
+  breakdownCat: { ...typography.body, color: colors.textHigh, flex: 1 },
+  breakdownVal: { ...typography.label, color: colors.gold },
 });

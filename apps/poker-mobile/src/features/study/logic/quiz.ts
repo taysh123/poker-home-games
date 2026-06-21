@@ -155,3 +155,28 @@ export function scoreQuiz(outcomes: boolean[]): QuizScore {
   const pct = total === 0 ? 0 : Math.round((correct / total) * 100);
   return { total, correct, pct };
 }
+
+export interface CategoryResult {
+  category: string;
+  correct: number;
+  total: number;
+}
+
+/**
+ * Per-category correct/total for ONE run (questions parallel to outcomes), in first-seen order.
+ * This is a THIS-RUN summary only — NOT mastery/progress over time (that needs persisted attempt
+ * aggregates + objective linkage, which aren't wired). Honest by scope.
+ */
+export function runBreakdown(questions: QuizQuestion[], outcomes: boolean[]): CategoryResult[] {
+  const byCat = new Map<string, CategoryResult>();
+  const order: string[] = [];
+  const n = Math.min(questions.length, outcomes.length);
+  for (let i = 0; i < n; i++) {
+    const category = questions[i].category || 'General';
+    let r = byCat.get(category);
+    if (!r) { r = { category, correct: 0, total: 0 }; byCat.set(category, r); order.push(category); }
+    r.total += 1;
+    if (outcomes[i]) r.correct += 1;
+  }
+  return order.map(c => byCat.get(c)!);
+}

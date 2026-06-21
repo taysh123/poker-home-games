@@ -25,10 +25,16 @@ flag-OFF functional check (no feature leak). Prod-visible component changes get 
 | 2 — Content surfaces adoption | done | 0 | 362 / 42 | clean | PackCatalog/LessonModules/LessonReader/QuizRunner → StateView + ListRow + Chip + Screen-animated; retry wired. Flag-gated (no prod-visible change). Study-hub Stat + Coach chips folded into Phases 6/4. |
 | 3 — Production surfaces refinement | pending | — | — | — | prod-visible |
 | 4 — Coach grounding UI | done | 0 | 365 / 42 | clean | Honest standalone "Grounded references" surface (safe_to_assert only, tier+citation+caveat, NO hand linkage); allAssertions gated accessor; CoachResult trust chips → Chip; coach-provider contract untouched. Flag-gated. |
-| 5 — Quiz/learning/mastery UX | pending | — | — | — | mastery-flag-gated |
+| 5 — Quiz/learning UX | done | 0 | 367 / 42 | clean | Quiz polish: in-run progress bar, reduced-motion-aware feedback entrance, this-run category breakdown (honest, in-memory). Mastery *feedback* NOT faked — real boundary (needs attempt persistence + objective linkage). Flag-gated. |
 | 6 — Cross-app consistency + commercial review | pending | — | — | — | |
 | 7 — Verification + independent review | pending | — | — | — | |
 
-## Open risks
+## Open risks / surfaced boundaries (honest — not papered over)
 - Prod-visible refinement (Decision 2) changes the live app's appearance on merge — tracked + reviewed, not gated.
 - 0.8.1 handoff/manifest docs still pending from content team (does not block app QA).
+- **Coach grounding ↔ specific hand:** `CoachAnalysis` has no concept linkage → grounded claims can't be tied
+  to an analyzed hand without fabrication. Shipped an honest standalone references library instead (Phase 4).
+  Real per-hand grounding needs a coach-provider contract change (emit concept refs).
+- **Mastery feedback:** the mastery engine (PR #7) is built but unwired — no persisted attempt aggregates and
+  the bundled quiz sample carries no objective linkage. Real mastery/progress UI needs an attempt-persistence +
+  objective-linkage data pipeline. Not faked; Phase 5 ships an honest this-run breakdown only.
