@@ -37,8 +37,10 @@ describe('mock billing provider', () => {
   it('purchase rejects an unknown product', async () => {
     expect((await mockBillingProvider.purchase('bogus')).ok).toBe(false);
   });
-  it('factory returns a provider (mock fallback)', () => {
-    expect(getBillingProvider('revenuecat').id).toBe('mock');
+  it('factory defaults to mock and falls back to mock for an unknown id', () => {
+    expect(getBillingProvider().id).toBe('mock');
+    // @ts-expect-error — exercising the runtime fail-safe default with an invalid id
+    expect(getBillingProvider('totally-unknown').id).toBe('mock');
   });
 });
 
