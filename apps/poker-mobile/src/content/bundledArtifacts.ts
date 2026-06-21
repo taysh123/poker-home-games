@@ -30,3 +30,15 @@ export function analyticsContractArtifact(): unknown {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require('../../assets/content/0.8.1/analytics_contract.json');
 }
+
+/** Pack manifests ContentPack (verification rollups; hard FK → premium_content_catalog). */
+export function packManifestsPackArtifact(): unknown {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require('../../assets/content/0.8.1/pack_manifests.pack.json');
+}
+
+/** Premium content catalog ContentPack (access tier + metadata). Bundled WITH pack_manifests (FK pair). */
+export function premiumContentCatalogPackArtifact(): unknown {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require('../../assets/content/0.8.1/premium_content_catalog.pack.json');
+}

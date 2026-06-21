@@ -8,6 +8,8 @@ import {
   coachGroundingArtifact,
   quizSamplePackArtifact,
   analyticsContractArtifact,
+  packManifestsPackArtifact,
+  premiumContentCatalogPackArtifact,
 } from '../bundledArtifacts';
 
 describe('bundled artifacts ↔ CONTENT_DATASET_VERSION', () => {
@@ -19,6 +21,14 @@ describe('bundled artifacts ↔ CONTENT_DATASET_VERSION', () => {
   });
   it('quiz sample pack manifest dataset_version matches', () => {
     expect((quizSamplePackArtifact() as { manifest: { dataset_version: string } }).manifest.dataset_version)
+      .toBe(CONTENT_DATASET_VERSION);
+  });
+  it('pack_manifests pack manifest dataset_version matches', () => {
+    expect((packManifestsPackArtifact() as { manifest: { dataset_version: string } }).manifest.dataset_version)
+      .toBe(CONTENT_DATASET_VERSION);
+  });
+  it('premium_content_catalog pack manifest dataset_version matches', () => {
+    expect((premiumContentCatalogPackArtifact() as { manifest: { dataset_version: string } }).manifest.dataset_version)
       .toBe(CONTENT_DATASET_VERSION);
   });
 });

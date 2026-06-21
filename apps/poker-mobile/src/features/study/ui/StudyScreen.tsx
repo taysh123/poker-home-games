@@ -131,6 +131,14 @@ export default function StudyScreen() {
               onPress={() => navigation.navigate('QuizRunner')}
             />
           )}
+          {isFeatureEnabled('content') && (
+            <TrainCard
+              icon="cube"
+              title="Content Packs"
+              sub="Browse the curriculum"
+              onPress={() => navigation.navigate('PackCatalog')}
+            />
+          )}
         </View>
 
         <View style={styles.noteRow}>
