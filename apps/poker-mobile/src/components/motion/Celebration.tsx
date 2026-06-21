@@ -9,7 +9,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { successNotification } from '../../utils/haptics';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { isFeatureEnabled } from '../../config/features';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -91,8 +90,9 @@ export default function Celebration({ haptic = true }: Props) {
     return () => clearTimeout(timer);
   }, [haptic]);
 
-  // Respect the OS "reduce motion" setting (gated behind `polish` so prod is unchanged when off).
-  if (done || (isFeatureEnabled('polish') && reducedMotion)) return null;
+  // Respect the OS "reduce motion" setting UNCONDITIONALLY — accessibility is not feature-flagged.
+  // (Prod-visible: a prod user with Reduce Motion ON no longer sees end-game confetti. Logged in the ledger.)
+  if (done || reducedMotion) return null;
 
   return (
     // overflow hidden: drifting particles must never widen the page (web)

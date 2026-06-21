@@ -21,6 +21,11 @@ export const colors = {
   success: '#27AE60',
   warning: '#F39C12',
   bgOverlay: 'rgba(15,25,35,0.6)',
+  // ── Semantic tone faints (additive — power the Chip primitive's subtle variants) ──
+  successFaint: 'rgba(39,174,96,0.12)',
+  warningFaint: 'rgba(243,156,18,0.12)',
+  info: '#4EAADC',
+  infoFaint: 'rgba(78,170,220,0.12)',
   // ── Velvet Table additions (additive — never rename the tokens above) ──
   backgroundDeep: '#0A111B',
   // ── Immersive poker-table (STEP 5.3) — deep green felt that stays on-brand with navy/gold ──

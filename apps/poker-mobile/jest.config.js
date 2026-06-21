@@ -8,5 +8,7 @@ module.exports = {
     '**/src/api/__tests__/**/*.test.ts',
     '**/src/content/__tests__/**/*.test.ts',
     '**/src/analytics/__tests__/**/*.test.ts',
+    '**/src/components/__tests__/**/*.test.ts',
+    '**/src/hooks/__tests__/**/*.test.ts',
   ],
 };

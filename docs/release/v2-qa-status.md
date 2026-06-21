@@ -21,7 +21,7 @@ flag-OFF functional check (no feature leak). Prod-visible component changes get 
 | Phase | Status | tsc | jest | export | Notes |
 |-------|--------|-----|------|--------|-------|
 | 0 — Release-readiness package | done | n/a (docs) | n/a | n/a | merge-readiness + deployment checklist + this log |
-| 1 — Design System foundation | pending | — | — | — | spec (review-gated) + primitives + motion |
+| 1 — Design System foundation | done | 0 | 362 / 42 | clean | spec + review + Chip/ErrorState(reuse)/StateView/ListRow + pure resolvers; Badge deleted; Celebration a11y (logged); +components/hooks jest globs |
 | 2 — Content surfaces adoption | pending | — | — | — | |
 | 3 — Production surfaces refinement | pending | — | — | — | prod-visible |
 | 4 — Coach grounding UI | pending | — | — | — | content-flag-gated |

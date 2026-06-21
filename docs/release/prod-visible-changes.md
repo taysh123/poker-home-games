@@ -11,4 +11,6 @@ the eventual merge is a deliberate, reviewable release of the live app's new app
 
 | Date | Component / screen | Change | Before → After | Commit | Reviewed |
 |------|--------------------|--------|----------------|--------|----------|
-| _(none yet — Phase 1 begins the design-system foundation)_ | | | | | |
+| 2026-06-21 | `motion/Celebration` (end-game confetti; prod via LocalSessionSummary) | Respect OS Reduce-Motion **unconditionally** (was gated behind the `polish` flag, so prod ignored it) | Reduce-Motion ON → confetti still played → **confetti suppressed** (correct a11y). Reduce-Motion OFF → unchanged | (phase 1) | spec review (frontend-architect/arch) |
+| 2026-06-21 | `components/Badge.tsx` | Deleted (dead code, 0 importers) | No render impact (nothing imported it) | (phase 1) | grep-verified 0 importers |
+| 2026-06-21 | `theme/colors.ts` | Added `successFaint`/`warningFaint`/`info`/`infoFaint` tokens | Additive new keys → existing usage byte-identical | (phase 1) | — |
