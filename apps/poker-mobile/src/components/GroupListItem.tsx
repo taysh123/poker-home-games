@@ -5,6 +5,7 @@ import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { formatPL } from '../utils/formatters';
 import Avatar from './Avatar';
+import Chip from './Chip';
 import PressableScale from './motion/PressableScale';
 
 type Props = {
@@ -32,11 +33,7 @@ export default function GroupListItem({ name, memberCount, role, myGroupPL, myGr
         <View style={styles.nameRow}>
           <Text style={styles.name} numberOfLines={1}>{name}</Text>
           {(isOwner || isAdmin) && (
-            <View style={[styles.rolePill, isOwner && styles.rolePillOwner]}>
-              <Text style={[styles.roleText, isOwner && styles.roleTextOwner]}>
-                {isOwner ? 'Owner' : 'Admin'}
-              </Text>
-            </View>
+            <Chip label={isOwner ? 'Owner' : 'Admin'} tone={isOwner ? 'gold' : 'neutral'} />
           )}
         </View>
         <View style={styles.metaRow}>
@@ -85,25 +82,6 @@ const styles = StyleSheet.create({
     ...typography.label,
     color: colors.text,
     flex: 1,
-  },
-  rolePill: {
-    backgroundColor: colors.surfaceHigh,
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  rolePillOwner: {
-    backgroundColor: colors.goldFaint,
-    borderWidth: 1,
-    borderColor: colors.goldMuted,
-  },
-  roleText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
-  roleTextOwner: {
-    color: colors.gold,
   },
   metaRow: {
     flexDirection: 'row',

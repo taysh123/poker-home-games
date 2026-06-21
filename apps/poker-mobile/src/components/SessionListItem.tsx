@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { formatPL } from '../utils/formatters';
+import Chip from './Chip';
 
 type Props = {
   name: string;
@@ -36,23 +37,9 @@ export default function SessionListItem({ name, meta, profitLoss, status, onPres
       <View style={styles.content}>
         <View style={styles.top}>
           <Text style={styles.name} numberOfLines={1}>{name}</Text>
-          {isActive && (
-            <View style={styles.livePill}>
-              <Text style={styles.liveText}>LIVE</Text>
-            </View>
-          )}
+          {isActive && <Chip label="LIVE" tone="gold" dot />}
           {showResultBadge && !isActive && pl != null && (
-            <View style={[
-              styles.resultBadge,
-              pl > 0 ? styles.resultBadgeWin : pl < 0 ? styles.resultBadgeLoss : styles.resultBadgeEven,
-            ]}>
-              <Text style={[
-                styles.resultBadgeText,
-                pl > 0 ? styles.resultTextWin : pl < 0 ? styles.resultTextLoss : styles.resultTextEven,
-              ]}>
-                {pl > 0 ? 'WIN' : pl < 0 ? 'LOSS' : 'EVEN'}
-              </Text>
-            </View>
+            <Chip label={pl > 0 ? 'WIN' : pl < 0 ? 'LOSS' : 'EVEN'} tone={pl > 0 ? 'success' : pl < 0 ? 'error' : 'neutral'} />
           )}
         </View>
         <Text style={styles.meta} numberOfLines={1}>{meta}</Text>
@@ -101,20 +88,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     flex: 1,
   },
-  livePill: {
-    backgroundColor: colors.goldFaint,
-    borderWidth: 1,
-    borderColor: colors.goldMuted,
-    borderRadius: 4,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-  },
-  liveText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: colors.gold,
-    letterSpacing: 1,
-  },
   meta: {
     ...typography.caption,
     color: colors.textMuted,
@@ -125,17 +98,4 @@ const styles = StyleSheet.create({
     minWidth: 52,
     textAlign: 'right',
   },
-  resultBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 5,
-    borderWidth: 1,
-  },
-  resultBadgeWin: { backgroundColor: 'rgba(39,174,96,0.12)', borderColor: 'rgba(39,174,96,0.4)' },
-  resultBadgeLoss: { backgroundColor: 'rgba(231,76,60,0.08)', borderColor: 'rgba(231,76,60,0.35)' },
-  resultBadgeEven: { backgroundColor: '#1E2D3D', borderColor: '#243447' },
-  resultBadgeText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
-  resultTextWin: { color: '#27AE60' },
-  resultTextLoss: { color: '#E74C3C' },
-  resultTextEven: { color: '#7A8A99' },
 });
