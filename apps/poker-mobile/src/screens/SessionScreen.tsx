@@ -24,6 +24,7 @@ import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { shadows } from '../theme/shadows';
 import { springScale, USE_NATIVE_DRIVER } from '../theme/motion';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import Celebration from '../components/motion/Celebration';
 import PrimaryButton from '../components/PrimaryButton';
 import Screen from '../components/Screen';
@@ -238,16 +239,19 @@ export default function SessionScreen({ route, navigation }: Props) {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Winner spotlight animation (end-game summary step 3)
+  const reducedMotion = useReducedMotion();
   const winnerScaleAnim = useRef(new Animated.Value(0.9)).current;
   const gameOverShareRef = useRef<View>(null);
 
   useEffect(() => {
     if (endStep === 3) {
-      setTimeout(() => springScale(winnerScaleAnim, 1.0).start(), 300);
+      if (reducedMotion) { winnerScaleAnim.setValue(1.0); return; }
+      const t = setTimeout(() => springScale(winnerScaleAnim, 1.0).start(), 300);
+      return () => clearTimeout(t);
     } else {
       winnerScaleAnim.setValue(0.9);
     }
-  }, [endStep]);
+  }, [endStep, reducedMotion]);
 
   const isActive = session?.status === 'Active';
   const isDraft = session?.status === 'Draft';

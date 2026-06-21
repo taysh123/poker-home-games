@@ -17,6 +17,7 @@ import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { shadows } from '../theme/shadows';
 import { fadeIn, slideUp, pulse } from '../theme/motion';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import { getMyStats, MyStatsDto, RecentSessionDto } from '../api/statsApi';
 import { getMyAchievements, AchievementDto, MyAchievementsDto } from '../api/achievementsApi';
 import { isFeatureEnabled } from '../config/features';
@@ -59,17 +60,19 @@ export default function StatsScreen({ embedded = false }: { embedded?: boolean }
   const [error, setError] = useState<string | null>(null);
 
   // Entrance animation
+  const reducedMotion = useReducedMotion();
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(20)).current;
 
   const runEntrance = useCallback(() => {
+    if (reducedMotion) { opacity.setValue(1); translateY.setValue(0); return; }
     opacity.setValue(0);
     translateY.setValue(20);
     Animated.parallel([
       fadeIn(opacity, { duration: 350 }),
       slideUp(translateY, { duration: 350, from: 20 }),
     ]).start();
-  }, []);
+  }, [reducedMotion]);
 
   const load = useCallback(async (isRefresh = false, p: Period = 'all') => {
     if (!isRefresh) setLoading(true);
