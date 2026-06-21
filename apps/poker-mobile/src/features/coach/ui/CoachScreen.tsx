@@ -82,6 +82,29 @@ export default function CoachScreen() {
           ))}
         </View>
 
+        {isFeatureEnabled('content') && (
+          <View style={styles.section}>
+            <SectionTitle>REFERENCES</SectionTitle>
+            <PressableScale
+              onPress={() => navigation.navigate('CoachGrounding')}
+              haptic="light"
+              accessibilityRole="button"
+              accessibilityLabel="Open grounded references"
+            >
+              <Card style={styles.methodCard}>
+                <View style={styles.methodIcon}>
+                  <Ionicons name="shield-checkmark-outline" size={22} color={colors.gold} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.methodTitle}>Grounded references</Text>
+                  <Text style={styles.methodSub}>Source-cited facts the coach can quote</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+              </Card>
+            </PressableScale>
+          </View>
+        )}
+
         <View style={styles.section}>
           <SectionTitle>RECENT</SectionTitle>
           {history.length === 0 ? (

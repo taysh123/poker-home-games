@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Screen from '../../../components/Screen';
 import BrandHeader from '../../../components/BrandHeader';
 import Card from '../../../components/Card';
+import Chip from '../../../components/Chip';
 import SectionTitle from '../../../components/SectionTitle';
 import EmptyState from '../../../components/EmptyState';
 import { colors } from '../../../theme/colors';
@@ -47,8 +48,8 @@ export default function CoachResultScreen() {
           <Text style={styles.demoText}>Demo Analysis — Not Live AI Yet</Text>
         </View>
         <View style={styles.metaRow}>
-          <View style={styles.chip}><Text style={styles.chipText}>{analysis.confidence} confidence</Text></View>
-          <View style={styles.chip}><Text style={styles.chipText}>via {analysis.providerId}</Text></View>
+          <Chip label={`${analysis.confidence} confidence`} tone="neutral" />
+          <Chip label={`via ${analysis.providerId}`} tone="neutral" />
         </View>
 
         <Card variant="hero">
@@ -138,8 +139,6 @@ const styles = StyleSheet.create({
   },
   demoText: { ...typography.labelSmall, color: colors.warning },
   metaRow: { flexDirection: 'row', gap: spacing.sm },
-  chip: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radii.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  chipText: { ...typography.caps, color: colors.textMuted },
   summaryLabel: { ...typography.caps, color: colors.textMuted },
   summary: { ...typography.bodyLarge, color: colors.textHigh, marginTop: spacing.xs },
   section: { gap: spacing.sm },

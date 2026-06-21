@@ -14,11 +14,14 @@ import {
   assertion,
   assertableClaimsForConcept,
   claimsForConcept,
+  allAssertions,
   type GroundedClaim,
+  type GroundedAssertion,
 } from '../logic/grounding';
 
 /** Inspection-only view of a grounded claim — never carries the assertable template. */
 export type GroundedClaimView = Omit<GroundedClaim, 'assertion_template'>;
+export type { GroundedAssertion } from '../logic/grounding';
 
 const toView = ({ assertion_template, ...rest }: GroundedClaim): GroundedClaimView => rest;
 
@@ -31,6 +34,11 @@ export interface CoachGrounding {
   assertableClaims: (conceptId: string) => GroundedClaimView[];
   /** All claims for a concept, assertable or not (inspection view — no template). */
   claims: (conceptId: string) => GroundedClaimView[];
+  /**
+   * Every safe-to-assert claim across the dataset, projected for display (assertion + tier + citation).
+   * Powers the standalone "Grounded references" library — NOT tied to any specific hand/analysis.
+   */
+  allAssertions: () => GroundedAssertion[];
 }
 
 export function useCoachGrounding(): CoachGrounding | null {
@@ -45,6 +53,7 @@ export function useCoachGrounding(): CoachGrounding | null {
           .filter((s): s is string => s !== null),
       assertableClaims: (conceptId: string) => assertableClaimsForConcept(index, conceptId).map(toView),
       claims: (conceptId: string) => claimsForConcept(index, conceptId).map(toView),
+      allAssertions: () => allAssertions(index),
     };
   }, []);
 }

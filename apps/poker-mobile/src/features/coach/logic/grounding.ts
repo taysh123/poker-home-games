@@ -124,3 +124,40 @@ export function allAssertableClaims(index: GroundingIndex | null): GroundedClaim
   if (!index) return [];
   return index.all.filter(isAssertable);
 }
+
+/**
+ * Display-safe projection of an assertable claim — the verbatim caveat-bearing `assertion` (via the gate),
+ * plus the verification tier + citation (verbatim metadata). This is what a "grounded references" surface
+ * shows. It is NOT tied to any specific hand/analysis. Returns null for non-assertable claims.
+ */
+export interface GroundedAssertion {
+  groundingId: string;
+  conceptId: string;
+  /** The safe, caveat-bearing sentence (from the assertion gate) — the only fact text surfaced. */
+  assertion: string;
+  tier: string;
+  citation: string;
+  unit: string;
+  numericValue: number | null;
+}
+
+export function toAssertion(claim: GroundedClaim | null | undefined): GroundedAssertion | null {
+  const a = assertion(claim);
+  if (a === null || !claim) return null;
+  return {
+    groundingId: claim.grounding_id,
+    conceptId: claim.concept_id,
+    assertion: a,
+    tier: claim.verification_tier,
+    citation: claim.citation,
+    unit: claim.unit,
+    numericValue: claim.numeric_value,
+  };
+}
+
+/** All safe-to-assert claims across the dataset, projected for display (assertion + tier + citation). */
+export function allAssertions(index: GroundingIndex | null): GroundedAssertion[] {
+  return allAssertableClaims(index)
+    .map(toAssertion)
+    .filter((x): x is GroundedAssertion => x !== null);
+}

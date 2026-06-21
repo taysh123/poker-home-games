@@ -24,7 +24,7 @@ flag-OFF functional check (no feature leak). Prod-visible component changes get 
 | 1 — Design System foundation | done | 0 | 362 / 42 | clean | spec + review + Chip/ErrorState(reuse)/StateView/ListRow + pure resolvers; Badge deleted; Celebration a11y (logged); +components/hooks jest globs |
 | 2 — Content surfaces adoption | done | 0 | 362 / 42 | clean | PackCatalog/LessonModules/LessonReader/QuizRunner → StateView + ListRow + Chip + Screen-animated; retry wired. Flag-gated (no prod-visible change). Study-hub Stat + Coach chips folded into Phases 6/4. |
 | 3 — Production surfaces refinement | pending | — | — | — | prod-visible |
-| 4 — Coach grounding UI | pending | — | — | — | content-flag-gated |
+| 4 — Coach grounding UI | done | 0 | 365 / 42 | clean | Honest standalone "Grounded references" surface (safe_to_assert only, tier+citation+caveat, NO hand linkage); allAssertions gated accessor; CoachResult trust chips → Chip; coach-provider contract untouched. Flag-gated. |
 | 5 — Quiz/learning/mastery UX | pending | — | — | — | mastery-flag-gated |
 | 6 — Cross-app consistency + commercial review | pending | — | — | — | |
 | 7 — Verification + independent review | pending | — | — | — | |

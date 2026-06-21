@@ -64,6 +64,7 @@ import PackCatalogScreen from '../features/premium/ui/PackCatalogScreen';
 import CoachScreen from '../features/coach/ui/CoachScreen';
 import CoachInputScreen from '../features/coach/ui/CoachInputScreen';
 import CoachResultScreen from '../features/coach/ui/CoachResultScreen';
+import CoachGroundingScreen from '../features/coach/ui/CoachGroundingScreen';
 import type { CoachInputKind } from '../features/coach/types';
 import PaywallScreen from '../features/premium/ui/PaywallScreen';
 import TrackScreen from '../screens/TrackScreen';
@@ -107,6 +108,7 @@ export type RootStackParamList = {
   // V2 — AI Coach (Improve pillar)
   CoachInput: { method: CoachInputKind };
   CoachResult: { id: string };
+  CoachGrounding: undefined;
   // V2 — Monetization
   Paywall: { trigger?: string } | undefined;
   // V2.1 — Track hub (5-tab IA)
@@ -515,6 +517,7 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
             <Stack.Screen name="PackCatalog" component={PackCatalogScreen} options={{ headerShown: false }} />
             <Stack.Screen name="CoachInput"  component={CoachInputScreen}  options={{ headerShown: false }} />
             <Stack.Screen name="CoachResult" component={CoachResultScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="CoachGrounding" component={CoachGroundingScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Paywall"     component={PaywallScreen}     options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="Achievements" component={AchievementsScreen} options={{ headerShown: false }} />
             <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} options={{ headerShown: false }} />
@@ -551,6 +554,7 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
             <Stack.Screen name="PackCatalog" component={PackCatalogScreen} options={{ headerShown: false }} />
             <Stack.Screen name="CoachInput"  component={CoachInputScreen}  options={{ headerShown: false }} />
             <Stack.Screen name="CoachResult" component={CoachResultScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="CoachGrounding" component={CoachGroundingScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Paywall"     component={PaywallScreen}     options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="Achievements" component={AchievementsScreen} options={{ headerShown: false }} />
             <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} options={{ headerShown: false }} />

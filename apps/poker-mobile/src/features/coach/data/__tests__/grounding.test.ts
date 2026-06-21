@@ -18,6 +18,8 @@ import {
   assertableClaimsForConcept,
   claimById,
   allAssertableClaims,
+  toAssertion,
+  allAssertions,
   type GroundedClaim,
   type GroundingDataset,
 } from '../../logic/grounding';
@@ -148,6 +150,32 @@ describe('buildGroundingIndex — malformed/empty input', () => {
     expect(idx.all.map(c => c.grounding_id)).toEqual(['CG-1', 'CG-3']);
     expect(claimById(idx, 'CG-1')!.claim_text).toBe('first');
     expect(allAssertableClaims(idx).map(c => c.grounding_id)).toEqual(['CG-1']);
+  });
+});
+
+describe('toAssertion / allAssertions — grounded references projection', () => {
+  const index = buildGroundingIndex(realArtifact);
+
+  it('toAssertion projects a safe claim to { assertion, tier, citation } and null for unsafe', () => {
+    const safe = index.all[0];
+    const a = toAssertion(safe)!;
+    expect(a.assertion).toBe(safe.assertion_template); // the gated, caveat-bearing sentence (verbatim)
+    expect(a.tier).toBe(safe.verification_tier);
+    expect(a.citation).toBe(safe.citation);
+    expect(toAssertion({ ...safe, safe_to_assert: false })).toBeNull(); // unsafe never projects
+  });
+
+  it('allAssertions returns ONLY safe claims, each with assertion + tier (no unsafe leak)', () => {
+    const items = allAssertions(index);
+    expect(items.length).toBe(allAssertableClaims(index).length); // exactly the safe set (95 in 0.8.1)
+    for (const it of items) {
+      expect(it.assertion.length).toBeGreaterThan(0);
+      expect(it.tier.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('allAssertions tolerates a null index (flag OFF)', () => {
+    expect(allAssertions(null)).toEqual([]);
   });
 });
 
