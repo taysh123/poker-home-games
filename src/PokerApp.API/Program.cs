@@ -8,6 +8,7 @@ using Microsoft.OpenApi.Models;
 using PokerApp.API.Middleware;
 using PokerApp.Application;
 using PokerApp.Infrastructure;
+using PokerApp.Infrastructure.Identity;
 using PokerApp.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -118,24 +119,17 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // ── JWT Authentication ──────────────────────────────────────────────────────
-// Tolerate missing/short secret at startup — log critical and skip wiring
-// validation params (keys with insufficient bytes throw at request time, and
-// we don't want the entire container to refuse to start over a missing env
-// var that would otherwise be obvious in the logs).
+// Fail-closed: outside Development a missing/short secret is fatal (tokens signed with a padded key never
+// validate → silently-broken auth). JwtKey.ResolveSigningKey throws in that case; Development still pads so
+// local dev boots. A correctly-configured prod (>=64-char secret) is unaffected. See JwtKey.cs.
 var jwtSection = builder.Configuration.GetSection("JwtSettings");
 var jwtSecret = jwtSection["SecretKey"] ?? string.Empty;
+var jwtSigningKey = JwtKey.ResolveSigningKey(jwtSecret, requireStrongSecret: !builder.Environment.IsDevelopment());
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        // SymmetricSecurityKey requires >= 256 bits (32 bytes). Pad short
-        // secrets so the middleware can construct — tokens signed with the
-        // padded key won't validate, but the container starts and we get
-        // /health up so Railway can surface the misconfiguration in logs.
-        var keyBytes = Encoding.UTF8.GetBytes(jwtSecret);
-        if (keyBytes.Length < 32) keyBytes = keyBytes.Concat(new byte[32 - keyBytes.Length]).ToArray();
-
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -144,7 +138,7 @@ builder.Services
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwtSection["Issuer"],
             ValidAudience = jwtSection["Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
+            IssuerSigningKey = jwtSigningKey,
             ClockSkew = TimeSpan.FromSeconds(30)
         };
     });
@@ -170,6 +164,16 @@ startupLogger.LogInformation("PokerApp.API starting. Env={Env} Port={Port} JwtSe
     railwayPort ?? "(launchSettings)",
     !string.IsNullOrWhiteSpace(jwtSecret) && jwtSecret.Length >= 32,
     string.Join(",", prodOrigins));
+
+// Make a CORS misconfiguration loud: outside Development with no AllowedOrigins set, we fall back to the
+// hardcoded production domain. That keeps the web app working, but if it's unintended (e.g. a new domain) it
+// would silently reject the real origin — so surface it.
+if (!app.Environment.IsDevelopment() && configuredOrigins.Length == 0)
+{
+    startupLogger.LogCritical(
+        "CORS: AllowedOrigins is not configured — falling back to the hardcoded production origin(s): {Origins}. " +
+        "Set AllowedOrigins__0 to your web domain if this is not intended.", string.Join(",", prodOrigins));
+}
 
 // /health registered BEFORE auth/rate-limit/exception middleware so Railway
 // can confirm liveness even if downstream middleware misbehaves.
