@@ -27,7 +27,7 @@ flag-OFF functional check (no feature leak). Prod-visible component changes get 
 | 4 — Coach grounding UI | done | 0 | 365 / 42 | clean | Honest standalone "Grounded references" surface (safe_to_assert only, tier+citation+caveat, NO hand linkage); allAssertions gated accessor; CoachResult trust chips → Chip; coach-provider contract untouched. Flag-gated. |
 | 5 — Quiz/learning UX | done | 0 | 367 / 42 | clean | Quiz polish: in-run progress bar, reduced-motion-aware feedback entrance, this-run category breakdown (honest, in-memory). Mastery *feedback* NOT faked — real boundary (needs attempt persistence + objective linkage). Flag-gated. |
 | 6 — Cross-app consistency + commercial review | done | 0 | 367 / 42 | clean | Commercial/monetization/conversion audit → docs/design-audit.md. Fixed the one real honesty violation: paywall over-claimed live AI/cloud-sync/courses → now `comingSoon` "Soon" chips + honest hero. Coach out-of-credits dead-end → honest expectation. All flag-gated (paywall/coach OFF prod). Billing/AI-vendor/retention-flip = documented dependencies, not faked. |
-| 7 — Verification + independent review | pending | — | — | — | |
+| 7 — Verification + independent review | done | 0 | 367 / 42 | clean | Two independent multi-perspective reviews (arch/frontend/perf + UX/mobile/web/a11y/release): NO blockers/majors. Resolved findings: QuizRunner retry parity, neutral-Chip AA contrast, quiz heroNum web line-height, paywall link hit-slop, re-stamped merge-readiness doc, added paywall pre-flip store-compliance items to the deployment checklist. |
 
 ## Open risks / surfaced boundaries (honest — not papered over)
 - Prod-visible refinement (Decision 2) changes the live app's appearance on merge — tracked + reviewed, not gated.

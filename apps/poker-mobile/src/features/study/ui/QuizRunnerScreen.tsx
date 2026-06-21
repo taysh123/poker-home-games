@@ -51,6 +51,7 @@ export default function QuizRunnerScreen() {
 
   const [all, setAll] = useState<QuizQuestion[] | null>(null);
   const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   // Flow state
   const [phase, setPhase] = useState<Phase>('pick');
@@ -63,6 +64,8 @@ export default function QuizRunnerScreen() {
   useEffect(() => {
     if (!isLoaded || !query) return;
     let cancelled = false;
+    setError(false);
+    setAll(null);
     query.all('quiz_bank')
       .then(rows => {
         if (cancelled) return;
@@ -72,7 +75,7 @@ export default function QuizRunnerScreen() {
       })
       .catch(() => { if (!cancelled) setError(true); });
     return () => { cancelled = true; };
-  }, [isLoaded, query, route.params?.collectionId]);
+  }, [isLoaded, query, route.params?.collectionId, reloadKey]);
 
   const categories = useMemo(() => (all ? categoriesOf(all) : []), [all]);
   const loading = enabled && !error && (!isLoaded || all === null);
@@ -111,6 +114,7 @@ export default function QuizRunnerScreen() {
           error={error}
           isEmpty={!enabled || !all || all.length === 0}
           empty={<EmptyState ionicon="help-circle-outline" title="No quizzes yet" subtitle="Quizzes arrive with the next content update." />}
+          onRetry={() => setReloadKey(k => k + 1)}
         >
           {phase === 'pick' ? (
             <PickView
@@ -315,7 +319,7 @@ function optionKeyStyle(s: OptState) {
 const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: 140, gap: spacing.md },
   heroLabel: { ...typography.caps, color: colors.textMuted },
-  heroNum: { ...typography.amountHero, color: colors.gold, marginTop: spacing.xs },
+  heroNum: { ...typography.amountHero, lineHeight: 52, color: colors.gold, marginTop: spacing.xs },
   heroSub: { ...typography.bodySmall, color: colors.textMuted, marginTop: spacing.xs },
   section: { gap: spacing.sm },
   sectionLabel: { ...typography.caps, color: colors.textMuted, marginBottom: spacing.xs },

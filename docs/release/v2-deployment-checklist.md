@@ -10,6 +10,13 @@
 - [ ] Review `prod-visible-changes.md` (the live app's appearance will change).
 - [ ] Confirm the feature-flag matrix: production env sets no `EXPO_PUBLIC_APP_VARIANT=beta` → all V2 flags OFF.
 
+## Before flipping the `paywall` flag (store IAP compliance — gated)
+- [ ] Terms of Service + Privacy Policy links rendered **on the PaywallScreen** (Privacy URL exists; Terms page may need authoring). Apple/Play require functional links on the purchase screen.
+- [ ] "Cancel anytime" + renewal terms shown near the CTA (present in fine print today — surface it).
+- [ ] Real billing provider wired behind `IBillingProvider` (today `mockBillingProvider` always succeeds; `restore()` is a no-op).
+- [ ] Localized store pricing (replace hard-coded `$11.99`/`$79.99` with SDK-provided prices).
+- [ ] Every `PREMIUM_FEATURES` benefit either genuinely live or still flagged `comingSoon` (no charging for unshipped benefits). See `docs/design-audit.md`.
+
 ## Web → Vercel
 - [ ] Root Directory = `apps/poker-mobile` (so `apps/poker-mobile/vercel.json` is the active config; a repo-root one is ignored).
 - [ ] Build command = `cd apps/poker-mobile && npx expo export -p web`; Output dir = `apps/poker-mobile/dist`.

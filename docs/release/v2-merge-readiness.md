@@ -4,7 +4,8 @@
 > been performed. `feature/v2-poker-platform` remains the active release branch; the polish program continues
 > on it, and the final merge happens later after the full program + release review.
 
-_Last verified at branch HEAD `03b811f` (will be updated as the polish program adds commits)._
+_Current as of the UI/UX polish program (Phases 0–7). Live gate counts: see `v2-qa-status.md` (currently
+tsc clean · 367 jest / 42 suites · web export clean). Always re-run gates at the actual merge SHA before cutover._
 
 ## Branch / merge mechanics
 | Check | Result |
@@ -22,11 +23,11 @@ Because `main` has not advanced since the branch diverged, the merge is conflict
 cutover time: **merge commit (`--no-ff`)** to preserve the 56-commit / per-PR history and the PR boundary
 (squash would collapse the granular content-platform history — not recommended).
 
-## Local quality gates (verified this session at `03b811f`)
+## Local quality gates (current — re-verify at the merge SHA)
 | Gate | Result |
 |------|--------|
 | `npx tsc --noEmit` | clean (exit 0) |
-| `npx jest` | **354 passed / 41 suites** |
+| `npx jest` | **367 passed / 42 suites** |
 | `npx expo export -p web` | clean (exit 0) |
 
 ## Production-safety (feature-flag) matrix

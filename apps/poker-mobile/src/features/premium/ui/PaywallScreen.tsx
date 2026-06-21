@@ -120,7 +120,7 @@ export default function PaywallScreen() {
               label={plan === 'yearly' ? `Go Premium — ${PRICING.yearly.price}/yr` : `Go Premium — ${PRICING.monthly.price}/mo`}
               variant="gradient" loading={purchasing} onPress={upgrade}
             />
-            <PressableScale onPress={onRestore} disabled={restoring} style={styles.restore} accessibilityRole="button" accessibilityLabel="Restore purchases">
+            <PressableScale onPress={onRestore} disabled={restoring} style={styles.restore} hitSlop={12} accessibilityRole="button" accessibilityLabel="Restore purchases">
               <Text style={styles.restoreText}>{restoring ? 'Restoring…' : 'Restore purchases'}</Text>
             </PressableScale>
             <Text style={styles.fine}>
@@ -130,6 +130,7 @@ export default function PaywallScreen() {
             <PressableScale
               onPress={() => Linking.openURL('mailto:truestorylabs@gmail.com?subject=Purchase%20help')}
               style={styles.helpLink}
+              hitSlop={12}
               accessibilityRole="button"
               accessibilityLabel="Get help with a purchase"
             >

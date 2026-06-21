@@ -11,7 +11,8 @@ export type ChipSize = 'sm' | 'md';
 interface ToneSpec { fg: string; bg: string; border: string; solidBg: string; }
 
 const TONES: Record<ChipTone, ToneSpec> = {
-  neutral: { fg: colors.textMuted, bg: colors.surfaceHigh, border: colors.border, solidBg: colors.surfaceHigh },
+  // textHigh (not textMuted) for AA contrast: a 10px bold label needs ≥4.5:1, which textMuted on surfaceHigh misses.
+  neutral: { fg: colors.textHigh, bg: colors.surfaceHigh, border: colors.border, solidBg: colors.surfaceHigh },
   gold: { fg: colors.gold, bg: colors.goldFaint, border: colors.goldMuted, solidBg: colors.gold },
   success: { fg: colors.success, bg: colors.successFaint, border: colors.success, solidBg: colors.success },
   error: { fg: colors.error, bg: colors.errorFaint, border: colors.errorMuted, solidBg: colors.error },
