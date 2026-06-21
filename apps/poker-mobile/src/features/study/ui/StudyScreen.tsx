@@ -123,6 +123,14 @@ export default function StudyScreen() {
               onPress={() => navigation.navigate('LessonModules')}
             />
           )}
+          {isFeatureEnabled('content') && (
+            <TrainCard
+              icon="help-circle"
+              title="Quizzes"
+              sub="Multiple-choice — test your reads"
+              onPress={() => navigation.navigate('QuizRunner')}
+            />
+          )}
         </View>
 
         <View style={styles.noteRow}>

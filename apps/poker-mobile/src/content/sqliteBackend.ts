@@ -67,6 +67,9 @@ export async function createSqliteBackend(): Promise<ContentBackend> {
   };
   const liveTables = async (): Promise<string[]> =>
     (await namesWith('')).filter(n => n !== META && !n.startsWith('stg__') && !n.startsWith('prev__'));
+  // Reads on an absent table return empty (parity with the in-memory backend) rather than throwing
+  // a SQLite "no such table" — so a flag-ON / no-ingest state surfaces as an honest empty state.
+  const hasTable = async (table: string): Promise<boolean> => (await liveTables()).includes(table);
 
   return {
     async beginStaging() {
@@ -109,10 +112,12 @@ export async function createSqliteBackend(): Promise<ContentBackend> {
       return true;
     },
     async getAll(table: string) {
+      if (!(await hasTable(table))) return [];
       const rows = await db.getAllAsync<Row>(`SELECT * FROM "${table}"`);
       return rows.map(r => decodeRow(specs.get(table), r));
     },
     async getById(table: string, pk: Row) {
+      if (!(await hasTable(table))) return null;
       const spec = specs.get(table);
       const keys = spec?.primaryKey ?? Object.keys(pk);
       const where = keys.map(k => `"${k}" = ?`).join(' AND ');
@@ -120,6 +125,7 @@ export async function createSqliteBackend(): Promise<ContentBackend> {
       return row ? decodeRow(spec, row) : null;
     },
     async find(table: string, where: Partial<Row>) {
+      if (!(await hasTable(table))) return [];
       const keys = Object.keys(where);
       const spec = specs.get(table);
       const sql = keys.length === 0

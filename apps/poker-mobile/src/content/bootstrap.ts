@@ -9,6 +9,7 @@ import { Platform } from 'react-native';
 import { isFeatureEnabled } from '../config/features';
 import { createContentStore, type ContentStore } from './contentStore';
 import { createMemoryBackend } from './memoryBackend';
+import { bundledPacks } from './bundledPacks';
 import type { ContentBackend } from './backend';
 
 export interface BootstrapResult { enabled: boolean; store: ContentStore | null }
@@ -23,6 +24,9 @@ export async function bootstrapContent(): Promise<BootstrapResult> {
     backend = await createSqliteBackend();
   }
   const store = createContentStore(backend);
-  // D2 pending: no bundled packs to ingest yet. Store is ready (empty).
+  // D2 (PR #5): ingest whatever packs are bundled. Currently a quiz sample only; invalid/dangling packs
+  // self-quarantine inside ingest (the store keeps the prior good set), so this never throws.
+  const packs = bundledPacks();
+  if (packs.length) await store.ingest(packs);
   return { enabled: true, store };
 }

@@ -1,0 +1,308 @@
+/**
+ * Quiz Runner (PR #5) — runs a multiple-choice quiz sourced from the ContentStore (read-only, via
+ * useContent().query; never the workbook). Flag-gated (`content`); honest empty state until quiz packs
+ * are bundled. Phases: pick (category + count) → run (question, select, grade, feedback) → results.
+ *
+ * Pure logic (normalize / grade / select / score) lives in ../logic/quiz.ts and is unit-tested; this
+ * screen is presentation + flow only. Grading is read-only — no writes, no mastery side effects yet.
+ */
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
+import Screen from '../../../components/Screen';
+import BrandHeader from '../../../components/BrandHeader';
+import Card from '../../../components/Card';
+import EmptyState from '../../../components/EmptyState';
+import SkeletonRow from '../../../components/SkeletonRow';
+import PrimaryButton from '../../../components/PrimaryButton';
+import PressableScale from '../../../components/motion/PressableScale';
+import { colors } from '../../../theme/colors';
+import { typography } from '../../../theme/typography';
+import { spacing } from '../../../theme/spacing';
+import { radii } from '../../../theme/radii';
+import type { RootStackParamList } from '../../../navigation/AppNavigator';
+import { useContent } from '../../../context/ContentContext';
+import {
+  normalizeQuestions,
+  selectQuestions,
+  gradeAnswer,
+  scoreQuiz,
+  categoriesOf,
+  type QuizQuestion,
+  type QuizChoice,
+} from '../logic/quiz';
+
+type Nav = NativeStackNavigationProp<RootStackParamList>;
+type R = RouteProp<RootStackParamList, 'QuizRunner'>;
+
+const RUN_LIMIT = 10; // questions per run
+
+type Phase = 'pick' | 'run' | 'results';
+
+export default function QuizRunnerScreen() {
+  const navigation = useNavigation<Nav>();
+  const route = useRoute<R>();
+  const { enabled, isLoaded, query } = useContent();
+
+  const [all, setAll] = useState<QuizQuestion[] | null>(null);
+  const [error, setError] = useState(false);
+
+  // Flow state
+  const [phase, setPhase] = useState<Phase>('pick');
+  const [category, setCategory] = useState<string | null>(null);
+  const [run, setRun] = useState<QuizQuestion[]>([]);
+  const [idx, setIdx] = useState(0);
+  const [chosen, setChosen] = useState<QuizChoice | null>(null);
+  const [outcomes, setOutcomes] = useState<boolean[]>([]);
+
+  useEffect(() => {
+    if (!isLoaded || !query) return;
+    let cancelled = false;
+    query.all('quiz_bank')
+      .then(rows => {
+        if (cancelled) return;
+        let qs = normalizeQuestions(rows);
+        if (route.params?.collectionId) qs = qs.filter(q => q.collectionId === route.params!.collectionId);
+        setAll(qs);
+      })
+      .catch(() => { if (!cancelled) setError(true); });
+    return () => { cancelled = true; };
+  }, [isLoaded, query, route.params?.collectionId]);
+
+  const categories = useMemo(() => (all ? categoriesOf(all) : []), [all]);
+  const loading = enabled && !error && (!isLoaded || all === null);
+
+  const startRun = (cat: string | null) => {
+    const pool = selectQuestions(all ?? [], { category: cat ?? undefined, limit: RUN_LIMIT });
+    if (pool.length === 0) return;
+    setCategory(cat);
+    setRun(pool);
+    setIdx(0);
+    setChosen(null);
+    setOutcomes([]);
+    setPhase('run');
+  };
+
+  const answer = (choice: QuizChoice) => {
+    if (chosen) return; // lock after first selection
+    setChosen(choice);
+    setOutcomes(prev => [...prev, gradeAnswer(run[idx], choice).correct]);
+  };
+
+  const next = () => {
+    if (idx + 1 >= run.length) { setPhase('results'); return; }
+    setIdx(idx + 1);
+    setChosen(null);
+  };
+
+  const restart = () => { setPhase('pick'); setCategory(null); setRun([]); setIdx(0); setChosen(null); setOutcomes([]); };
+
+  return (
+    <Screen>
+      <BrandHeader variant="screen" title="Quiz" subtitle={subtitleFor(phase, category)} onBack={() => navigation.goBack()} />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {error ? (
+          <EmptyState ionicon="alert-circle-outline" title="Couldn't load quizzes" subtitle="Please try again in a moment." />
+        ) : loading ? (
+          <>{[0, 1, 2, 3].map(i => <SkeletonRow key={i} isFirst={i === 0} />)}</>
+        ) : !enabled || !all || all.length === 0 ? (
+          <EmptyState ionicon="help-circle-outline" title="No quizzes yet" subtitle="Quizzes arrive with the next content update." />
+        ) : phase === 'pick' ? (
+          <PickView
+            total={all.length}
+            categories={categories}
+            onStartAll={() => startRun(null)}
+            onStartCategory={(c) => startRun(c)}
+          />
+        ) : phase === 'run' ? (
+          <RunView
+            question={run[idx]}
+            index={idx}
+            count={run.length}
+            chosen={chosen}
+            onAnswer={answer}
+            onNext={next}
+            isLast={idx + 1 >= run.length}
+          />
+        ) : (
+          <ResultsView outcomes={outcomes} onRestart={restart} onDone={() => navigation.goBack()} />
+        )}
+      </ScrollView>
+    </Screen>
+  );
+}
+
+function subtitleFor(phase: Phase, category: string | null): string {
+  if (phase === 'pick') return 'Test your reads';
+  if (phase === 'results') return 'Your score';
+  return category ?? 'All categories';
+}
+
+function PickView({ total, categories, onStartAll, onStartCategory }: {
+  total: number; categories: string[]; onStartAll: () => void; onStartCategory: (c: string) => void;
+}) {
+  return (
+    <>
+      <Card variant="hero">
+        <Text style={styles.heroLabel}>QUESTION BANK</Text>
+        <Text style={styles.heroNum}>{total}</Text>
+        <Text style={styles.heroSub}>Up to {RUN_LIMIT} questions per run · educational, not solver output</Text>
+        <View style={{ marginTop: spacing.lg }}>
+          <PrimaryButton label="Start quiz" variant="gradient" onPress={onStartAll} />
+        </View>
+      </Card>
+
+      {categories.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>BY CATEGORY</Text>
+          {categories.map(c => (
+            <PressableScale key={c} haptic="light" accessibilityRole="button" accessibilityLabel={`Start ${c} quiz`} onPress={() => onStartCategory(c)}>
+              <Card style={styles.row}>
+                <View style={styles.icon}><Ionicons name="albums-outline" size={20} color={colors.gold} /></View>
+                <Text style={styles.rowName}>{c}</Text>
+                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+              </Card>
+            </PressableScale>
+          ))}
+        </View>
+      )}
+    </>
+  );
+}
+
+function RunView({ question, index, count, chosen, onAnswer, onNext, isLast }: {
+  question: QuizQuestion; index: number; count: number; chosen: QuizChoice | null;
+  onAnswer: (c: QuizChoice) => void; onNext: () => void; isLast: boolean;
+}) {
+  const answered = chosen !== null;
+  return (
+    <>
+      <View style={styles.progressRow}>
+        <Text style={styles.progressText}>Question {index + 1} of {count}</Text>
+        {!!question.difficulty && <Text style={styles.difficultyChip}>{question.difficulty}</Text>}
+      </View>
+
+      <Card style={styles.questionCard}>
+        <Text style={styles.questionText}>{question.prompt}</Text>
+      </Card>
+
+      <View style={styles.options}>
+        {question.options.map(opt => {
+          const state = optionState(opt.key, question.correct, chosen);
+          return (
+            <PressableScale
+              key={opt.key}
+              haptic="light"
+              disabled={answered}
+              accessibilityRole="button"
+              accessibilityLabel={`Option ${opt.key}: ${opt.text}`}
+              onPress={() => onAnswer(opt.key)}
+            >
+              <View style={[styles.option, optionStyle(state)]}>
+                <View style={[styles.optionKey, optionKeyStyle(state)]}>
+                  {state === 'correct' ? (
+                    <Ionicons name="checkmark" size={16} color={colors.background} />
+                  ) : state === 'wrong' ? (
+                    <Ionicons name="close" size={16} color={colors.background} />
+                  ) : (
+                    <Text style={styles.optionKeyText}>{opt.key}</Text>
+                  )}
+                </View>
+                <Text style={[styles.optionText, state !== 'idle' && styles.optionTextActive]}>{opt.text}</Text>
+              </View>
+            </PressableScale>
+          );
+        })}
+      </View>
+
+      {answered && (
+        <Card style={styles.feedback}>
+          <Text style={styles.feedbackTitle}>
+            {chosen === question.correct ? 'Correct' : `Correct answer: ${question.correct}`}
+          </Text>
+          {!!question.explanation && <Text style={styles.feedbackBody}>{question.explanation}</Text>}
+        </Card>
+      )}
+
+      {answered && (
+        <View style={{ marginTop: spacing.md }}>
+          <PrimaryButton label={isLast ? 'See results' : 'Next question'} onPress={onNext} />
+        </View>
+      )}
+    </>
+  );
+}
+
+function ResultsView({ outcomes, onRestart, onDone }: { outcomes: boolean[]; onRestart: () => void; onDone: () => void }) {
+  const score = scoreQuiz(outcomes);
+  return (
+    <>
+      <Card variant="hero">
+        <Text style={styles.heroLabel}>YOUR SCORE</Text>
+        <Text style={styles.heroNum}>{score.pct}%</Text>
+        <Text style={styles.heroSub}>{score.correct} of {score.total} correct</Text>
+      </Card>
+      <View style={{ gap: spacing.sm, marginTop: spacing.md }}>
+        <PrimaryButton label="Try another" variant="gradient" onPress={onRestart} />
+        <PrimaryButton label="Done" variant="outline" onPress={onDone} />
+      </View>
+    </>
+  );
+}
+
+type OptState = 'idle' | 'correct' | 'wrong' | 'dim';
+function optionState(key: QuizChoice, correct: QuizChoice, chosen: QuizChoice | null): OptState {
+  if (chosen === null) return 'idle';
+  if (key === correct) return 'correct';
+  if (key === chosen) return 'wrong';
+  return 'dim';
+}
+function optionStyle(s: OptState) {
+  if (s === 'correct') return { borderColor: colors.success, backgroundColor: 'rgba(39,174,96,0.10)' };
+  if (s === 'wrong') return { borderColor: colors.error, backgroundColor: colors.errorFaint };
+  if (s === 'dim') return { opacity: 0.5 };
+  return null;
+}
+function optionKeyStyle(s: OptState) {
+  if (s === 'correct') return { backgroundColor: colors.success };
+  if (s === 'wrong') return { backgroundColor: colors.error };
+  return null;
+}
+
+const styles = StyleSheet.create({
+  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: 140, gap: spacing.md },
+  heroLabel: { ...typography.caps, color: colors.textMuted },
+  heroNum: { ...typography.amountHero, color: colors.gold, marginTop: spacing.xs },
+  heroSub: { ...typography.bodySmall, color: colors.textMuted, marginTop: spacing.xs },
+  section: { gap: spacing.sm },
+  sectionLabel: { ...typography.caps, color: colors.textMuted, marginBottom: spacing.xs },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  icon: { width: 40, height: 40, borderRadius: radii.sm, backgroundColor: colors.goldFaint, alignItems: 'center', justifyContent: 'center' },
+  rowName: { ...typography.h4, color: colors.text, flex: 1 },
+  progressRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  progressText: { ...typography.bodySmall, color: colors.textMuted },
+  difficultyChip: {
+    ...typography.bodySmall, color: colors.gold, backgroundColor: colors.goldFaint,
+    borderRadius: radii.pill, paddingHorizontal: spacing.sm, paddingVertical: 2, overflow: 'hidden',
+  },
+  questionCard: { paddingVertical: spacing.lg },
+  questionText: { ...typography.h4, color: colors.text, lineHeight: 26 },
+  options: { gap: spacing.sm },
+  option: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radii.md,
+    backgroundColor: colors.surface, paddingVertical: spacing.md, paddingHorizontal: spacing.md,
+  },
+  optionKey: {
+    width: 30, height: 30, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.surfaceHigh,
+  },
+  optionKeyText: { ...typography.label, color: colors.textHigh },
+  optionText: { ...typography.body, color: colors.textHigh, flex: 1 },
+  optionTextActive: { color: colors.text },
+  feedback: { marginTop: spacing.sm, gap: spacing.xs },
+  feedbackTitle: { ...typography.h4, color: colors.text },
+  feedbackBody: { ...typography.bodySmall, color: colors.textMuted, lineHeight: 20 },
+});
