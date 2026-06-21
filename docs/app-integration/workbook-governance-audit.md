@@ -8,7 +8,8 @@
 **Status:** READ-ONLY audit (historical). This document **recommended**; it did **not** modify the workbook,
 `Schema_Registry`, any cell value, or any `AllowedValues`. Remediation was content-team / workbook-side (0.8.1).
 
-**Source of truth:** `content/release-0.8.0/TPoker_Content_Database.xlsx`
+**Audited against:** `content/release-0.8.0/TPoker_Content_Database.xlsx` (the version that had the
+contradictions); **resolved in** `content/release-0.8.1/TPoker_Content_Database.xlsx` (now canonical).
 **Method:** `python tools/content-export/audit_governance.py` — reuses the exporter's `read_workbook` +
 `schema_registry` to scan **every** column that declares `AllowedValues` and report distinct values present
 in the data that fall **outside** the declared enum (with row counts). Reproducible and read-only.

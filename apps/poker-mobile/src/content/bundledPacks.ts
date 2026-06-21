@@ -9,6 +9,8 @@
 import type { ContentPack } from './types';
 import { quizSamplePackArtifact } from './bundledArtifacts';
 
+// Gated by the caller: the only invoker is bootstrapContent(), which returns early when the `content`
+// flag is OFF — so this (and its require()) never runs in production. Keep that contract if adding callers.
 export function bundledPacks(): ContentPack[] {
   const packs: ContentPack[] = [];
   try {

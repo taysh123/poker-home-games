@@ -7,9 +7,9 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from canonical import content_hash
+from paths import REPO  # single source for repo root (shared across the content-export tools)
 
-ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-OUT = os.path.join(ROOT, "apps", "poker-mobile", "src", "content", "__tests__", "hashFixture.ts")
+OUT = os.path.join(REPO, "apps", "poker-mobile", "src", "content", "__tests__", "hashFixture.ts")
 
 schema = [
     {"column": "RowID", "datatype": "string"},

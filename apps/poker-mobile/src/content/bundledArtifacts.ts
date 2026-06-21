@@ -8,6 +8,9 @@
  *
  * ⚠️ The "0.8.1" in the paths below MUST match `CONTENT_DATASET_VERSION`. The drift-guard test
  * (`__tests__/bundledArtifacts.test.ts`) asserts each artifact's internal `dataset_version` matches.
+ * On a version bump, update (1) `CONTENT_DATASET_VERSION`, (2) the three literal paths here, and
+ * (3) the test-local `require()` paths in grounding/quizIngest/contract tests — all fail loudly if missed
+ * (a wrong/stale folder makes `require()` throw or the drift guard mismatch).
  */
 
 /** Coach grounding dataset ({ dataset_version, claims }). */
