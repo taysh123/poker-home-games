@@ -175,6 +175,29 @@ if (!app.Environment.IsDevelopment() && configuredOrigins.Length == 0)
         "Set AllowedOrigins__0 to your web domain if this is not intended.", string.Join(",", prodOrigins));
 }
 
+// Fail-loud on a billing misconfig in Production. The mock verifier grants premium for ANY non-empty
+// receipt (safe for dev/tests; catastrophic in prod). We log rather than hard-fail because the paywall
+// flag is OFF and purchase validation isn't user-reachable yet — but a forgotten env var must be impossible
+// to miss. Mirrors the JWT/CORS fail-closed posture. See BillingSettings + MockBillingVerifier.
+if (app.Environment.IsProduction())
+{
+    var billingProvider = builder.Configuration.GetSection("BillingSettings")["Provider"];
+    var acceptSandbox = builder.Configuration.GetSection("BillingSettings")["AcceptSandbox"];
+    if (!string.Equals(billingProvider, "direct", StringComparison.OrdinalIgnoreCase))
+    {
+        startupLogger.LogCritical(
+            "BILLING: Production is running the MOCK billing verifier (BillingSettings:Provider={Provider}). " +
+            "The mock grants premium for ANY non-empty receipt — set BillingSettings__Provider=direct before " +
+            "enabling purchases.", billingProvider ?? "(null)");
+    }
+    else if (string.Equals(acceptSandbox, "true", StringComparison.OrdinalIgnoreCase))
+    {
+        startupLogger.LogCritical(
+            "BILLING: Production has BillingSettings:AcceptSandbox=true — sandbox/TestFlight receipts can grant " +
+            "production entitlements. Set BillingSettings__AcceptSandbox=false in production.");
+    }
+}
+
 // /health registered BEFORE auth/rate-limit/exception middleware so Railway
 // can confirm liveness even if downstream middleware misbehaves.
 app.MapGet("/health", () => Results.Text("Healthy"));

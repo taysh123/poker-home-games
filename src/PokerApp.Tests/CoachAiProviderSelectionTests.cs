@@ -59,4 +59,18 @@ public class CoachAiProviderSelectionTests
         var provider = new VendorCoachAiProvider(new CoachAiSettings { Provider = "vendor", ApiKey = "test-key" });
         await Assert.ThrowsAsync<NotImplementedException>(() => provider.AnalyzeAsync(SampleInput()));
     }
+
+    // The factory is what DI delegates to (DependencyInjection.cs) — these guard the actual selection branch,
+    // so inverting it breaks a test rather than silently shipping the wrong provider.
+    [Fact]
+    public void Factory_returns_mock_by_default()
+    {
+        Assert.IsType<MockCoachAiProvider>(CoachAiProviderFactory.Create(new CoachAiSettings()));
+    }
+
+    [Fact]
+    public void Factory_returns_vendor_when_selected()
+    {
+        Assert.IsType<VendorCoachAiProvider>(CoachAiProviderFactory.Create(new CoachAiSettings { Provider = "vendor" }));
+    }
 }

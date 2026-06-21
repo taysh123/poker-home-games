@@ -30,7 +30,13 @@ moment real billing/AI ship **unless** the billing/content items are addressed c
 
 Other small hardening:
 - **BCrypt work factor 12→13. ✅ IMPLEMENTED** (`PasswordHasher.cs`) — adaptive cost, so existing cost-12 hashes
-  still verify and re-hash at 13 on next login; NIST-aligned.
+  still verify at their stored cost; new/changed passwords use 13 (NIST-aligned). No rehash-on-login today
+  (`LoginCommandHandler` only calls `Verify`) — old accounts upgrade on password change; opportunistic
+  rehash-on-login is a noted safe future improvement.
+- **Mock-billing-in-prod guard. ✅ IMPLEMENTED** (`Program.cs`) — `LogCritical` at startup if Production runs the
+  mock billing verifier (`BillingSettings:Provider != "direct"`) or has `AcceptSandbox=true`. The mock grants
+  premium for ANY non-empty receipt, so a forgotten deploy env var is now loud, not silent (entitlement-trust
+  fail-loud, mirrors the CORS/JWT posture; logging only — no behavior change).
 - **`UseHttpsRedirection()` in prod. 📋 DOCUMENTED — intentionally NOT added.** Railway terminates TLS at the
   edge and forwards HTTP internally; an in-app HTTPS redirect (without trusting forwarded headers) risks
   redirect loops, and trusting `X-Forwarded-Proto` would require `ForwardedHeaders` from an untrusted hop = a
@@ -66,8 +72,8 @@ No secrets committed (OAuth client IDs are public). Account deletion exists + an
 add a deletion audit-log entry for compliance. No analytics/tracking SDK; passwords BCrypt, refresh hashed.
 
 ## Verdict
-The safe P0 subset is now implemented (JWT fail-closed + BCrypt 13 + CORS fallback visibility) — build clean, 71
-backend tests green. The remaining P0 items #2/#3 are **config/infra actions, not code gaps** (pin
+The safe P0 subset is now implemented (JWT fail-closed + BCrypt 13 + CORS fallback visibility + mock-billing-in-
+prod guard) — build clean, 82 backend tests green. The remaining P0 items #2/#3 are **config/infra actions, not code gaps** (pin
 `AllowedOrigins__0`; add Redis only at multi-instance). Treat the bundled-content decision + real-billing
 re-validation + fraud-enforcement (`FraudSettings:EnforceBlocking=false` today, advisory) as **must-do
 concurrently with monetization**, not after.
