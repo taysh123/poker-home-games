@@ -133,6 +133,13 @@ export default function PaywallScreen() {
             </Text>
             <View style={styles.legalRow}>
               <PressableScale
+                onPress={() => Linking.openURL('https://poker-home-games-three.vercel.app/terms.html')}
+                hitSlop={12} accessibilityRole="link" accessibilityLabel="Terms of Service"
+              >
+                <Text style={styles.helpText}>Terms</Text>
+              </PressableScale>
+              <Text style={styles.legalDot}>·</Text>
+              <PressableScale
                 onPress={() => Linking.openURL('https://poker-home-games-three.vercel.app/privacy.html')}
                 hitSlop={12} accessibilityRole="link" accessibilityLabel="Privacy Policy"
               >

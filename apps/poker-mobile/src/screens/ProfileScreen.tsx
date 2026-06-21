@@ -473,6 +473,16 @@ export default function ProfileScreen({ navigation }: Props) {
             <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={styles.aboutRow}
+            onPress={() => Linking.openURL('https://poker-home-games-three.vercel.app/terms.html')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="document-text-outline" size={16} color={colors.textMuted} />
+            <Text style={styles.aboutRowText}>Terms of Service</Text>
+            <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
+          </TouchableOpacity>
+
           <Text style={styles.aboutResponsible}>
             T Poker is a private home-game scorekeeping app for adults (18+). It is not
             a gambling product — play responsibly and within the law.
