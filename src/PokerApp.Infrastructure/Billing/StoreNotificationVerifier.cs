@@ -98,7 +98,7 @@ public sealed class StoreNotificationVerifier(
 
             return Task.FromResult<StoreNotificationDto?>(new StoreNotificationDto(
                 eventId, MapStripe(type, obj), subId,
-                EpochSeconds(Ms(root, "created")) ?? nowUtc, EpochSeconds(Ms(obj, "current_period_end"))));
+                EpochSeconds(Ms(root, "created")) ?? nowUtc, EpochSeconds(StripePeriodEnd(obj))));
         }
         catch { return Null(); }
     }
@@ -142,6 +142,17 @@ public sealed class StoreNotificationVerifier(
     };
 
     private static DateTime? EpochSeconds(long s) => s > 0 ? DateTimeOffset.FromUnixTimeSeconds(s).UtcDateTime : null;
+
+    // Newer Stripe API moved current_period_end onto the subscription item; read the sub level first, then items.data[0].
+    private static long StripePeriodEnd(JsonElement obj)
+    {
+        var v = Ms(obj, "current_period_end");
+        if (v > 0) return v;
+        if (obj.TryGetProperty("items", out var items) && items.TryGetProperty("data", out var data)
+            && data.ValueKind == JsonValueKind.Array && data.GetArrayLength() > 0)
+            return Ms(data[0], "current_period_end");
+        return 0;
+    }
 
     private static bool FixedEquals(string? a, string? b)
     {

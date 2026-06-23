@@ -14,7 +14,7 @@ public sealed class MockBillingVerifier : IBillingVerifier
     {
         if (string.IsNullOrWhiteSpace(token)) return Task.FromResult<VerifiedSubscription?>(null);
         var now = DateTime.UtcNow;
-        var productId = store == SubscriptionStore.Apple ? "tpoker.premium.monthly" : "tpoker.premium.monthly";
+        var productId = "tpoker.premium.monthly";
         var result = new VerifiedSubscription(
             store, productId, OriginalTransactionId: token,
             PeriodStart: now, PeriodEnd: now.AddMonths(1),

@@ -55,8 +55,8 @@ public static class DependencyInjection
         services.AddScoped<ICreditLedger, CreditLedger>();
 
         // AI Coach provider (vendor-neutral; key lives server-side only). Default = deterministic mock
-        // (fail-closed, unchanged behaviour); "vendor" selects the real adapter (a stub today that throws
-        // until wired). Mirrors the billing provider config switch below.
+        // (fail-closed, unchanged behaviour); "anthropic" selects the real AnthropicCoachAiProvider (behind the
+        // server key), "vendor" a generic stub. Mirrors the billing provider config switch below.
         var coachAiSettings = configuration.GetSection("CoachAiSettings").Get<CoachAiSettings>() ?? new CoachAiSettings();
         services.AddSingleton(coachAiSettings);
         services.AddScoped<ICoachAiProvider>(sp =>

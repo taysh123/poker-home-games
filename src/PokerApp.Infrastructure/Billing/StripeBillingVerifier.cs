@@ -38,8 +38,8 @@ public sealed class StripeBillingVerifier(StripeSettings settings, BillingSettin
             var isSandbox = root.TryGetProperty("livemode", out var lm) && lm.ValueKind == JsonValueKind.False;
             if (isSandbox && !billing.AcceptSandbox) return null; // test-mode cannot grant production
 
-            var start = Epoch(Long(sub, "current_period_start")) ?? DateTime.UtcNow;
-            var end = Epoch(Long(sub, "current_period_end")) ?? start.AddMonths(1);
+            var start = Epoch(PeriodField(sub, "current_period_start")) ?? DateTime.UtcNow;
+            var end = Epoch(PeriodField(sub, "current_period_end")) ?? start.AddMonths(1);
             var autoRenew = !(sub.TryGetProperty("cancel_at_period_end", out var c) && c.ValueKind == JsonValueKind.True);
 
             return new VerifiedSubscription(
@@ -61,6 +61,17 @@ public sealed class StripeBillingVerifier(StripeSettings settings, BillingSettin
         sub.TryGetProperty("items", out var items) && items.TryGetProperty("data", out var data)
         && data.ValueKind == JsonValueKind.Array && data.GetArrayLength() > 0
         && data[0].TryGetProperty("price", out var price) ? Str(price, "id") : "";
+
+    // Newer Stripe API moved the period fields onto the subscription item; read the sub level first, then items.data[0].
+    private static long PeriodField(JsonElement sub, string field)
+    {
+        var v = Long(sub, field);
+        if (v > 0) return v;
+        if (sub.TryGetProperty("items", out var items) && items.TryGetProperty("data", out var data)
+            && data.ValueKind == JsonValueKind.Array && data.GetArrayLength() > 0)
+            return Long(data[0], field);
+        return 0;
+    }
 
     private static string Str(JsonElement e, string n) => e.TryGetProperty(n, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : "";
     private static long Long(JsonElement e, string n) => e.TryGetProperty(n, out var v) && v.TryGetInt64(out var l) ? l : 0;
