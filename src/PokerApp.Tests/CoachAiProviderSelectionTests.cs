@@ -61,16 +61,23 @@ public class CoachAiProviderSelectionTests
     }
 
     // The factory is what DI delegates to (DependencyInjection.cs) — these guard the actual selection branch,
-    // so inverting it breaks a test rather than silently shipping the wrong provider.
+    // so inverting it breaks a test rather than silently shipping the wrong provider. (HttpClient is only used
+    // by the Anthropic adapter; a throwaway client is fine for the selection assertions.)
     [Fact]
     public void Factory_returns_mock_by_default()
     {
-        Assert.IsType<MockCoachAiProvider>(CoachAiProviderFactory.Create(new CoachAiSettings()));
+        Assert.IsType<MockCoachAiProvider>(CoachAiProviderFactory.Create(new CoachAiSettings(), new System.Net.Http.HttpClient()));
     }
 
     [Fact]
     public void Factory_returns_vendor_when_selected()
     {
-        Assert.IsType<VendorCoachAiProvider>(CoachAiProviderFactory.Create(new CoachAiSettings { Provider = "vendor" }));
+        Assert.IsType<VendorCoachAiProvider>(CoachAiProviderFactory.Create(new CoachAiSettings { Provider = "vendor" }, new System.Net.Http.HttpClient()));
+    }
+
+    [Fact]
+    public void Factory_returns_anthropic_when_selected()
+    {
+        Assert.IsType<AnthropicCoachAiProvider>(CoachAiProviderFactory.Create(new CoachAiSettings { Provider = "anthropic" }, new System.Net.Http.HttpClient()));
     }
 }

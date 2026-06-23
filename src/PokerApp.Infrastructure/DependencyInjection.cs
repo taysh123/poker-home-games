@@ -59,7 +59,8 @@ public static class DependencyInjection
         // until wired). Mirrors the billing provider config switch below.
         var coachAiSettings = configuration.GetSection("CoachAiSettings").Get<CoachAiSettings>() ?? new CoachAiSettings();
         services.AddSingleton(coachAiSettings);
-        services.AddScoped<ICoachAiProvider>(_ => CoachAiProviderFactory.Create(coachAiSettings));
+        services.AddScoped<ICoachAiProvider>(sp =>
+            CoachAiProviderFactory.Create(coachAiSettings, sp.GetRequiredService<IHttpClientFactory>().CreateClient()));
 
         // B3 — real store verification (provider-selected; mock retained for dev/tests).
         var billingSettings = configuration.GetSection("BillingSettings").Get<BillingSettings>() ?? new BillingSettings();
