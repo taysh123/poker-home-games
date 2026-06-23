@@ -40,9 +40,24 @@ export interface PremiumPlan {
   savePct?: number;
 }
 
+// Product IDs are env-overridable placeholders — NEVER hardcode the FINAL store identifiers. The defaults are
+// documented conventions; real IDs (which must match the App Store / Play / Stripe products) come from env at
+// build time. Static `process.env.EXPO_PUBLIC_*` access so Expo/Metro can inline them. Price strings are display
+// placeholders; the real LOCALIZED price comes from the billing SDK / Stripe at runtime.
 export const PRICING: { monthly: PremiumPlan; yearly: PremiumPlan } = {
-  monthly: { productId: 'tpoker.premium.monthly', price: '$11.99', period: 'month' },
-  yearly:  { productId: 'tpoker.premium.yearly',  price: '$79.99', period: 'year', perMonth: '$6.67', savePct: 44 },
+  monthly: { productId: process.env.EXPO_PUBLIC_PREMIUM_MONTHLY_ID || 'tpoker.premium.monthly', price: '$11.99', period: 'month' },
+  yearly:  { productId: process.env.EXPO_PUBLIC_PREMIUM_YEARLY_ID  || 'tpoker.premium.yearly',  price: '$99.99', period: 'year', perMonth: '$8.33', savePct: 30 },
+};
+
+/**
+ * Client-safe billing provider PUBLIC keys (RevenueCat public SDK key, Stripe publishable key). EMPTY by
+ * default ⇒ the real adapters stay key-gated and the mock provider remains the active provider (OFF no-op).
+ * Supply via env once accounts exist (see .env.example). These are PUBLIC keys, NOT secrets — the server-side
+ * SECRET keys (Stripe secret, RevenueCat secret, webhook secrets) live ONLY on the backend, never here.
+ */
+export const BILLING_KEYS = {
+  revenueCatApiKey: process.env.EXPO_PUBLIC_REVENUECAT_API_KEY || '',
+  stripePublishableKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '',
 };
 
 export type PremiumFeatureKey =
