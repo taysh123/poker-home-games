@@ -18,6 +18,10 @@ export interface ActionFrequency {
   action: RangeAction;
   freq: number;
   sizeBb?: number;
+  /** Solver-only EV in bb (additive; present ONLY in imported verified solver packs — never fabricated). */
+  evBb?: number;
+  /** Solver-only hand equity 0..1 (additive; present ONLY in imported verified solver packs). */
+  equity?: number;
 }
 
 /** Canonical 169-hand key: 'AA' | 'AKs' | 'AKo'. */
