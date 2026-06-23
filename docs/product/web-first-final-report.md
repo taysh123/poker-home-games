@@ -56,6 +56,8 @@ type/finite guards, AA header contrast, quarantine-key collision, type widening,
 ## K — Exact external dependencies / human next-actions
 1. **Solver export sample** — to build a concrete adapter (GTO Wizard / PioSolver / GTO+ / Monker / custom),
    provide a real export file/spec. The internal canonical format is built; **do not invent** the external one.
+   See **`solver-sample-request-spec.md`** (exactly what to request from a vendor) +
+   **`solver-flip-readiness-checklist.md`** (the go-live gate before importing real EV/equity/node data).
 2. **Rendering strategy decision** (for solver-page SEO): prerender / Expo Router static / thin SSR — a future
    initiative.
 3. **(When flipping `solver` ON):** add a prominent web nav entry/tab; replace illustrative ranges with a
