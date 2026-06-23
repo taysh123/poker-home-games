@@ -16,7 +16,7 @@
 ## Update — Commercial build: RevenueCat / Stripe / Anthropic (June 2026)
 A second program implemented the now-DECIDED vendors on the same held branch (commits `70affae` onward).
 **Still held — no merge, no deploy.** Mock providers stay active; `paywall`/`coach` flags OFF; production
-byte-identical. Gates re-run green: `dotnet build` + 110 backend tests; `tsc`; 393+ jest; web export.
+byte-identical. Gates re-run green: `dotnet build` + 110 backend tests; `tsc`; 395 jest / 46 suites; web export.
 
 - **Decisions (locked):** mobile = RevenueCat, web = Stripe, AI = Anthropic, pricing $11.99/mo + $99.99/yr,
   server-authoritative entitlements, keys server-side. See `docs/commercial/commercial-decision-record.md`.
