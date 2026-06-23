@@ -208,6 +208,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "PokerApp API v1"));
 }
 
+// Defensive HTTP security headers on every response (belt-and-suspenders with Railway's TLS edge):
+// nosniff, frame-deny (clickjacking), referrer + permissions policy, report-only CSP, HSTS (prod). Additive.
+app.UseMiddleware<SecurityHeadersMiddleware>();
+
 // CORS must come BEFORE the exception middleware so error responses
 // (including 500s) carry the Access-Control-Allow-Origin header. Otherwise
 // the browser swallows the real status behind a generic CORS error.

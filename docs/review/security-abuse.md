@@ -45,6 +45,9 @@ Other small hardening:
   migration needed.
 - **Swagger in prod. ✅ already gated** — `Program.cs` maps Swagger only under `IsDevelopment()`; it is not
   exposed in production. (The original note was stale.)
+- **HTTP security headers. ✅ IMPLEMENTED** (`SecurityHeadersMiddleware` + pure `SecurityHeaderPolicy`) —
+  nosniff, X-Frame-Options DENY + CSP `frame-ancestors 'none'` (clickjacking), Referrer-Policy,
+  Permissions-Policy, report-only CSP (SPA-safe), HSTS (prod-only). Unit-tested. See `web-security-headers.md`.
 - **Device-token attestation & refresh-replay cooldown. 📋 DOCUMENTED — not changed.** Larger changes; device
   tokens are best-effort/push-only and refresh already rotates + revokes families. Recorded for a later pass.
 
