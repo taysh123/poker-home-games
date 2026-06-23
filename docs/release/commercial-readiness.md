@@ -20,6 +20,13 @@ legal placeholders, tests green). It is **NOT monetization-ready** — charging 
 `react-native-purchases` install, and counsel-final Terms). Recommendation: **stay held**; complete EXTERNAL
 items, then flip flags.
 
+**Web-first solver (June 2026):** the flagship solver work (canonical solver-pack + import pipeline, the
+web-responsive workspace + hover inspector + compare, HTTP security headers, robots/sitemap) is **additive +
+flag-gated** (`solver`/`publicSpots` OFF in prod) and **held**. It introduces **no new monetization claims**,
+labels illustrative-vs-solver data honestly, and ships no real solver values (EV/equity require an imported
+verified pack). See `docs/product/web-first-strategy.md` + the `solver-*` docs. Legal/privacy unchanged
+(payments disclosures already present; Terms still counsel-owned DRAFT — the standing pre-merge gate).
+
 ## Track index
 | Track | Detail doc | Headline |
 |-------|-----------|----------|
