@@ -1,32 +1,38 @@
 /**
  * RevenueCat billing provider — NATIVE (iOS/Android) production billing seam.
  *
- * INACTIVE typed stub. It does NOT talk to RevenueCat: the SDK (`react-native-purchases`),
- * the RevenueCat API key, and the store products/offerings are not configured yet. Every method
- * throws a clear "not configured" error so nothing can mistake it for a working purchase path —
- * we never fake a successful purchase. The active provider stays `mock` until this is wired (see
- * `getBillingProvider` default), so production behaviour is unchanged.
+ * KEY-GATED STUB. The native SDK (`react-native-purchases`) is intentionally NOT installed yet — it's a native
+ * module with no web support and requires the RevenueCat account (a deferred external step). Every method throws
+ * "not configured" so the adapter is inert and the mock provider stays active (OFF no-op). The exact wiring once
+ * the SDK + key exist is sketched below.
  *
- * Wiring checklist + verification boundary: docs/commercial/billing-architecture.md.
+ * Server-authoritative: after a successful native purchase, the client calls
+ * `validatePurchase('revenuecat', <appUserId>)` so the SERVER verifies with RevenueCat and computes the
+ * entitlement — never client-side.
+ *
+ * Implementation sketch once react-native-purchases + EXPO_PUBLIC_REVENUECAT_API_KEY are available:
+ *   import Purchases from 'react-native-purchases';
+ *   Purchases.configure({ apiKey: BILLING_KEYS.revenueCatApiKey, appUserID: <userId> });
+ *   getProducts → Purchases.getOfferings(); map offerings.current.availablePackages → BillingProduct[]
+ *   purchase   → Purchases.purchasePackage(pkg); then validatePurchase('revenuecat', await Purchases.getAppUserID(), token)
+ *   restore    → Purchases.restorePurchases(); then re-read the server entitlement
+ *
+ * Wiring checklist: docs/commercial/billing-architecture.md.
  */
 import type { BillingProduct, IBillingProvider, PurchaseResult } from '../types';
 
 const NOT_CONFIGURED =
-  'RevenueCat billing is not configured. Install react-native-purchases, set the RevenueCat API ' +
-  'key, and configure store products/offerings, then route entitlement through the server verifier. ' +
+  'RevenueCat billing is not configured. Install react-native-purchases, set EXPO_PUBLIC_REVENUECAT_API_KEY ' +
+  '(public SDK key) + the server RevenueCatSettings, then implement the SDK calls. ' +
   'See docs/commercial/billing-architecture.md.';
+
+function requireConfigured(): never {
+  throw new Error(NOT_CONFIGURED);
+}
 
 export const revenueCatBillingProvider: IBillingProvider = {
   id: 'revenuecat',
-  // async (not sync-throw): callers await / .catch() these; a rejected promise is catchable, a
-  // synchronous throw from a "() => Promise" is not. Matches the mock provider's contract.
-  async getProducts(): Promise<BillingProduct[]> {
-    throw new Error(NOT_CONFIGURED);
-  },
-  async purchase(_productId: string): Promise<PurchaseResult> {
-    throw new Error(NOT_CONFIGURED);
-  },
-  async restore(): Promise<PurchaseResult> {
-    throw new Error(NOT_CONFIGURED);
-  },
+  async getProducts(): Promise<BillingProduct[]> { return requireConfigured(); },
+  async purchase(_productId: string): Promise<PurchaseResult> { return requireConfigured(); },
+  async restore(): Promise<PurchaseResult> { return requireConfigured(); },
 };

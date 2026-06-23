@@ -10,6 +10,7 @@ import {
   billingProviderIdForPlatform,
   resolvePlatformBillingProvider,
 } from '../providers';
+import * as monetizationApi from '../../../api/monetizationApi';
 
 describe('billing registry — default is the no-op mock', () => {
   it('getBillingProvider() defaults to mock (the provider PremiumContext uses)', () => {
@@ -64,5 +65,12 @@ describe('platform resolver (inactive by default)', () => {
     const expectedId = billingProviderIdForPlatform(Platform.OS);
     expect(['revenuecat', 'stripe']).toContain(expectedId);
     expect(resolvePlatformBillingProvider().id).toBe(expectedId);
+  });
+});
+
+describe('billing client API surface (server-authoritative)', () => {
+  it('exposes the server checkout + validate calls', () => {
+    expect(typeof monetizationApi.createCheckoutSession).toBe('function');
+    expect(typeof monetizationApi.validatePurchase).toBe('function');
   });
 });

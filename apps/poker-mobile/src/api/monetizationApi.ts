@@ -85,3 +85,23 @@ export async function analyzeHand(req: AnalyzeRequest, token: string): Promise<S
     throw mapCoachError(error);
   }
 }
+
+/** Response of `POST /api/billing/checkout` (web Stripe). */
+export interface CheckoutSession {
+  url: string;
+}
+
+/**
+ * Create a Stripe Checkout session (web billing). The server returns the redirect URL and 400s when Stripe is
+ * not configured — entitlement is granted ONLY after the server's Stripe webhook verifies the payment.
+ */
+export async function createCheckoutSession(plan: 'monthly' | 'yearly', token: string): Promise<CheckoutSession> {
+  const { data } = await apiClient.post<CheckoutSession>('/api/billing/checkout', { plan }, auth(token));
+  return data;
+}
+
+/** Validate a completed store purchase server-side; returns the refreshed (authoritative) server entitlement. */
+export async function validatePurchase(store: string, purchaseToken: string, token: string): Promise<ServerEntitlement> {
+  const { data } = await apiClient.post<ServerEntitlement>('/api/billing/validate', { store, token: purchaseToken }, auth(token));
+  return data;
+}
