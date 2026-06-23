@@ -57,6 +57,7 @@ import BankrollScreen from '../features/bankroll/ui/BankrollScreen';
 import LogSessionScreen from '../features/bankroll/ui/LogSessionScreen';
 import StudyScreen from '../features/study/ui/StudyScreen';
 import SpotTrainerScreen from '../features/study/ui/SpotTrainerScreen';
+import SolverWorkspaceScreen from '../features/solver/ui/SolverWorkspaceScreen';
 import LessonModulesScreen from '../features/study/ui/LessonModulesScreen';
 import LessonReaderScreen from '../features/study/ui/LessonReaderScreen';
 import QuizRunnerScreen from '../features/study/ui/QuizRunnerScreen';
@@ -101,6 +102,8 @@ export type RootStackParamList = {
   LogSession: { sessionId?: string } | undefined;
   // V2 — Study (Study pillar)
   StudyTrainer: { mode: 'spot' | 'decision' };
+  // Web-first flagship — solver workspace (solver flag)
+  SolverWorkspace: undefined;
   // V2.2 — Content platform (Lessons; content flag)
   LessonModules: undefined;
   LessonReader: { moduleId: string; moduleName?: string };
@@ -151,6 +154,8 @@ const linking: LinkingOptions<RootStackParamList> = {
     screens: {
       JoinGroup: 'join/group/:inviteToken',
       JoinSession: 'join/session/:inviteToken',
+      // Web-first flagship deep link (resolves only when the `solver` flag registers the screen).
+      SolverWorkspace: 'solver',
     },
   },
 };
@@ -513,6 +518,9 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
             <Stack.Screen name="LocalSessionSummary" component={LocalSessionSummaryScreen} options={{ headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="LogSession" component={LogSessionScreen} options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="StudyTrainer" component={SpotTrainerScreen} options={{ headerShown: false }} />
+            {isFeatureEnabled('solver') && (
+              <Stack.Screen name="SolverWorkspace" component={SolverWorkspaceScreen} options={{ headerShown: false }} />
+            )}
             <Stack.Screen name="LessonModules" component={LessonModulesScreen} options={{ headerShown: false }} />
             <Stack.Screen name="LessonReader" component={LessonReaderScreen} options={{ headerShown: false }} />
             <Stack.Screen name="QuizRunner" component={QuizRunnerScreen} options={{ headerShown: false }} />
@@ -551,6 +559,9 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
             <Stack.Screen name="LocalSessionSummary" component={LocalSessionSummaryScreen} options={{ headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="LogSession" component={LogSessionScreen} options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="StudyTrainer" component={SpotTrainerScreen} options={{ headerShown: false }} />
+            {isFeatureEnabled('solver') && (
+              <Stack.Screen name="SolverWorkspace" component={SolverWorkspaceScreen} options={{ headerShown: false }} />
+            )}
             <Stack.Screen name="LessonModules" component={LessonModulesScreen} options={{ headerShown: false }} />
             <Stack.Screen name="LessonReader" component={LessonReaderScreen} options={{ headerShown: false }} />
             <Stack.Screen name="QuizRunner" component={QuizRunnerScreen} options={{ headerShown: false }} />

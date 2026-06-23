@@ -35,6 +35,20 @@ export default function StudyScreen() {
       {isFeatureEnabled('immersive') && <TableBackdrop />}
       <BrandHeader variant="brand" title="Study" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {isFeatureEnabled('solver') && (
+          <PressableScale onPress={() => navigation.navigate('SolverWorkspace')} haptic="light" style={{ marginBottom: spacing.lg }}>
+            <Card variant="elevated">
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                <Ionicons name="grid-outline" size={20} color={colors.gold} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ ...typography.h4, color: colors.text }}>Solver Workspace</Text>
+                  <Text style={{ ...typography.bodySmall, color: colors.textMuted }}>Explore ranges · hover for detail · compare</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
+              </View>
+            </Card>
+          </PressableScale>
+        )}
         {/* Streak hero */}
         <Card variant="hero">
           <Text style={styles.heroLabel}>CURRENT STREAK</Text>

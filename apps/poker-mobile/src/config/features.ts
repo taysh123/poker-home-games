@@ -23,6 +23,8 @@ export type FeatureFlag =
   | 'immersive' // V2.1 STEP 5.3 — immersive poker-table presentation (session/study/training/coach)
   | 'content'   // V2.2 — content platform (workbook 0.8.1): ContentStore / lessons / quizzes / packs (prod OFF)
   | 'mastery'   // V2.2 — analytics → mastery engine (prod OFF)
+  | 'solver'    // Web-first flagship — solver workspace + range-table hover inspector (prod OFF)
+  | 'publicSpots' // Future — shared/public spot library (design-only; prod OFF everywhere)
   | 'v2Splash'; // dual-brand (True Story Labs → T Poker) launch splash
 
 /** Production defaults — every new surface OFF so prod behaves exactly as today. */
@@ -41,6 +43,8 @@ const PROD_FLAGS: Record<FeatureFlag, boolean> = {
   immersive: false,
   content: false,
   mastery: false,
+  solver: false,
+  publicSpots: false,
   v2Splash: false,
 };
 
@@ -62,6 +66,7 @@ const BETA_FLAGS: Partial<Record<FeatureFlag, boolean>> = {
   immersive: true,
   content: true,
   mastery: true,
+  solver: true,           // preview the solver workspace in beta
   v2Splash: true,
   paywall: false,         // OFF in beta — no production paywall
   coachScreenshot: false, // OFF — partial upload not exposed
@@ -83,7 +88,9 @@ const DEV_OVERRIDES: Partial<Record<FeatureFlag, boolean>> = {
   immersive: true, // V2.1 STEP 5.3 — preview the immersive poker-table UI in dev (prod stays OFF)
   content: true,   // V2.2 — preview the content platform in dev (prod stays OFF)
   mastery: true,   // V2.2 — preview mastery in dev (prod stays OFF)
-  // coachScreenshot intentionally OFF in dev too — hidden until the real image pipeline ships.
+  solver: true,    // Web-first — preview the solver workspace in dev (prod stays OFF)
+  // coachScreenshot + publicSpots intentionally OFF in dev too (image pipeline / public sharing not built).
+
 };
 
 /**
