@@ -26,8 +26,8 @@ export function InspectorBody({ view }: { view: InspectorView }) {
         {view.actions.length === 0 ? (
           <Text style={styles.muted}>No data for this hand.</Text>
         ) : (
-          view.actions.map((a, i) => (
-            <View key={i} style={styles.actionRow}>
+          view.actions.map((a) => (
+            <View key={a.action} style={styles.actionRow}>
               <Text style={styles.actionLabel}>{a.action}</Text>
               <Text style={styles.actionFreq}>
                 {a.freqPct}%{a.sizeBb ? ` · ${a.sizeBb}bb` : ''}

@@ -23,7 +23,7 @@ async function readFile(): Promise<StoreFile> {
     if (!parsed || !Array.isArray(parsed.packs)) throw new Error('bad shape');
     return parsed;
   } catch {
-    await AsyncStorage.setItem(`${QUARANTINE_PREFIX}${Date.now()}`, raw); // quarantine, never lose
+    await AsyncStorage.setItem(`${QUARANTINE_PREFIX}${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, raw); // quarantine, never lose
     return { schemaVersion: 1, packs: [] };
   }
 }
@@ -42,7 +42,7 @@ export interface ImportOutcome {
 export async function importAndStore(raw: unknown): Promise<ImportOutcome> {
   const prepared = prepareImport(raw);
   if (!prepared.ok || !prepared.pack) {
-    await AsyncStorage.setItem(`${QUARANTINE_PREFIX}${Date.now()}`, safeStringify(raw));
+    await AsyncStorage.setItem(`${QUARANTINE_PREFIX}${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, safeStringify(raw));
     return { ok: false, errors: prepared.errors };
   }
   const pack = prepared.pack;

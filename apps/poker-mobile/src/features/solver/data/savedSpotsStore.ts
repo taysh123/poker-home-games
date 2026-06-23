@@ -26,7 +26,7 @@ async function read(): Promise<SavedSpot[]> {
     if (!Array.isArray(parsed)) throw new Error('bad shape');
     return parsed as SavedSpot[];
   } catch {
-    await AsyncStorage.setItem(`${QUARANTINE_PREFIX}${Date.now()}`, raw);
+    await AsyncStorage.setItem(`${QUARANTINE_PREFIX}${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, raw);
     return [];
   }
 }

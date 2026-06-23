@@ -47,7 +47,8 @@ export function validatePack(pack: unknown): ValidationResult {
         mix.forEach((a, j) => {
           if (!ACTIONS.includes(a.action)) errors.push(`ranges[${i}].strategy['${hand}'][${j}] invalid action ${String(a.action)}`);
           if (typeof a.freq !== 'number' || a.freq < 0 || a.freq > 1) errors.push(`ranges[${i}].strategy['${hand}'][${j}] freq out of range`);
-          if (a.equity !== undefined && (a.equity < 0 || a.equity > 1)) errors.push(`ranges[${i}].strategy['${hand}'][${j}] equity out of range`);
+          if (a.equity !== undefined && (typeof a.equity !== 'number' || a.equity < 0 || a.equity > 1)) errors.push(`ranges[${i}].strategy['${hand}'][${j}] equity out of range`);
+          if (a.evBb !== undefined && !Number.isFinite(a.evBb)) errors.push(`ranges[${i}].strategy['${hand}'][${j}] evBb not a finite number`);
         });
       }
     });

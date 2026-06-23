@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Screen from '../../../components/Screen';
 import ScreenHeader from '../../../components/ScreenHeader';
@@ -54,10 +54,10 @@ function WorkspaceInner() {
     );
   }
 
-  const onSelectHand = (h: string) => {
+  const onSelectHand = useCallback((h: string) => {
     setHand(h);
     if (isMobile) setSheetOpen(true);
-  };
+  }, [isMobile]);
 
   const view = hand ? buildInspectorView(active.range, hand, { tier: active.tier, compareTo: compare?.range }) : null;
 

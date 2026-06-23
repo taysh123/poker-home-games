@@ -13,7 +13,7 @@ interface Props {
   range: PreflopRange | SolverRange;
   tier: VerificationTier;
   selectedHand?: string;
-  compareTo?: PreflopRange;
+  compareTo?: PreflopRange | SolverRange;
   onSelectHand: (hand: string) => void;
   cellSize?: number;
 }
@@ -22,7 +22,7 @@ interface Props {
  * 13×13 range grid with rank headers (row + column) and a web hover inspector per cell (focus-accessible via
  * Tab → HoverCard onFocus). On mobile the hover popover is a no-op; the parent opens a DetailSheet on press.
  */
-export default function RangeGrid({ range, tier, selectedHand, compareTo, onSelectHand, cellSize = 30 }: Props) {
+function RangeGrid({ range, tier, selectedHand, compareTo, onSelectHand, cellSize = 30 }: Props) {
   return (
     <View>
       <View style={styles.row}>
@@ -43,7 +43,7 @@ export default function RangeGrid({ range, tier, selectedHand, compareTo, onSele
             return (
               <HoverCard
                 key={hand}
-                content={<InspectorBody view={buildInspectorView(range, hand, { tier, compareTo })} />}
+                renderContent={() => <InspectorBody view={buildInspectorView(range, hand, { tier, compareTo })} />}
               >
                 <RangeCell
                   hand={hand}
@@ -61,8 +61,10 @@ export default function RangeGrid({ range, tier, selectedHand, compareTo, onSele
   );
 }
 
+export default React.memo(RangeGrid);
+
 const styles = StyleSheet.create({
   row: { flexDirection: 'row' },
   header: { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.surface },
-  headerText: { fontSize: 10, color: colors.textMuted, fontWeight: '700' },
+  headerText: { fontSize: 10, color: colors.textHigh, fontWeight: '700' },
 });

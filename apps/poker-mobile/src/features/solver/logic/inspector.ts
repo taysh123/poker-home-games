@@ -32,7 +32,7 @@ export interface InspectorView {
 export function buildInspectorView(
   range: PreflopRange | SolverRange,
   hand: HandKey,
-  opts?: { tier?: VerificationTier; breadcrumb?: string[]; compareTo?: PreflopRange },
+  opts?: { tier?: VerificationTier; breadcrumb?: string[]; compareTo?: PreflopRange | SolverRange },
 ): InspectorView {
   const mix: ActionFrequency[] = range.strategy[hand] ?? [];
   const actions: InspectorAction[] = mix.map(a => ({
