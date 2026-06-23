@@ -1,6 +1,7 @@
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using PokerApp.Application.Common;
 using PokerApp.Application.Common.Exceptions;
 using PokerApp.Application.Common.Interfaces;
 using PokerApp.Domain.Entities;
@@ -16,8 +17,8 @@ public sealed class ValidatePurchaseCommandValidator : AbstractValidator<Validat
 {
     public ValidatePurchaseCommandValidator()
     {
-        RuleFor(x => x.Store).NotEmpty().Must(s => s is "apple" or "google")
-            .WithMessage("Store must be 'apple' or 'google'.");
+        RuleFor(x => x.Store).NotEmpty().Must(s => SubscriptionStoreParser.IsValid(s))
+            .WithMessage("Store must be one of 'apple', 'google', 'stripe', 'revenuecat'.");
         RuleFor(x => x.Token).NotEmpty();
     }
 }
@@ -31,7 +32,7 @@ public sealed class ValidatePurchaseCommandHandler(
 {
     public async Task<EntitlementDto> Handle(ValidatePurchaseCommand request, CancellationToken cancellationToken)
     {
-        var store = request.Store == "apple" ? SubscriptionStore.Apple : SubscriptionStore.Google;
+        var store = SubscriptionStoreParser.Parse(request.Store); // validated above
         var verified = await verifier.VerifyAsync(store, request.Token, cancellationToken)
             ?? throw new BadRequestException("Purchase could not be validated.");
 

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PokerApp.Application.Common.Interfaces;
 using PokerApp.Application.Features.Billing.Commands;
+using PokerApp.Application.Features.Billing.Commands.CreateCheckoutSession;
 using PokerApp.Application.Features.Billing.Commands.RedeemTopUp;
 using PokerApp.Application.Features.Billing.Queries.GetTopUpBundles;
 using PokerApp.Application.Features.Entitlements.Queries;
@@ -25,6 +26,13 @@ public class BillingController(IMediator mediator) : ControllerBase
     [ProducesResponseType(typeof(EntitlementDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Validate([FromBody] ValidatePurchaseCommand command, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(command, cancellationToken));
+
+    /// <summary>Create a Stripe Checkout session (web billing). Fails closed (400) when Stripe isn't configured.</summary>
+    [HttpPost("billing/checkout")]
+    [ProducesResponseType(typeof(CheckoutSessionDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Checkout([FromBody] CreateCheckoutSessionCommand command, CancellationToken cancellationToken)
         => Ok(await mediator.Send(command, cancellationToken));
 
     /// <summary>List configured consumable AI-credit bundles (empty when top-ups are disabled).</summary>

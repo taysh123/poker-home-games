@@ -53,7 +53,9 @@ public class StoreNotificationVerifierAppleTests
         new(new AppleJwsVerifier([cert]),
             new FakeOidcKeySource([]),
             new BillingSettings { Provider = "direct", AcceptSandbox = acceptSandbox },
-            new GooglePlaySettings());
+            new GooglePlaySettings(),
+            new StripeSettings(),
+            new RevenueCatSettings());
 
     [Fact]
     public async Task ValidProductionNotification_Normalized()
@@ -110,7 +112,9 @@ public class StoreNotificationVerifierGoogleTests
         new(new AppleJwsVerifier([]),
             new FakeOidcKeySource(keys),
             new BillingSettings { Provider = "direct", AcceptSandbox = false },
-            new GooglePlaySettings { PubSubAudience = Aud });
+            new GooglePlaySettings { PubSubAudience = Aud },
+            new StripeSettings(),
+            new RevenueCatSettings());
 
     private static string Rtdn(string purchaseToken, int type) =>
         Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new

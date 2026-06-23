@@ -70,6 +70,15 @@ public static class DependencyInjection
         services.AddSingleton(appleStoreSettings);
         services.AddSingleton(googlePlaySettings);
 
+        // Stripe (web) + RevenueCat (mobile) config — EMPTY ⇒ inert/fail-closed (mock stays active). The Stripe
+        // Checkout service is registered always (it returns null/BadRequest when unconfigured).
+        var stripeSettings = configuration.GetSection("StripeSettings").Get<StripeSettings>() ?? new StripeSettings();
+        var revenueCatSettings = configuration.GetSection("RevenueCatSettings").Get<RevenueCatSettings>() ?? new RevenueCatSettings();
+        services.AddSingleton(stripeSettings);
+        services.AddSingleton(revenueCatSettings);
+        services.AddScoped<IStripeCheckoutService>(sp =>
+            new StripeCheckoutService(stripeSettings, sp.GetRequiredService<IWebSettings>(), sp.GetRequiredService<IHttpClientFactory>().CreateClient()));
+
         var appleRoots = appleStoreSettings.RootCertsPem
             .Where(p => !string.IsNullOrWhiteSpace(p))
             .Select(p => X509Certificate2.CreateFromPem(p))
@@ -83,6 +92,8 @@ public static class DependencyInjection
         {
             services.AddScoped<AppleBillingVerifier>();
             services.AddScoped<GooglePlayBillingVerifier>();
+            services.AddScoped(sp => new StripeBillingVerifier(stripeSettings, billingSettings, sp.GetRequiredService<IHttpClientFactory>().CreateClient()));
+            services.AddScoped(sp => new RevenueCatBillingVerifier(revenueCatSettings, billingSettings, sp.GetRequiredService<IHttpClientFactory>().CreateClient()));
             services.AddScoped<IBillingVerifier, DirectBillingVerifier>();
         }
         else

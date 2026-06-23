@@ -1,5 +1,6 @@
 using FluentValidation;
 using MediatR;
+using PokerApp.Application.Common;
 using PokerApp.Application.Common.Exceptions;
 using PokerApp.Application.Common.Interfaces;
 
@@ -15,8 +16,8 @@ public sealed class RedeemTopUpCommandValidator : AbstractValidator<RedeemTopUpC
 {
     public RedeemTopUpCommandValidator()
     {
-        RuleFor(x => x.Store).NotEmpty().Must(s => s is "apple" or "google")
-            .WithMessage("Store must be 'apple' or 'google'.");
+        RuleFor(x => x.Store).NotEmpty().Must(s => SubscriptionStoreParser.IsValid(s))
+            .WithMessage("Store must be one of 'apple', 'google', 'stripe', 'revenuecat'.");
         RuleFor(x => x.PurchaseToken).NotEmpty();
         RuleFor(x => x.ProductId).NotEmpty();
     }

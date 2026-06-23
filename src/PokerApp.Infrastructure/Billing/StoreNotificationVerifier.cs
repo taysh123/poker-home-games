@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using PokerApp.Application.Common.Interfaces;
@@ -15,7 +16,9 @@ public sealed class StoreNotificationVerifier(
     AppleJwsVerifier appleJws,
     IOidcKeySource googleKeys,
     BillingSettings billing,
-    GooglePlaySettings google) : IStoreNotificationVerifier
+    GooglePlaySettings google,
+    StripeSettings stripe,
+    RevenueCatSettings revenueCat) : IStoreNotificationVerifier
 {
     public Task<StoreNotificationDto?> VerifyAppleAsync(string signedPayload, DateTime nowUtc, CancellationToken ct = default)
     {
@@ -72,6 +75,80 @@ public sealed class StoreNotificationVerifier(
             return new StoreNotificationDto(messageId, MapGoogle(type), purchaseToken, nowUtc, null);
         }
         catch { return null; }
+    }
+
+    public Task<StoreNotificationDto?> VerifyStripeAsync(string rawPayload, string? stripeSignature, DateTime nowUtc, CancellationToken ct = default)
+    {
+        if (!stripe.WebhookConfigured || !StripeSignature.Verify(rawPayload, stripeSignature, stripe.WebhookSecret, nowUtc))
+            return Null(); // fail-closed: unconfigured or bad signature
+        try
+        {
+            using var doc = JsonDocument.Parse(rawPayload);
+            var root = doc.RootElement;
+            var eventId = Str(root, "id");
+            var type = Str(root, "type");
+            if (string.IsNullOrEmpty(eventId) || type.Length == 0) return Null();
+            if (!root.TryGetProperty("data", out var data) || !data.TryGetProperty("object", out var obj)) return Null();
+
+            // Subscription events carry the subscription as the object; checkout.session.completed references it.
+            var subId = Str(obj, "id");
+            if (obj.TryGetProperty("subscription", out var s) && s.ValueKind == JsonValueKind.String)
+                subId = s.GetString() ?? subId;
+            if (string.IsNullOrEmpty(subId)) return Null();
+
+            return Task.FromResult<StoreNotificationDto?>(new StoreNotificationDto(
+                eventId, MapStripe(type, obj), subId,
+                EpochSeconds(Ms(root, "created")) ?? nowUtc, EpochSeconds(Ms(obj, "current_period_end"))));
+        }
+        catch { return Null(); }
+    }
+
+    public Task<StoreNotificationDto?> VerifyRevenueCatAsync(string? authorizationHeader, string rawBody, DateTime nowUtc, CancellationToken ct = default)
+    {
+        if (!revenueCat.WebhookConfigured || !FixedEquals(authorizationHeader, revenueCat.WebhookAuthHeader))
+            return Null(); // fail-closed: unconfigured or wrong shared secret
+        try
+        {
+            using var doc = JsonDocument.Parse(rawBody);
+            if (!doc.RootElement.TryGetProperty("event", out var ev)) return Null();
+            var id = Str(ev, "id");
+            var type = Str(ev, "type");
+            var appUserId = Str(ev, "app_user_id");
+            if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(appUserId)) return Null();
+            return Task.FromResult<StoreNotificationDto?>(new StoreNotificationDto(
+                id, MapRevenueCat(type), appUserId, nowUtc, Epoch(Ms(ev, "expiration_at_ms"))));
+        }
+        catch { return Null(); }
+    }
+
+    private static string MapStripe(string type, JsonElement obj) => type switch
+    {
+        "checkout.session.completed" or "customer.subscription.created" or "invoice.payment_succeeded" => "renew",
+        "customer.subscription.deleted" => "expire",
+        "invoice.payment_failed" => "grace",
+        "customer.subscription.updated" =>
+            obj.TryGetProperty("cancel_at_period_end", out var c) && c.ValueKind == JsonValueKind.True ? "cancel" : "renew",
+        _ => "unknown",
+    };
+
+    private static string MapRevenueCat(string type) => type switch
+    {
+        "INITIAL_PURCHASE" or "RENEWAL" or "PRODUCT_CHANGE" or "UNCANCELLATION" => "renew",
+        "CANCELLATION" => "cancel",
+        "EXPIRATION" => "expire",
+        "BILLING_ISSUE" => "grace",
+        "REFUND" => "refund",
+        _ => "unknown",
+    };
+
+    private static DateTime? EpochSeconds(long s) => s > 0 ? DateTimeOffset.FromUnixTimeSeconds(s).UtcDateTime : null;
+
+    private static bool FixedEquals(string? a, string? b)
+    {
+        if (a is null || b is null) return false;
+        var ba = Encoding.UTF8.GetBytes(a);
+        var bb = Encoding.UTF8.GetBytes(b);
+        return ba.Length == bb.Length && CryptographicOperations.FixedTimeEquals(ba, bb);
     }
 
     private static Task<StoreNotificationDto?> Null() => Task.FromResult<StoreNotificationDto?>(null);

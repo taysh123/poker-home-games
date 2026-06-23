@@ -14,4 +14,10 @@ public interface IStoreNotificationVerifier
 
     /// <summary>Google Play RTDN via Pub/Sub push — verify the OIDC auth + decode the message.</summary>
     Task<StoreNotificationDto?> VerifyGoogleAsync(string? authorizationHeader, string messageId, string base64Data, DateTime nowUtc, CancellationToken ct = default);
+
+    /// <summary>Stripe webhook — verify the Stripe-Signature HMAC over the RAW payload, then normalize.</summary>
+    Task<StoreNotificationDto?> VerifyStripeAsync(string rawPayload, string? stripeSignature, DateTime nowUtc, CancellationToken ct = default);
+
+    /// <summary>RevenueCat webhook — verify the shared Authorization-header secret, then normalize the event.</summary>
+    Task<StoreNotificationDto?> VerifyRevenueCatAsync(string? authorizationHeader, string rawBody, DateTime nowUtc, CancellationToken ct = default);
 }

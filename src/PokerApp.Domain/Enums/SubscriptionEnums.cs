@@ -4,6 +4,8 @@ public enum SubscriptionStore
 {
     Apple = 0,
     Google = 1,
+    Stripe = 2,      // web billing
+    RevenueCat = 3,  // mobile aggregator (iOS + Android)
 }
 
 /// <summary>

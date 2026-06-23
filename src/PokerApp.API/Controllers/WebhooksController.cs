@@ -40,6 +40,30 @@ public class WebhooksController(IMediator mediator, IStoreNotificationVerifier v
         return NoContent();
     }
 
+    /// <summary>Stripe webhooks — RAW body + Stripe-Signature header (HMAC). Fail-closed (401) on bad signature.</summary>
+    [HttpPost("stripe")]
+    public async Task<IActionResult> Stripe(CancellationToken cancellationToken)
+    {
+        using var reader = new StreamReader(Request.Body);
+        var payload = await reader.ReadToEndAsync(cancellationToken);
+        var dto = await verifier.VerifyStripeAsync(payload, Request.Headers["Stripe-Signature"], DateTime.UtcNow, cancellationToken);
+        if (dto is null) return Unauthorized(); // fail closed — bad/missing signature or unconfigured
+        await mediator.Send(new ProcessStoreNotificationCommand("stripe", dto), cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>RevenueCat webhooks — RAW body + shared Authorization-header secret. Fail-closed (401).</summary>
+    [HttpPost("revenuecat")]
+    public async Task<IActionResult> RevenueCat(CancellationToken cancellationToken)
+    {
+        using var reader = new StreamReader(Request.Body);
+        var body = await reader.ReadToEndAsync(cancellationToken);
+        var dto = await verifier.VerifyRevenueCatAsync(Request.Headers.Authorization.ToString(), body, DateTime.UtcNow, cancellationToken);
+        if (dto is null) return Unauthorized(); // fail closed — wrong/missing shared secret or unconfigured
+        await mediator.Send(new ProcessStoreNotificationCommand("revenuecat", dto), cancellationToken);
+        return NoContent();
+    }
+
     public sealed record AppleNotificationRequest(string SignedPayload);
 
     public sealed record PubSubEnvelope(PubSubMessage? Message);

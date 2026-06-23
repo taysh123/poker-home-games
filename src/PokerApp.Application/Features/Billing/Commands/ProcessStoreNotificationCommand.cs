@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using PokerApp.Application.Common;
 using PokerApp.Application.Common.Interfaces;
 using PokerApp.Domain.Entities;
 using PokerApp.Domain.Enums;
@@ -25,7 +26,11 @@ public sealed class ProcessStoreNotificationCommandHandler(
     public async Task<Unit> Handle(ProcessStoreNotificationCommand request, CancellationToken cancellationToken)
     {
         var n = request.Notification;
-        var store = request.Store == "apple" ? SubscriptionStore.Apple : SubscriptionStore.Google;
+        if (!SubscriptionStoreParser.TryParse(request.Store, out var store))
+        {
+            audit.Record(AuditCategory.WebhookProcessing, "unknown_store", null, new { store = request.Store });
+            return Unit.Value;
+        }
 
         // Idempotency / replay protection.
         if (await context.StoreWebhookEvents.AnyAsync(e => e.NotificationUuid == n.NotificationUuid, cancellationToken))
