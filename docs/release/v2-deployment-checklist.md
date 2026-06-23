@@ -34,7 +34,14 @@
       `JwtSettings__SecretKey` (≥64 chars), `JwtSettings__Issuer`, `JwtSettings__Audience`,
       `GoogleSettings__ClientIds__0`, `AllowedOrigins__0=https://poker-home-games-three.vercel.app`,
       `AppSettings__WebBaseUrl=https://poker-home-games-three.vercel.app`.
+- [ ] Commercial env — **only when monetizing** (empty ⇒ inert/fail-closed, so safe to leave unset pre-launch):
+      `BillingSettings__Provider=direct`, `BillingSettings__AcceptSandbox=false`,
+      `StripeSettings__SecretKey/__WebhookSecret/__PriceMonthlyId/__PriceYearlyId`,
+      `RevenueCatSettings__SecretApiKey/__WebhookAuthHeader`, `CoachAiSettings__Provider=anthropic` +
+      `CoachAiSettings__ApiKey`. Client (Vercel/EAS): `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY`,
+      `EXPO_PUBLIC_REVENUECAT_API_KEY`, `EXPO_PUBLIC_PREMIUM_MONTHLY_ID/_YEARLY_ID`. See `commercial-readiness.md`.
 - [ ] DB migrations applied (`dotnet ef database update`) — **(verify)** no pending V2 migrations unaccounted for.
+      (The Stripe/RevenueCat stores are additive enum values on an int column — **no new migration**.)
 - [ ] CORS allow-list includes the Vercel domain (UseCors before exception middleware).
 
 ## Post-deploy smoke

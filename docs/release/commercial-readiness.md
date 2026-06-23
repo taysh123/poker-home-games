@@ -13,16 +13,19 @@
   human action list. We do **not** fabricate these.
 
 ## Verdict
-The branch is **technically merge-ready and commercially scaffolded** (seams, server-authoritative
-entitlements, honest demo/stub behavior, legal placeholders, tests green). It is **NOT monetization-ready** —
-charging money requires the EXTERNAL items below (store/Stripe accounts + keys + products, an AI vendor key +
-budget, and counsel-final legal copy). Recommendation: **stay held**; complete EXTERNAL items, then flip flags.
+The branch is **technically merge-ready with commercial foundations built** (RevenueCat + Stripe verifiers /
+webhooks / checkout, the Anthropic AI adapter, server-authoritative entitlements, honest mock-default behavior,
+legal placeholders, tests green). It is **NOT monetization-ready** — charging requires the EXTERNAL items below
+(Stripe / RevenueCat / Apple / Google accounts + keys + products, the Anthropic key + budget, the
+`react-native-purchases` install, and counsel-final Terms). Recommendation: **stay held**; complete EXTERNAL
+items, then flip flags.
 
 ## Track index
 | Track | Detail doc | Headline |
 |-------|-----------|----------|
-| Billing | [`commercial/billing-architecture.md`](../commercial/billing-architecture.md) | Stubs throw; mock default; server verifier mock\|direct(Apple/Google); **Stripe/web unbuilt** |
-| AI | [`commercial/ai-architecture.md`](../commercial/ai-architecture.md) | Mock/demo end-to-end; vendor stub throws; keys server-side only |
+| Billing | [`commercial/billing-architecture.md`](../commercial/billing-architecture.md) | RevenueCat + Stripe **built (dormant)**; mock default; verifiers + webhooks + checkout fail-closed |
+| AI | [`commercial/ai-architecture.md`](../commercial/ai-architecture.md) | **Anthropic adapter built (key-gated)**; mock default; key server-side only |
+| Decision record | [`commercial/commercial-decision-record.md`](../commercial/commercial-decision-record.md) | Locked: RevenueCat / Stripe / Anthropic / $11.99 + $99.99 / server-authoritative |
 | Legal | this doc + `apps/poker-mobile/public/terms.html` | Privacy live; **Terms = counsel-owned DRAFT** (linked) |
 | Backend/infra | [`review/backend-readiness.md`](../review/backend-readiness.md) | Architecture solid; Npgsql pool + Redis are pre-scale gaps |
 | Security | [`review/security-abuse.md`](../review/security-abuse.md) | JWT fail-closed + BCrypt13 + CORS visibility **implemented**; Redis/HTTPS-redirect documented |
@@ -32,23 +35,21 @@ budget, and counsel-final legal copy). Recommendation: **stay held**; complete E
 | Rollback | [`rollback-recovery.md`](rollback-recovery.md) | Additive/flag-gated → reverts cleanly |
 
 ## Billing
-- **READY:** vendor-agnostic client seam (`IBillingProvider`); mock default (OFF no-op); RevenueCat (native) +
-  Stripe (web) stubs that throw "not configured" (never fake success); platform resolver (inactive); server
-  `IBillingVerifier` (mock default) + `DirectBillingVerifier` (Apple JWS + Google Play) + idempotent webhooks +
-  server-authoritative `GET /api/entitlements`; tests.
-- **PENDING:** implement `revenueCatBillingProvider`/`stripeBillingProvider` against real SDKs; for web,
-  add `SubscriptionStore.Stripe` + `StripeBillingVerifier` + `/api/webhooks/stripe` (does not exist yet);
-  flip `PremiumContext` to `resolvePlatformBillingProvider()`.
-- **EXTERNAL:** Apple/Google/Stripe accounts, products/price IDs, keys/secrets, webhook URLs; **decision**:
-  RevenueCat vs the existing direct Apple/Google verifier (see billing-architecture.md).
+- **READY (built, dormant):** client seam + mock default (OFF no-op); Stripe (web) adapter wired (key-gated) +
+  RevenueCat (native) key-gated stub; server `StripeBillingVerifier` + `RevenueCatBillingVerifier` +
+  `DirectBillingVerifier` 4-way dispatch; `/api/webhooks/{stripe,revenuecat}` (signature-verified, fail-closed);
+  `POST /api/billing/checkout`; `SubscriptionStore` += Stripe/RevenueCat; server-authoritative
+  `GET /api/entitlements`; config placeholders; tests.
+- **PENDING (code):** install `react-native-purchases` + implement the documented SDK calls in
+  `revenueCatBillingProvider`; flip `PremiumContext` to `resolvePlatformBillingProvider()` at go-live.
+- **EXTERNAL:** Apple/Google/Stripe/RevenueCat accounts, products/Price IDs, keys + webhook secrets.
 
 ## AI
-- **READY:** vendor-neutral `ICoachAiProvider` (mock default) + `CoachAiSettings` config switch +
-  `VendorCoachAiProvider` stub (throws; never fabricates); guardrails (atomic credit ledger + refund, rate
-  limit, fraud advisory, cost audit); client `serverCoachProvider`; tests.
-- **PENDING:** implement the real vendor call in `VendorCoachAiProvider`; flip client
-  `COACH_CONFIG.provider="server"`; wire `AiCost` audit to real accounting.
-- **EXTERNAL:** AI vendor account + API key (server env only) + spend budget.
+- **READY (built):** `AnthropicCoachAiProvider` (real Messages API, behind the server key, fail-closed, refunds
+  on failure) selected by `CoachAiSettings:Provider=anthropic`; mock default; `CoachAiProviderFactory` switch;
+  guardrails (atomic credit ledger + refund, rate limit, fraud advisory, cost audit); tests.
+- **PENDING (code):** flip client `COACH_CONFIG.provider="server"`; wire `AiCost` audit to real accounting.
+- **EXTERNAL:** Anthropic account + API key (server env only) + spend budget.
 
 ## Legal
 - **READY:** Privacy Policy (live, `/privacy.html`); Terms DRAFT (`/terms.html`) clearly marked counsel-owned /

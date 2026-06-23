@@ -13,6 +13,37 @@
 
 ---
 
+## Update — Commercial build: RevenueCat / Stripe / Anthropic (June 2026)
+A second program implemented the now-DECIDED vendors on the same held branch (commits `70affae` onward).
+**Still held — no merge, no deploy.** Mock providers stay active; `paywall`/`coach` flags OFF; production
+byte-identical. Gates re-run green: `dotnet build` + 110 backend tests; `tsc`; 393+ jest; web export.
+
+- **Decisions (locked):** mobile = RevenueCat, web = Stripe, AI = Anthropic, pricing $11.99/mo + $99.99/yr,
+  server-authoritative entitlements, keys server-side. See `docs/commercial/commercial-decision-record.md`.
+- **AI (built):** `AnthropicCoachAiProvider` (real Messages API, behind the server key, fail-closed, refunds on
+  failure); `CoachAiSettings:Provider=anthropic`; mock default. `docs/commercial/ai-architecture.md`.
+- **Billing (built, dormant):** Stripe + RevenueCat verifiers + `/api/webhooks/{stripe,revenuecat}`
+  (signature-verified) + `POST /api/billing/checkout`; `SubscriptionStore` += Stripe/RevenueCat; client Stripe
+  adapter wired (key-gated) + RevenueCat key-gated stub. `docs/commercial/billing-architecture.md`.
+- **Legal:** Terms updated with $11.99/$99.99 + processors (counsel-owned DRAFT); Privacy payments note.
+- **Cost:** refreshed for Anthropic (Sonnet) + Stripe/RevenueCat fees. `docs/review/cost-scalability.md`.
+- **Config-driven:** no hardcoded keys/secrets/IDs/URLs; empty settings ⇒ fail closed.
+
+### Updated external blockers + human actions (supersedes §J/§K below for commercial)
+1. **Stripe:** account, 2 recurring Prices, secret + publishable keys, webhook signing secret → `StripeSettings__*`
+   + `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY`; point the webhook at `/api/webhooks/stripe`.
+2. **RevenueCat:** account/project, public SDK key + secret REST key + webhook Authorization secret →
+   `EXPO_PUBLIC_REVENUECAT_API_KEY` + `RevenueCatSettings__*`; point the RevenueCat webhook at
+   `/api/webhooks/revenuecat`; **`npm i react-native-purchases`** + implement the documented SDK calls.
+3. **Apple/Google:** subscription products + paid-apps agreements (RevenueCat manages store notifications).
+4. **Anthropic:** API key + spend budget → `CoachAiSettings__Provider=anthropic` + `CoachAiSettings__ApiKey`.
+5. **Counsel:** finalize `terms.html` (linked from the production Profile screen → required before merge).
+6. **Go-live config + flip:** `BillingSettings__Provider=direct` + `AcceptSandbox=false`; `AppSettings__WebBaseUrl`;
+   flip client `COACH_CONFIG.provider="server"` + `resolvePlatformBillingProvider()`; then flip `paywall`/`coach`
+   flags + merge per `v2-deployment-checklist.md`.
+
+---
+
 ## A — Release-doc audit
 Reconciled `docs/release/*` + `docs/review/*` against the branch; fixed only stale facts (drift-proof ahead-count;
 security items moved doc→"implemented"; store-readiness Terms code-blocker marked resolved; prod-visible ledger

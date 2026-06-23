@@ -1,10 +1,11 @@
 # Billing Architecture
 
-> **Status: scaffolded, INACTIVE.** The active client billing provider is `mock`; the active server
-> verifier is `MockBillingVerifier`. No real purchase can succeed yet, and the `paywall` flag is OFF in
-> production. This document is the wiring map + the exact human TODOs to go live. **Nothing here fakes a
-> purchase.** Per the commercial decision record: mobile = platform billing (RevenueCat preferred), web =
-> Stripe, entitlements server-authoritative.
+> **Status: RevenueCat + Stripe BUILT, INACTIVE (mock by default).** Decisions are locked: mobile = RevenueCat,
+> web = Stripe, entitlements server-authoritative (see `commercial-decision-record.md`). The server verifiers +
+> webhooks for both are implemented but **config-gated + fail-closed** — with empty settings the active verifier
+> stays `MockBillingVerifier`, the client active provider stays `mock`, and the `paywall` flag is OFF, so
+> production is unchanged. **Nothing here fakes a purchase.** The remaining blockers are external accounts/keys
+> (+ the `react-native-purchases` install for mobile).
 
 ## Principle: the server is the single source of truth
 Entitlement is computed on the server from verified `Subscription` rows and read via `GET /api/entitlements`
@@ -21,8 +22,9 @@ validity.
 |-------|------|-------|
 | Vendor-agnostic seam | `types.ts` → `IBillingProvider { getProducts, purchase, restore }` | stable |
 | Active provider | `providers/mockBillingProvider.ts` | **mock (default)** — on-device grant, no SDK |
-| RevenueCat stub (native) | `providers/revenueCatBillingProvider.ts` | **stub — every method throws "not configured"** |
-| Stripe stub (web) | `providers/stripeBillingProvider.ts` | **stub — every method throws "not configured"** |
+| RevenueCat (native) | `providers/revenueCatBillingProvider.ts` | **key-gated stub** — throws "not configured" (`react-native-purchases` install deferred); exact SDK + `validatePurchase('revenuecat', …)` steps documented inline |
+| Stripe (web) | `providers/stripeBillingProvider.ts` | **wired, key-gated** — with `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY`: server Checkout (`createCheckoutSession`) → open → re-read entitlement; throws "not configured" when empty |
+| Server API | `api/monetizationApi.ts` | `createCheckoutSession` (POST `/api/billing/checkout`) + `validatePurchase` (POST `/api/billing/validate`) + `getEntitlements` |
 | Registry + platform resolver | `providers/index.ts` | `getBillingProvider(id='mock')`; `billingProviderIdForPlatform` (web→stripe, native→revenuecat); `resolvePlatformBillingProvider()` — **exported but NOT called on the default path** |
 | Entitlement state | `state/PremiumContext.tsx` | calls `getBillingProvider()` (no arg → **mock**) |
 
@@ -31,47 +33,33 @@ returns the mock, so production behaviour is unchanged. Flipping to real billing
 `PremiumContext` (use `resolvePlatformBillingProvider()`), gated behind real configuration.
 
 ### Server (`src/PokerApp.Infrastructure/Billing/`, `.../Features/Billing/`)
-The backend is **further along than the client** and already fail-closed:
-- `IBillingVerifier.VerifyAsync(store, token) → VerifiedSubscription?` (null ⇒ invalid ⇒ fail-closed). Seam
-  comment: "Apple/Google/RevenueCat behind this seam."
+Fail-closed; all provider-gated:
+- `IBillingVerifier.VerifyAsync(store, token) → VerifiedSubscription?` (null ⇒ invalid ⇒ fail-closed).
 - DI switch (`DependencyInjection.cs`): `BillingSettings.Provider = "mock"` (default) → `MockBillingVerifier`;
-  `"direct"` → `DirectBillingVerifier` composing **real `AppleBillingVerifier` (App Store JWS) + `GooglePlayBillingVerifier`**.
-- `ValidatePurchaseCommand(store, token)` — client-initiated post-purchase validation: verifies the receipt,
-  upserts the authoritative `Subscription`, returns `EntitlementDto`. **Validator restricts `store` to
-  `apple|google`.**
-- `WebhooksController` — Apple ASSN V2 (`/api/webhooks/apple`) + Google Play RTDN via Pub/Sub
-  (`/api/webhooks/google`), cryptographically signature-verified (`IStoreNotificationVerifier`), **fail-closed
-  (401, no state change) on any bad signature**, processed idempotently + out-of-order-safe by
-  `ProcessStoreNotificationCommand`.
-- `BillingSettings.AcceptSandbox` — **MUST be `false` in production** so sandbox/TestFlight receipts can never
-  grant production entitlements (fail-closed store separation).
-- `SubscriptionStore` enum = `{ Apple = 0, Google = 1 }`.
+  `"direct"` → `DirectBillingVerifier` dispatching by store to **`AppleBillingVerifier` (JWS) +
+  `GooglePlayBillingVerifier` + `StripeBillingVerifier` + `RevenueCatBillingVerifier`**. The Stripe/RevenueCat
+  verifiers return null when their settings are empty.
+- `SubscriptionStore` enum = `{ Apple, Google, Stripe, RevenueCat }` (int-stored — **no migration**).
+  `SubscriptionStoreParser` is the single store-string mapper; `ValidatePurchaseCommand` + `RedeemTopUp` accept
+  all four.
+- Webhooks (`WebhooksController` + `IStoreNotificationVerifier`) — all signature-verified, fail-closed (401),
+  idempotent (`StoreWebhookEvent` dedup), out-of-order-safe (`ProcessStoreNotificationCommand`):
+  `/api/webhooks/apple` (ASSN V2 JWS), `/api/webhooks/google` (RTDN OIDC),
+  `/api/webhooks/stripe` (raw body + `Stripe-Signature` HMAC via `StripeSignature.Verify`),
+  `/api/webhooks/revenuecat` (raw body + shared Authorization secret).
+- `POST /api/billing/checkout` (`CreateCheckoutSessionCommand` → `IStripeCheckoutService`) creates a Stripe
+  Checkout session; BadRequest when unconfigured. Success/cancel URLs from `IWebSettings` (not hardcoded).
+- `BillingSettings.AcceptSandbox` — **MUST be `false` in production**. A startup `LogCritical` warns if prod runs
+  the mock verifier or accepts sandbox.
 
-## Two honest decisions before go-live (do NOT skip)
-
-### 1. Mobile: RevenueCat **vs** the already-built direct Apple/Google verifier
-The decision record prefers **RevenueCat**, but the server already implements **direct** App Store JWS + Google
-Play verification (the `"direct"` provider) — a viable, partially-built alternative. Pick one:
-- **(A) RevenueCat** (decision-record default): client uses `react-native-purchases`; add a
-  `RevenueCatBillingVerifier : IBillingVerifier` (RevenueCat REST/v2) + a RevenueCat webhook endpoint; select it
-  via `BillingSettings.Provider = "revenuecat"`. RevenueCat handles store edge-cases for you; trade-off is a
-  third-party dependency + its fee.
-- **(B) Direct** (reuse what's built): client uses StoreKit 2 / Play Billing directly (or RevenueCat purely as a
-  purchase UI), and the server keeps `DirectBillingVerifier`. No new server verifier; trade-off is owning store
-  edge-cases yourself.
-Either way the **client seam and the `IBillingVerifier` seam are unchanged** — this is a configuration + which-
-adapter decision, not a redesign. Flag this for the owner; it is the one open architectural choice.
-
-### 2. Web: Stripe is entirely unbuilt on the server (real gap)
-There is **no Stripe anywhere in the backend** today (`grep` clean; `SubscriptionStore` has no `Stripe` value;
-`ValidatePurchaseCommand` rejects non-`apple|google`). Web billing requires NEW server work:
-- add `SubscriptionStore.Stripe`;
-- add a `StripeBillingVerifier : IBillingVerifier` (verify Checkout session / subscription via Stripe API);
-- add `POST /api/webhooks/stripe` verifying the Stripe webhook signature, granting entitlement only from
-  `checkout.session.completed` / `customer.subscription.*` (idempotent, like the Apple/Google handlers);
-- extend the purchase-validation path to accept the web/Stripe store.
-The client `stripeBillingProvider.ts` stub already documents that web entitlement is granted **only** after the
-server verifies the webhook — never client-side.
+## Decisions (resolved)
+- **Mobile = RevenueCat** (on the native store rails). Server verifies via `RevenueCatBillingVerifier` (REST
+  subscriber lookup) + `/api/webhooks/revenuecat`. The direct Apple/Google verifier remains available as a
+  fallback, but RevenueCat is the chosen path. Remaining external step: RevenueCat account/keys + installing
+  `react-native-purchases` (native module — deferred; the client adapter is a key-gated stub with the exact SDK
+  calls documented inline).
+- **Web = Stripe.** Built: `StripeBillingVerifier`, `/api/webhooks/stripe` (HMAC), `POST /api/billing/checkout`,
+  and the client adapter. Remaining external step: Stripe account/keys/Price IDs/webhook secret.
 
 ## Flows (target)
 - **Purchase (mobile):** paywall → `provider.purchase(productId)` (RevenueCat/StoreKit/Play) → client sends the
@@ -97,36 +85,28 @@ server verifies the webhook — never client-side.
   `docs/commercial/ai-architecture.md`.
 
 ## Exact human TODOs to go live
-**Decision first:** choose mobile path (A RevenueCat / B direct) and confirm web = Stripe.
-
-**Mobile (if RevenueCat):**
-1. RevenueCat account + project; create entitlements/offerings mapped to products
-   `tpoker.premium.monthly` / `tpoker.premium.yearly` (`config.ts`).
-2. App Store Connect: paid-apps agreement, banking/tax, the two auto-renewable subscription products,
-   App Store Server Notifications V2 URL → `/api/webhooks/apple`, app-specific shared secret / signing key.
-3. Google Play Console: subscription products, RTDN Pub/Sub topic → push subscription to `/api/webhooks/google`,
-   Play Developer API service account JSON (`GooglePlaySettings.ServiceAccountJson`).
-4. Install `react-native-purchases`, set the RevenueCat API key (client) and configure the server verifier;
-   set `BillingSettings.Provider` accordingly; implement `revenueCatBillingProvider.ts` against the SDK.
-5. Set `BillingSettings.AcceptSandbox=false` in production; populate `AppleStoreSettings.RootCertsPem` +
-   `BundleIds` and `GooglePlaySettings.PackageName` + `PubSubAudience`.
+**Mobile (RevenueCat):**
+1. RevenueCat account + project; entitlements/offerings mapped to the products (`config.ts` IDs, env-overridable).
+2. App Store Connect + Google Play: the two auto-renew subscription products + paid-apps agreements; let
+   RevenueCat manage the store notifications (ASSN V2 / RTDN), and configure the RevenueCat →
+   `/api/webhooks/revenuecat` webhook (set `RevenueCatSettings__WebhookAuthHeader`).
+3. Set env: `EXPO_PUBLIC_REVENUECAT_API_KEY` (client public key) + `RevenueCatSettings__SecretApiKey` (server).
+4. **Install `react-native-purchases`** and implement the documented SDK calls in `revenueCatBillingProvider.ts`.
 
 **Web (Stripe):**
-1. Stripe account; create the two recurring Prices; capture publishable + secret keys + price IDs + webhook
-   signing secret.
-2. Backend: add `SubscriptionStore.Stripe`, `StripeBillingVerifier`, `POST /api/webhooks/stripe`, and the
-   Checkout-session endpoint; wire entitlement grant from the verified webhook only.
-3. Client: implement `stripeBillingProvider.ts` against Stripe Checkout; flip the web path via
-   `resolvePlatformBillingProvider()`.
+1. Stripe account; two recurring Prices; capture publishable + secret keys + Price IDs + webhook signing secret.
+2. Set env: `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY` (client) + `StripeSettings__SecretKey`/`__WebhookSecret`/
+   `__PriceMonthlyId`/`__PriceYearlyId` (server); point the Stripe webhook at `/api/webhooks/stripe`.
 
 **Both:**
-- Localized price display comes from the SDK/Stripe at runtime — replace the `config.ts` placeholder strings.
-- Flip the `paywall` feature flag ON only after the above + Terms/EULA (`docs/...` / `terms.html`) are in place.
+1. Set `BillingSettings__Provider=direct` + `BillingSettings__AcceptSandbox=false`; set `AppSettings__WebBaseUrl`
+   (Checkout success/cancel URLs).
+2. Localized price display comes from the SDK/Stripe at runtime — the `config.ts` strings are placeholders.
+3. Flip `paywall` ON only after the above + counsel-final Terms (`terms.html`) are in place.
 
 ## What is intentionally NOT done (and why)
-- **No faked purchases.** The client stubs throw "not configured"; the active provider stays mock; the server
-  default verifier is the mock. No code path grants a paid entitlement without real verification.
-- **No RevenueCat/Stripe SDK added.** Adding SDKs/keys is owner-gated (accounts + credentials). The seams are in
-  place so the swap is contained.
-- **`paywall` flag stays OFF.** Premium benefits are still `comingSoon`; charging is blocked until real billing
-  + legal land (see `security-abuse.md` "bundled content" decision).
+- **No faked purchases.** With empty settings every verifier returns null / checkout 400s; the active verifier
+  stays mock; the client active provider stays mock. No path grants a paid entitlement without real verification.
+- **No vendor SDKs added.** Stripe + RevenueCat server verification is hand-rolled HTTP (consistent with the
+  existing Apple JWS / Google OIDC verifiers); the native `react-native-purchases` install is owner-gated + deferred.
+- **`paywall` flag stays OFF** until real billing + counsel-final legal land (see `security-abuse.md` "bundled content").
