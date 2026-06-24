@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Text, TextProps } from 'react-native';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 
 type Props = TextProps & {
   /** Target numeric value (any unit — formatting is up to `format`). */
@@ -17,11 +18,14 @@ type Props = TextProps & {
 export default function AnimatedNumber({ value, format, duration = 800, ...rest }: Props) {
   const [display, setDisplay] = useState(0);
   const fromRef = useRef(0);
+  const reduced = useReducedMotion();
 
   useEffect(() => {
     const from = fromRef.current;
-    if (from === value) {
+    if (from === value || reduced) {
+      // Reduce Motion (or no change): snap to the final value, skip the count-up.
       setDisplay(value);
+      fromRef.current = value;
       return;
     }
     let raf: number;
@@ -36,7 +40,7 @@ export default function AnimatedNumber({ value, format, duration = 800, ...rest 
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [value, duration]);
+  }, [value, duration, reduced]);
 
   return <Text {...rest}>{format(display)}</Text>;
 }

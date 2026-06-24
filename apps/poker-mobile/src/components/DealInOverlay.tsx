@@ -24,11 +24,12 @@ export default function DealInOverlay({ onDone }: { onDone: () => void }) {
       Animated.spring(scale, { toValue: 1, friction: 6, tension: 80, useNativeDriver: USE_NATIVE_DRIVER }),
       Animated.timing(opacity, { toValue: 1, duration: 260, useNativeDriver: USE_NATIVE_DRIVER }),
     ]).start();
-    Animated.loop(
+    const sweepLoop = Animated.loop(
       Animated.timing(sweep, { toValue: 1, duration: 1100, easing: Easing.inOut(Easing.ease), useNativeDriver: USE_NATIVE_DRIVER }),
-    ).start();
+    );
+    sweepLoop.start();
     const t = setTimeout(finish, 950);
-    return () => clearTimeout(t);
+    return () => { clearTimeout(t); sweepLoop.stop(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

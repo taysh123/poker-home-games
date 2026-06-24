@@ -206,6 +206,8 @@ export default function GroupsListScreen() {
           onPress={() => navigation.navigate('Invitations')}
           hitSlop={8}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={invitationCount > 0 ? `Invitations, ${invitationCount} pending` : 'Invitations'}
         >
           <Ionicons name="mail-outline" size={20} color={invitationCount > 0 ? colors.gold : colors.textMuted} />
           {invitationCount > 0 && (
@@ -221,6 +223,8 @@ export default function GroupsListScreen() {
           onPress={() => navigation.navigate('CreateGroup')}
           hitSlop={8}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Create group"
         >
           <Ionicons name="add" size={22} color={colors.gold} />
         </TouchableOpacity>

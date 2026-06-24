@@ -335,6 +335,8 @@ export default function AllSessionsScreen({ embedded = false }: { embedded?: boo
                         style={styles.moreBtn}
                         onPress={() => setActionSheetSession(s)}
                         hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Options for ${s.sessionName}`}
                       >
                         <Ionicons name="ellipsis-horizontal" size={16} color={colors.textMuted} />
                       </TouchableOpacity>

@@ -33,7 +33,6 @@ import { getWeeklyDigest, WeeklyDigestDto } from '../api/digestApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { goToSessions, goToStats } from '../navigation/navHelpers';
 import RankBadge from '../components/RankBadge';
-import { isFeatureEnabled } from '../config/features';
 import SkeletonCard from '../components/SkeletonCard';
 import StatWidget from '../components/StatWidget';
 import SessionListItem from '../components/SessionListItem';
@@ -96,7 +95,8 @@ export default function HomeScreen() {
   const hasAnimated = useRef(false);
   const runEntranceAnimation = useCallback(() => {
     // Reduced motion (or already-animated this mount): show final state instantly, no entrance.
-    if (reducedMotion || (isFeatureEnabled('polish') && hasAnimated.current)) {
+    // The entrance is a once-per-mount beat; without this guard it re-fired on every tab focus.
+    if (reducedMotion || hasAnimated.current) {
       heroOpacity.setValue(1);
       heroY.setValue(0);
       contentOpacity.setValue(1);

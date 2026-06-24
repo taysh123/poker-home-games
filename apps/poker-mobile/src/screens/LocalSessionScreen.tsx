@@ -290,7 +290,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
     <Screen>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={12} activeOpacity={0.75}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={12} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel="Back">
           <Ionicons name="chevron-back" size={20} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
@@ -300,7 +300,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
             <Text style={styles.liveText}>LIVE · started {timeAgo(game.createdAt)}</Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.backBtn} onPress={handleUndo} hitSlop={12} activeOpacity={0.75} disabled={game.txns.length === 0}>
+        <TouchableOpacity style={styles.backBtn} onPress={handleUndo} hitSlop={12} activeOpacity={0.75} disabled={game.txns.length === 0} accessibilityRole="button" accessibilityLabel="Undo last action" accessibilityState={{ disabled: game.txns.length === 0 }}>
           <Ionicons name="arrow-undo-outline" size={18} color={game.txns.length === 0 ? colors.textDim : colors.text} />
         </TouchableOpacity>
       </View>
