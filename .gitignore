@@ -36,3 +36,6 @@ out/
 ## Generated content exports (reproducible from the LFS workbook via tools/content-export)
 content/release-*/exports/
 __pycache__/
+
+# Claude Code local worktrees (harness-managed; never tracked)
+/.claude/worktrees/
