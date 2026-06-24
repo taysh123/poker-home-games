@@ -30,6 +30,8 @@ import { formatDate } from '../utils/formatters';
 import { formatCents, formatCentsSigned } from '../utils/money';
 import { formatDuration } from '../utils/formatters';
 import { confirmDialog } from '../utils/confirm';
+import { useAuth } from '../context/AuthContext';
+import { markSignupIntent } from '../utils/analytics';
 import AnimatedNumber from '../components/motion/AnimatedNumber';
 import Celebration from '../components/motion/Celebration';
 
@@ -43,6 +45,7 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
   const { gameId } = route.params;
   const insets = useSafeAreaInsets();
   const { games, deleteGame } = useLocalGames();
+  const { user } = useAuth();
 
   const game = games.find(g => g.id === gameId);
   const isTournament = game?.mode === 'tournament';
@@ -301,6 +304,24 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
         )}
 
         <View style={{ height: 32 }} />
+        {user === null && (
+          <TouchableOpacity
+            style={styles.saveCard}
+            onPress={() => { markSignupIntent(); navigation.navigate('Login'); }}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Save this game to a free account to keep your history across devices"
+          >
+            <View style={styles.saveIconWrap}>
+              <Ionicons name="cloud-upload-outline" size={20} color={colors.gold} />
+            </View>
+            <View style={styles.saveText}>
+              <Text style={styles.saveTitle}>Save this game</Text>
+              <Text style={styles.saveSub}>Create a free account to keep your stats, groups, and history across devices.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+        )}
         {isFeatureEnabled('retention') && (isFeatureEnabled('bankroll') || isFeatureEnabled('coach')) && (
           <View style={{ gap: 10, marginBottom: 16 }}>
             {isFeatureEnabled('bankroll') && (
@@ -446,4 +467,27 @@ const styles = StyleSheet.create({
   transferPayer: { fontSize: 15, fontWeight: '600', color: colors.text },
   transferReceiver: { fontSize: 15, fontWeight: '600', color: colors.goldLight },
   transferAmount: { fontSize: 16, fontWeight: '800', color: colors.gold, fontVariant: ['tabular-nums'] },
+
+  saveCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.goldMuted,
+    gap: 12,
+    marginBottom: 16,
+  },
+  saveIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.goldFaint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveText: { flex: 1, gap: 3 },
+  saveTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
+  saveSub: { fontSize: 12, color: colors.textMuted, lineHeight: 17 },
 });
