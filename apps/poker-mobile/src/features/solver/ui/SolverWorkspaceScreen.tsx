@@ -43,6 +43,14 @@ function WorkspaceInner() {
   const [hand, setHand] = useState<string | undefined>();
   const [sheetOpen, setSheetOpen] = useState(false);
 
+  // All hooks must run before any early return (Rules of Hooks) — this useCallback
+  // previously sat after the `!active` guard, so the hook count changed once a range
+  // existed and crashed the workspace.
+  const onSelectHand = useCallback((h: string) => {
+    setHand(h);
+    if (isMobile) setSheetOpen(true);
+  }, [isMobile]);
+
   const active = sources.find(s => s.id === selectedId) ?? sources[0];
   const compare = sources.find(s => s.id === compareId);
 
@@ -53,11 +61,6 @@ function WorkspaceInner() {
       </View>
     );
   }
-
-  const onSelectHand = useCallback((h: string) => {
-    setHand(h);
-    if (isMobile) setSheetOpen(true);
-  }, [isMobile]);
 
   const view = hand ? buildInspectorView(active.range, hand, { tier: active.tier, compareTo: compare?.range }) : null;
 

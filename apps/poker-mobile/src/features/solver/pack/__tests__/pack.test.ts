@@ -46,6 +46,22 @@ describe('validatePack (fail-closed)', () => {
     expect(r.ok).toBe(false);
     expect(r.errors.some(e => /dangling/i.test(e))).toBe(true);
   });
+  it('rejects a hand whose frequencies do not sum to ~1', () => {
+    const p = validSolverPack();
+    p.ranges[0].strategy.T9s = [{ action: 'raise', freq: 0.5 }]; // sums to 0.5
+    p.manifest.contentHash = computeContentHash(p); // rehash so we isolate the freq check
+    const r = validatePack(p);
+    expect(r.ok).toBe(false);
+    expect(r.errors.some(e => /sum/i.test(e))).toBe(true);
+  });
+  it('rejects an invalid hand key', () => {
+    const p = validSolverPack();
+    (p.ranges[0].strategy as Record<string, unknown>).ZZ = [{ action: 'fold', freq: 1 }];
+    p.manifest.contentHash = computeContentHash(p);
+    const r = validatePack(p);
+    expect(r.ok).toBe(false);
+    expect(r.errors.some(e => /valid hand key/i.test(e))).toBe(true);
+  });
 });
 
 describe('adapters + prepareImport', () => {

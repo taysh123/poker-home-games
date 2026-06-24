@@ -4,6 +4,7 @@
  * no cycles, nodeRefs resolve), and the content-hash match. Returns all errors; never throws, never fabricates.
  */
 import { computeContentHash } from './hash';
+import { RANKS, handAt } from '../logic/grid';
 import { SOLVER_PACK_SCHEMA_VERSION, STREETS, VERIFICATION_TIERS } from './types';
 import type { SolverNode, SolverPack } from './types';
 
@@ -13,6 +14,14 @@ export interface ValidationResult {
 }
 
 const ACTIONS = ['fold', 'call', 'raise'];
+
+/** The 169 canonical preflop hand keys (pairs + suited + offsuit). */
+const VALID_HAND_KEYS: ReadonlySet<string> = (() => {
+  const s = new Set<string>();
+  for (let r = 0; r < RANKS.length; r++)
+    for (let c = 0; c < RANKS.length; c++) s.add(handAt(r, c));
+  return s;
+})();
 
 export function validatePack(pack: unknown): ValidationResult {
   const errors: string[] = [];
@@ -78,6 +87,20 @@ export function validatePack(pack: unknown): ValidationResult {
   if (errors.length === 0 && m) {
     const computed = computeContentHash(p as SolverPack);
     if (computed !== m.contentHash) errors.push(`contentHash mismatch (expected ${m.contentHash}, computed ${computed})`);
+  }
+
+  // Semantic integrity — run AFTER the hash check so a soft mismatch can't mask a tamper.
+  // Every strategy key must be a real 169-grid hand, and each hand's action mix must sum to ~1.
+  if (Array.isArray(p.ranges)) {
+    p.ranges.forEach((r, i) => {
+      if (!r || !r.strategy || typeof r.strategy !== 'object') return;
+      for (const [hand, mix] of Object.entries(r.strategy)) {
+        if (!VALID_HAND_KEYS.has(hand)) errors.push(`ranges[${i}].strategy['${hand}'] is not a valid hand key`);
+        if (!Array.isArray(mix) || mix.length === 0) continue;
+        const sum = mix.reduce((acc, a) => acc + (a && typeof a.freq === 'number' ? a.freq : 0), 0);
+        if (Math.abs(sum - 1) > 0.02) errors.push(`ranges[${i}].strategy['${hand}'] frequencies sum to ${sum.toFixed(3)}, expected ~1`);
+      }
+    });
   }
 
   return { ok: errors.length === 0, errors };
