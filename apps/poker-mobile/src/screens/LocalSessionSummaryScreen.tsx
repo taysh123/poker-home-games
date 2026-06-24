@@ -164,17 +164,17 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
     <View style={styles.flex}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.popToTop()} hitSlop={12} activeOpacity={0.75}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.popToTop()} hitSlop={12} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel="Close summary">
           <Ionicons name="close" size={20} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{game.name}</Text>
         <View style={styles.headerActions}>
           {canShareImages && (
-            <TouchableOpacity style={styles.backBtn} onPress={handleShareImage} hitSlop={12} activeOpacity={0.75}>
+            <TouchableOpacity style={styles.backBtn} onPress={handleShareImage} hitSlop={12} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel="Share result card">
               <Ionicons name="share-outline" size={18} color={colors.gold} />
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={styles.backBtn} onPress={handleDelete} hitSlop={12} activeOpacity={0.75}>
+          <TouchableOpacity style={styles.backBtn} onPress={handleDelete} hitSlop={12} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel="Delete this game">
             <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
@@ -219,7 +219,7 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
           )}
           {championName && (
             <View style={styles.championRow}>
-              <Text style={styles.championTrophy}>🏆</Text>
+              <Ionicons name="trophy" size={16} color={colors.goldLight} accessibilityLabel="Champion" />
               <Text style={styles.championName} numberOfLines={1}>{championName}</Text>
               {championSub && <Text style={styles.championSub}>{championSub}</Text>}
             </View>
@@ -231,12 +231,11 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
           <>
             <Text style={styles.sectionTitle}>FINAL STANDINGS</Text>
             {podium.map(({ player, position, payoutCents, netCents }) => {
-              const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : null;
               const isChampion = position === 1;
               return (
                 <View key={player.id} style={[styles.resultRow, isChampion && styles.resultRowWinner]}>
                   <Text style={[styles.resultRank, isChampion && styles.resultRankWinner]}>
-                    {medal ?? `#${position}`}
+                    {`#${position}`}
                   </Text>
                   <View style={styles.podiumInfo}>
                     <View style={styles.podiumNameRow}>
@@ -268,7 +267,7 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
           return (
             <View key={player.id} style={[styles.resultRow, isWinner && styles.resultRowWinner]}>
               <Text style={[styles.resultRank, isWinner && styles.resultRankWinner]}>
-                {isWinner ? '🏆' : `#${index + 1}`}
+                {`#${index + 1}`}
               </Text>
               <Text style={styles.resultName} numberOfLines={1}>{player.name}</Text>
               <Text style={[
@@ -379,7 +378,6 @@ const styles = StyleSheet.create({
   heroMeta: { ...typography.bodySmall, color: colors.textMuted },
 
   championRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
-  championTrophy: { fontSize: 16 },
   championName: { fontFamily: Sora['700'], fontSize: 16, color: colors.goldLight },
   championSub: { ...typography.amount, fontSize: 14, color: colors.textMuted },
 
