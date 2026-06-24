@@ -376,10 +376,13 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
                   onPress={() => { lightTap(); gotoLevel(game.id, -1); }}
                   disabled={view.levelNumber <= 1}
                   hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Previous blind level"
+                  accessibilityState={{ disabled: view.levelNumber <= 1 }}
                 >
                   <Ionicons name="play-skip-back" size={16} color={view.levelNumber <= 1 ? colors.textDim : colors.text} />
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.dashCtrlBtn, styles.dashCtrlPrimary]} onPress={toggleClockPause} hitSlop={8}>
+                <TouchableOpacity style={[styles.dashCtrlBtn, styles.dashCtrlPrimary]} onPress={toggleClockPause} hitSlop={8} accessibilityRole="button" accessibilityLabel={view.paused ? 'Resume the clock' : 'Pause the clock'}>
                   <Ionicons name={view.paused ? 'play' : 'pause'} size={18} color={colors.background} />
                   <Text style={styles.dashCtrlPrimaryText}>{view.paused ? 'Resume' : 'Pause'}</Text>
                 </TouchableOpacity>
@@ -388,6 +391,9 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
                   onPress={() => { lightTap(); gotoLevel(game.id, 1); }}
                   disabled={atLastLevel}
                   hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Next blind level"
+                  accessibilityState={{ disabled: atLastLevel }}
                 >
                   <Ionicons name="play-skip-forward" size={16} color={atLastLevel ? colors.textDim : colors.text} />
                 </TouchableOpacity>
@@ -418,7 +424,12 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{isTournament ? 'IN THE GAME' : 'AT THE TABLE'}</Text>
           {(!isTournament || isLateRegOpen(game)) && (
-            <TouchableOpacity onPress={() => openAmountModal({ kind: 'addPlayer' })} hitSlop={8}>
+            <TouchableOpacity
+              onPress={() => openAmountModal({ kind: 'addPlayer' })}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={isTournament ? 'Register a late entry' : 'Add a player'}
+            >
               <Text style={styles.sectionAction}>+ {isTournament ? 'Late Reg' : 'Add Player'}</Text>
             </TouchableOpacity>
           )}
@@ -446,13 +457,17 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
                     style={[styles.playerRow, isLeader && styles.playerRowLeader]}
                     onPress={() => setSheetPlayer(player)}
                     activeOpacity={0.75}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${player.name}. Tap for actions.`}
                   >
                     <Avatar name={player.name} size={40} />
                     <View style={styles.playerInfo}>
-                      <Text style={styles.playerName} numberOfLines={1}>
-                        {player.name}
-                        {isLeader ? '  👑' : ''}
-                      </Text>
+                      <View style={styles.playerNameRow}>
+                        <Text style={styles.playerName} numberOfLines={1}>{player.name}</Text>
+                        {isLeader && (
+                          <Ionicons name="trophy" size={13} color={colors.goldLight} style={styles.leaderCrown} accessibilityLabel="Chip leader" />
+                        )}
+                      </View>
                       <Text style={styles.playerMeta}>
                         in {formatCents(buyInCents)}{!isTournament && cashOutCents > 0 ? ` · out ${formatCents(cashOutCents)}` : ''}
                       </Text>
@@ -541,10 +556,9 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
             <ScrollView style={{ maxHeight: Math.min(320, Dimensions.get('window').height * 0.4) }}>
               {(rankOrder ?? []).map((pid, i) => {
                 const p = game.players.find(pl => pl.id === pid);
-                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
                 return (
                   <View key={pid} style={styles.rankRow}>
-                    <Text style={styles.rankMedal}>{medal}</Text>
+                    <Text style={styles.rankMedal}>{`#${i + 1}`}</Text>
                     <Avatar name={p?.name ?? '?'} size={34} />
                     <Text style={styles.rankName} numberOfLines={1}>{p?.name}</Text>
                     <View style={styles.rankArrows}>
@@ -911,6 +925,8 @@ const styles = StyleSheet.create({
   playerRowLeader: { borderColor: colors.goldMuted, backgroundColor: colors.goldFaint },
   playerInfo: { flex: 1, gap: 2 },
   playerName: { fontSize: 16, fontWeight: '600', color: colors.text },
+  playerNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  leaderCrown: { marginTop: 1 },
   playerMeta: { fontSize: 12, color: colors.textMuted },
   playerNet: { fontSize: 16, fontWeight: '800', fontVariant: ['tabular-nums'] },
   netPositive: { color: colors.success },
@@ -981,7 +997,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 5,
   },
-  countCardOk: { backgroundColor: 'rgba(39,174,96,0.08)', borderColor: 'rgba(39,174,96,0.35)' },
+  countCardOk: { backgroundColor: colors.successFaint, borderColor: colors.success },
   countCardWarn: { backgroundColor: colors.errorFaint, borderColor: colors.errorMuted },
   countHeadline: { fontSize: 14, fontWeight: '700', color: colors.text },
   countHeadlineWarn: { color: colors.text },
