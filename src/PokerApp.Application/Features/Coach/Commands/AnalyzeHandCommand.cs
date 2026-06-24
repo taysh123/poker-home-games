@@ -18,8 +18,16 @@ public sealed class AnalyzeHandCommandValidator : AbstractValidator<AnalyzeHandC
 {
     public AnalyzeHandCommandValidator()
     {
-        RuleFor(x => x.Kind).NotEmpty();
-        RuleFor(x => x.IdempotencyKey).NotEmpty();
+        // Bound every field: the free-text inputs are forwarded to a paid AI model
+        // (token-bomb / cost-abuse / injection surface) and IdempotencyKey persists to a
+        // 200-char column (an over-long key would 500 on insert instead of 400-ing here).
+        RuleFor(x => x.Kind).NotEmpty().MaximumLength(40);
+        RuleFor(x => x.IdempotencyKey).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.Text).MaximumLength(4000);
+        RuleFor(x => x.HeroHand).MaximumLength(32);
+        RuleFor(x => x.HeroPosition).MaximumLength(32);
+        RuleFor(x => x.Question).MaximumLength(1000);
+        RuleFor(x => x.DeviceId).MaximumLength(200);
     }
 }
 

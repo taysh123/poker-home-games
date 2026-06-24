@@ -60,7 +60,14 @@ public static class DependencyInjection
         var coachAiSettings = configuration.GetSection("CoachAiSettings").Get<CoachAiSettings>() ?? new CoachAiSettings();
         services.AddSingleton(coachAiSettings);
         services.AddScoped<ICoachAiProvider>(sp =>
-            CoachAiProviderFactory.Create(coachAiSettings, sp.GetRequiredService<IHttpClientFactory>().CreateClient()));
+        {
+            // Bound the outbound AI call: default HttpClient has a 100s timeout and unbounded
+            // response buffering, so a slow/large upstream could pin a request thread.
+            var http = sp.GetRequiredService<IHttpClientFactory>().CreateClient();
+            http.Timeout = TimeSpan.FromSeconds(30);
+            http.MaxResponseContentBufferSize = 2 * 1024 * 1024; // 2 MB
+            return CoachAiProviderFactory.Create(coachAiSettings, http);
+        });
 
         // B3 — real store verification (provider-selected; mock retained for dev/tests).
         var billingSettings = configuration.GetSection("BillingSettings").Get<BillingSettings>() ?? new BillingSettings();
