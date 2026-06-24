@@ -114,8 +114,10 @@ C#↔TS fixtures).
 ## 7. Subsystem 3 — Paywall + Stripe (P2)
 
 **Client:**
-- `features/premium/config.ts`: add `premium_study` (`comingSoon:false`) + benefit copy ("Full lesson library
-  — all 12 packs · all quizzes · unlimited Spot Trainer"). Others stay Soon.
+- `features/premium/config.ts`: add `premium_study` (`comingSoon:false`) + benefit copy **"Full lesson library
+  — every study pack · all quizzes · unlimited Spot Trainer"** (no pack count — 4 packs are already free and
+  PACK-10 is excluded from advertised value; use this **exact wording** on the PaywallScreen **and** the
+  landing page). Others stay Soon.
 - `PaywallScreen` (`ui-ux-pro-max`): lead with `premium_study`; "Soon" chips for the rest; monthly/yearly
   toggle (yearly default, "save 30%"); honest price (SDK-localized when available, else $11.99 / $99.99).
   CTA → `PremiumContext.purchase()`.
@@ -147,7 +149,8 @@ the Stripe webhook handler, `BillingController.cs`, `EntitlementService.cs`.
 
 - `src/screens/LandingScreen.tsx` (renders only `Platform.OS === 'web'`): two-sided hook-forward hero →
   club-tool value → "get better between sessions" (Premium Study) → inline pricing cards (monthly/yearly,
-  Soon chips) → FAQ → footer (legal links, **18+ / not-a-gambling-product**). Velvet-Table tokens/brand via
+  Soon chips; the Premium benefit line uses the **same `premium_study` copy as §7**) → FAQ → footer (legal
+  links, **18+ / not-a-gambling-product**). Velvet-Table tokens/brand via
   `ui-ux-pro-max`.
 - **Routing:** web `/` → Landing for logged-out visitors; logged-in → app; deep links (`/join/*`) bypass
   Landing. Pricing CTA → if signed in, `purchase()`; if not, sign-up → **pending-checkout-intent stash** →
