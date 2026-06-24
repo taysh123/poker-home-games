@@ -20,6 +20,7 @@ import { useActiveSession } from '../context/ActiveSessionContext';
 import { useLocalGames } from '../context/LocalGamesContext';
 import { consumePendingInvite } from '../utils/pendingInvite';
 import { usePushNotificationListeners } from '../hooks/usePushNotifications';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import HomeScreen from '../screens/HomeScreen';
@@ -198,6 +199,7 @@ function LiveGameBar() {
       : null;
 
   const hasEntry = entry != null;
+  const reducedMotion = useReducedMotion();
   const translateY = useSharedValue(80);
   const pulse = useSharedValue(1);
 
@@ -206,6 +208,8 @@ function LiveGameBar() {
   }, [hasEntry, translateY]);
 
   React.useEffect(() => {
+    // Respect OS Reduce Motion — hold the live dot steady instead of the infinite pulse.
+    if (reducedMotion) { pulse.value = 1; return; }
     pulse.value = withRepeat(
       withSequence(
         withTiming(0.2, { duration: 900 }),
@@ -213,7 +217,7 @@ function LiveGameBar() {
       ),
       -1,
     );
-  }, [pulse]);
+  }, [pulse, reducedMotion]);
 
   const barStyle = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }));
   const dotStyle = useAnimatedStyle(() => ({ opacity: pulse.value }));

@@ -7,6 +7,7 @@ import { shadows } from '../theme/shadows';
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
 import { fadeIn, slideUp } from '../theme/motion';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 
 type Props = {
   label: string;
@@ -31,13 +32,15 @@ export default function StatWidget({
 }: Props) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(16)).current;
+  const reduced = useReducedMotion();
 
   useEffect(() => {
+    if (reduced) { opacity.setValue(1); translateY.setValue(0); return; }
     Animated.parallel([
       fadeIn(opacity, { delay }),
       slideUp(translateY, { delay, from: 16 }),
     ]).start();
-  }, []);
+  }, [reduced]);
 
   return (
     <Animated.View
