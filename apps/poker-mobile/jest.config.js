@@ -10,5 +10,6 @@ module.exports = {
     '**/src/analytics/__tests__/**/*.test.ts',
     '**/src/components/__tests__/**/*.test.ts',
     '**/src/hooks/__tests__/**/*.test.ts',
+    '**/src/config/__tests__/**/*.test.ts',
   ],
 };
