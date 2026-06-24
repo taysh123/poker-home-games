@@ -53,6 +53,14 @@ internal sealed class PlainPasswordHasher : IPasswordHasher
     public bool Verify(string password, string hash) => hash == "hash:" + password;
 }
 
+internal sealed class TestCurrentUser(Guid userId) : ICurrentUserService
+{
+    public Guid UserId { get; } = userId;
+    public string? Email => "test@me.com";
+    public string? Username => "test";
+    public bool IsAuthenticated => true;
+}
+
 /// <summary>Captures audit events so tests can assert observability wiring.</summary>
 internal sealed class CapturingAuditLog : IAuditLog
 {

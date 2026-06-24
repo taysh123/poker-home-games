@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
+using PokerApp.Application.Common.Exceptions;
 using PokerApp.Application.Common.Interfaces;
 
 namespace PokerApp.Infrastructure.Services;
@@ -13,7 +14,11 @@ public class CurrentUserService(IHttpContextAccessor httpContextAccessor) : ICur
         get
         {
             var value = Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
-            return Guid.TryParse(value, out var id) ? id : Guid.Empty;
+            // Fail closed: a missing/unparseable subject claim must NOT collapse to
+            // Guid.Empty (which would silently operate as the all-zero "user").
+            return Guid.TryParse(value, out var id)
+                ? id
+                : throw new UnauthorizedException("No authenticated user.");
         }
     }
 

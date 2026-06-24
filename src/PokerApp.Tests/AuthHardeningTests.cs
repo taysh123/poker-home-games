@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using PokerApp.Application.Common.Exceptions;
 using PokerApp.Application.Common.Interfaces;
 using PokerApp.Application.Features.Auth.Commands.AppleLogin;
+using PokerApp.Application.Features.Auth.Commands.ChangePassword;
 using PokerApp.Application.Features.Auth.Commands.GoogleLogin;
 using PokerApp.Application.Features.Auth.Commands.Register;
 using PokerApp.Application.Features.Auth.Commands.RefreshToken;
@@ -210,6 +211,49 @@ public class RefreshTokenTests
             Handler(w).Handle(new RefreshTokenCommand(plain), default));
 
         Assert.False(await w.Ctx.RefreshTokens.AnyAsync(t => !t.IsRevoked)); // whole family revoked
+    }
+}
+
+public class ChangePasswordTests
+{
+    private static ChangePasswordCommandHandler Handler(AppDbContextWrap w, Guid userId) =>
+        new(w.Ctx, new TestCurrentUser(userId), new PlainPasswordHasher());
+
+    [Fact]
+    public async Task ValidChange_UpdatesHash_AndRevokesActiveRefreshTokens()
+    {
+        using var w = AppDbContextWrap.New();
+        var jwt = TestInfra.Jwt();
+        var user = User.Create("ann", "ann@me.com", "hash:OldPass1"); // PlainPasswordHasher format
+        w.Ctx.Users.Add(user);
+        var (_, h1, e1) = jwt.GenerateRefreshToken();
+        var (_, h2, e2) = jwt.GenerateRefreshToken();
+        w.Ctx.RefreshTokens.Add(RefreshToken.Create(user.Id, h1, e1));
+        w.Ctx.RefreshTokens.Add(RefreshToken.Create(user.Id, h2, e2));
+        await w.Ctx.SaveChangesAsync();
+
+        await Handler(w, user.Id).Handle(new ChangePasswordCommand("OldPass1", "NewPass1"), default);
+
+        var updated = await w.Ctx.Users.SingleAsync();
+        Assert.True(new PlainPasswordHasher().Verify("NewPass1", updated.PasswordHash));
+        Assert.False(await w.Ctx.RefreshTokens.AnyAsync(t => !t.IsRevoked)); // all sessions invalidated
+    }
+
+    [Fact]
+    public async Task WrongCurrentPassword_Throws_AndDoesNotRevoke()
+    {
+        using var w = AppDbContextWrap.New();
+        var jwt = TestInfra.Jwt();
+        var user = User.Create("bob", "bob@me.com", "hash:OldPass1");
+        w.Ctx.Users.Add(user);
+        var (_, h1, e1) = jwt.GenerateRefreshToken();
+        w.Ctx.RefreshTokens.Add(RefreshToken.Create(user.Id, h1, e1));
+        await w.Ctx.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<UnauthorizedException>(() =>
+            Handler(w, user.Id).Handle(new ChangePasswordCommand("WrongPass", "NewPass1"), default));
+
+        Assert.True(await w.Ctx.RefreshTokens.AnyAsync(t => !t.IsRevoked)); // untouched
     }
 }
 
