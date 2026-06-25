@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { formatPL } from '../utils/formatters';
 import Chip from './Chip';
+import PressableScale from './motion/PressableScale';
 
 type Props = {
   name: string;
@@ -28,10 +29,9 @@ export default function SessionListItem({ name, meta, profitLoss, status, onPres
         : colors.textMuted;
 
   return (
-    <TouchableOpacity
+    <PressableScale
       style={[styles.row, !isFirst && styles.border]}
       onPress={onPress}
-      activeOpacity={0.7}
     >
       <View style={[styles.accent, { backgroundColor: isActive ? colors.gold : colors.border }]} />
       <View style={styles.content}>
@@ -50,7 +50,7 @@ export default function SessionListItem({ name, meta, profitLoss, status, onPres
         </Text>
       )}
       <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 

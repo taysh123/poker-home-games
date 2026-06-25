@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import PressableScale from '../components/motion/PressableScale';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -57,10 +58,9 @@ export default function GuestHomeScreen() {
 
       {/* Active game */}
       {activeGame && (
-        <TouchableOpacity
+        <PressableScale
           style={styles.activeCard}
           onPress={() => navigation.navigate('LocalSession', { gameId: activeGame.id })}
-          activeOpacity={0.85}
           accessibilityRole="button"
           accessibilityLabel={`Resume live game ${activeGame.name}`}
         >
@@ -74,7 +74,7 @@ export default function GuestHomeScreen() {
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.gold} />
-        </TouchableOpacity>
+        </PressableScale>
       )}
 
       {/* Start a game — Cash and Tournament as first-class choices */}
@@ -84,10 +84,9 @@ export default function GuestHomeScreen() {
             Start a game — right now, no account needed.
           </Text>
           <View style={styles.heroRow}>
-            <TouchableOpacity
+            <PressableScale
               style={styles.heroCard}
               onPress={() => navigation.navigate('LocalNewGame', { mode: 'cash' })}
-              activeOpacity={0.85}
               accessibilityRole="button"
               accessibilityLabel="Start a cash game. Buy-ins, cash-outs, settle up."
             >
@@ -96,11 +95,10 @@ export default function GuestHomeScreen() {
               </View>
               <Text style={styles.heroTitle}>Cash Game</Text>
               <Text style={styles.heroSubtitle}>Buy-ins, cash-outs, settle up</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableScale>
+            <PressableScale
               style={styles.heroCard}
               onPress={() => navigation.navigate('LocalNewGame', { mode: 'tournament' })}
-              activeOpacity={0.85}
               accessibilityRole="button"
               accessibilityLabel="Start a tournament. Blind clock, prize pool, podium."
             >
@@ -109,7 +107,7 @@ export default function GuestHomeScreen() {
               </View>
               <Text style={styles.heroTitle}>Tournament</Text>
               <Text style={styles.heroSubtitle}>Blind clock, prize pool, podium</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </View>
         </View>
       )}

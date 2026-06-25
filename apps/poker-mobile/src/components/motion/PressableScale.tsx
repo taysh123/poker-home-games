@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, PressableProps, StyleProp, ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { lightTap, mediumTap } from '../../utils/haptics';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -17,6 +18,9 @@ type Props = Omit<PressableProps, 'style'> & {
 /**
  * Base touchable for the motion system: springy press scale + optional haptic.
  * Drop-in replacement for TouchableOpacity in new/upgraded components.
+ *
+ * When the OS "reduce motion" setting is enabled, the scale animation is
+ * suppressed (scale stays at 1) while haptic feedback and onPress are preserved.
  */
 export default function PressableScale({
   style,
@@ -27,6 +31,7 @@ export default function PressableScale({
   children,
   ...rest
 }: Props) {
+  const reducedMotion = useReducedMotion();
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -37,13 +42,17 @@ export default function PressableScale({
     <AnimatedPressable
       style={[style, animatedStyle]}
       onPressIn={e => {
-        scale.value = withSpring(activeScale, { damping: 20, stiffness: 400 });
+        if (!reducedMotion) {
+          scale.value = withSpring(activeScale, { damping: 20, stiffness: 400 });
+        }
         if (haptic === 'light') lightTap();
         else if (haptic === 'medium') mediumTap();
         onPressIn?.(e);
       }}
       onPressOut={e => {
-        scale.value = withSpring(1, { damping: 16, stiffness: 320 });
+        if (!reducedMotion) {
+          scale.value = withSpring(1, { damping: 16, stiffness: 320 });
+        }
         onPressOut?.(e);
       }}
       {...rest}
