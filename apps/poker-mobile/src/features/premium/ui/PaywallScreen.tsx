@@ -19,6 +19,7 @@ import type { RootStackParamList } from '../../../navigation/AppNavigator';
 import { usePremium } from '../state/PremiumContext';
 import { useEntitlements } from '../../../context/EntitlementsContext';
 import { PRICING, PREMIUM_FEATURES } from '../config';
+import { isFeatureEnabled } from '../../../config/features';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Rt = RouteProp<RootStackParamList, 'Paywall'>;
@@ -71,6 +72,39 @@ export default function PaywallScreen() {
     } finally {
       setRestoring(false);
     }
+  }
+
+  const paywallOn = isFeatureEnabled('paywall');
+
+  // HONESTY GATE: when the paywall flag is OFF, render informational preview only — no purchase UI.
+  if (!paywallOn) {
+    return (
+      <Screen>
+        <BrandHeader variant="screen" title="T Poker Premium" onBack={() => navigation.goBack()} />
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          <Card variant="hero">
+            <Text style={styles.heroTitle}>Go deeper. Play → Track → Study → Improve.</Text>
+            <Text style={styles.heroSub}>Premium isn't available yet — it's coming soon.</Text>
+          </Card>
+          <View style={styles.features}>
+            {PREMIUM_FEATURES.map(f => (
+              <View key={f.key} style={styles.featureRow}>
+                <View style={styles.featureIcon}>
+                  <Ionicons name={f.icon as React.ComponentProps<typeof Ionicons>['name']} size={18} color={colors.gold} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={styles.featureTitleRow}>
+                    <Text style={styles.featureTitle}>{f.title}</Text>
+                    <Chip label="Soon" tone="neutral" />
+                  </View>
+                  <Text style={styles.featureDesc}>{f.desc}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      </Screen>
+    );
   }
 
   return (

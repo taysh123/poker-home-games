@@ -25,6 +25,7 @@ import { useContent } from '../../../context/ContentContext';
 import { useEntitlements } from '../../../context/EntitlementsContext';
 import { toModules, type LessonModule } from '../logic/lessons';
 import { buildPackCatalog, availabilityOf, packById, type Pack } from '../../premium/logic/marketableLabel';
+import { isFeatureEnabled } from '../../../config/features';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -93,7 +94,7 @@ export default function LessonModulesScreen() {
                 dim={comingSoon}
                 onPress={
                   locked
-                    ? () => navigation.navigate('Paywall', { trigger: 'lesson_locked' })
+                    ? (isFeatureEnabled('paywall') ? () => navigation.navigate('Paywall', { trigger: 'lesson_locked' }) : undefined)
                     : comingSoon
                       ? undefined
                       : () => navigation.navigate('LessonReader', { moduleId: m.moduleId, moduleName: m.moduleName })

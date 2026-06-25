@@ -24,6 +24,7 @@ import type { RootStackParamList } from '../../../navigation/AppNavigator';
 import { useContent } from '../../../context/ContentContext';
 import { useEntitlements } from '../../../context/EntitlementsContext';
 import { buildPackCatalog, packById, availabilityOf, type Pack } from '../logic/marketableLabel';
+import { isFeatureEnabled } from '../../../config/features';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Rt = RouteProp<RootStackParamList, 'PackDetail'>;
@@ -98,7 +99,14 @@ export default function PackDetailScreen() {
                     <Ionicons name="lock-closed" size={14} color={colors.textMuted} />
                     <Text style={styles.lockText}>This pack is part of Premium.</Text>
                   </View>
-                  <PrimaryButton label="See Premium" variant="gradient" onPress={() => navigation.navigate('Paywall', { trigger: 'pack_detail' })} />
+                  {isFeatureEnabled('paywall') ? (
+                    <PrimaryButton label="See Premium" variant="gradient" onPress={() => navigation.navigate('Paywall', { trigger: 'pack_detail' })} />
+                  ) : (
+                    <View style={styles.lockNote}>
+                      <Ionicons name="time-outline" size={14} color={colors.textMuted} />
+                      <Text style={styles.lockText}>Premium is coming soon.</Text>
+                    </View>
+                  )}
                 </View>
               ) : comingSoon ? (
                 <View style={styles.lockNote}>
