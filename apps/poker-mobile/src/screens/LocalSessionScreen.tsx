@@ -36,6 +36,7 @@ import { isLateRegOpen } from '../local/localGamesStore';
 import Screen from '../components/Screen';
 import AnimatedNumber from '../components/motion/AnimatedNumber';
 import Avatar from '../components/Avatar';
+import ContentContainer from '../components/ContentContainer';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocalSession'>;
 
@@ -306,6 +307,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+        <ContentContainer style={styles.contentInner}>
         {/* Pot summary */}
         <View style={styles.potCard}>
           <LinearGradient
@@ -508,6 +510,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
         })()}
 
         <View style={{ height: 120 }} />
+        </ContentContainer>
       </ScrollView>
 
       {/* Bottom action bar */}
@@ -814,7 +817,8 @@ const styles = StyleSheet.create({
   liveText: { fontSize: 11, fontWeight: '700', color: colors.goldLight, letterSpacing: 0.5 },
 
   scroll: { flex: 1 },
-  content: { padding: 20, gap: 12 },
+  content: { padding: 20 },
+  contentInner: { gap: 12 },
 
   potCard: {
     alignItems: 'center',
