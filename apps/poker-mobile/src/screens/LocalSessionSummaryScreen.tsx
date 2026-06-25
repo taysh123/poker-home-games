@@ -5,14 +5,12 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
-import { spacing } from '../theme/spacing';
 import { typography } from '../theme/typography';
 import { Sora } from '../theme/fonts';
 import { shadows } from '../theme/shadows';
@@ -24,10 +22,8 @@ import { settleGame } from '../local/settlements';
 import { contributionCents, tournamentResult } from '../local/tournament';
 import ShareCard, { canShareImages, shareCardImage, ShareCardData } from '../components/ShareCard';
 import CrossPillarCTA from '../components/CrossPillarCTA';
-import TableScene from '../components/table/TableScene';
-import type { SeatProps } from '../components/table/TableSeat';
 import ContentContainer from '../components/ContentContainer';
-import { tableDimensions } from '../utils/tableLayout';
+import { nameWritingDirection } from '../utils/rtl';
 import { isFeatureEnabled } from '../config/features';
 import { formatDate } from '../utils/formatters';
 import { formatCents, formatCentsSigned } from '../utils/money';
@@ -44,8 +40,6 @@ type Props = NativeStackScreenProps<RootStackParamList, 'LocalSessionSummary'>;
 export default function LocalSessionSummaryScreen({ route, navigation }: Props) {
   const { gameId } = route.params;
   const insets = useSafeAreaInsets();
-  const { width: winW } = useWindowDimensions();
-  const { width: TABLE_W, height: TABLE_H } = tableDimensions(winW - spacing.xl * 2);
   const { games, deleteGame } = useLocalGames();
   const { user } = useAuth();
 
@@ -99,11 +93,6 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
   }
 
   const playerName = (id: string) => game.players.find(p => p.id === id)?.name ?? 'Unknown';
-
-  // Immersive: seat each player around the table with their net result; pot = total pot.
-  const tableSeats: SeatProps[] = (
-    (podium && podium.length ? podium : results) as Array<{ player: { name: string }; netCents: number }>
-  ).map(s => ({ name: s.player.name, sub: formatCentsSigned(s.netCents) }));
 
   // Champion spotlight for the celebration hero (tournament winner or top cash winner).
   let championName: string | null = null;
@@ -187,16 +176,30 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <ContentContainer>
-        {isFeatureEnabled('immersive') && tableSeats.length > 0 && (
-          <View style={styles.tableSceneWrapper}>
-            <TableScene
-              players={tableSeats}
-              width={TABLE_W}
-              height={TABLE_H}
-              potCents={totalPotCents}
-              style={styles.tableScene}
-            />
-          </View>
+        {/* Cash games: a clean player list of who won and lost, up top where the felt used to be. */}
+        {!podium && results.length > 0 && (
+          <>
+            <Text style={[styles.sectionTitle, styles.sectionTitleFirst]}>RESULTS</Text>
+            {results.map(({ player, netCents }, index) => {
+              const isWinner = index === 0 && netCents > 0;
+              return (
+                <View key={player.id} style={[styles.resultRow, isWinner && styles.resultRowWinner]}>
+                  <Text style={[styles.resultRank, isWinner && styles.resultRankWinner]}>
+                    {`#${index + 1}`}
+                  </Text>
+                  <Text style={[styles.resultName, { writingDirection: nameWritingDirection(player.name) }]} numberOfLines={1}>
+                    {player.name}
+                  </Text>
+                  <Text style={[
+                    styles.resultNet,
+                    netCents > 0 ? styles.netPositive : netCents < 0 ? styles.netNegative : styles.netEven,
+                  ]}>
+                    {formatCentsSigned(netCents)}
+                  </Text>
+                </View>
+              );
+            })}
+          </>
         )}
         {/* Game over hero (celebration) */}
         <View style={styles.heroCard}>
@@ -228,7 +231,7 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
           {championName && (
             <View style={styles.championRow}>
               <Ionicons name="trophy" size={16} color={colors.goldLight} accessibilityLabel="Champion" />
-              <Text style={styles.championName} numberOfLines={1}>{championName}</Text>
+              <Text style={[styles.championName, { writingDirection: nameWritingDirection(championName) }]} numberOfLines={1}>{championName}</Text>
               {championSub && <Text style={styles.championSub}>{championSub}</Text>}
             </View>
           )}
@@ -247,7 +250,7 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
                   </Text>
                   <View style={styles.podiumInfo}>
                     <View style={styles.podiumNameRow}>
-                      <Text style={styles.podiumName} numberOfLines={1}>{player.name}</Text>
+                      <Text style={[styles.podiumName, { writingDirection: nameWritingDirection(player.name) }]} numberOfLines={1}>{player.name}</Text>
                       {payoutCents > 0 && (
                         <View style={styles.itmBadge}><Text style={styles.itmBadgeText}>ITM</Text></View>
                       )}
@@ -268,26 +271,6 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
           </>
         )}
 
-        {/* Results (cash games) */}
-        {!podium && <Text style={styles.sectionTitle}>RESULTS</Text>}
-        {results.map(({ player, netCents }, index) => {
-          const isWinner = index === 0 && netCents > 0;
-          return (
-            <View key={player.id} style={[styles.resultRow, isWinner && styles.resultRowWinner]}>
-              <Text style={[styles.resultRank, isWinner && styles.resultRankWinner]}>
-                {`#${index + 1}`}
-              </Text>
-              <Text style={styles.resultName} numberOfLines={1}>{player.name}</Text>
-              <Text style={[
-                styles.resultNet,
-                netCents > 0 ? styles.netPositive : netCents < 0 ? styles.netNegative : styles.netEven,
-              ]}>
-                {formatCentsSigned(netCents)}
-              </Text>
-            </View>
-          );
-        })}
-
         {/* Cash settlements */}
         <Text style={styles.sectionTitle}>CASH SETTLEMENTS</Text>
         {transfers.length === 0 ? (
@@ -299,9 +282,9 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
           transfers.map((t, i) => (
             <View key={i} style={styles.transferRow}>
               <View style={styles.transferNames}>
-                <Text style={styles.transferPayer}>{playerName(t.fromPlayerId)}</Text>
+                <Text style={[styles.transferPayer, { writingDirection: nameWritingDirection(playerName(t.fromPlayerId)) }]} numberOfLines={1}>{playerName(t.fromPlayerId)}</Text>
                 <Ionicons name="arrow-forward" size={14} color={colors.gold} />
-                <Text style={styles.transferReceiver}>{playerName(t.toPlayerId)}</Text>
+                <Text style={[styles.transferReceiver, { writingDirection: nameWritingDirection(playerName(t.toPlayerId)) }]} numberOfLines={1}>{playerName(t.toPlayerId)}</Text>
               </View>
               <Text style={styles.transferAmount}>{formatCents(t.amountCents)}</Text>
             </View>
@@ -385,8 +368,6 @@ const styles = StyleSheet.create({
 
   scroll: { flex: 1 },
   content: { padding: 20, gap: 10 },
-  tableSceneWrapper: { alignSelf: 'center', marginBottom: 16 },
-  tableScene: { alignSelf: 'center' },
 
   heroCard: {
     alignItems: 'center',
@@ -415,6 +396,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
     marginBottom: 2,
   },
+  sectionTitleFirst: { marginTop: 0 },
 
   resultRow: {
     flexDirection: 'row',
@@ -429,7 +411,7 @@ const styles = StyleSheet.create({
   resultRowWinner: { borderColor: colors.goldMuted, backgroundColor: colors.goldFaint },
   resultRank: { width: 34, fontSize: 14, fontWeight: '700', color: colors.textMuted },
   resultRankWinner: { fontSize: 18 },
-  resultName: { flex: 1, fontSize: 16, fontWeight: '600', color: colors.text },
+  resultName: { flex: 1, fontSize: 16, fontWeight: '600', color: colors.text, textAlign: 'left' },
   podiumInfo: { flex: 1, gap: 2 },
   podiumNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   podiumName: { fontSize: 16, fontWeight: '600', color: colors.text },

@@ -8,6 +8,7 @@ import {
   Platform,
   Modal,
   Dimensions,
+  useWindowDimensions,
   KeyboardAvoidingView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -37,6 +38,11 @@ import Screen from '../components/Screen';
 import AnimatedNumber from '../components/motion/AnimatedNumber';
 import Avatar from '../components/Avatar';
 import ContentContainer from '../components/ContentContainer';
+import TableScene from '../components/table/TableScene';
+import type { SeatProps } from '../components/table/TableSeat';
+import { tableDimensions } from '../utils/tableLayout';
+import { nameWritingDirection } from '../utils/rtl';
+import { isFeatureEnabled } from '../config/features';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocalSession'>;
 
@@ -55,6 +61,11 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
 
   const game = games.find(g => g.id === gameId);
   const isTournament = game?.mode === 'tournament';
+  // Immersive cash table (felt + seats) is the beta/dev presentation of the live cash screen; prod keeps
+  // the proven flat list until `immersive` is flipped on. Tournaments keep the dashboard + list.
+  const immersive = isFeatureEnabled('immersive');
+  const { width: winW } = useWindowDimensions();
+  const { width: TABLE_W, height: TABLE_H } = tableDimensions(winW - 40);
 
   // 1-second tick drives the blind countdown (tournaments only) and auto-advances
   // the stored clock when a running level expires.
@@ -104,6 +115,13 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
     () => game?.txns.filter(t => t.kind === 'buyin').reduce((s, t) => s + t.amountCents, 0) ?? 0,
     [game],
   );
+
+  // Immersive cash table: one tappable seat per player (name + buy-in); tapping opens the action sheet.
+  const liveSeats: SeatProps[] = standings.map(({ player, buyInCents }) => ({
+    name: player.name,
+    sub: formatCents(buyInCents),
+    onPress: () => setSheetPlayer(player),
+  }));
 
   // Safety: if someone lands here after the game finished, forward to summary.
   useEffect(() => {
@@ -437,7 +455,17 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
           )}
         </View>
 
-        {(() => {
+        {(!isTournament && immersive) ? (
+          <View style={styles.tableSceneWrapper}>
+            <TableScene
+              players={liveSeats}
+              width={TABLE_W}
+              height={TABLE_H}
+              potCents={totalPotCents}
+              style={styles.tableScene}
+            />
+          </View>
+        ) : (() => {
           const bustedPositions = new Map(
             (game.tournament?.eliminations ?? []).map(e => [e.playerId, e.position]),
           );
@@ -465,7 +493,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
                     <Avatar name={player.name} size={40} />
                     <View style={styles.playerInfo}>
                       <View style={styles.playerNameRow}>
-                        <Text style={styles.playerName} numberOfLines={1}>{player.name}</Text>
+                        <Text style={[styles.playerName, { writingDirection: nameWritingDirection(player.name) }]} numberOfLines={1}>{player.name}</Text>
                         {isLeader && (
                           <Ionicons name="trophy" size={13} color={colors.goldLight} style={styles.leaderCrown} accessibilityLabel="Chip leader" />
                         )}
@@ -495,7 +523,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
                     <View key={player.id} style={[styles.playerRow, styles.playerRowBusted]}>
                       <Avatar name={player.name} size={40} />
                       <View style={styles.playerInfo}>
-                        <Text style={[styles.playerName, styles.playerNameBusted]} numberOfLines={1}>{player.name}</Text>
+                        <Text style={[styles.playerName, styles.playerNameBusted, { writingDirection: nameWritingDirection(player.name) }]} numberOfLines={1}>{player.name}</Text>
                         <Text style={styles.playerMeta}>in {formatCents(buyInCents)}</Text>
                       </View>
                       <View style={styles.positionBadge}>
@@ -563,7 +591,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
                   <View key={pid} style={styles.rankRow}>
                     <Text style={styles.rankMedal}>{`#${i + 1}`}</Text>
                     <Avatar name={p?.name ?? '?'} size={34} />
-                    <Text style={styles.rankName} numberOfLines={1}>{p?.name}</Text>
+                    <Text style={[styles.rankName, { writingDirection: nameWritingDirection(p?.name) }]} numberOfLines={1}>{p?.name}</Text>
                     <View style={styles.rankArrows}>
                       <TouchableOpacity style={styles.rankArrow} onPress={() => moveRank(i, -1)} disabled={i === 0} hitSlop={6}>
                         <Ionicons name="chevron-up" size={18} color={i === 0 ? colors.textDim : colors.gold} />
@@ -704,7 +732,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
                 return (
                   <View key={p.id} style={styles.stackRow}>
                     <View style={styles.stackNameWrap}>
-                      <Text style={styles.stackName} numberOfLines={1}>{p.name}</Text>
+                      <Text style={[styles.stackName, { writingDirection: nameWritingDirection(p.name) }]} numberOfLines={1}>{p.name}</Text>
                       {isEmpty && <Text style={styles.bustedHint}>Busted · {sym}0</Text>}
                     </View>
                     <View style={styles.stackInputWrap}>
@@ -819,6 +847,8 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: 20 },
   contentInner: { gap: 12 },
+  tableSceneWrapper: { alignSelf: 'center', marginVertical: 4 },
+  tableScene: { alignSelf: 'center' },
 
   potCard: {
     alignItems: 'center',

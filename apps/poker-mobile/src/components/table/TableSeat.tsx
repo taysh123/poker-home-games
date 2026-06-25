@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -17,6 +17,7 @@ import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { radii } from '../../theme/radii';
+import { nameWritingDirection } from '../../utils/rtl';
 import type { PokerPosition, PlayerAction, SeatState } from '../../utils/pokerTable';
 
 export interface SeatProps {
@@ -43,6 +44,8 @@ export interface SeatProps {
   /** Legacy flag — gold ring. `state` supersedes this when provided. */
   active?: boolean;
   isDealer?: boolean;
+  /** When set, the seat renders as a button (e.g. the live cash table — tap to record a buy-in/cash-out). */
+  onPress?: () => void;
 }
 
 const SEAT_W = 76;
@@ -80,6 +83,7 @@ export default function TableSeat({
   allin,
   active,
   isDealer,
+  onPress,
 }: SeatProps & { x: number; y: number }) {
   const reduced = useReducedMotion();
   // Resolve the visual state. Legacy callers (no `state`) keep the prior look: gold ring iff `active`.
@@ -128,12 +132,9 @@ export default function TableSeat({
     .filter(Boolean)
     .join(', ');
 
-  return (
-    <View
-      style={[styles.seat, { left: x - SEAT_W / 2, top: y - SEAT_W / 2 }, (isFolded || isEmpty) && styles.dimmed]}
-      accessible
-      accessibilityLabel={a11y}
-    >
+  const seatStyle = [styles.seat, { left: x - SEAT_W / 2, top: y - SEAT_W / 2 }, (isFolded || isEmpty) && styles.dimmed];
+  const body = (
+    <>
       <View style={styles.avatarWrap}>
         {isHero ? <Animated.View pointerEvents="none" style={[styles.heroGlow, glowStyle]} /> : null}
         <View
@@ -148,7 +149,7 @@ export default function TableSeat({
         {position && !isEmpty ? <PositionBadge position={position} size="sm" style={styles.posBadge} /> : null}
         {isDealer && !isEmpty ? <DealerButton style={styles.dealer} /> : null}
       </View>
-      <Text style={[styles.name, isHero && styles.nameHero, (isFolded || isEmpty) && styles.nameMuted]} numberOfLines={1}>
+      <Text style={[styles.name, isHero && styles.nameHero, (isFolded || isEmpty) && styles.nameMuted, { writingDirection: nameWritingDirection(label) }]} numberOfLines={1}>
         {label}
       </Text>
       {showStack ? <StackBadge bb={stackBb} cents={stackCents} allin={allin} /> : null}
@@ -158,6 +159,21 @@ export default function TableSeat({
       ) : showToAct ? (
         <View style={styles.toAct}><Text style={styles.toActText}>TO ACT</Text></View>
       ) : null}
+    </>
+  );
+
+  // Tappable seat (live cash table) → a button; otherwise a static, accessible view.
+  if (onPress) {
+    return (
+      <TouchableOpacity style={seatStyle} onPress={onPress} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel={a11y}>
+        {body}
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <View style={seatStyle} accessible accessibilityLabel={a11y}>
+      {body}
     </View>
   );
 }
