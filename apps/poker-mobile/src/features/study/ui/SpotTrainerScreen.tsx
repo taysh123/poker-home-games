@@ -17,6 +17,9 @@ import CrossPillarCTA from '../../../components/CrossPillarCTA';
 import { isFeatureEnabled } from '../../../config/features';
 import { useStudy } from '../state/StudyContext';
 import { track } from '../../../utils/analytics';
+import { useEntitlements } from '../../../context/EntitlementsContext';
+import LockNudge from './LockNudge';
+import Chip from '../../../components/Chip';
 import { generateSpot, evaluateSpot, type Spot, type SpotResult } from '../logic/trainer';
 import type { RangeAction } from '../types';
 import TableScene from '../../../components/table/TableScene';
@@ -40,7 +43,10 @@ export default function SpotTrainerScreen() {
   const route = useRoute<Rt>();
   const mode = route.params?.mode ?? 'spot';
   const isQuiz = mode === 'spot';
-  const { dataset, recordAnswer } = useStudy();
+  const { dataset, recordAnswer, limitFor, consumeLimit } = useStudy();
+  const { isPremium } = useEntitlements();
+  const sessionLimit = limitFor('trainerSession');
+  const [blocked] = useState(!sessionLimit.allowed);
 
   const [spot, setSpot] = useState<Spot>(() => generateSpot(dataset, Math.random));
   const [result, setResult] = useState<SpotResult | null>(null);
@@ -99,7 +105,9 @@ export default function SpotTrainerScreen() {
   const toCallLabel = Number.isInteger(snapshot.toCallBb) ? String(snapshot.toCallBb) : snapshot.toCallBb.toFixed(1);
 
   useEffect(() => {
+    if (blocked) return; // do not start or consume a session the user can't run
     track('study_trainer_started', { mode });
+    void consumeLimit('trainerSession');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -123,6 +131,23 @@ export default function SpotTrainerScreen() {
     if (isQuiz && answered >= QUIZ_LENGTH) { finishSession(); return; }
     setSpot(generateSpot(dataset, Math.random));
     setResult(null);
+  }
+
+  if (blocked) {
+    return (
+      <Screen>
+        <BrandHeader variant="screen" title={isQuiz ? 'Spot Trainer' : 'Decision Trainer'} onBack={() => navigation.goBack()} />
+        <View style={styles.center}>
+          <LockNudge
+            title="Daily free limit reached"
+            comingSoonBody="Daily free limit reached — resets tomorrow. Premium (unlimited) coming soon."
+            upgradeBody="You've used today's free trainer sessions. Go unlimited with Premium."
+            trigger="trainer_daily_limit"
+            icon="time-outline"
+          />
+        </View>
+      </Screen>
+    );
   }
 
   if (done) {
@@ -173,6 +198,13 @@ export default function SpotTrainerScreen() {
         ) : undefined}
       />
       <View style={styles.body}>
+        <View style={styles.limitRow}>
+          <Chip
+            label={sessionLimit.remaining === Infinity ? 'Unlimited sessions' : `${sessionLimit.remaining} free session${sessionLimit.remaining === 1 ? '' : 's'} left today`}
+            tone={sessionLimit.remaining === Infinity ? 'gold' : 'neutral'}
+            icon="time-outline"
+          />
+        </View>
         {!isQuiz && (
           <View style={styles.statsStrip}>
             <Text style={styles.statItem}>Answered <Text style={styles.statVal}>{answered}</Text></Text>
@@ -313,5 +345,6 @@ const styles = StyleSheet.create({
   },
   statItem: { ...typography.bodySmall, color: colors.textMuted },
   statVal: { ...typography.label, color: colors.text },
+  limitRow: { flexDirection: 'row' },
 });
 
