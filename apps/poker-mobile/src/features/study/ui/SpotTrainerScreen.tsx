@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Screen from '../../../components/Screen';
@@ -25,6 +25,8 @@ import type { RangeAction } from '../types';
 import TableScene from '../../../components/table/TableScene';
 import ActionTimeline from '../../../components/table/ActionTimeline';
 import type { SeatProps } from '../../../components/table/TableSeat';
+import ContentContainer from '../../../components/ContentContainer';
+import { tableDimensions } from '../../../utils/tableLayout';
 import { HoleCards } from '../../../components/table/PlayingCard';
 import { buildTrainerHand } from '../../../utils/trainerHand';
 import type { PokerPosition, PlayerAction } from '../../../utils/pokerTable';
@@ -33,15 +35,14 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Rt = RouteProp<RootStackParamList, 'StudyTrainer'>;
 
 const QUIZ_LENGTH = 10;
-const SCREEN_W = Dimensions.get('window').width;
-const TABLE_W = SCREEN_W - spacing.xl * 2;
-const TABLE_H = Math.round(TABLE_W * 0.86);
 const ACTION_LABEL: Record<RangeAction, string> = { fold: 'Fold', call: 'Call', raise: 'Raise' };
 
 export default function SpotTrainerScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Rt>();
   const mode = route.params?.mode ?? 'spot';
+  const { width: winW } = useWindowDimensions();
+  const { width: TABLE_W, height: TABLE_H } = tableDimensions(winW - spacing.xl * 2);
   const isQuiz = mode === 'spot';
   const { dataset, recordAnswer, limitFor, consumeLimit } = useStudy();
   const { isPremium } = useEntitlements();
@@ -138,13 +139,15 @@ export default function SpotTrainerScreen() {
       <Screen>
         <BrandHeader variant="screen" title={isQuiz ? 'Spot Trainer' : 'Decision Trainer'} onBack={() => navigation.goBack()} />
         <View style={styles.center}>
-          <LockNudge
-            title="Daily free limit reached"
-            comingSoonBody="Daily free limit reached — resets tomorrow. Premium (unlimited) coming soon."
-            upgradeBody="You've used today's free trainer sessions. Go unlimited with Premium."
-            trigger="trainer_daily_limit"
-            icon="time-outline"
-          />
+          <ContentContainer>
+            <LockNudge
+              title="Daily free limit reached"
+              comingSoonBody="Daily free limit reached — resets tomorrow. Premium (unlimited) coming soon."
+              upgradeBody="You've used today's free trainer sessions. Go unlimited with Premium."
+              trigger="trainer_daily_limit"
+              icon="time-outline"
+            />
+          </ContentContainer>
         </View>
       </Screen>
     );
@@ -198,6 +201,7 @@ export default function SpotTrainerScreen() {
         ) : undefined}
       />
       <View style={styles.body}>
+        <ContentContainer>
         <View style={styles.limitRow} accessible accessibilityLabel={sessionLimit.remaining === Infinity ? 'Unlimited trainer sessions with Premium' : `${sessionLimit.remaining} free trainer sessions left today`}>
           <Chip
             label={sessionLimit.remaining === Infinity ? 'Unlimited sessions' : `${sessionLimit.remaining} free session${sessionLimit.remaining === 1 ? '' : 's'} left today`}
@@ -221,14 +225,16 @@ export default function SpotTrainerScreen() {
                 : `${spot.range.heroPosition} vs ${spot.range.villainPosition} open. Your move?`}
             </Text>
             <ActionTimeline steps={snapshot.timeline} />
-            <TableScene
-              players={trainerSeats}
-              width={TABLE_W}
-              height={TABLE_H}
-              potBb={snapshot.potBb}
-              heroCards={<HoleCards hand={spot.hand} size="sm" />}
-              style={styles.tableScene}
-            />
+            <View style={styles.tableSceneWrapper}>
+              <TableScene
+                players={trainerSeats}
+                width={TABLE_W}
+                height={TABLE_H}
+                potBb={snapshot.potBb}
+                heroCards={<HoleCards hand={spot.hand} size="sm" />}
+                style={styles.tableScene}
+              />
+            </View>
             <Text style={styles.seatLegend}>
               {snapshot.toCallBb > 0 ? `Facing ${toCallLabel}bb to call · ` : 'First to act · '}
               opponents' cards stay hidden
@@ -275,6 +281,7 @@ export default function SpotTrainerScreen() {
             onPress={next}
           />
         ) : null}
+        </ContentContainer>
       </View>
     </Screen>
   );
@@ -308,6 +315,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, paddingHorizontal: spacing.xl, justifyContent: 'center', gap: spacing.xl },
   spotCard: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl },
   tableWrap: { alignItems: 'center', gap: spacing.sm },
+  tableSceneWrapper: { alignSelf: 'center' },
   tableScene: { alignItems: 'center', justifyContent: 'center', paddingTop: spacing.lg, paddingBottom: spacing.xl + spacing.md },
   seatLegend: { ...typography.bodySmall, fontSize: 11, color: colors.textMuted, textAlign: 'center' },
   context: { ...typography.caps, color: colors.textMuted },
