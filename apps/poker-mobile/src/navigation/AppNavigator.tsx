@@ -161,9 +161,8 @@ const linking: LinkingOptions<RootStackParamList> = {
   },
 };
 
-const stackScreenOptions = {
+const stackScreenOptionsBase = {
   contentStyle: { backgroundColor: colors.background },
-  animation: 'slide_from_right' as const,
   headerStyle: { backgroundColor: colors.background },
   headerTintColor: colors.text,
   headerTitleStyle: { fontWeight: '700' as const },
@@ -458,6 +457,12 @@ type AppNavigatorProps = {
 export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
   const { user, isLoading } = useAuth();
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | undefined>(undefined);
+  const reducedMotion = useReducedMotion();
+  const stackScreenOptions = {
+    ...stackScreenOptionsBase,
+    animation: reducedMotion ? ('none' as const) : ('slide_from_right' as const),
+    animationDuration: reducedMotion ? 0 : 350,
+  };
 
   useEffect(() => {
     storage.getItemAsync('hasSeenOnboarding').then((val) => {
