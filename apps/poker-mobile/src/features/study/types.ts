@@ -7,6 +7,7 @@
  * and postflop content — without reshaping anything. Starter ranges are flagged
  * `isIllustrative` (training content) until verified solver data replaces them.
  */
+import type { DailyLimitCounters } from './logic/dailyLimits';
 
 export type StudyFormat = 'cash' | 'mtt';
 /** v1 scenarios; postflop / 3bet+ scenarios extend this union later. */
@@ -52,7 +53,7 @@ export interface RangeDataset {
   ranges: PreflopRange[];
 }
 
-export const STUDY_SCHEMA_VERSION = 1 as const;
+export const STUDY_SCHEMA_VERSION = 2 as const;
 
 /** Persisted study progress (engagement + habit formation). */
 export interface StudyProgress {
@@ -72,6 +73,13 @@ export interface StudyProgress {
   freezeTokens?: number;
   /** ISO week the tokens were last refilled (so weekly refill is idempotent). */
   freezeWeekKey?: string;
+  // Phase 1 — free training taste (additive; absent on v1 data, defaulted on load).
+  /** Date-stamped per-day counters for metered free interactive reps (quiz / trainer session). */
+  dailyLimitCounters?: DailyLimitCounters;
+  /** Lifetime free/premium quizzes completed (feeds XP). */
+  quizzesCompleted?: number;
+  /** Lifetime lessons completed/read (feeds XP). */
+  lessonsCompleted?: number;
 }
 
 export interface StudyFile {

@@ -119,3 +119,35 @@ describe('isoWeekKey', () => {
     expect(isoWeekKey('2026-06-15')).not.toBe(isoWeekKey('2026-06-22'));
   });
 });
+
+// ── Task 3 — Phase 1 additive fields ──
+import { recordQuizCompleted, recordLessonCompleted } from '../progress';
+
+describe('emptyProgress — Phase 1 additive fields', () => {
+  it('defaults daily-limit counters and completion counters', () => {
+    const p = emptyProgress();
+    expect(p.dailyLimitCounters).toEqual({ quiz: { dayKey: '', count: 0 }, trainerSession: { dayKey: '', count: 0 } });
+    expect(p.quizzesCompleted).toBe(0);
+    expect(p.lessonsCompleted).toBe(0);
+  });
+});
+
+describe('recordQuizCompleted', () => {
+  it('increments quizzesCompleted only (pure)', () => {
+    const p = emptyProgress();
+    const next = recordQuizCompleted(p);
+    expect(next.quizzesCompleted).toBe(1);
+    expect(p.quizzesCompleted).toBe(0); // input untouched
+    expect(next.lessonsCompleted).toBe(0);
+  });
+});
+
+describe('recordLessonCompleted', () => {
+  it('increments lessonsCompleted only (pure, idempotent input)', () => {
+    const p = emptyProgress();
+    const next = recordLessonCompleted(p);
+    expect(next.lessonsCompleted).toBe(1);
+    expect(p.lessonsCompleted).toBe(0);
+    expect(next.quizzesCompleted).toBe(0);
+  });
+});

@@ -4,6 +4,7 @@
  * accuracy.
  */
 import { STUDY_SCHEMA_VERSION, type StudyProgress } from '../types';
+import { emptyDailyCounters, type DailyLimitCounters } from './dailyLimits';
 
 export const DEFAULT_DAILY_GOAL = 10;
 export const MIN_DAILY_GOAL = 3;
@@ -20,6 +21,9 @@ export function emptyProgress(dailyGoal = DEFAULT_DAILY_GOAL): StudyProgress {
     longestStreak: 0,
     frozenDays: [],
     freezeTokens: 0,
+    dailyLimitCounters: emptyDailyCounters(),
+    quizzesCompleted: 0,
+    lessonsCompleted: 0,
   };
 }
 
@@ -172,4 +176,19 @@ export function studyStats(p: StudyProgress, todayKey: string): StudyStats {
     answeredToday,
     goalMetToday: answeredToday >= p.dailyGoal,
   };
+}
+
+/** Record one completed quiz (lifetime counter; feeds XP). Pure. */
+export function recordQuizCompleted(p: StudyProgress): StudyProgress {
+  return { ...p, quizzesCompleted: (p.quizzesCompleted ?? 0) + 1 };
+}
+
+/** Record one completed/read lesson (lifetime counter; feeds XP). Pure. */
+export function recordLessonCompleted(p: StudyProgress): StudyProgress {
+  return { ...p, lessonsCompleted: (p.lessonsCompleted ?? 0) + 1 };
+}
+
+/** Read the daily-limit counters, defaulting for v1 data. Pure. */
+export function dailyCountersOf(p: StudyProgress): DailyLimitCounters {
+  return p.dailyLimitCounters ?? emptyDailyCounters();
 }
