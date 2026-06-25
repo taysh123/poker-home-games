@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -18,6 +18,10 @@ import { useStudy } from '../state/StudyContext';
 import { studyStats } from '../logic/progress';
 import { isFeatureEnabled } from '../../../config/features';
 import TableBackdrop from '../../../components/table/TableBackdrop';
+import { useContent } from '../../../context/ContentContext';
+import { useEntitlements } from '../../../context/EntitlementsContext';
+import { buildPackCatalog, availabilityOf, type Pack } from '../../premium/logic/marketableLabel';
+import LockNudge from './LockNudge';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 const todayKey = () => new Date().toISOString().slice(0, 10);
@@ -29,6 +33,23 @@ export default function StudyScreen() {
   const goalPct = Math.min(1, progress.dailyGoal > 0 ? stats.answeredToday / progress.dailyGoal : 0);
   const retention = isFeatureEnabled('retention');
   const freezeTokens = progress.freezeTokens ?? 0;
+
+  const { isLoaded: contentLoaded, query } = useContent();
+  const { isPremium } = useEntitlements();
+  const [packs, setPacks] = useState<Pack[] | null>(null);
+
+  useEffect(() => {
+    if (!contentLoaded || !query) return;
+    let cancelled = false;
+    Promise.all([query.all('pack_manifests'), query.all('premium_content_catalog')])
+      .then(([m, c]) => { if (!cancelled) setPacks(buildPackCatalog(m, c)); })
+      .catch(() => { if (!cancelled) setPacks([]); });
+    return () => { cancelled = true; };
+  }, [contentLoaded, query]);
+
+  const lockedCount = (packs ?? []).filter(p => availabilityOf(p, isPremium) === 'locked').length;
+  const unlockedCount = (packs ?? []).filter(p => availabilityOf(p, isPremium) === 'available').length;
+  const showLibrary = isFeatureEnabled('content') && packs !== null && (lockedCount > 0 || unlockedCount > 0);
 
   return (
     <Screen animated>
@@ -113,6 +134,34 @@ export default function StudyScreen() {
           <Stat label="ANSWERED" value={String(progress.totalAnswered)} />
           <Stat label="SPOTS" value={String(dataset.ranges.length)} />
         </View>
+
+        {/* Library summary */}
+        {showLibrary && (
+          <View style={styles.section}>
+            <SectionTitle>LIBRARY</SectionTitle>
+            <Card>
+              <View style={styles.libRow}>
+                <Ionicons name="lock-open-outline" size={18} color={colors.success} />
+                <Text style={styles.libText}>{unlockedCount} pack{unlockedCount === 1 ? '' : 's'} unlocked</Text>
+              </View>
+              {lockedCount > 0 && (
+                <View style={styles.libRow}>
+                  <Ionicons name="lock-closed" size={18} color={colors.gold} />
+                  <Text style={styles.libText}>{lockedCount} premium pack{lockedCount === 1 ? '' : 's'} {isFeatureEnabled('paywall') ? 'locked' : 'coming soon'}</Text>
+                </View>
+              )}
+            </Card>
+            {lockedCount > 0 && (
+              <LockNudge
+                title={isFeatureEnabled('paywall') ? 'Unlock the full library' : 'More packs on the way'}
+                comingSoonBody="The 4 free packs are open now. Premium unlocks the full library — coming soon."
+                upgradeBody="Unlock every study pack, all quizzes, and unlimited Spot Trainer."
+                trigger="study_home_library"
+                icon="library-outline"
+              />
+            )}
+          </View>
+        )}
 
         {/* Train CTAs */}
         <View style={styles.section}>
@@ -228,4 +277,6 @@ const styles = StyleSheet.create({
   trainSub: { ...typography.bodySmall, color: colors.textMuted },
   noteRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start', paddingHorizontal: spacing.xs },
   note: { ...typography.bodySmall, color: colors.textMuted, flex: 1 },
+  libRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs },
+  libText: { ...typography.body, color: colors.textHigh },
 });
