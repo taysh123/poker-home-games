@@ -17,6 +17,8 @@ import { typography } from '../../../theme/typography';
 import { spacing } from '../../../theme/spacing';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
 import { useContent } from '../../../context/ContentContext';
+import { useStudy } from '../state/StudyContext';
+import { track } from '../../../utils/analytics';
 import { sortSections, type LessonSection } from '../logic/lessons';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -27,6 +29,7 @@ export default function LessonReaderScreen() {
   const route = useRoute<Rt>();
   const { moduleId, moduleName } = route.params;
   const { enabled, isLoaded, query } = useContent();
+  const { recordLessonCompleted } = useStudy();
   const [sections, setSections] = useState<LessonSection[] | null>(null);
   const [error, setError] = useState(false);
 
@@ -38,7 +41,15 @@ export default function LessonReaderScreen() {
     setError(false);
     setSections(null);
     query.find('lesson_content', { ModuleID: moduleId })
-      .then(rows => { if (!cancelled) setSections(sortSections(rows)); })
+      .then(rows => {
+        if (cancelled) return;
+        const secs = sortSections(rows);
+        setSections(secs);
+        if (secs.length > 0) {
+          track('study_lesson_completed', { module_id: moduleId });
+          void recordLessonCompleted();
+        }
+      })
       .catch(() => { if (!cancelled) setError(true); });
     return () => { cancelled = true; };
   }, [isLoaded, query, moduleId, reloadKey]);
