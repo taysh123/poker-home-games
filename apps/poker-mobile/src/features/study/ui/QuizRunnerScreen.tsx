@@ -28,6 +28,10 @@ import { useContent } from '../../../context/ContentContext';
 import { useReducedMotion } from '../../../hooks/useReducedMotion';
 import { useMastery } from '../../mastery/state/MasteryContext';
 import type { ObjectiveMastery } from '../../mastery/types';
+import { useEntitlements } from '../../../context/EntitlementsContext';
+import { useStudy } from '../state/StudyContext';
+import { track } from '../../../utils/analytics';
+import LockNudge from './LockNudge';
 import {
   normalizeQuestions,
   selectQuestions,
@@ -63,6 +67,9 @@ export default function QuizRunnerScreen() {
   const route = useRoute<R>();
   const { enabled, isLoaded, query } = useContent();
   const mastery = useMastery();
+  const { isPremium } = useEntitlements();
+  const { limitFor, consumeLimit, recordQuizCompleted } = useStudy();
+  const quizLimit = limitFor('quiz');
 
   const [all, setAll] = useState<QuizQuestion[] | null>(null);
   const [error, setError] = useState(false);
@@ -96,7 +103,7 @@ export default function QuizRunnerScreen() {
   const loading = enabled && !error && (!isLoaded || all === null);
 
   const startRun = (cat: string | null) => {
-    const pool = selectQuestions(all ?? [], { category: cat ?? undefined, limit: RUN_LIMIT });
+    const pool = selectQuestions(all ?? [], { category: cat ?? undefined, freeOnly: !isPremium, limit: RUN_LIMIT });
     if (pool.length === 0) return;
     setCategory(cat);
     setRun(pool);
@@ -114,8 +121,16 @@ export default function QuizRunnerScreen() {
     mastery.record(objectiveKeyOf(run[idx]), correct); // no-op when the mastery flag is OFF
   };
 
+  const finishQuiz = () => {
+    setPhase('results');
+    const score = scoreQuiz(outcomes);
+    track('study_quiz_completed', { category: category ?? 'all', total: score.total, pct: score.pct });
+    void consumeLimit('quiz');
+    void recordQuizCompleted();
+  };
+
   const next = () => {
-    if (idx + 1 >= run.length) { setPhase('results'); return; }
+    if (idx + 1 >= run.length) { finishQuiz(); return; }
     setIdx(idx + 1);
     setChosen(null);
   };
@@ -137,6 +152,7 @@ export default function QuizRunnerScreen() {
             <PickView
               total={all?.length ?? 0}
               categories={categories}
+              limit={quizLimit}
               onStartAll={() => startRun(null)}
               onStartCategory={(c) => startRun(c)}
             />
@@ -172,21 +188,39 @@ function subtitleFor(phase: Phase, category: string | null): string {
   return category ?? 'All categories';
 }
 
-function PickView({ total, categories, onStartAll, onStartCategory }: {
-  total: number; categories: string[]; onStartAll: () => void; onStartCategory: (c: string) => void;
+function PickView({ total, categories, limit, onStartAll, onStartCategory }: {
+  total: number; categories: string[]; limit: { allowed: boolean; remaining: number };
+  onStartAll: () => void; onStartCategory: (c: string) => void;
 }) {
+  const blocked = !limit.allowed;
+  const remainingLabel = limit.remaining === Infinity ? 'Unlimited quizzes' : `${limit.remaining} free quiz${limit.remaining === 1 ? '' : 'zes'} left today`;
   return (
     <>
       <Card variant="hero">
         <Text style={styles.heroLabel}>QUESTION BANK</Text>
         <Text style={styles.heroNum}>{total}</Text>
         <Text style={styles.heroSub}>Up to {RUN_LIMIT} questions per run · educational, not solver output</Text>
-        <View style={{ marginTop: spacing.lg }}>
-          <PrimaryButton label="Start quiz" variant="gradient" onPress={onStartAll} />
+        <View style={styles.limitChipRow}>
+          <Chip label={remainingLabel} tone={limit.remaining === Infinity ? 'gold' : 'neutral'} icon="time-outline" />
         </View>
+        {!blocked && (
+          <View style={{ marginTop: spacing.lg }}>
+            <PrimaryButton label="Start quiz" variant="gradient" onPress={onStartAll} />
+          </View>
+        )}
       </Card>
 
-      {categories.length > 0 && (
+      {blocked && (
+        <LockNudge
+          title="Daily free limit reached"
+          comingSoonBody="Daily free limit reached — resets tomorrow. Premium (unlimited) coming soon."
+          upgradeBody="You've used today's free quiz. Go unlimited with Premium."
+          trigger="quiz_daily_limit"
+          icon="time-outline"
+        />
+      )}
+
+      {!blocked && categories.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>BY CATEGORY</Text>
           {categories.map(c => (
@@ -398,4 +432,5 @@ const styles = StyleSheet.create({
   breakdownRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.xs },
   breakdownCat: { ...typography.body, color: colors.textHigh, flex: 1 },
   breakdownVal: { ...typography.label, color: colors.gold },
+  limitChipRow: { marginTop: spacing.sm, flexDirection: 'row' },
 });
