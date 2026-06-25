@@ -5,13 +5,14 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
+import { spacing } from '../theme/spacing';
 import { typography } from '../theme/typography';
 import { Sora } from '../theme/fonts';
 import { shadows } from '../theme/shadows';
@@ -25,6 +26,8 @@ import ShareCard, { canShareImages, shareCardImage, ShareCardData } from '../com
 import CrossPillarCTA from '../components/CrossPillarCTA';
 import TableScene from '../components/table/TableScene';
 import type { SeatProps } from '../components/table/TableSeat';
+import ContentContainer from '../components/ContentContainer';
+import { tableDimensions } from '../utils/tableLayout';
 import { isFeatureEnabled } from '../config/features';
 import { formatDate } from '../utils/formatters';
 import { formatCents, formatCentsSigned } from '../utils/money';
@@ -37,13 +40,12 @@ import Celebration from '../components/motion/Celebration';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocalSessionSummary'>;
 
-const TABLE_W = Dimensions.get('window').width - 40;
-const TABLE_H = Math.round(TABLE_W * 0.62);
-
 /** Results + cash settlements for a finished local game. */
 export default function LocalSessionSummaryScreen({ route, navigation }: Props) {
   const { gameId } = route.params;
   const insets = useSafeAreaInsets();
+  const { width: winW } = useWindowDimensions();
+  const { width: TABLE_W, height: TABLE_H } = tableDimensions(winW - spacing.xl * 2);
   const { games, deleteGame } = useLocalGames();
   const { user } = useAuth();
 
@@ -184,14 +186,17 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+        <ContentContainer>
         {isFeatureEnabled('immersive') && tableSeats.length > 0 && (
-          <TableScene
-            players={tableSeats}
-            width={TABLE_W}
-            height={TABLE_H}
-            potCents={totalPotCents}
-            style={styles.tableScene}
-          />
+          <View style={styles.tableSceneWrapper}>
+            <TableScene
+              players={tableSeats}
+              width={TABLE_W}
+              height={TABLE_H}
+              potCents={totalPotCents}
+              style={styles.tableScene}
+            />
+          </View>
         )}
         {/* Game over hero (celebration) */}
         <View style={styles.heroCard}>
@@ -344,6 +349,7 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
         )}
         <PrimaryButton label="Done" onPress={() => navigation.popToTop()} />
         <View style={{ height: 40 }} />
+        </ContentContainer>
       </ScrollView>
       {justEnded && <Celebration />}
       <ShareCard ref={shareRef} data={shareData} />
@@ -379,7 +385,8 @@ const styles = StyleSheet.create({
 
   scroll: { flex: 1 },
   content: { padding: 20, gap: 10 },
-  tableScene: { alignSelf: 'center', marginBottom: 16 },
+  tableSceneWrapper: { alignSelf: 'center', marginBottom: 16 },
+  tableScene: { alignSelf: 'center' },
 
   heroCard: {
     alignItems: 'center',
