@@ -13,17 +13,26 @@ export function emptyFile(): StudyFile {
   return { schemaVersion: STUDY_SCHEMA_VERSION, progress: emptyProgress() };
 }
 
+const SUPPORTED_VERSIONS = new Set([1, 2]);
+
 function isValidFile(value: unknown): value is StudyFile {
   if (typeof value !== 'object' || value === null) return false;
   const f = value as { schemaVersion?: unknown; progress?: unknown };
-  return f.schemaVersion === 1 && typeof f.progress === 'object' && f.progress !== null;
+  return (
+    typeof f.schemaVersion === 'number' &&
+    SUPPORTED_VERSIONS.has(f.schemaVersion) &&
+    typeof f.progress === 'object' &&
+    f.progress !== null
+  );
 }
 
 function migrateToCurrent(parsed: StudyFile): StudyFile {
-  // Identity at v1; future versions chain here. Merge against defaults defensively.
+  // v1 → v2 is purely additive: merging over emptyProgress() fills the new Phase 1 fields
+  // (dailyLimitCounters, quizzesCompleted, lessonsCompleted) while preserving existing progress.
+  // Always stamp the CURRENT schema version on both the file and the progress.
   return {
     schemaVersion: STUDY_SCHEMA_VERSION,
-    progress: { ...emptyProgress(), ...parsed.progress },
+    progress: { ...emptyProgress(), ...parsed.progress, schemaVersion: STUDY_SCHEMA_VERSION },
   };
 }
 
