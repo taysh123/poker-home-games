@@ -27,21 +27,21 @@ export type FeatureFlag =
   | 'publicSpots' // Future — shared/public spot library (design-only; prod OFF everywhere)
   | 'v2Splash'; // dual-brand (True Story Labs → T Poker) launch splash
 
-/** Production defaults — nav5 + onboardingV2 ON (Subsystem 1 launch); every other surface OFF. */
-const PROD_FLAGS: Record<FeatureFlag, boolean> = {
+/** Production defaults — nav5 + onboardingV2 ON (Subsystem 1 launch); study/content/retention ON (Phase 1 free-training-taste). */
+export const PROD_FLAGS: Record<FeatureFlag, boolean> = {
   bankroll: false,
-  study: false,
+  study: true,
   coach: false,
   paywall: false,
   nav5: true,
   onboardingV2: true,
-  retention: false,
+  retention: true,
   reminders: false,
   currencyPrefs: false,
   polish: false,
   coachScreenshot: false,
   immersive: false,
-  content: false,
+  content: true,
   mastery: false,
   solver: false,
   publicSpots: false,
