@@ -38,3 +38,11 @@ flag-OFF functional check (no feature leak). Prod-visible component changes get 
 - **Mastery feedback:** the mastery engine (PR #7) is built but unwired — no persisted attempt aggregates and
   the bundled quiz sample carries no objective linkage. Real mastery/progress UI needs an attempt-persistence +
   objective-linkage data pipeline. Not faked; Phase 5 ships an honest this-run breakdown only.
+
+## Launch build (`feature/launch-phase-1-2`) — Phase 1
+- 2026-06-25 — **funnel-finish (Subsystem 1):** web-export gate GREEN after the a11y/de-emoji screen changes
+  (`npx expo export -p web` → `Exported: dist`); per-task unit gates green (`tsc` clean; `jest` 430 / 52 suites).
+  The automated funnel Playwright E2E harness is staged at `%TEMP%\tpoker-verify\` but was **NOT confirmed
+  green this run** (the runner subagent was interrupted by an API/socket error before it completed). The guest
+  funnel (onboarding-V2 → cash → tournament → invite deep-link → recap + G2 sign-up card) is therefore to be
+  **verified manually on web at the Phase-1 gate** (founder check) before Phase 2.
