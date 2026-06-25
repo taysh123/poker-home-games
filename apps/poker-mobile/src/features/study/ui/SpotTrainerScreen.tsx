@@ -198,7 +198,7 @@ export default function SpotTrainerScreen() {
         ) : undefined}
       />
       <View style={styles.body}>
-        <View style={styles.limitRow}>
+        <View style={styles.limitRow} accessible accessibilityLabel={sessionLimit.remaining === Infinity ? 'Unlimited trainer sessions with Premium' : `${sessionLimit.remaining} free trainer sessions left today`}>
           <Chip
             label={sessionLimit.remaining === Infinity ? 'Unlimited sessions' : `${sessionLimit.remaining} free session${sessionLimit.remaining === 1 ? '' : 's'} left today`}
             tone={sessionLimit.remaining === Infinity ? 'gold' : 'neutral'}

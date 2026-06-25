@@ -200,7 +200,7 @@ function PickView({ total, categories, limit, onStartAll, onStartCategory }: {
         <Text style={styles.heroLabel}>QUESTION BANK</Text>
         <Text style={styles.heroNum}>{total}</Text>
         <Text style={styles.heroSub}>Up to {RUN_LIMIT} questions per run · educational, not solver output</Text>
-        <View style={styles.limitChipRow}>
+        <View style={styles.limitChipRow} accessible accessibilityLabel={limit.remaining === Infinity ? 'Unlimited quizzes with Premium' : `${remainingLabel}`}>
           <Chip label={remainingLabel} tone={limit.remaining === Infinity ? 'gold' : 'neutral'} icon="time-outline" />
         </View>
         {!blocked && (
