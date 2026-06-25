@@ -4,6 +4,7 @@ import type { EngagementSignals } from '../../types';
 const base: EngagementSignals = {
   spotsAnswered: 0, studyStreak: 0, bankrollSessions: 0,
   bankrollPositiveMonth: false, coachAnalyses: 0, localGamesFinished: 0,
+  quizzesCompleted: 0, lessonsCompleted: 0,
 };
 
 describe('computeXp', () => {
@@ -41,5 +42,19 @@ describe('rankForXp', () => {
   it('progress is 0..1 within a band', () => {
     const r = rankForXp(500); // between Reg(250) and Grinder(750)
     expect(r.progressPct).toBeCloseTo((500 - 250) / (750 - 250), 5);
+  });
+});
+
+describe('computeXp — quiz/lesson completion signals', () => {
+  it('weights quizzesCompleted and lessonsCompleted', () => {
+    const s: EngagementSignals = { ...base, quizzesCompleted: 2, lessonsCompleted: 3 };
+    const expected = 2 * XP_WEIGHTS.quizCompleted + 3 * XP_WEIGHTS.lessonCompleted;
+    expect(computeXp(s, 0)).toBe(expected);
+  });
+
+  it('adds completion XP on top of spot XP', () => {
+    const s: EngagementSignals = { ...base, spotsAnswered: 5, quizzesCompleted: 1, lessonsCompleted: 1 };
+    const expected = 5 * XP_WEIGHTS.spot + 1 * XP_WEIGHTS.quizCompleted + 1 * XP_WEIGHTS.lessonCompleted;
+    expect(computeXp(s, 0)).toBe(expected);
   });
 });

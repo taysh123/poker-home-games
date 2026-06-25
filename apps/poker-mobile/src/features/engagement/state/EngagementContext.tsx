@@ -61,6 +61,8 @@ export function EngagementProvider({ children }: { children: React.ReactNode }) 
   // ── Derive signals from the local pillars ──
   const spotsAnswered = progress.totalAnswered;
   const studyStreak = progress.currentStreak;
+  const quizzesCompleted = progress.quizzesCompleted ?? 0;
+  const lessonsCompleted = progress.lessonsCompleted ?? 0;
   const bankrollSessions = sessions.length;
   const coachAnalyses = history.length;
   const localGamesFinished = useMemo(() => games.filter(g => g.status === 'Finished').length, [games]);
@@ -72,7 +74,8 @@ export function EngagementProvider({ children }: { children: React.ReactNode }) 
 
   const signals: EngagementSignals = useMemo(() => ({
     spotsAnswered, studyStreak, bankrollSessions, bankrollPositiveMonth, coachAnalyses, localGamesFinished,
-  }), [spotsAnswered, studyStreak, bankrollSessions, bankrollPositiveMonth, coachAnalyses, localGamesFinished]);
+    quizzesCompleted, lessonsCompleted,
+  }), [spotsAnswered, studyStreak, bankrollSessions, bankrollPositiveMonth, coachAnalyses, localGamesFinished, quizzesCompleted, lessonsCompleted]);
 
   const eligibleCount = useMemo(() => eligibleKeys(signals).length, [signals]);
   const xpTotal = useMemo(() => computeXp(signals, eligibleCount), [signals, eligibleCount]);
@@ -145,6 +148,7 @@ export function useEngagement(): EngagementContextType {
       rank: rankForXp(0), signals: {
         spotsAnswered: 0, studyStreak: 0, bankrollSessions: 0,
         bankrollPositiveMonth: false, coachAnalyses: 0, localGamesFinished: 0,
+        quizzesCompleted: 0, lessonsCompleted: 0,
       },
       localAchievements: [],
     };

@@ -12,6 +12,8 @@ export interface EngagementSignals {
   bankrollPositiveMonth: boolean;
   coachAnalyses: number;
   localGamesFinished: number;
+  quizzesCompleted: number;
+  lessonsCompleted: number;
 }
 
 export const ENGAGEMENT_SCHEMA_VERSION = 1 as const;

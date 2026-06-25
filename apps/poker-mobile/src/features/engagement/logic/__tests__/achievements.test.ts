@@ -4,6 +4,7 @@ import type { EngagementSignals } from '../../types';
 const base: EngagementSignals = {
   spotsAnswered: 0, studyStreak: 0, bankrollSessions: 0,
   bankrollPositiveMonth: false, coachAnalyses: 0, localGamesFinished: 0,
+  quizzesCompleted: 0, lessonsCompleted: 0,
 };
 
 describe('achievement eligibility', () => {

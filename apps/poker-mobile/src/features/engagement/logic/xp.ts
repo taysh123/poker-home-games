@@ -8,6 +8,8 @@ export const XP_WEIGHTS = {
   coachAnalysis: 20,
   streakDay: 5,
   achievement: 25,
+  quizCompleted: 8,
+  lessonCompleted: 6,
 } as const;
 
 export function computeXp(s: EngagementSignals, achievementsUnlocked: number): number {
@@ -17,6 +19,8 @@ export function computeXp(s: EngagementSignals, achievementsUnlocked: number): n
     s.localGamesFinished * XP_WEIGHTS.localGame +
     s.coachAnalyses * XP_WEIGHTS.coachAnalysis +
     s.studyStreak * XP_WEIGHTS.streakDay +
+    s.quizzesCompleted * XP_WEIGHTS.quizCompleted +
+    s.lessonsCompleted * XP_WEIGHTS.lessonCompleted +
     Math.max(0, achievementsUnlocked) * XP_WEIGHTS.achievement
   );
 }
