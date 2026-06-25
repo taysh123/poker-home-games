@@ -6,7 +6,11 @@ import {
   refreshFreezeTokens,
   autoFreezeMissedDay,
   computeStreaksWithFreeze,
+  recordQuizCompleted as applyQuizDone,
+  recordLessonCompleted as applyLessonDone,
+  dailyCountersOf,
 } from '../logic/progress';
+import { limitStatus, consumeToday, type DailyLimitKind, type LimitStatus } from '../logic/dailyLimits';
 import { STARTER_DATASET } from '../data/starterRanges';
 import { isFeatureEnabled } from '../../../config/features';
 import { useEntitlements } from '../../../context/EntitlementsContext';
@@ -28,6 +32,14 @@ type StudyContextType = {
   recordAnswer: (correct: boolean) => Promise<void>;
   /** Customize the daily goal (clamped 3–25). */
   setDailyGoal: (goal: number) => Promise<void>;
+  /** Whether one more metered free rep is allowed today + how many remain (premium ⇒ Infinity). */
+  limitFor: (kind: DailyLimitKind) => LimitStatus;
+  /** Record one metered rep for today (date-stamped; resets on a new local day). */
+  consumeLimit: (kind: DailyLimitKind) => Promise<void>;
+  /** Record one completed quiz (feeds XP). */
+  recordQuizCompleted: () => Promise<void>;
+  /** Record one completed/read lesson (feeds XP). */
+  recordLessonCompleted: () => Promise<void>;
 };
 
 const StudyContext = createContext<StudyContextType>({
@@ -36,6 +48,10 @@ const StudyContext = createContext<StudyContextType>({
   isLoaded: false,
   recordAnswer: async () => {},
   setDailyGoal: async () => {},
+  limitFor: () => ({ allowed: true, remaining: Infinity }),
+  consumeLimit: async () => {},
+  recordQuizCompleted: async () => {},
+  recordLessonCompleted: async () => {},
 });
 
 const todayKey = () => new Date().toISOString().slice(0, 10);
@@ -83,8 +99,27 @@ export function StudyProvider({ children }: { children: React.ReactNode }) {
     await commit({ ...file, progress: applyGoal(file.progress, goal) });
   }, [file, commit]);
 
+  const limitFor = useCallback(
+    (kind: DailyLimitKind): LimitStatus =>
+      limitStatus(dailyCountersOf(file.progress), kind, todayKey(), isPremium),
+    [file.progress, isPremium],
+  );
+
+  const consumeLimit = useCallback(async (kind: DailyLimitKind) => {
+    const counters = consumeToday(dailyCountersOf(file.progress), kind, todayKey());
+    await commit({ ...file, progress: { ...file.progress, dailyLimitCounters: counters } });
+  }, [file, commit]);
+
+  const recordQuizCompleted = useCallback(async () => {
+    await commit({ ...file, progress: applyQuizDone(file.progress) });
+  }, [file, commit]);
+
+  const recordLessonCompleted = useCallback(async () => {
+    await commit({ ...file, progress: applyLessonDone(file.progress) });
+  }, [file, commit]);
+
   return (
-    <StudyContext.Provider value={{ progress: file.progress, dataset: STARTER_DATASET, isLoaded, recordAnswer, setDailyGoal }}>
+    <StudyContext.Provider value={{ progress: file.progress, dataset: STARTER_DATASET, isLoaded, recordAnswer, setDailyGoal, limitFor, consumeLimit, recordQuizCompleted, recordLessonCompleted }}>
       {children}
     </StudyContext.Provider>
   );
