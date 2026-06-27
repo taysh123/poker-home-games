@@ -12,6 +12,10 @@ describe('PROD_FLAGS — Phase 1 launch state', () => {
     expect(PROD_FLAGS.retention).toBe(true);
   });
 
+  it('turns the immersive felt surfaces ON (launch decision — live cash table + both summaries)', () => {
+    expect(PROD_FLAGS.immersive).toBe(true);
+  });
+
   it('keeps paid/unsafe surfaces OFF (paywall is Subsystem 3)', () => {
     expect(PROD_FLAGS.paywall).toBe(false);
     expect(PROD_FLAGS.coach).toBe(false);

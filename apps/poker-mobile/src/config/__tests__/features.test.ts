@@ -1,8 +1,8 @@
 /**
  * Production feature-flag resolution guard. In a real production build __DEV__ is false and
  * EXPO_PUBLIC_APP_VARIANT is unset, so resolved === PROD_FLAGS. nav5 + onboardingV2 must be ON
- * (Subsystem 1 launch); study + content + retention ON (Phase 1 free-training-taste);
- * paywall/coach/solver/mastery and all others must stay OFF.
+ * (Subsystem 1 launch); study + content + retention ON (Phase 1 free-training-taste); immersive ON
+ * (felt surfaces — launch decision); paywall/coach/solver/mastery and all others must stay OFF.
  */
 describe('feature flags — production resolution', () => {
   const ORIGINAL_DEV = (global as any).__DEV__;
@@ -40,7 +40,7 @@ describe('feature flags — production resolution', () => {
 
   it('every other flag stays OFF in production (paywall/coach/solver/mastery stay OFF)', () => {
     const { featureFlags } = loadFlags();
-    const expectedOn = new Set(['nav5', 'onboardingV2', 'study', 'content', 'retention']);
+    const expectedOn = new Set(['nav5', 'onboardingV2', 'study', 'content', 'retention', 'immersive']);
     for (const [flag, value] of Object.entries(featureFlags)) {
       expect(value).toBe(expectedOn.has(flag));
     }
