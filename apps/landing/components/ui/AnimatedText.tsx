@@ -1,61 +1,33 @@
-'use client';
-
 import { Fragment } from 'react';
-import { motion, useReducedMotion, type Variants } from 'framer-motion';
-
-const container: Variants = {
-  hidden: {},
-  visible: (delay = 0) => ({
-    transition: { staggerChildren: 0.06, delayChildren: delay },
-  }),
-};
-
-const word: Variants = {
-  hidden: { opacity: 0, y: '0.3em' },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: 'easeOut' },
-  },
-};
 
 type AnimatedTextProps = {
   text: string;
   className?: string;
-  /** Seconds to wait before the first word reveals. */
+  /** Seconds before the first word starts rising (the stagger compounds from here). */
   delay?: number;
 };
 
 /**
- * Staggered word-by-word reveal (Framer). Honors prefers-reduced-motion by
- * rendering the final text instantly. Renders an inline <span>, so callers wrap
- * it in the semantic element (e.g. <h1>) they need.
+ * Word-by-word rise on first paint. PURE CSS (see `.anim-word` + `wordRise` in globals.css) — no JS,
+ * no hydration gate — so the text is rendered into the static HTML and PAINTED immediately, which is
+ * what keeps it LCP- and SEO-safe (and visible with JS disabled). It is transform-only (opacity stays
+ * 1), so a word is never invisible, and it honors `prefers-reduced-motion` (animation removed).
+ *
+ * Renders an inline <span>; callers wrap it in the semantic element they need (e.g. <h1>).
  */
 export function AnimatedText({ text, className, delay = 0 }: AnimatedTextProps) {
-  const reduce = useReducedMotion();
-
-  if (reduce) {
-    return <span className={className}>{text}</span>;
-  }
-
   const words = text.split(' ');
 
   return (
-    <motion.span
-      className={className}
-      initial="hidden"
-      animate="visible"
-      variants={container}
-      custom={delay}
-    >
+    <span className={className}>
       {words.map((w, i) => (
         <Fragment key={`${w}-${i}`}>
-          <motion.span className="inline-block" variants={word}>
+          <span className="anim-word" style={{ animationDelay: `${(delay + i * 0.06).toFixed(2)}s` }}>
             {w}
-          </motion.span>
+          </span>
           {i < words.length - 1 ? ' ' : ''}
         </Fragment>
       ))}
-    </motion.span>
+    </span>
   );
 }

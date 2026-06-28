@@ -83,3 +83,26 @@
     }
   }
 }
+
+/*
+ * Heading word-reveal (AnimatedText). TRANSFORM-ONLY (opacity stays 1) so the headline text is
+ * PAINTED at first paint — LCP-optimal — and lives in the static HTML (SEO + no-JS safe). Pure CSS:
+ * no JS / no hydration gate. Per-word stagger is set inline via `animation-delay`. The `both`
+ * fill-mode holds the (visible, slightly-lower) start state during the delay, so no word is ever hidden.
+ */
+@keyframes wordRise {
+  from { transform: translateY(0.3em); }
+  to   { transform: translateY(0); }
+}
+
+.anim-word {
+  display: inline-block;
+  animation: wordRise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-word {
+    animation: none;
+    transform: none;
+  }
+}

@@ -2,7 +2,6 @@ import { ArrowRight } from 'lucide-react';
 import { Container } from '@/components/ui/Container';
 import { Button } from '@/components/ui/Button';
 import { AnimatedText } from '@/components/ui/AnimatedText';
-import { Reveal } from '@/components/ui/Reveal';
 import { TiltCard } from '@/components/ui/TiltCard';
 import { StoreBadges } from '@/components/ui/StoreBadges';
 import { HERO } from '@/lib/content';
@@ -124,12 +123,14 @@ export function Hero() {
             </div>
           </div>
 
-          {/* Visual column */}
-          <Reveal y={32} delay={0.1} className="lg:pl-6">
-            <TiltCard className="mx-auto max-w-md lg:max-w-none">
+          {/* Visual column — PAINTED on first paint (no opacity gate above the fold). Stacks BELOW the copy
+              on mobile (CTA stays high) and is de-emphasized (smaller) on phones so the headline + CTA own the
+              first screen; full size from lg up. */}
+          <div className="order-last lg:pl-6">
+            <TiltCard className="mx-auto max-w-[17rem] sm:max-w-sm lg:max-w-none">
               <AppWindowMock />
             </TiltCard>
-          </Reveal>
+          </div>
         </div>
       </Container>
     </section>
