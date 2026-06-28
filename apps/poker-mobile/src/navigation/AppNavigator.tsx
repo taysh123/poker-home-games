@@ -19,6 +19,9 @@ import { useAuth } from '../context/AuthContext';
 import { useActiveSession } from '../context/ActiveSessionContext';
 import { useLocalGames } from '../context/LocalGamesContext';
 import { consumePendingInvite } from '../utils/pendingInvite';
+import { consumePendingCheckout } from '../utils/pendingCheckout';
+import LandingScreen from '../screens/LandingScreen';
+import { resolveWebLanding } from '../features/landing/landingRouting';
 import { usePushNotificationListeners } from '../hooks/usePushNotifications';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import LoginScreen from '../screens/LoginScreen';
@@ -78,6 +81,7 @@ import CurrencyPickerScreen from '../screens/CurrencyPickerScreen';
 type TrackSegment = 'bankroll' | 'sessions' | 'stats';
 
 export type RootStackParamList = {
+  Landing: undefined;
   Onboarding: undefined;
   Login: undefined;
   Register: undefined;
@@ -153,6 +157,9 @@ const linking: LinkingOptions<RootStackParamList> = {
   prefixes: ['https://poker-home-games-three.vercel.app', 'tpoker://'],
   config: {
     screens: {
+      // Site root → Landing for logged-out web visitors. The /join/* paths below are
+      // more specific and always win for deep links, so they bypass Landing correctly.
+      Landing: '',
       JoinGroup: 'join/group/:inviteToken',
       JoinSession: 'join/session/:inviteToken',
       // Web-first flagship deep link (resolves only when the `solver` flag registers the screen).
@@ -494,7 +501,32 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
       // Give the authed tree a beat to mount after the swap.
       setTimeout(navigate, 300);
     });
+
+    // Resume a pending checkout intent (from LandingScreen pricing CTA → Register flow).
+    // Route to Paywall so the freshly-authed user can complete their purchase there.
+    consumePendingCheckout().then(plan => {
+      if (!plan) return;
+      const go = () => {
+        const nav = navigationRef?.current;
+        if (nav?.isReady()) {
+          nav.navigate('Paywall', { trigger: `landing_${plan}` });
+        } else {
+          setTimeout(go, 150);
+        }
+      };
+      setTimeout(go, 300);
+    });
   }, [user, navigationRef]);
+
+  // Decide whether to show the web landing page (logged-out web visitors at root only).
+  const showLanding = resolveWebLanding({
+    platform: Platform.OS as 'web' | 'ios' | 'android',
+    isAuthed: user !== null,
+    path:
+      Platform.OS === 'web' && typeof window !== 'undefined'
+        ? window.location.pathname
+        : '/',
+  });
 
   if (isLoading || hasSeenOnboarding === undefined) {
     return (
@@ -514,6 +546,13 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
           // Guest tree — the app is fully usable without an account: local games
           // run on-device; Groups/Stats upsell sign-in; Login is a modal, not a wall.
           <>
+            {showLanding && (
+              <Stack.Screen
+                name="Landing"
+                component={LandingScreen}
+                options={{ headerShown: false }}
+              />
+            )}
             {!hasSeenOnboarding && (
               <Stack.Screen
                 name="Onboarding"
