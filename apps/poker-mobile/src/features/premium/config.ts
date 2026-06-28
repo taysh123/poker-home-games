@@ -60,6 +60,10 @@ export const PRICING: { monthly: PremiumPlan; yearly: PremiumPlan } = {
 export const BILLING_KEYS = {
   revenueCatApiKey: process.env.EXPO_PUBLIC_REVENUECAT_API_KEY || '',
   stripePublishableKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '',
+  /** Paddle.js client-side token (test_… in sandbox, live_… in production). Safe to expose in the bundle. */
+  paddleClientToken: process.env.EXPO_PUBLIC_PADDLE_CLIENT_TOKEN || '',
+  /** 'sandbox' (default) → Paddle.Environment.set('sandbox') before Initialize; omit the call for production. */
+  paddleEnvironment: process.env.EXPO_PUBLIC_PADDLE_ENVIRONMENT || 'sandbox',
 };
 
 export type PremiumFeatureKey =
