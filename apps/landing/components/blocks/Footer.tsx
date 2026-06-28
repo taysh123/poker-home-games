@@ -2,39 +2,112 @@ import { Container } from '@/components/ui/Container';
 import { SITE } from '@/lib/site';
 
 const linkClass =
-  'text-textMuted transition-colors hover:text-textHigh focus-visible:outline-none ' +
-  'focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded';
+  'text-sm text-textMuted transition-colors hover:text-textHigh ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold ' +
+  'focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm';
 
+/**
+ * Full site footer — brand column + product/legal columns + copyright.
+ * All links use design-token colours and visible focus rings (AA-compliant).
+ */
 export function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="mt-10 border-t border-border/60">
-      <Container className="py-12">
-        <div className="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
-          <div>
+    <footer className="border-t border-border/50">
+      <Container className="py-14 sm:py-16">
+        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4">
+
+          {/* Brand */}
+          <div className="sm:col-span-2 lg:col-span-2">
             <div className="font-display text-2xl text-text">
               T<span className="text-gold">.</span>Poker
             </div>
-            <p className="mt-2 max-w-xs text-sm text-textMuted">
+            <p className="mt-2 max-w-xs text-sm leading-relaxed text-textMuted">
               The home-game manager with a coach built in.
             </p>
+            <a
+              href={SITE.appUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-gold transition-colors hover:text-goldLight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm"
+            >
+              Start for free →
+            </a>
           </div>
 
-          <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-3 text-sm">
-            <a href={SITE.privacyUrl} target="_blank" rel="noopener noreferrer" className={linkClass}>
-              Privacy
-            </a>
-            <a href={SITE.termsUrl} target="_blank" rel="noopener noreferrer" className={linkClass}>
-              Terms
-            </a>
-            <a href={`mailto:${SITE.contact}`} className={linkClass}>
-              {SITE.contact}
-            </a>
-          </nav>
+          {/* Product column */}
+          <div>
+            <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-textMuted">
+              Product
+            </p>
+            <nav aria-label="Product links" className="flex flex-col gap-3">
+              <a
+                href={SITE.appUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={linkClass}
+              >
+                Cash Games
+              </a>
+              <a
+                href={SITE.appUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={linkClass}
+              >
+                Tournaments
+              </a>
+              <a
+                href={SITE.appUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={linkClass}
+              >
+                Strategy Study
+              </a>
+              <a
+                href={SITE.appUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={linkClass}
+              >
+                Group Stats
+              </a>
+            </nav>
+          </div>
+
+          {/* Legal / contact column */}
+          <div>
+            <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-textMuted">
+              Company
+            </p>
+            <nav aria-label="Legal and contact links" className="flex flex-col gap-3">
+              <a
+                href={SITE.privacyUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={linkClass}
+              >
+                Privacy Policy
+              </a>
+              <a
+                href={SITE.termsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={linkClass}
+              >
+                Terms of Service
+              </a>
+              <a href={`mailto:${SITE.contact}`} className={linkClass}>
+                {SITE.contact}
+              </a>
+            </nav>
+          </div>
         </div>
 
-        <div className="mt-10 border-t border-border/40 pt-6 text-xs text-textMuted">
+        {/* Copyright bar */}
+        <div className="mt-12 border-t border-border/40 pt-6 text-xs text-textMuted">
           © {year} {SITE.company}. All rights reserved.
         </div>
       </Container>
