@@ -86,14 +86,22 @@ export async function analyzeHand(req: AnalyzeRequest, token: string): Promise<S
   }
 }
 
-/** Response of `POST /api/billing/checkout` (web Stripe). */
+/** Response of `POST /api/billing/checkout` (web billing — Stripe or Paddle). */
 export interface CheckoutSession {
   url: string;
+  /**
+   * Paddle transaction id (txn_…) when the server creates a Paddle transaction via
+   * POST /transactions. May be returned directly in the JSON body, or can be parsed from
+   * the ?_ptxn= query param in `url`. Optional — backward-compatible with the Stripe shape.
+   */
+  transactionId?: string;
 }
 
 /**
- * Create a Stripe Checkout session (web billing). The server returns the redirect URL and 400s when Stripe is
- * not configured — entitlement is granted ONLY after the server's Stripe webhook verifies the payment.
+ * Create a Checkout session (web billing). The server returns the redirect URL (and optionally
+ * a transactionId for Paddle) and 400s when billing is not configured — entitlement is granted
+ * ONLY after the server's webhook (Paddle: subscription.created / transaction.completed;
+ * Stripe: checkout.session.completed) verifies the payment.
  */
 export async function createCheckoutSession(plan: 'monthly' | 'yearly', token: string): Promise<CheckoutSession> {
   const { data } = await apiClient.post<CheckoutSession>('/api/billing/checkout', { plan }, auth(token));
@@ -103,5 +111,25 @@ export async function createCheckoutSession(plan: 'monthly' | 'yearly', token: s
 /** Validate a completed store purchase server-side; returns the refreshed (authoritative) server entitlement. */
 export async function validatePurchase(store: string, purchaseToken: string, token: string): Promise<ServerEntitlement> {
   const { data } = await apiClient.post<ServerEntitlement>('/api/billing/validate', { store, token: purchaseToken }, auth(token));
+  return data;
+}
+
+/**
+ * Verify a completed checkout session on the web success-redirect → returns the refreshed
+ * (server-authoritative) entitlement. Idempotent with the billing webhook (same Subscription row).
+ *
+ * For Paddle: `idOrSession` is the Paddle transaction id (txn_… or the value of ?_ptxn in the
+ * success URL). The backend `VerifyCheckoutSessionCommand.SessionId` field receives it.
+ * For Stripe: `idOrSession` is the Stripe Checkout Session id (cs_…) from ?session_id=.
+ * The field name `sessionId` is kept generic so both flows share the same contract.
+ *
+ * Returns 400 if the session cannot be verified (not paid, unknown id, billing not configured).
+ */
+export async function verifyCheckoutSession(idOrSession: string, token: string): Promise<ServerEntitlement> {
+  const { data } = await apiClient.post<ServerEntitlement>(
+    '/api/billing/verify-session',
+    { sessionId: idOrSession },
+    auth(token),
+  );
   return data;
 }
