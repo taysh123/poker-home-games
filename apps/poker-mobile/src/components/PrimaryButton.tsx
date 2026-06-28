@@ -14,6 +14,8 @@ type Props = {
   variant?: Variant;
   fullWidth?: boolean;
   style?: ViewStyle;
+  /** Explicit accessible name — defaults to `label` text when omitted. */
+  accessibilityLabel?: string;
 };
 
 export default function PrimaryButton({
@@ -24,6 +26,7 @@ export default function PrimaryButton({
   variant = 'gold',
   fullWidth = true,
   style,
+  accessibilityLabel,
 }: Props) {
   const indicatorColor =
     variant === 'gold' || variant === 'gradient'
@@ -67,6 +70,7 @@ export default function PrimaryButton({
       onPress={onPress}
       haptic="light"
       disabled={disabled || loading}
+      accessibilityLabel={accessibilityLabel}
     >
       {variant === 'gradient' && (
         <LinearGradient
