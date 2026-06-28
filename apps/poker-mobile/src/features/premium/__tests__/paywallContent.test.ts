@@ -16,8 +16,8 @@ describe('paywall content rules', () => {
   });
 
   it('price uses the SDK-localized value when present, else the config fallback', () => {
-    expect(paywallPriceFor('yearly', undefined)).toBe(PRICING.yearly.price);   // $99.99
-    expect(paywallPriceFor('monthly', undefined)).toBe(PRICING.monthly.price); // $11.99
+    expect(paywallPriceFor('yearly', undefined)).toBe(PRICING.yearly.price);   // $79.99
+    expect(paywallPriceFor('monthly', undefined)).toBe(PRICING.monthly.price); // $8.99
     expect(paywallPriceFor('yearly', '₪399/yr')).toBe('₪399/yr');              // SDK wins
   });
 });

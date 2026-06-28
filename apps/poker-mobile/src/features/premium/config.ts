@@ -47,8 +47,8 @@ export interface PremiumPlan {
 // build time. Static `process.env.EXPO_PUBLIC_*` access so Expo/Metro can inline them. Price strings are display
 // placeholders; the real LOCALIZED price comes from the billing SDK / Stripe at runtime.
 export const PRICING: { monthly: PremiumPlan; yearly: PremiumPlan } = {
-  monthly: { productId: process.env.EXPO_PUBLIC_PREMIUM_MONTHLY_ID || 'tpoker.premium.monthly', price: '$11.99', period: 'month' },
-  yearly:  { productId: process.env.EXPO_PUBLIC_PREMIUM_YEARLY_ID  || 'tpoker.premium.yearly',  price: '$99.99', period: 'year', perMonth: '$8.33', savePct: 30 },
+  monthly: { productId: process.env.EXPO_PUBLIC_PREMIUM_MONTHLY_ID || 'tpoker.premium.monthly', price: '$8.99', period: 'month' },
+  yearly:  { productId: process.env.EXPO_PUBLIC_PREMIUM_YEARLY_ID  || 'tpoker.premium.yearly',  price: '$79.99', period: 'year', perMonth: '$6.67', savePct: 25 },
 };
 
 /**

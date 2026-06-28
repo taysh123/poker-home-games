@@ -30,13 +30,13 @@ describe('landing content — honesty + correctness', () => {
     const plans = landingPlans();
     const monthly = plans.find(p => p.key === 'monthly')!;
     const yearly = plans.find(p => p.key === 'yearly')!;
-    expect(monthly.price).toBe(PRICING.monthly.price);     // $11.99
-    expect(yearly.price).toBe(PRICING.yearly.price);       // $99.99
+    expect(monthly.price).toBe(PRICING.monthly.price);     // $8.99
+    expect(yearly.price).toBe(PRICING.yearly.price);       // $79.99
     expect(monthly.productId).toBe(PRICING.monthly.productId);
     expect(yearly.productId).toBe(PRICING.yearly.productId);
     expect(yearly.highlighted).toBe(true);
     expect(monthly.highlighted).toBe(false);
-    expect(yearly.subline).toMatch(/save 30%/);
+    expect(yearly.subline).toMatch(/save 25%/);
   });
 
   it('lists exactly one live (non-Soon) paid benefit — Premium Study', () => {

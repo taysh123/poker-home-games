@@ -46,8 +46,8 @@ describe('mock billing provider', () => {
 
 describe('pricing + AI policy config', () => {
   it('matches the agreed economics', () => {
-    expect(PRICING.monthly.price).toBe('$11.99');
-    expect(PRICING.yearly.price).toBe('$99.99');
+    expect(PRICING.monthly.price).toBe('$8.99');
+    expect(PRICING.yearly.price).toBe('$79.99');
     expect(AI_CREDIT_POLICY.free.credits).toBe(1);
     expect(AI_CREDIT_POLICY.premium.credits).toBe(100);
   });
@@ -55,9 +55,9 @@ describe('pricing + AI policy config', () => {
     const monthly = Number(PRICING.monthly.price.replace('$', ''));
     const yearly = Number(PRICING.yearly.price.replace('$', ''));
     const perMonth = Number((PRICING.yearly.perMonth ?? '$0').replace('$', ''));
-    expect(perMonth).toBeCloseTo(yearly / 12, 1); // ≈ $8.33
+    expect(perMonth).toBeCloseTo(yearly / 12, 1); // ≈ $6.67
     // Floor (not round) so the advertised saving never exceeds the real saving.
-    const expectedSave = Math.floor((1 - yearly / (monthly * 12)) * 100); // 30
+    const expectedSave = Math.floor((1 - yearly / (monthly * 12)) * 100); // 25
     expect(PRICING.yearly.savePct).toBe(expectedSave);
   });
 });
