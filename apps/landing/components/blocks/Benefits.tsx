@@ -43,7 +43,7 @@ export function Benefits() {
                     </div>
                     <h3 className="text-xl leading-snug text-text">{b.title}</h3>
                     <p className="flex-1 leading-relaxed text-textMuted">{b.body}</p>
-                    <span className="text-xs font-semibold uppercase tracking-wider text-gold/70">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-gold">
                       {b.tag}
                     </span>
                   </Card>

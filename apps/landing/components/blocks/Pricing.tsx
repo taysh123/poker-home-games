@@ -147,7 +147,7 @@ export function Pricing() {
           <Reveal delay={0.25}>
             <Card className="p-8">
               {/* Badge */}
-              <span className="inline-flex items-center rounded-full border border-border bg-surfaceHigh px-3 py-1 text-xs font-semibold uppercase tracking-wider text-textMuted">
+              <span className="inline-flex items-center rounded-full border border-border bg-surfaceHigh px-3 py-1 text-xs font-semibold uppercase tracking-wider text-textHigh">
                 Premium
               </span>
 
@@ -183,10 +183,7 @@ export function Pricing() {
                   return (
                     <li
                       key={f.key}
-                      className={cn(
-                        'flex items-start gap-3',
-                        !live && 'opacity-55',
-                      )}
+                      className="flex items-start gap-3"
                     >
                       {live ? (
                         <Check
@@ -210,7 +207,7 @@ export function Pricing() {
                             {f.title}
                           </span>
                           {!live && (
-                            <span className="rounded-full border border-border/80 bg-surface px-2 py-0.5 text-xs text-textMuted">
+                            <span className="rounded-full border border-border/80 bg-surface px-2 py-0.5 text-xs text-textHigh">
                               Coming soon
                             </span>
                           )}
