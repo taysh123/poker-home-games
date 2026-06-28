@@ -47,7 +47,7 @@ export const BENEFITS = [
   },
   {
     title: 'Get better between sessions',
-    body: 'Expert-Calibrated strategy packs help you plug leaks and make sharper decisions. AI Coach brings personalised feedback in Premium.',
+    body: 'Expert-Calibrated strategy packs help you plug leaks and make sharper decisions. Personalised AI coaching is coming soon.',
     tag: 'Study · Premium',
   },
 ] as const;
