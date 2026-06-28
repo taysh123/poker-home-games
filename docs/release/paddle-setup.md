@@ -222,3 +222,70 @@ Everything must be recreated in the live Paddle account — IDs, keys, and secre
 10. Do NOT call `Paddle.Environment.set('sandbox')` in the live build.
     The code gates on `BILLING_KEYS.paddleEnvironment === 'sandbox'` — removing the env var
     means that branch is never reached and `Initialize` runs in production mode.
+
+
+---
+
+## Verification status - 2026-06-28 (against REAL sandbox payloads)
+
+Captured real sandbox events (a checkout with test card 4242 + an immediate cancel, via the Paddle.js overlay
+test page; payloads read from Paddle > Developer Tools > Notifications) and diffed them against our parsers.
+
+**Confirmed correct (no change needed):**
+- Webhook envelope: event_id / event_type / occurred_at / notification_id / data
+- Subscription id: data.id on subscription.*; data.subscription_id on transaction.*
+- User link: data.custom_data.app_user_id at the data root (all event types)
+- Price: data.items[0].price.id; checkout: data.checkout.url (with ?_ptxn=) + transaction data.id
+- Status: subscription active/canceled, transaction completed; grant (created/completed) + revoke (canceled) mapping
+- Immediate cancel fires BOTH subscription.canceled AND subscription.updated(status canceled) -> both revoke
+- verify-session (PaddleBillingVerifier) reads data.billing_period on the transaction
+- Client Paddle.js (Environment.set('sandbox'), Initialize({token}), Checkout.open({items,customData}),
+  checkout.completed callback, CDN v2) - all exercised end-to-end by the overlay checkout completing
+
+**Fixed (commits ff5caa1, 4ab4bd6):**
+- Webhook period field: read only current_billing_period (the subscription.* shape); transaction.* carries the
+  period at billing_period, so transaction.completed yielded a null period. Now reads whichever the event carries;
+  pinned by the webhook tests. dotnet 155 tests green.
+
+**STILL PENDING (the ONLY remaining item) - confirm at the runtime E2E:**
+- Paddle-Signature HMAC: confirm a REAL signed webhook delivery verifies (HTTP 200), not 401. The format
+  (ts=..;h1=..) is implemented + unit-tested (PaddleSignatureTests); only a live delivery to our endpoint proves
+  the end-to-end signature. (Cancel shapes/scheduled_change + status enum are now covered/fail-safe; the
+  POST /transactions create-response is confirmed by shape via the transaction object.)
+
+## Runtime E2E - how to resume later (closes the last item)
+
+The branch must run where Paddle can deliver the webhook (prod `main` lacks the billing code -> 404). Two ways,
+both with NOTHING merged to main:
+
+### Option A - local backend + ngrok (recommended; nothing deployed)
+1. src/PokerApp.API/appsettings.Development.json (gitignored): add a "Paddle" section with the sandbox values
+   (ApiBaseUrl=https://sandbox-api.paddle.com, ApiKey, WebhookSigningSecret, PriceMonthlyId, PriceYearlyId),
+   set "BillingSettings": { "AcceptSandbox": true }, and a working ConnectionStrings:DefaultConnection
+   (local Postgres, or the Railway DB connection string).
+2. cd src/PokerApp.Infrastructure; dotnet ef database update --startup-project ../PokerApp.API   (if DB is fresh)
+3. cd src/PokerApp.API; dotnet run --launch-profile http   (serves :5062)
+4. ngrok http 5062   -> copy the https URL
+5. Paddle > the webhook destination > temporarily change the URL to https://<ngrok>/api/webhooks/paddle (save)
+6. cd apps/poker-mobile; npm run web   (dev build: paywall + immersive ON; web points at localhost:5062).
+   Ensure apps/poker-mobile/.env has EXPO_PUBLIC_PADDLE_CLIENT_TOKEN, EXPO_PUBLIC_PADDLE_ENVIRONMENT=sandbox,
+   EXPO_PUBLIC_PREMIUM_MONTHLY_ID, EXPO_PUBLIC_PREMIUM_YEARLY_ID.
+7. In the app: open the paywall -> buy Monthly -> Paddle overlay -> test card 4242 4242 4242 4242 -> complete.
+8. CONFIRM: the backend logs POST /api/webhooks/paddle returning 200 (PaddleSignature verified), a Subscription
+   row is created, and GET /api/entitlements returns premium.
+9. Revert the Paddle webhook URL back to the Railway prod URL.
+
+### Option B - Railway/Vercel staging (deployed branch; no main merge)
+1. Railway: a service/environment that builds feature/launch-phase-1-2 (NOT main); set the Paddle__* env +
+   AcceptSandbox; needs Postgres + migrations. Get its URL.
+2. Vercel: a branch preview deploy with the EXPO_PUBLIC_PADDLE_* env.
+3. Point the Paddle webhook URL at the staging Railway /api/webhooks/paddle; flip `paywall` ON for that build.
+4. Buy with 4242 -> confirm signature verify + grant. Revert the webhook URL + flag afterwards.
+
+### Config gotchas
+- BillingSettings:AcceptSandbox MUST be true wherever you run it (the verify-session path rejects a sandbox sub
+  otherwise; the webhook create path grants regardless - keep them consistent).
+- The webhook URL must point at the host running THIS branch (main returns 404 on /api/webhooks/paddle).
+- Paddle checkout is active only when Paddle:ApiKey + both price ids are configured (else it falls back to
+  Stripe/mock, fail-closed).
+- Everything is behind the `paywall` flag - prod is byte-identical until you flip it ON.
