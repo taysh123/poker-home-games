@@ -61,6 +61,7 @@ export const BILLING_KEYS = {
 };
 
 export type PremiumFeatureKey =
+  | 'premium_study'
   | 'advanced_gto' | 'ai_coach' | 'advanced_bankroll' | 'cloud_sync' | 'premium_learning';
 
 /**
@@ -68,11 +69,15 @@ export type PremiumFeatureKey =
  * advanced analytics, and premium courses are unbuilt). This is precisely why the `paywall` flag is OFF.
  * The paywall renders a "Soon" chip on these so it never presents an unshipped benefit as available. Clear
  * each flag only when the feature is genuinely live (and real billing is wired). Never charge for a `comingSoon`.
+ *
+ * `comingSoon` is non-optional boolean — the honesty CI guard (honesty.test.ts) checks `=== false` / `=== true`
+ * so the intent is always explicit. Only `premium_study` is live (comingSoon: false).
  */
-export const PREMIUM_FEATURES: { key: PremiumFeatureKey; icon: string; title: string; desc: string; comingSoon?: boolean }[] = [
-  { key: 'ai_coach',          icon: 'sparkles',       title: 'AI Coach',                desc: '30 hand analyses every month', comingSoon: true },
-  { key: 'advanced_gto',      icon: 'school',         title: 'Advanced GTO study',      desc: 'Deeper ranges, sizings & spots', comingSoon: true },
-  { key: 'advanced_bankroll', icon: 'stats-chart',    title: 'Advanced bankroll analytics', desc: 'Variance, filters & deeper trends', comingSoon: true },
-  { key: 'cloud_sync',        icon: 'cloud-done',     title: 'Cloud sync',              desc: 'Your data, across all devices', comingSoon: true },
-  { key: 'premium_learning',  icon: 'library',        title: 'Premium learning',        desc: 'Courses & guided study paths', comingSoon: true },
+export const PREMIUM_FEATURES: { key: PremiumFeatureKey; icon: string; title: string; desc: string; comingSoon: boolean }[] = [
+  { key: 'premium_study',     icon: 'library',     title: 'Premium Study',           desc: 'Full lesson library — every study pack · all quizzes · unlimited Spot Trainer', comingSoon: false },
+  { key: 'ai_coach',          icon: 'sparkles',    title: 'AI Coach',                desc: '30 hand analyses every month', comingSoon: true },
+  { key: 'advanced_gto',      icon: 'school',      title: 'Advanced GTO study',      desc: 'Deeper ranges, sizings & spots', comingSoon: true },
+  { key: 'advanced_bankroll', icon: 'stats-chart', title: 'Advanced bankroll analytics', desc: 'Variance, filters & deeper trends', comingSoon: true },
+  { key: 'cloud_sync',        icon: 'cloud-done',  title: 'Cloud sync',              desc: 'Your data, across all devices', comingSoon: true },
+  { key: 'premium_learning',  icon: 'library',     title: 'Premium learning',        desc: 'Courses & guided study paths', comingSoon: true },
 ];
