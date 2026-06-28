@@ -65,6 +65,7 @@ const styles = StyleSheet.create({
   prefix: { fontSize: 16, color: colors.textMuted, marginRight: 6, fontWeight: '600' },
   input: {
     flex: 1,
+    minWidth: 0, // allow the input to shrink inside narrow flex containers (web <input> min-width:auto fix)
     paddingVertical: 14,
     fontSize: 16,
     color: colors.text,

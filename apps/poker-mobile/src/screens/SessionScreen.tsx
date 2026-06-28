@@ -2661,7 +2661,7 @@ const styles = StyleSheet.create({
   // End session modal — The Final Count
   finalCountTitle: { ...typography.displaySerif, fontSize: 24, color: colors.text },
   endSubtitle: { fontSize: 13, color: colors.textMuted, lineHeight: 19, marginTop: 2 },
-  endPlayerList: { maxHeight: 280 },
+  endPlayerList: { flexShrink: 1, maxHeight: 280 },
   endPlayerRow: {
     flexDirection: 'row',
     alignItems: 'center',

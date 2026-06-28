@@ -32,6 +32,7 @@ export default function ActionTimeline({ steps }: { steps: TimelineStep[] }) {
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      style={styles.scroller}
       contentContainerStyle={styles.track}
       accessible
       accessibilityLabel={`Action: ${a11y}`}
@@ -75,6 +76,9 @@ function fmt(bb: number): string {
 }
 
 const styles = StyleSheet.create({
+  // Constrain the scroller to its parent so long action tracks scroll INTERNALLY instead of
+  // widening the whole page (fixes horizontal overflow on phones).
+  scroller: { alignSelf: 'stretch', flexGrow: 0 },
   track: { alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.xs, paddingVertical: 2 },
   arrow: { marginHorizontal: 1 },
   chip: {

@@ -719,83 +719,82 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
               </View>
               <Text style={styles.finalCountTitle} maxFontSizeMultiplier={1.3}>The Final Count</Text>
             </View>
-            <Text style={styles.modalSubtitle}>
-              Last step — count each player's remaining chips. We'll settle the rest.
-            </Text>
-
-            <ScrollView
-              style={[styles.stacksScroll, { maxHeight: Math.min(280, Dimensions.get('window').height * 0.25) }]}
-              keyboardShouldPersistTaps="handled"
-            >
-              {game.players.map(p => {
-                const isEmpty = !(finalStacks[p.id] ?? '').trim();
-                return (
-                  <View key={p.id} style={styles.stackRow}>
-                    <View style={styles.stackNameWrap}>
-                      <Text style={[styles.stackName, { writingDirection: nameWritingDirection(p.name) }]} numberOfLines={1}>{p.name}</Text>
-                      {isEmpty && <Text style={styles.bustedHint}>Busted · {sym}0</Text>}
-                    </View>
-                    <View style={styles.stackInputWrap}>
-                      <AppTextInput
-                        label=""
-                        value={finalStacks[p.id] ?? ''}
-                        onChangeText={v => setFinalStacks(prev => ({ ...prev, [p.id]: v }))}
-                        placeholder="0"
-                        keyboardType="decimal-pad"
-                        prefix={sym}
-                      />
-                    </View>
-                  </View>
-                );
-              })}
-            </ScrollView>
-
-            {/* Balance indicator */}
-            <View style={[styles.countCard, stacksMismatch ? styles.countCardWarn : styles.countCardOk]}>
-              <Text style={[styles.countHeadline, stacksMismatch && styles.countHeadlineWarn]}>
-                Counted {formatCents(stacksTotalCents)} of {formatCents(remainingCents)} on the table
+            <ScrollView style={styles.endScroll} contentContainerStyle={styles.endScrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalSubtitle}>
+                Last step — count each player's remaining chips. We'll settle the rest.
               </Text>
-              {stacksMismatch ? (
-                <>
-                  <Text style={styles.countDetailWarn}>
-                    {stacksTotalCents < remainingCents
-                      ? `${formatCents(mismatchCents)} unaccounted for`
-                      : `${formatCents(mismatchCents)} over the table total`}
-                  </Text>
-                  <Text style={styles.countWhy}>
-                    Chips counted should equal buy-ins minus cash-outs — recount or check for a missed transaction.
-                  </Text>
-                </>
-              ) : (
-                <View style={styles.countOkRow}>
-                  <Ionicons name="checkmark-circle" size={15} color={colors.success} />
-                  <Text style={styles.countOkText}>Totals match — every shekel is accounted for.</Text>
-                </View>
+
+              <View style={styles.stacksBlock}>
+                {game.players.map(p => {
+                  const isEmpty = !(finalStacks[p.id] ?? '').trim();
+                  return (
+                    <View key={p.id} style={styles.stackRow}>
+                      <View style={styles.stackNameWrap}>
+                        <Text style={[styles.stackName, { writingDirection: nameWritingDirection(p.name) }]} numberOfLines={1}>{p.name}</Text>
+                        {isEmpty && <Text style={styles.bustedHint}>Busted · {sym}0</Text>}
+                      </View>
+                      <View style={styles.stackInputWrap}>
+                        <AppTextInput
+                          label=""
+                          value={finalStacks[p.id] ?? ''}
+                          onChangeText={v => setFinalStacks(prev => ({ ...prev, [p.id]: v }))}
+                          placeholder="0"
+                          keyboardType="decimal-pad"
+                          prefix={sym}
+                        />
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+
+              {/* Balance indicator */}
+              <View style={[styles.countCard, stacksMismatch ? styles.countCardWarn : styles.countCardOk]}>
+                <Text style={[styles.countHeadline, stacksMismatch && styles.countHeadlineWarn]}>
+                  Counted {formatCents(stacksTotalCents)} of {formatCents(remainingCents)} on the table
+                </Text>
+                {stacksMismatch ? (
+                  <>
+                    <Text style={styles.countDetailWarn}>
+                      {stacksTotalCents < remainingCents
+                        ? `${formatCents(mismatchCents)} unaccounted for`
+                        : `${formatCents(mismatchCents)} over the table total`}
+                    </Text>
+                    <Text style={styles.countWhy}>
+                      Chips counted should equal buy-ins minus cash-outs — recount or check for a missed transaction.
+                    </Text>
+                  </>
+                ) : (
+                  <View style={styles.countOkRow}>
+                    <Ionicons name="checkmark-circle" size={15} color={colors.success} />
+                    <Text style={styles.countOkText}>Totals match — every shekel is accounted for.</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Inline override — replaces the old post-hoc confirm dialog */}
+              {stacksMismatch && (
+                <TouchableOpacity
+                  style={[styles.overrideRow, overrideArmed && styles.overrideRowArmed]}
+                  onPress={() => setOverrideArmed(v => !v)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons
+                    name={overrideArmed ? 'checkbox' : 'square-outline'}
+                    size={22}
+                    color={overrideArmed ? colors.error : colors.textMuted}
+                  />
+                  <View style={styles.overrideTextWrap}>
+                    <Text style={styles.overrideLabel}>End anyway with an unbalanced count</Text>
+                    <Text style={styles.overrideCaption}>Results will be off by {formatCents(mismatchCents)}.</Text>
+                  </View>
+                </TouchableOpacity>
               )}
-            </View>
 
-            {/* Inline override — replaces the old post-hoc confirm dialog */}
-            {stacksMismatch && (
-              <TouchableOpacity
-                style={[styles.overrideRow, overrideArmed && styles.overrideRowArmed]}
-                onPress={() => setOverrideArmed(v => !v)}
-                activeOpacity={0.8}
-              >
-                <Ionicons
-                  name={overrideArmed ? 'checkbox' : 'square-outline'}
-                  size={22}
-                  color={overrideArmed ? colors.error : colors.textMuted}
-                />
-                <View style={styles.overrideTextWrap}>
-                  <Text style={styles.overrideLabel}>End anyway with an unbalanced count</Text>
-                  <Text style={styles.overrideCaption}>Results will be off by {formatCents(mismatchCents)}.</Text>
-                </View>
-              </TouchableOpacity>
-            )}
-
-            <Text style={styles.finalityFooter}>
-              Winners, losers, and who-pays-who are calculated automatically. This ends the game — it can't be reopened.
-            </Text>
+              <Text style={styles.finalityFooter}>
+                Winners, losers, and who-pays-who are calculated automatically. This ends the game — it can't be reopened.
+              </Text>
+            </ScrollView>
 
             <View style={styles.modalActions}>
               <PrimaryButton label="Keep Playing" onPress={() => setEnding(false)} variant="outline" fullWidth={false} style={styles.modalBtn} />
@@ -1004,10 +1003,12 @@ const styles = StyleSheet.create({
   modalBtn: { flex: 1 },
   modalBtnPrimary: { flex: 2 },
 
-  stacksScroll: { maxHeight: 280 },
-  stackRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
+  endScroll: { flexShrink: 1 },
+  endScrollContent: { gap: 14 },
+  stacksBlock: { gap: 6 },
+  stackRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   stackNameWrap: { flex: 1, gap: 2 },
-  stackName: { fontSize: 15, fontWeight: '600', color: colors.text },
+  stackName: { fontSize: 15, fontWeight: '600', color: colors.text, textAlign: 'left' },
   bustedHint: { fontSize: 12, fontWeight: '500', color: colors.textMuted },
   stackInputWrap: { width: 140 },
 

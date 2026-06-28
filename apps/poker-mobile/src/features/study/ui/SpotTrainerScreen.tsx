@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Screen from '../../../components/Screen';
@@ -40,6 +41,7 @@ const ACTION_LABEL: Record<RangeAction, string> = { fold: 'Fold', call: 'Call', 
 export default function SpotTrainerScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Rt>();
+  const insets = useSafeAreaInsets();
   const mode = route.params?.mode ?? 'spot';
   const { width: winW } = useWindowDimensions();
   const { width: TABLE_W, height: TABLE_H } = tableDimensions(winW - spacing.xl * 2);
@@ -200,8 +202,8 @@ export default function SpotTrainerScreen() {
           </PressableScale>
         ) : undefined}
       />
-      <View style={styles.body}>
-        <ContentContainer>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <ContentContainer style={styles.stack}>
         <View style={styles.limitRow} accessible accessibilityLabel={sessionLimit.remaining === Infinity ? 'Unlimited trainer sessions with Premium' : `${sessionLimit.remaining} free trainer sessions left today`}>
           <Chip
             label={sessionLimit.remaining === Infinity ? 'Unlimited sessions' : `${sessionLimit.remaining} free session${sessionLimit.remaining === 1 ? '' : 's'} left today`}
@@ -264,23 +266,29 @@ export default function SpotTrainerScreen() {
               GTO play: {result.strategy.map(s => `${ACTION_LABEL[s.action]} ${Math.round(s.freq * 100)}%`).join(' · ')}
             </Text>
           </Card>
-        ) : (
-          <View style={styles.actions}>
-            {spot.options.map(opt => (
-              <PressableScale key={opt} onPress={() => choose(opt)} haptic="medium" style={styles.actionBtn}>
-                <Text style={styles.actionText}>{opt === 'raise' ? raiseLabel : ACTION_LABEL[opt]}</Text>
-              </PressableScale>
-            ))}
-          </View>
-        )}
-
-        {result ? (
-          <PrimaryButton
-            label={isQuiz && answered >= QUIZ_LENGTH ? 'See results' : 'Next spot'}
-            variant="gradient"
-            onPress={next}
-          />
         ) : null}
+        </ContentContainer>
+      </ScrollView>
+
+      {/* Pinned action footer — the primary action (Fold/Call/Raise, or Next) is ALWAYS visible,
+          never clipped, and safe-area aware. Table/feedback scroll above it. */}
+      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
+        <ContentContainer>
+          {result ? (
+            <PrimaryButton
+              label={isQuiz && answered >= QUIZ_LENGTH ? 'See results' : 'Next spot'}
+              variant="gradient"
+              onPress={next}
+            />
+          ) : (
+            <View style={styles.actions}>
+              {spot.options.map(opt => (
+                <PressableScale key={opt} onPress={() => choose(opt)} haptic="medium" style={styles.actionBtn}>
+                  <Text style={styles.actionText}>{opt === 'raise' ? raiseLabel : ACTION_LABEL[opt]}</Text>
+                </PressableScale>
+              ))}
+            </View>
+          )}
         </ContentContainer>
       </View>
     </Screen>
@@ -311,7 +319,10 @@ function HandCards({ hand }: { hand: string }) {
 }
 
 const styles = StyleSheet.create({
-  body: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.sm, gap: spacing.lg },
+  scroll: { flex: 1 },
+  scrollContent: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: spacing.lg },
+  stack: { gap: spacing.lg },
+  footer: { paddingHorizontal: spacing.xl, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface },
   center: { flex: 1, paddingHorizontal: spacing.xl, justifyContent: 'center', gap: spacing.xl },
   spotCard: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl },
   tableWrap: { alignItems: 'center', gap: spacing.sm },
