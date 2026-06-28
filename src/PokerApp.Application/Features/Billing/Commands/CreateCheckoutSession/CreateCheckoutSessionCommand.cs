@@ -7,8 +7,9 @@ namespace PokerApp.Application.Features.Billing.Commands.CreateCheckoutSession;
 
 public sealed record CheckoutSessionDto(string Url);
 
-/// <summary>Creates a Stripe Checkout session for the signed-in user + plan (web billing). FAIL-CLOSED:
-/// BadRequest "billing not configured" when Stripe isn't wired — never fabricates a checkout URL.</summary>
+/// <summary>Creates a web checkout for the signed-in user + plan via the active provider (Paddle when configured,
+/// else Stripe). FAIL-CLOSED: BadRequest "billing not configured" when no provider is wired — never fabricates a
+/// checkout URL.</summary>
 public sealed record CreateCheckoutSessionCommand(string Plan) : IRequest<CheckoutSessionDto>;
 
 public sealed class CreateCheckoutSessionCommandValidator : AbstractValidator<CreateCheckoutSessionCommand>
@@ -21,7 +22,7 @@ public sealed class CreateCheckoutSessionCommandValidator : AbstractValidator<Cr
 }
 
 public sealed class CreateCheckoutSessionCommandHandler(
-    IStripeCheckoutService checkout,
+    ICheckoutService checkout,
     ICurrentUserService currentUser) : IRequestHandler<CreateCheckoutSessionCommand, CheckoutSessionDto>
 {
     public async Task<CheckoutSessionDto> Handle(CreateCheckoutSessionCommand request, CancellationToken cancellationToken)

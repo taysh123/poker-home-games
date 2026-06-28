@@ -86,6 +86,21 @@ public static class DependencyInjection
         services.AddScoped<IStripeCheckoutService>(sp =>
             new StripeCheckoutService(stripeSettings, sp.GetRequiredService<IWebSettings>(), sp.GetRequiredService<IHttpClientFactory>().CreateClient()));
 
+        // Paddle Billing (web billing — current API, Merchant of Record). EMPTY ⇒ inert/fail-closed: the Stripe
+        // path (or mock) stays active. Bound from the "Paddle" section (env: Paddle__ApiKey, __PriceMonthlyId, …).
+        var paddleSettings = configuration.GetSection("Paddle").Get<PaddleSettings>() ?? new PaddleSettings();
+        services.AddSingleton(paddleSettings);
+        services.AddScoped<PaddleCheckoutService>(sp =>
+            new PaddleCheckoutService(paddleSettings, sp.GetRequiredService<IHttpClientFactory>().CreateClient()));
+        services.AddScoped<IPaddleCheckoutService>(sp => sp.GetRequiredService<PaddleCheckoutService>());
+
+        // Active web-checkout provider: Paddle when configured (API key + both price ids), else the existing Stripe
+        // path. Both implementations stay fail-closed (null/BadRequest) when their own credentials are absent.
+        services.AddScoped<ICheckoutService>(sp =>
+            paddleSettings.IsConfigured
+                ? sp.GetRequiredService<IPaddleCheckoutService>()
+                : sp.GetRequiredService<IStripeCheckoutService>());
+
         var appleRoots = appleStoreSettings.RootCertsPem
             .Where(p => !string.IsNullOrWhiteSpace(p))
             .Select(p => X509Certificate2.CreateFromPem(p))

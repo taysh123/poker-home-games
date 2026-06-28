@@ -6,6 +6,7 @@ public enum SubscriptionStore
     Google = 1,
     Stripe = 2,      // web billing
     RevenueCat = 3,  // mobile aggregator (iOS + Android)
+    Paddle = 4,      // web billing (Merchant of Record — current Paddle Billing API)
 }
 
 /// <summary>
