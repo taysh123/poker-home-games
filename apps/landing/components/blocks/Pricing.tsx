@@ -31,7 +31,9 @@ export function Pricing() {
   /* Derived pricing values */
   const yearlyMonthly = PRICING.yearly / 12;
   const displayMonthly = period === 'yearly' ? yearlyMonthly : PRICING.monthly;
-  const savingsPct = Math.round(
+  // Floor (not round) so the advertised saving never exceeds the real saving, and so this badge
+  // matches the in-app paywall, which floors too (apps/poker-mobile .../premium/config.ts savePct).
+  const savingsPct = Math.floor(
     100 * (1 - PRICING.yearly / (PRICING.monthly * 12)),
   );
 
