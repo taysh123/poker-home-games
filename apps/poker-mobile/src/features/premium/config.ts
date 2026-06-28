@@ -81,3 +81,18 @@ export const PREMIUM_FEATURES: { key: PremiumFeatureKey; icon: string; title: st
   { key: 'cloud_sync',        icon: 'cloud-done',  title: 'Cloud sync',              desc: 'Your data, across all devices', comingSoon: true },
   { key: 'premium_learning',  icon: 'library',     title: 'Premium learning',        desc: 'Courses & guided study paths', comingSoon: true },
 ];
+
+/** Keys of premium features that are genuinely live (chargeable). Single source for paywall + tests. */
+export function liveFeatureKeys(): PremiumFeatureKey[] {
+  return PREMIUM_FEATURES.filter(f => f.comingSoon === false).map(f => f.key);
+}
+
+/** True when a feature is live (not Soon) — the paywall only charges for these. */
+export function isFeatureLive(key: PremiumFeatureKey): boolean {
+  return PREMIUM_FEATURES.some(f => f.key === key && f.comingSoon === false);
+}
+
+/** Display price: prefer the billing-SDK/Stripe localized value; else the honest config fallback. */
+export function paywallPriceFor(plan: 'monthly' | 'yearly', sdkPrice: string | undefined): string {
+  return sdkPrice ?? PRICING[plan].price;
+}
