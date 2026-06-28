@@ -165,6 +165,27 @@ public class PaddleWebhookGrantTests
     }
 
     [Fact]
+    public async Task Subscription_updated_to_canceled_status_revokes_premium()
+    {
+        // Real sandbox shape (2026-06-28): an immediate cancel fires subscription.updated with status already
+        // "canceled" (scheduled_change null, current_billing_period null) → MapPaddleUpdated → "expire" → revoke.
+        using var ctx = TestInfra.NewContext();
+        var uid = Guid.NewGuid();
+        ctx.Subscriptions.Add(Subscription.Create(uid, SubscriptionStore.Paddle, "pri_monthly", "sub_1",
+            Now.AddDays(-1), new DateTime(2099, 7, 28, 12, 0, 0, DateTimeKind.Utc), true, false, Now.AddHours(-1)));
+        await ctx.SaveChangesAsync();
+        Assert.True((await new EntitlementService(ctx).GetAsync(uid)).IsPremium);
+
+        var body = SubscriptionBody(uid, "evt_upd_cancel", "sub_1", "subscription.updated", "canceled");
+        var dto = await Verifier().VerifyPaddleAsync(body, Sign(body), Now);
+        Assert.Equal("expire", dto!.Type);
+
+        var handler = new ProcessStoreNotificationCommandHandler(ctx, new CapturingAuditLog());
+        await handler.Handle(new ProcessStoreNotificationCommand("paddle", dto), default);
+        Assert.False((await new EntitlementService(ctx).GetAsync(uid)).IsPremium);
+    }
+
+    [Fact]
     public async Task Bad_signature_fails_closed_to_null()
     {
         var uid = Guid.NewGuid();

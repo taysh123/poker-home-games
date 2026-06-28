@@ -179,9 +179,12 @@ public sealed class StoreNotificationVerifier(
     // like Stripe customer.subscription.deleted) — a scheduled cancel-at-period-end instead arrives as
     // subscription.updated with status still active + scheduled_change.action="cancel" and RETAINS access until it
     // takes effect; paused/past_due → "grace". subscription.updated is Paddle's catch-all → branch on status.
-    // VERIFIED (sandbox 2026-06-28): subscription.created + transaction.completed → "renew". STILL UNVERIFIED
-    // against live events: subscription.canceled / subscription.updated spellings + the scheduled_change shape
-    // (not captured yet — exercise a cancel in the sandbox to confirm before relying on the revoke path).
+    // VERIFIED (sandbox 2026-06-28): subscription.created + transaction.completed → "renew"; an immediate cancel
+    // fires BOTH subscription.canceled AND subscription.updated with status "canceled" (scheduled_change null,
+    // current_billing_period null) → both map to "expire" (revoke). The explicit cancel-AT-period-end shape
+    // (status still "active" + scheduled_change.action="cancel") wasn't produced by the immediate cancel, but the
+    // path is fail-safe: explicit → "cancel" (retain) and the status fallback (active → "renew") also RETAINS
+    // until period end, so an unrecognized scheduled_change shape can never wrongly revoke early.
     private static string MapPaddle(string eventType, JsonElement data)
     {
         var status = Str(data, "status");
