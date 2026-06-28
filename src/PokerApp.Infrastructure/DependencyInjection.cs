@@ -116,6 +116,7 @@ public static class DependencyInjection
             services.AddScoped<GooglePlayBillingVerifier>();
             services.AddScoped(sp => new StripeBillingVerifier(stripeSettings, billingSettings, sp.GetRequiredService<IHttpClientFactory>().CreateClient()));
             services.AddScoped(sp => new RevenueCatBillingVerifier(revenueCatSettings, billingSettings, sp.GetRequiredService<IHttpClientFactory>().CreateClient()));
+            services.AddScoped(sp => new PaddleBillingVerifier(paddleSettings, billingSettings, sp.GetRequiredService<IHttpClientFactory>().CreateClient()));
             services.AddScoped<IBillingVerifier, DirectBillingVerifier>();
         }
         else

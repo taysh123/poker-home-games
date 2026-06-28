@@ -40,6 +40,8 @@ public class DirectBillingVerifierDispatchTests
             new GooglePlayBillingVerifier(new FakeGooglePlayClient(null), billing),  // fail-closed (null state)
             stripe,
             new RevenueCatBillingVerifier(new RevenueCatSettings(), billing,         // unconfigured → null
+                new HttpClient(new FakeHttpMessageHandler(HttpStatusCode.OK, "{}"))),
+            new PaddleBillingVerifier(new PaddleSettings(), billing,                  // unconfigured → null
                 new HttpClient(new FakeHttpMessageHandler(HttpStatusCode.OK, "{}"))));
 
         // Stripe routes to the configured stripe verifier → a real result.
@@ -51,5 +53,6 @@ public class DirectBillingVerifierDispatchTests
         Assert.Null(await direct.VerifyAsync(SubscriptionStore.Apple, "not-a-jws"));
         Assert.Null(await direct.VerifyAsync(SubscriptionStore.Google, "tok"));
         Assert.Null(await direct.VerifyAsync(SubscriptionStore.RevenueCat, "user_1"));
+        Assert.Null(await direct.VerifyAsync(SubscriptionStore.Paddle, "txn_1"));
     }
 }

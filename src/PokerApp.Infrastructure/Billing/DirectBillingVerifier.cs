@@ -12,7 +12,8 @@ public sealed class DirectBillingVerifier(
     AppleBillingVerifier apple,
     GooglePlayBillingVerifier google,
     StripeBillingVerifier stripe,
-    RevenueCatBillingVerifier revenueCat) : IBillingVerifier
+    RevenueCatBillingVerifier revenueCat,
+    PaddleBillingVerifier paddle) : IBillingVerifier
 {
     public Task<VerifiedSubscription?> VerifyAsync(SubscriptionStore store, string token, CancellationToken ct = default)
         => store switch
@@ -21,6 +22,7 @@ public sealed class DirectBillingVerifier(
             SubscriptionStore.Google => google.VerifyAsync(store, token, ct),
             SubscriptionStore.Stripe => stripe.VerifyAsync(store, token, ct),
             SubscriptionStore.RevenueCat => revenueCat.VerifyAsync(store, token, ct),
+            SubscriptionStore.Paddle => paddle.VerifyAsync(store, token, ct),
             _ => Task.FromResult<VerifiedSubscription?>(null),
         };
 }
