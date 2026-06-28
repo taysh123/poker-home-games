@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background font-sans text-textHigh antialiased;
+    min-height: 100vh;
+  }
+
+  /* Headings default to the display serif in pure white. */
+  h1,
+  h2,
+  h3 {
+    @apply font-display text-text;
+  }
+
+  ::selection {
+    background: rgba(201, 168, 76, 0.25);
+    color: #ffffff;
+  }
+
+  /* Tabular figures for any element marked with .nums (prices, stacks, pots). */
+  .nums {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+}
+
+/*
+ * Gradient mesh background — deep navy base with soft radial glows:
+ * one faint felt-green, one faint gold. Low-key + premium, never casino-bright.
+ * Rendered as a fixed, behind-content layer (see <div className="bg-mesh" /> in layout).
+ */
+.bg-mesh {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  pointer-events: none;
+  background:
+    radial-gradient(55rem 55rem at 12% -8%, rgba(39, 174, 96, 0.06), transparent 60%),
+    radial-gradient(48rem 48rem at 100% 4%, rgba(201, 168, 76, 0.08), transparent 55%),
+    radial-gradient(42rem 42rem at 50% 118%, rgba(39, 174, 96, 0.05), transparent 60%),
+    #0f1923;
+}
+
+@layer components {
+  /*
+   * CSS poker-chip face used as the placeholder for the three.js chip (slice 3).
+   * Alternating gold wedges (edge spots) + top sheen + soft glow.
+   */
+  .chip-face {
+    background:
+      radial-gradient(circle at 50% 32%, rgba(255, 255, 255, 0.3), transparent 46%),
+      repeating-conic-gradient(from 0deg, #e8c97a 0deg 18deg, #a8872e 18deg 36deg);
+    box-shadow:
+      0 14px 34px -10px rgba(201, 168, 76, 0.55),
+      inset 0 0 0 2px rgba(255, 255, 255, 0.16);
+  }
+}
+
+@layer utilities {
+  .animate-floaty {
+    animation: floaty 5.5s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-floaty {
+      animation: none;
+    }
+
+    html {
+      scroll-behavior: auto;
+    }
+  }
+}
