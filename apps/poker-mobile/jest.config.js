@@ -1,4 +1,4 @@
-/** Pure-logic tests only for now (settlement engine, local store). */
+/** Pure-logic tests + the web-only landing render smoke test. */
 module.exports = {
   preset: 'jest-expo',
   testMatch: [
@@ -11,5 +11,6 @@ module.exports = {
     '**/src/components/__tests__/**/*.test.ts',
     '**/src/hooks/__tests__/**/*.test.ts',
     '**/src/config/__tests__/**/*.test.ts',
+    '**/src/screens/__tests__/**/*.test.tsx',
   ],
 };
