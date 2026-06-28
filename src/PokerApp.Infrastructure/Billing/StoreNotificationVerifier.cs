@@ -18,6 +18,7 @@ public sealed class StoreNotificationVerifier(
     BillingSettings billing,
     GooglePlaySettings google,
     StripeSettings stripe,
+    PaddleSettings paddle,
     RevenueCatSettings revenueCat) : IStoreNotificationVerifier
 {
     public Task<StoreNotificationDto?> VerifyAppleAsync(string signedPayload, DateTime nowUtc, CancellationToken ct = default)
@@ -103,6 +104,48 @@ public sealed class StoreNotificationVerifier(
         catch { return Null(); }
     }
 
+    public Task<StoreNotificationDto?> VerifyPaddleAsync(string rawBody, string? paddleSignature, DateTime nowUtc, CancellationToken ct = default)
+    {
+        if (!paddle.WebhookConfigured || !PaddleSignature.Verify(rawBody, paddleSignature, paddle.WebhookSigningSecret, nowUtc))
+            return Null(); // fail-closed: unconfigured or bad signature
+        try
+        {
+            using var doc = JsonDocument.Parse(rawBody);
+            var root = doc.RootElement;
+
+            // Envelope: event_id (idempotency key), event_type ("entity.action"), occurred_at, data (the entity).
+            var eventId = Str(root, "event_id");
+            var eventType = Str(root, "event_type");
+            if (string.IsNullOrEmpty(eventId) || eventType.Length == 0) return Null();
+            if (!root.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Object) return Null();
+
+            // OriginalTransactionId = the SUBSCRIPTION id (sub_…). On subscription.* the data root IS the
+            // subscription (data.id = sub_…); on transaction.* the sub id is data.subscription_id.
+            // PADDLE-VERIFY (sandbox): confirm this nesting against a captured sandbox event.
+            var subId = eventType.StartsWith("transaction.", StringComparison.Ordinal)
+                ? Str(data, "subscription_id")
+                : Str(data, "id");
+            if (string.IsNullOrEmpty(subId)) return Null();
+
+            // Our user link: data.custom_data.app_user_id (set on the checkout, propagated to sub + transaction).
+            // PADDLE-VERIFY (sandbox): confirm custom_data sits at the data root on both subscription.* and transaction.*.
+            Guid? userId = null;
+            if (data.TryGetProperty("custom_data", out var cd) && cd.ValueKind == JsonValueKind.Object
+                && Guid.TryParse(Str(cd, "app_user_id"), out var uid)) userId = uid;
+
+            var occurredAt = ParseRfc3339(Str(root, "occurred_at")) ?? nowUtc;
+
+            return Task.FromResult<StoreNotificationDto?>(new StoreNotificationDto(
+                eventId, MapPaddle(eventType, data), subId, occurredAt, PaddleBillingPeriod(data, "ends_at"))
+            {
+                UserId = userId,
+                ProductId = PaddleFirstPrice(data),
+                PeriodStart = PaddleBillingPeriod(data, "starts_at"),
+            });
+        }
+        catch { return Null(); }
+    }
+
     public Task<StoreNotificationDto?> VerifyRevenueCatAsync(string? authorizationHeader, string rawBody, DateTime nowUtc, CancellationToken ct = default)
     {
         if (!revenueCat.WebhookConfigured || !FixedEquals(authorizationHeader, revenueCat.WebhookAuthHeader))
@@ -130,6 +173,61 @@ public sealed class StoreNotificationVerifier(
             obj.TryGetProperty("cancel_at_period_end", out var c) && c.ValueKind == JsonValueKind.True ? "cancel" : "renew",
         _ => "unknown",
     };
+
+    // Paddle event → normalized Type. Mirrors the Stripe shape: created/activated/resumed + transaction.completed
+    // grant ("renew"); subscription.canceled is TERMINAL (the sub has actually ended) so it REVOKES ("expire",
+    // like Stripe customer.subscription.deleted) — a scheduled cancel-at-period-end instead arrives as
+    // subscription.updated with status still active + scheduled_change.action="cancel" and RETAINS access until it
+    // takes effect; paused/past_due → "grace". subscription.updated is Paddle's catch-all → branch on status.
+    // PADDLE-VERIFY (sandbox): confirm event_type spellings + scheduled_change shape against captured events.
+    private static string MapPaddle(string eventType, JsonElement data)
+    {
+        var status = Str(data, "status");
+        return eventType switch
+        {
+            "subscription.created" or "subscription.activated" or "subscription.resumed"
+                or "subscription.trialing" or "transaction.completed" or "transaction.paid" => "renew",
+            "subscription.canceled" => "expire",
+            "subscription.paused" => "grace",
+            "subscription.past_due" => "grace",
+            "subscription.updated" => MapPaddleUpdated(data, status),
+            _ => MapPaddleStatus(status),
+        };
+    }
+
+    private static string MapPaddleUpdated(JsonElement data, string status)
+    {
+        // A scheduled cancel-at-period-end keeps status active but sets scheduled_change.action="cancel":
+        // retain access until it takes effect (mirrors Stripe cancel_at_period_end → "cancel").
+        if (data.TryGetProperty("scheduled_change", out var sc) && sc.ValueKind == JsonValueKind.Object
+            && Str(sc, "action") == "cancel")
+            return "cancel";
+        return MapPaddleStatus(status);
+    }
+
+    private static string MapPaddleStatus(string status) => status switch
+    {
+        "active" or "trialing" => "renew",
+        "past_due" or "paused" => "grace",
+        "canceled" => "expire",
+        _ => "unknown",
+    };
+
+    // Subscription item prices are a top-level ARRAY in Paddle (items[0].price.id), unlike Stripe's items.data[].
+    private static string PaddleFirstPrice(JsonElement data) =>
+        data.TryGetProperty("items", out var items) && items.ValueKind == JsonValueKind.Array
+        && items.GetArrayLength() > 0 && items[0].TryGetProperty("price", out var price)
+            ? Str(price, "id") : "";
+
+    // data.current_billing_period.{starts_at,ends_at} are RFC-3339 strings (null on paused/canceled).
+    private static DateTime? PaddleBillingPeriod(JsonElement data, string field) =>
+        data.TryGetProperty("current_billing_period", out var p) && p.ValueKind == JsonValueKind.Object
+            ? ParseRfc3339(Str(p, field)) : null;
+
+    private static DateTime? ParseRfc3339(string s) =>
+        DateTimeOffset.TryParse(s, System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal,
+            out var dto) ? dto.UtcDateTime : null;
 
     private static string MapRevenueCat(string type) => type switch
     {

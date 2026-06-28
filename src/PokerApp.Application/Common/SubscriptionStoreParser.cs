@@ -4,7 +4,7 @@ using PokerApp.Domain.Enums;
 namespace PokerApp.Application.Common;
 
 /// <summary>
-/// Single source for the store-string ↔ <see cref="SubscriptionStore"/> mapping (apple|google|stripe|revenuecat).
+/// Single source for the store-string ↔ <see cref="SubscriptionStore"/> mapping (apple|google|stripe|revenuecat|paddle).
 /// Used by the billing validators + handlers so adding a store is one edit here, not a scatter of ternaries.
 /// </summary>
 public static class SubscriptionStoreParser
@@ -17,6 +17,7 @@ public static class SubscriptionStoreParser
             case "google": result = SubscriptionStore.Google; return true;
             case "stripe": result = SubscriptionStore.Stripe; return true;
             case "revenuecat": result = SubscriptionStore.RevenueCat; return true;
+            case "paddle": result = SubscriptionStore.Paddle; return true;
             default: result = default; return false;
         }
     }

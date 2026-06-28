@@ -7,14 +7,20 @@ using PokerApp.Domain.Enums;
 
 namespace PokerApp.Application.Features.Billing.Commands;
 
-/// <summary>Normalized store notification (the signature-verified payload is parsed into this by the
-/// webhook layer; real Apple ASSN / Google RTDN verification is a deferred seam).</summary>
+/// <summary>Normalized store notification. The base fields exist for all stores; the optional fields are
+/// populated for stores whose webhook can CREATE a subscription on first purchase (Stripe/Paddle carry the user
+/// via custom_data/metadata + the plan price + the billing period). Apple/Google leave them null.</summary>
 public sealed record StoreNotificationDto(
     string NotificationUuid,
     string Type,                 // renew | cancel | expire | grace | refund
     string OriginalTransactionId,
     DateTime EventAtUtc,
-    DateTime? PeriodEnd);
+    DateTime? PeriodEnd)
+{
+    public Guid? UserId { get; init; }
+    public string? ProductId { get; init; }
+    public DateTime? PeriodStart { get; init; }
+}
 
 public sealed record ProcessStoreNotificationCommand(string Store, StoreNotificationDto Notification) : IRequest<Unit>;
 
@@ -43,7 +49,19 @@ public sealed class ProcessStoreNotificationCommandHandler(
         var sub = await context.Subscriptions.FirstOrDefaultAsync(
             s => s.Store == store && s.OriginalTransactionId == n.OriginalTransactionId, cancellationToken);
 
-        if (sub is not null)
+        if (sub is null)
+        {
+            // First-purchase grant: only stores that supply the user + period can create (Stripe/Paddle).
+            // Apple/Google leave UserId null here and fall through to the existing no-op (unchanged behaviour).
+            if (n.Type == "renew" && n.UserId is Guid uid)
+            {
+                sub = Subscription.Create(uid, store, n.ProductId ?? string.Empty, n.OriginalTransactionId,
+                    n.PeriodStart ?? n.EventAtUtc, n.PeriodEnd ?? n.EventAtUtc.AddMonths(1),
+                    autoRenew: true, isSandbox: false, n.EventAtUtc);
+                await context.Subscriptions.AddAsync(sub, cancellationToken);
+            }
+        }
+        else
         {
             switch (n.Type)
             {

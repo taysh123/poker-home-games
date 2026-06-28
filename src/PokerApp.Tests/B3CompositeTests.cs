@@ -55,6 +55,7 @@ public class StoreNotificationVerifierAppleTests
             new BillingSettings { Provider = "direct", AcceptSandbox = acceptSandbox },
             new GooglePlaySettings(),
             new StripeSettings(),
+            new PaddleSettings(),
             new RevenueCatSettings());
 
     [Fact]
@@ -114,6 +115,7 @@ public class StoreNotificationVerifierGoogleTests
             new BillingSettings { Provider = "direct", AcceptSandbox = false },
             new GooglePlaySettings { PubSubAudience = Aud },
             new StripeSettings(),
+            new PaddleSettings(),
             new RevenueCatSettings());
 
     private static string Rtdn(string purchaseToken, int type) =>

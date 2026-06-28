@@ -18,6 +18,9 @@ public interface IStoreNotificationVerifier
     /// <summary>Stripe webhook — verify the Stripe-Signature HMAC over the RAW payload, then normalize.</summary>
     Task<StoreNotificationDto?> VerifyStripeAsync(string rawPayload, string? stripeSignature, DateTime nowUtc, CancellationToken ct = default);
 
+    /// <summary>Paddle Billing webhook — verify the Paddle-Signature HMAC over the RAW body, then normalize.</summary>
+    Task<StoreNotificationDto?> VerifyPaddleAsync(string rawBody, string? paddleSignature, DateTime nowUtc, CancellationToken ct = default);
+
     /// <summary>RevenueCat webhook — verify the shared Authorization-header secret, then normalize the event.</summary>
     Task<StoreNotificationDto?> VerifyRevenueCatAsync(string? authorizationHeader, string rawBody, DateTime nowUtc, CancellationToken ct = default);
 }

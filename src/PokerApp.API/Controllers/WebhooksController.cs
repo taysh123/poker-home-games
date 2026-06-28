@@ -52,6 +52,20 @@ public class WebhooksController(IMediator mediator, IStoreNotificationVerifier v
         return NoContent();
     }
 
+    /// <summary>Paddle Billing webhooks — RAW body + Paddle-Signature header (HMAC). Source of truth for
+    /// entitlements. Fail-closed (401) on bad/missing signature; otherwise 200 even on dup/ignored events
+    /// (Paddle treats non-200 as a delivery failure and retries — never 5xx on a handled event).</summary>
+    [HttpPost("paddle")]
+    public async Task<IActionResult> Paddle(CancellationToken cancellationToken)
+    {
+        using var reader = new StreamReader(Request.Body);
+        var payload = await reader.ReadToEndAsync(cancellationToken); // RAW body — the signature is computed over it
+        var dto = await verifier.VerifyPaddleAsync(payload, Request.Headers["Paddle-Signature"], DateTime.UtcNow, cancellationToken);
+        if (dto is null) return Unauthorized(); // fail closed — bad/missing signature or unconfigured
+        await mediator.Send(new ProcessStoreNotificationCommand("paddle", dto), cancellationToken);
+        return Ok(); // 200 within Paddle's window; processing is idempotent + out-of-order safe
+    }
+
     /// <summary>RevenueCat webhooks — RAW body + shared Authorization-header secret. Fail-closed (401).</summary>
     [HttpPost("revenuecat")]
     public async Task<IActionResult> RevenueCat(CancellationToken cancellationToken)
