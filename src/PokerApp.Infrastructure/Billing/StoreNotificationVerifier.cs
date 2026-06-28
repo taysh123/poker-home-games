@@ -121,14 +121,14 @@ public sealed class StoreNotificationVerifier(
 
             // OriginalTransactionId = the SUBSCRIPTION id (sub_…). On subscription.* the data root IS the
             // subscription (data.id = sub_…); on transaction.* the sub id is data.subscription_id.
-            // PADDLE-VERIFY (sandbox): confirm this nesting against a captured sandbox event.
+            // VERIFIED against sandbox payloads (2026-06-28).
             var subId = eventType.StartsWith("transaction.", StringComparison.Ordinal)
                 ? Str(data, "subscription_id")
                 : Str(data, "id");
             if (string.IsNullOrEmpty(subId)) return Null();
 
             // Our user link: data.custom_data.app_user_id (set on the checkout, propagated to sub + transaction).
-            // PADDLE-VERIFY (sandbox): confirm custom_data sits at the data root on both subscription.* and transaction.*.
+            // VERIFIED against sandbox payloads (2026-06-28): custom_data.app_user_id present at the data root on both.
             Guid? userId = null;
             if (data.TryGetProperty("custom_data", out var cd) && cd.ValueKind == JsonValueKind.Object
                 && Guid.TryParse(Str(cd, "app_user_id"), out var uid)) userId = uid;
@@ -179,7 +179,9 @@ public sealed class StoreNotificationVerifier(
     // like Stripe customer.subscription.deleted) — a scheduled cancel-at-period-end instead arrives as
     // subscription.updated with status still active + scheduled_change.action="cancel" and RETAINS access until it
     // takes effect; paused/past_due → "grace". subscription.updated is Paddle's catch-all → branch on status.
-    // PADDLE-VERIFY (sandbox): confirm event_type spellings + scheduled_change shape against captured events.
+    // VERIFIED (sandbox 2026-06-28): subscription.created + transaction.completed → "renew". STILL UNVERIFIED
+    // against live events: subscription.canceled / subscription.updated spellings + the scheduled_change shape
+    // (not captured yet — exercise a cancel in the sandbox to confirm before relying on the revoke path).
     private static string MapPaddle(string eventType, JsonElement data)
     {
         var status = Str(data, "status");
@@ -219,10 +221,21 @@ public sealed class StoreNotificationVerifier(
         && items.GetArrayLength() > 0 && items[0].TryGetProperty("price", out var price)
             ? Str(price, "id") : "";
 
-    // data.current_billing_period.{starts_at,ends_at} are RFC-3339 strings (null on paused/canceled).
-    private static DateTime? PaddleBillingPeriod(JsonElement data, string field) =>
-        data.TryGetProperty("current_billing_period", out var p) && p.ValueKind == JsonValueKind.Object
-            ? ParseRfc3339(Str(p, field)) : null;
+    // The period field differs by entity (VERIFIED against sandbox payloads 2026-06-28):
+    //   subscription.* events → data.current_billing_period.{starts_at,ends_at}
+    //   transaction.*  events → data.billing_period.{starts_at,ends_at}
+    // Read whichever the event carries (both RFC-3339; null on paused/canceled). Reading only
+    // current_billing_period silently dropped the period on transaction.completed.
+    private static DateTime? PaddleBillingPeriod(JsonElement data, string field)
+    {
+        foreach (var key in new[] { "current_billing_period", "billing_period" })
+            if (data.TryGetProperty(key, out var p) && p.ValueKind == JsonValueKind.Object)
+            {
+                var v = ParseRfc3339(Str(p, field));
+                if (v is not null) return v;
+            }
+        return null;
+    }
 
     private static DateTime? ParseRfc3339(string s) =>
         DateTimeOffset.TryParse(s, System.Globalization.CultureInfo.InvariantCulture,

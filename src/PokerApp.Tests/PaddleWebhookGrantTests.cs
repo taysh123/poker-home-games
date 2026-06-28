@@ -18,7 +18,8 @@ namespace PokerApp.Tests;
 /// Proves first subscription.created / transaction.completed CREATES the subscription + grants premium; duplicate
 /// delivery (same event_id) does NOT double-grant (1 subscription, 1 StoreWebhookEvent); subscription.canceled
 /// revokes; a bad signature fails closed (null → the controller answers 401). The webhook is the source of truth.
-/// PADDLE-VERIFY (sandbox): the event JSON shapes are from the research doc, not captured sandbox events.
+/// Event JSON shapes ALIGNED to captured sandbox payloads (2026-06-28): subscription.* carry
+/// current_billing_period; transaction.* carry billing_period; custom_data.app_user_id sits at the data root.
 /// </summary>
 public class PaddleWebhookGrantTests
 {
@@ -74,7 +75,7 @@ public class PaddleWebhookGrantTests
                 id = "txn_1",
                 status = "completed",
                 subscription_id = subId, // transaction.* carries the sub id here (not at data.id)
-                current_billing_period = new { starts_at = "2026-06-28T12:00:00Z", ends_at = "2099-07-28T12:00:00Z" },
+                billing_period = new { starts_at = "2026-06-28T12:00:00Z", ends_at = "2099-07-28T12:00:00Z" }, // real txn shape: billing_period, NOT current_billing_period
                 items = new[] { new { price = new { id = "pri_monthly" } } },
                 custom_data = new { app_user_id = uid.ToString() },
             },
@@ -114,6 +115,8 @@ public class PaddleWebhookGrantTests
         Assert.Equal("sub_2", dto!.OriginalTransactionId); // resolved from data.subscription_id, not data.id (txn_1)
         Assert.Equal("renew", dto.Type);
         Assert.Equal(uid, dto.UserId);
+        // Period must come from data.billing_period on transaction.* (would be null if we only read current_billing_period).
+        Assert.Equal(new DateTime(2099, 7, 28, 12, 0, 0, DateTimeKind.Utc), dto.PeriodEnd);
 
         var handler = new ProcessStoreNotificationCommandHandler(ctx, new CapturingAuditLog());
         await handler.Handle(new ProcessStoreNotificationCommand("paddle", dto), default);
