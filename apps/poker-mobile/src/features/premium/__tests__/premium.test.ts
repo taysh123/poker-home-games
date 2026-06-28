@@ -49,7 +49,7 @@ describe('pricing + AI policy config', () => {
     expect(PRICING.monthly.price).toBe('$11.99');
     expect(PRICING.yearly.price).toBe('$99.99');
     expect(AI_CREDIT_POLICY.free.credits).toBe(1);
-    expect(AI_CREDIT_POLICY.premium.credits).toBe(30);
+    expect(AI_CREDIT_POLICY.premium.credits).toBe(100);
   });
   it('yearly perMonth + savePct are internally consistent with the prices (honest, no over-claim)', () => {
     const monthly = Number(PRICING.monthly.price.replace('$', ''));

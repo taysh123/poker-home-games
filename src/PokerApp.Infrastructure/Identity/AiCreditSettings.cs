@@ -12,5 +12,5 @@ public class AiCreditPolicySettings
 public class AiCreditSettings
 {
     public AiCreditPolicySettings Free { get; init; } = new() { Kind = "lifetime", Credits = 1, MinIntervalSeconds = 4 };
-    public AiCreditPolicySettings Premium { get; init; } = new() { Kind = "monthly", Credits = 30, MinIntervalSeconds = 2 };
+    public AiCreditPolicySettings Premium { get; init; } = new() { Kind = "monthly", Credits = 100, MinIntervalSeconds = 2 };
 }

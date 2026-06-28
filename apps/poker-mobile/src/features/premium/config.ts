@@ -24,11 +24,13 @@ export interface AiCreditPolicy {
 
 /**
  * AI Coach access per tier. Free = 1 LIFETIME onboarding analysis (verified accounts only;
- * guests get 0 — enforced separately). Premium = 30 / month. Tune here (or via remote config).
+ * guests get 0 — enforced separately). Premium = 100 / month (economics: ~$0.006/analysis via
+ * Haiku ⇒ ≤ ~$0.60/mo cost vs $8.99 revenue). The quota is a HARD cap enforced server-side
+ * (`AiCreditSettings.Premium.Credits`) — keep these in sync. Tune here (or via remote config).
  */
 export const AI_CREDIT_POLICY: Record<PremiumTier, AiCreditPolicy> = {
-  free:    { kind: 'lifetime', credits: 1,  minIntervalMs: 4000 },
-  premium: { kind: 'monthly',  credits: 30, minIntervalMs: 1500 },
+  free:    { kind: 'lifetime', credits: 1,   minIntervalMs: 4000 },
+  premium: { kind: 'monthly',  credits: 100, minIntervalMs: 1500 },
 };
 
 export type BillingPeriod = 'month' | 'year';
@@ -62,24 +64,26 @@ export const BILLING_KEYS = {
 
 export type PremiumFeatureKey =
   | 'premium_study'
-  | 'advanced_gto' | 'ai_coach' | 'advanced_bankroll' | 'cloud_sync' | 'premium_learning';
+  | 'ai_coach' | 'cloud_sync' | 'advanced_bankroll';
 
 /**
- * HONESTY: `comingSoon` marks benefits that are NOT yet live (the AI coach is a labeled demo; cloud sync,
- * advanced analytics, and premium courses are unbuilt). This is precisely why the `paywall` flag is OFF.
- * The paywall renders a "Soon" chip on these so it never presents an unshipped benefit as available. Clear
- * each flag only when the feature is genuinely live (and real billing is wired). Never charge for a `comingSoon`.
+ * HONESTY: `comingSoon` marks benefits that are NOT yet live (the AI coach, cloud sync, and advanced
+ * bankroll analytics are unbuilt). This is precisely why the `paywall` flag is OFF. The paywall renders a
+ * "Soon" chip on these so it never presents an unshipped benefit as available. Clear each flag only when
+ * the feature is genuinely live (and real billing is wired). Never charge for a `comingSoon`.
+ *
+ * Launch set (decided): ONE live benefit — `premium_study` (comingSoon: false) — plus AI Coach, Cloud Sync,
+ * and Advanced Bankroll Analytics as "Soon". No "Advanced GTO"/solver claims — study content is positioned
+ * as expert-calibrated, never GTO/solver-verified.
  *
  * `comingSoon` is non-optional boolean — the honesty CI guard (honesty.test.ts) checks `=== false` / `=== true`
  * so the intent is always explicit. Only `premium_study` is live (comingSoon: false).
  */
 export const PREMIUM_FEATURES: { key: PremiumFeatureKey; icon: string; title: string; desc: string; comingSoon: boolean }[] = [
   { key: 'premium_study',     icon: 'library',     title: 'Premium Study',           desc: 'Full lesson library — every study pack · all quizzes · unlimited Spot Trainer', comingSoon: false },
-  { key: 'ai_coach',          icon: 'sparkles',    title: 'AI Coach',                desc: '30 hand analyses every month', comingSoon: true },
-  { key: 'advanced_gto',      icon: 'school',      title: 'Advanced GTO study',      desc: 'Deeper ranges, sizings & spots', comingSoon: true },
-  { key: 'advanced_bankroll', icon: 'stats-chart', title: 'Advanced bankroll analytics', desc: 'Variance, filters & deeper trends', comingSoon: true },
+  { key: 'ai_coach',          icon: 'sparkles',    title: 'AI Coach',                desc: '100 hand analyses every month', comingSoon: true },
   { key: 'cloud_sync',        icon: 'cloud-done',  title: 'Cloud sync',              desc: 'Your data, across all devices', comingSoon: true },
-  { key: 'premium_learning',  icon: 'library',     title: 'Premium learning',        desc: 'Courses & guided study paths', comingSoon: true },
+  { key: 'advanced_bankroll', icon: 'stats-chart', title: 'Advanced bankroll analytics', desc: 'Variance, filters & deeper trends', comingSoon: true },
 ];
 
 /** Keys of premium features that are genuinely live (chargeable). Single source for paywall + tests. */

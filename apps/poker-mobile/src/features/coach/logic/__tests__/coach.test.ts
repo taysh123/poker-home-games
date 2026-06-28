@@ -62,9 +62,9 @@ describe('recordUsage + normalize', () => {
   it('normalizes a legacy usage missing usedLifetime', () => {
     expect(normalizeUsage({ schemaVersion: 1, monthKey: '2026-06', usedThisMonth: 3 } as any).usedLifetime).toBe(0);
   });
-  it('config defaults are profit-protective (free lifetime 1, premium monthly 30)', () => {
+  it('config defaults are profit-protective (free lifetime 1, premium monthly 100)', () => {
     expect(AI_CREDIT_POLICY.free).toMatchObject({ kind: 'lifetime', credits: 1 });
-    expect(AI_CREDIT_POLICY.premium).toMatchObject({ kind: 'monthly', credits: 30 });
+    expect(AI_CREDIT_POLICY.premium).toMatchObject({ kind: 'monthly', credits: 100 });
   });
 });
 
