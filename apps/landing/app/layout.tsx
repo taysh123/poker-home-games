@@ -22,7 +22,7 @@ const description =
   'Track cash games and tournaments, settle up automatically, and see who is really winning — all free. Plus a personal coach when you want to improve.';
 
 export const metadata: Metadata = {
-  metadataBase: new URL(SITE.appUrl),
+  metadataBase: new URL(SITE.siteUrl),
   title: {
     default: title,
     template: '%s · T Poker',
@@ -39,17 +39,38 @@ export const metadata: Metadata = {
     'poker tournament manager',
   ],
   authors: [{ name: SITE.company }],
+  alternates: {
+    canonical: '/',
+  },
   openGraph: {
     title,
     description,
     siteName: SITE.name,
     type: 'website',
     locale: 'en_US',
+    url: SITE.siteUrl,
+    images: [
+      {
+        url: '/og.png',
+        width: 1200,
+        height: 630,
+        alt: 'T Poker — run your home poker game, no mess, no arguments.',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title,
     description,
+    images: ['/og.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
   },
 };
 
