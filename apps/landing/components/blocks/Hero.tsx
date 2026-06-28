@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { AnimatedText } from '@/components/ui/AnimatedText';
 import { TiltCard } from '@/components/ui/TiltCard';
 import { StoreBadges } from '@/components/ui/StoreBadges';
+import { HeroChip } from '@/components/three/HeroChip';
 import { HERO } from '@/lib/content';
 import { SITE } from '@/lib/site';
 
@@ -85,11 +86,7 @@ function AppWindowMock() {
         aria-hidden="true"
         className="animate-floaty pointer-events-none absolute -bottom-7 -left-6 z-10 h-20 w-20 sm:-left-8 sm:h-24 sm:w-24"
       >
-        <div className="chip-face flex h-full w-full items-center justify-center rounded-full">
-          <div className="flex h-[52%] w-[52%] items-center justify-center rounded-full border border-gold/40 bg-background/85">
-            <span className="font-display text-lg leading-none text-goldLight">T</span>
-          </div>
-        </div>
+        <HeroChip />
       </div>
     </div>
   );
