@@ -519,7 +519,9 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
   }, [user, navigationRef]);
 
   // Decide whether to show the web landing page (logged-out web visitors at root only).
-  const showLanding = resolveWebLanding({
+  // Gated behind the `paywall` flag so the premium launch (paywall + this pricing landing) lights up
+  // as ONE flag flip — until then, logged-out web keeps the current guest experience (no surprise on merge).
+  const showLanding = isFeatureEnabled('paywall') && resolveWebLanding({
     platform: Platform.OS as 'web' | 'ios' | 'android',
     isAuthed: user !== null,
     path:
