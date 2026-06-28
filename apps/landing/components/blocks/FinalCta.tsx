@@ -3,6 +3,8 @@ import { Container } from '@/components/ui/Container';
 import { Section } from '@/components/ui/Section';
 import { Button } from '@/components/ui/Button';
 import { Reveal } from '@/components/ui/Reveal';
+import { AuroraBackground } from '@/components/backgrounds/AuroraBackground';
+import ShinyText from '@/components/ui/ShinyText';
 import { FINAL_CTA } from '@/lib/content';
 import { SITE } from '@/lib/site';
 
@@ -33,10 +35,23 @@ export function FinalCta() {
         }}
       />
 
-      <Container className="relative">
+      {/*
+        Animated aurora layer — sits above the static glow, behind the content.
+        Lazy + gated (desktop + motion-allowed + in-view); mobile / reduced-motion
+        never fetch the OGL chunk and it renders empty as a no-op fallback.
+      */}
+      <AuroraBackground />
+
+      <Container className="relative z-10">
         <Reveal className="mx-auto max-w-2xl text-center">
           <h2 id="final-cta-heading" className="text-display">
-            {FINAL_CTA.heading}
+            <ShinyText
+              text={FINAL_CTA.heading}
+              color="#E8EDF2"
+              shineColor="#E8C97A"
+              speed={5}
+              className="text-display"
+            />
           </h2>
           <p className="mt-4 text-lg text-textMuted">{FINAL_CTA.sub}</p>
           <div className="mt-8 flex justify-center">
