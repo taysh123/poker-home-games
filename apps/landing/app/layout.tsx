@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { DM_Serif_Display, Inter } from 'next/font/google';
 import './globals.css';
 import { SITE } from '@/lib/site';
+import { MotionProvider } from '../components/MotionProvider';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -63,7 +64,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${inter.variable} ${dmSerif.variable}`}>
       <body>
         <div className="bg-mesh" aria-hidden="true" />
-        {children}
+        <MotionProvider>{children}</MotionProvider>
       </body>
     </html>
   );

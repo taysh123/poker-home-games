@@ -5,7 +5,6 @@ import {
   motion,
   useScroll,
   useTransform,
-  useReducedMotion,
 } from 'framer-motion';
 import { Container } from '@/components/ui/Container';
 import { Section } from '@/components/ui/Section';
@@ -18,13 +17,13 @@ import { HOW_IT_WORKS } from '@/lib/content';
  * Desktop: horizontal timeline. The gold connector line between steps draws
  * from left to right as the section scrolls into view (scroll-progress via
  * Framer Motion useScroll + useTransform → scaleX, transform-only, CLS-safe).
- * Reduced-motion: line renders at full width immediately — static, no scroll effect.
+ * MotionConfig reducedMotion="user" (in layout) handles the prefers-reduced-motion
+ * case — no DOM branching needed; the line always uses motion.div.
  *
  * Mobile: steps stack vertically with a simple dashed vertical accent.
  */
 export function HowItWorks() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const reduce = useReducedMotion();
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -53,6 +52,8 @@ export function HowItWorks() {
             Connector line — desktop only (hidden on mobile).
             Base track: faint border colour.
             Animated fill: gold gradient, scaleX from 0→1 (origin-left).
+            MotionConfig reducedMotion="user" disables the scroll-linked animation
+            for users who prefer reduced motion — always a motion.div (no DOM branch).
             Positioned at vertical center of the number circles (h-14 = 56px → top-7 = 28px).
             Left/right offset = 1/6 of container width (center of outermost columns in a 3-col grid).
           */}
@@ -60,14 +61,10 @@ export function HowItWorks() {
             className="absolute left-[calc(100%/6)] right-[calc(100%/6)] top-7 hidden h-px bg-border/50 lg:block"
             aria-hidden="true"
           >
-            {reduce ? (
-              <div className="absolute inset-0 bg-gradient-to-r from-gold/50 via-gold/30 to-transparent" />
-            ) : (
-              <motion.div
-                className="absolute inset-0 origin-left bg-gradient-to-r from-gold/60 via-gold/35 to-transparent"
-                style={{ scaleX: lineScaleX }}
-              />
-            )}
+            <motion.div
+              className="absolute inset-0 origin-left bg-gradient-to-r from-gold/60 via-gold/35 to-transparent"
+              style={{ scaleX: lineScaleX }}
+            />
           </div>
 
           {/* Step grid */}

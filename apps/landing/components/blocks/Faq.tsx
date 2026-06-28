@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import { Container } from '@/components/ui/Container';
 import { Section } from '@/components/ui/Section';
@@ -19,11 +19,11 @@ import { FAQ_ITEMS } from '@/lib/content';
  *
  * Motion:
  * - Height animates 0 → auto via Framer Motion AnimatePresence (opacity too).
- * - Reduced-motion: immediate show/hide, no height transition, chevron static.
+ * - MotionConfig reducedMotion="user" (in layout) disables animations globally
+ *   for users who prefer reduced motion — no DOM branching needed.
  */
 export function Faq() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
-  const reduce = useReducedMotion();
 
   return (
     <Section aria-labelledby="faq-heading">
@@ -55,56 +55,37 @@ export function Faq() {
                   >
                     <span className="font-medium text-textHigh">{item.q}</span>
 
-                    {/* Chevron — rotate on open; static when reduced-motion */}
-                    {reduce ? (
-                      <ChevronDown
-                        className="h-5 w-5 shrink-0 text-textMuted transition-transform"
-                        style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                        aria-hidden="true"
-                      />
-                    ) : (
-                      <motion.span
-                        animate={{ rotate: isOpen ? 180 : 0 }}
-                        transition={{ duration: 0.2, ease: 'easeInOut' }}
-                        className="shrink-0"
-                        aria-hidden="true"
-                      >
-                        <ChevronDown className="h-5 w-5 text-textMuted" />
-                      </motion.span>
-                    )}
+                    {/* Chevron — rotates on open. MotionConfig disables animation
+                        for prefers-reduced-motion users (instant jump). */}
+                    <motion.span
+                      animate={{ rotate: isOpen ? 180 : 0 }}
+                      transition={{ duration: 0.2, ease: 'easeInOut' }}
+                      className="shrink-0"
+                      aria-hidden="true"
+                    >
+                      <ChevronDown className="h-5 w-5 text-textMuted" />
+                    </motion.span>
                   </button>
 
-                  {/* Panel */}
-                  {reduce ? (
-                    /* Reduced-motion: instant show/hide, no height animation */
-                    isOpen ? (
-                      <div
+                  {/* Panel — height/opacity animate via AnimatePresence.
+                      MotionConfig disables animation for prefers-reduced-motion users. */}
+                  <AnimatePresence initial={false}>
+                    {isOpen && (
+                      <motion.div
                         id={panelId}
                         role="region"
                         aria-labelledby={triggerId}
+                        key={panelId}
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25, ease: 'easeInOut' }}
+                        className="overflow-hidden"
                       >
                         <p className="pb-5 leading-relaxed text-textMuted">{item.a}</p>
-                      </div>
-                    ) : null
-                  ) : (
-                    <AnimatePresence initial={false}>
-                      {isOpen && (
-                        <motion.div
-                          id={panelId}
-                          role="region"
-                          aria-labelledby={triggerId}
-                          key={panelId}
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.25, ease: 'easeInOut' }}
-                          className="overflow-hidden"
-                        >
-                          <p className="pb-5 leading-relaxed text-textMuted">{item.a}</p>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </Reveal>
             );
