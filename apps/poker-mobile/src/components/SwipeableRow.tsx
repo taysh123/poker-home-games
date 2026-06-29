@@ -1,7 +1,7 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { Pressable, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import ReanimatedSwipeable, { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
+import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { spacing } from '../theme/spacing';
@@ -12,7 +12,7 @@ const ACTION_WIDTH = 80;
 
 type Props = {
   children: React.ReactNode;
-  /** Called when the revealed action is tapped (or a full-swipe is released). */
+  /** Called when the revealed action button is tapped. */
   onAction: () => void;
   actionLabel: string;
   actionIcon: React.ComponentProps<typeof Ionicons>['name'];
@@ -27,8 +27,11 @@ type Props = {
  * right-side action panel. Presentational only — callers own the action logic
  * (confirm dialogs, deletions, etc.).
  *
- * On web the swipe gesture is a progressive enhancement; the row renders and
- * taps normally regardless of platform.
+ * Reveal-then-tap: a swipe reveals the action button (which stays open) and the
+ * user taps it to fire `onAction`. That deliberate second step deliberately
+ * suits destructive actions — a stray or shallow swipe never triggers anything
+ * on its own; the button must be seen and tapped. On web the gesture is a
+ * progressive enhancement; the row renders and taps normally regardless.
  */
 export default function SwipeableRow({
   children,
@@ -38,8 +41,6 @@ export default function SwipeableRow({
   actionColor = colors.error,
   disabled = false,
 }: Props) {
-  const swipeableRef = useRef<SwipeableMethods>(null);
-
   // When disabled, render children transparently — no gesture surface at all.
   if (disabled) {
     return <>{children}</>;
@@ -47,13 +48,12 @@ export default function SwipeableRow({
 
   return (
     <ReanimatedSwipeable
-      ref={swipeableRef}
       renderRightActions={(_progress, _translation, methods) => (
         <Pressable
           style={[styles.action, { backgroundColor: actionColor }]}
           onPress={() => {
-            // Close the swipeable first so the panel animates away while the
-            // caller's confirm dialog (or other handler) is shown.
+            // Close the panel so it animates away while the caller's handler
+            // (e.g. a confirm dialog) takes over.
             methods.close();
             onAction();
           }}
@@ -64,17 +64,12 @@ export default function SwipeableRow({
           <Text style={styles.actionLabel}>{actionLabel}</Text>
         </Pressable>
       )}
-      // Snap open when swipe crosses half the panel width; no over-pull.
+      // Snap the panel fully open once the swipe crosses half its width; the user
+      // then taps the revealed button. No auto-trigger on open, no over-pull —
+      // a deliberate tap is required, which is the right safeguard for a
+      // destructive action.
       rightThreshold={ACTION_WIDTH / 2}
       overshootRight={false}
-      // Full swipe past the threshold snaps the panel open; trigger the action
-      // so the gesture alone is sufficient (same close-first pattern as tap).
-      onSwipeableOpen={(direction) => {
-        if (direction === 'right') {
-          swipeableRef.current?.close();
-          onAction();
-        }
-      }}
     >
       {children}
     </ReanimatedSwipeable>
