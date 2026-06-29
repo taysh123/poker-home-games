@@ -3,42 +3,47 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
   RefreshControl,
-  Modal,
   TextInput,
-  KeyboardAvoidingView,
-  Platform,
   Animated,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { useScreenEntrance } from '../hooks/useScreenEntrance';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
+import { spacing } from '../theme/spacing';
+import { radii } from '../theme/radii';
+import { iconSize } from '../theme/iconSize';
 import { shadows } from '../theme/shadows';
 import { pulse } from '../theme/motion';
 import { getMyStats, RecentSessionDto } from '../api/statsApi';
 import { deleteSession, updateSessionName } from '../api/sessionsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import SessionListItem from '../components/SessionListItem';
-import { formatPL, formatDate, formatDuration } from '../utils/formatters';
+import SectionTitle from '../components/SectionTitle';
+import Chip from '../components/Chip';
+import { formatDate, formatDuration } from '../utils/formatters';
 import ActionSheet from '../components/ActionSheet';
 import SkeletonCard from '../components/SkeletonCard';
 import SkeletonRow from '../components/SkeletonRow';
 import Screen from '../components/Screen';
+import AppModal from '../components/Modal';
+import ErrorState from '../components/ErrorState';
+import PressableScale from '../components/motion/PressableScale';
+import { MotiView, slideUpSequence, staggerIn } from '../components/motion';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function AllSessionsScreen({ embedded = false }: { embedded?: boolean } = {}) {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
-  const entrance = useScreenEntrance();
+  const reduced = useReducedMotion();
   const [sessions, setSessions] = useState<RecentSessionDto[]>([]);
   const [loading, setLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -136,18 +141,20 @@ export default function AllSessionsScreen({ embedded = false }: { embedded?: boo
     .filter(s => !selectedGroup || (s.groupName ?? 'Solo') === selectedGroup)
     .filter(s => !q || s.sessionName.toLowerCase().includes(q));
 
-  // Pulse for live dot
+  // Pulse for live dot (steady when Reduce Motion is on)
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
   React.useEffect(() => {
-    pulse(pulseAnim).start();
-    return () => pulseAnim.stopAnimation();
-  }, []);
+    if (reduced) { pulseAnim.setValue(1); return; }
+    const loop = pulse(pulseAnim);
+    loop.start();
+    return () => loop.stop();
+  }, [reduced]);
 
   const stickyHeader = (
-    <View style={[styles.stickyHeader, { paddingTop: embedded ? 4 : insets.top + 12 }]}>
+    <View style={[styles.stickyHeader, { paddingTop: embedded ? spacing.xs : insets.top + spacing.md }]}>
       {!embedded && <Text style={styles.screenTitle}>Sessions</Text>}
       <View style={styles.searchRow}>
-        <Ionicons name="search-outline" size={16} color={colors.textDim} style={styles.searchIcon} />
+        <Ionicons name="search-outline" size={iconSize.xs} color={colors.textDim} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
           placeholder="Search sessions…"
@@ -157,11 +164,17 @@ export default function AllSessionsScreen({ embedded = false }: { embedded?: boo
           returnKeyType="search"
           clearButtonMode="while-editing"
           autoCorrect={false}
+          accessibilityLabel="Search sessions"
         />
         {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
-            <Ionicons name="close-circle" size={16} color={colors.textDim} />
-          </TouchableOpacity>
+          <PressableScale
+            onPress={() => setSearchQuery('')}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Clear search"
+          >
+            <Ionicons name="close-circle" size={iconSize.xs} color={colors.textDim} />
+          </PressableScale>
         )}
       </View>
     </View>
@@ -177,11 +190,11 @@ export default function AllSessionsScreen({ embedded = false }: { embedded?: boo
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Active Now</Text>
-            <SkeletonCard height={64} borderRadius={16} />
+            <SectionTitle>ACTIVE NOW</SectionTitle>
+            <SkeletonCard height={64} borderRadius={radii.lg} />
           </View>
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Recent Sessions</Text>
+            <SectionTitle>RECENT SESSIONS</SectionTitle>
             <View style={[styles.card, { overflow: 'hidden' }]}>
               <SkeletonRow isFirst />
               <SkeletonRow />
@@ -198,13 +211,10 @@ export default function AllSessionsScreen({ embedded = false }: { embedded?: boo
     return (
       <Screen>
         {stickyHeader}
-        <View style={styles.center}>
-          <Ionicons name="alert-circle-outline" size={36} color={colors.textDim} />
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
-            <Text style={styles.retryText}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
+        <ErrorState
+          message="We couldn't load your sessions. Check your connection and try again."
+          onRetry={() => load()}
+        />
       </Screen>
     );
   }
@@ -227,83 +237,99 @@ export default function AllSessionsScreen({ embedded = false }: { embedded?: boo
         }
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View style={entrance.style}>
-
         {/* ── Active ── */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Active Now</Text>
+        <MotiView {...slideUpSequence({ reduced })} style={styles.section}>
+          <SectionTitle>ACTIVE NOW</SectionTitle>
           {active.length === 0 ? (
-            <TouchableOpacity
+            <PressableScale
               style={styles.newGameCta}
               onPress={() => navigation.navigate('NewGame', {})}
-              activeOpacity={0.88}
+              haptic="medium"
+              accessibilityRole="button"
+              accessibilityLabel="Start new game"
             >
               <View style={styles.newGameLeft}>
                 <View style={styles.newGameIconWrap}>
-                  <Ionicons name="play" size={16} color={colors.background} />
+                  <Ionicons name="play" size={iconSize.xs} color={colors.background} />
                 </View>
-                <View>
+                <View style={styles.newGameTextWrap}>
                   <Text style={styles.newGameCtaText}>Start New Game</Text>
                   <Text style={styles.newGameCtaSub}>Deal in your crew for tonight</Text>
                 </View>
               </View>
-              <Ionicons name="chevron-forward" size={18} color="rgba(15,25,35,0.5)" />
-            </TouchableOpacity>
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.background} />
+            </PressableScale>
           ) : (
             <View style={[styles.card, styles.activeCard]}>
               {active.map((s, i) => (
-                <TouchableOpacity
+                <PressableScale
                   key={s.sessionId}
                   style={[styles.activeRow, i > 0 && styles.divider]}
                   onPress={() => openSession(s)}
-                  activeOpacity={0.7}
+                  haptic="light"
+                  accessibilityRole="button"
+                  accessibilityLabel={`${s.sessionName}, live, ${s.groupName ?? 'Solo game'}`}
                 >
                   <Animated.View style={[styles.liveDot, { opacity: pulseAnim }]} />
                   <View style={styles.rowLeft}>
-                    <Text style={styles.sessionName}>{s.sessionName}</Text>
-                    <Text style={styles.groupName}>{s.groupName ?? 'Solo game'}</Text>
+                    <Text style={styles.sessionName} numberOfLines={1}>{s.sessionName}</Text>
+                    <Text style={styles.groupName} numberOfLines={1}>{s.groupName ?? 'Solo game'}</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={18} color={colors.gold} />
-                </TouchableOpacity>
+                  <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.gold} />
+                </PressableScale>
               ))}
             </View>
           )}
-        </View>
+        </MotiView>
 
         {/* ── Recent Sessions ── */}
         <View style={styles.section}>
-          <View style={styles.sectionLabelRow}>
-            <Text style={styles.sectionLabel}>
-              Recent Sessions{finished.length < allFinished.length ? ` (${finished.length})` : ''}
-            </Text>
-            {selectedGroup && (
-              <TouchableOpacity onPress={() => setSelectedGroup(null)}>
-                <Text style={styles.clearFilter}>Clear filter</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          <SectionTitle
+            action={
+              selectedGroup ? (
+                <PressableScale
+                  onPress={() => setSelectedGroup(null)}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear group filter"
+                >
+                  <Text style={styles.clearFilter}>Clear filter</Text>
+                </PressableScale>
+              ) : undefined
+            }
+          >
+            {`RECENT SESSIONS${finished.length < allFinished.length ? ` (${finished.length})` : ''}`}
+          </SectionTitle>
+
           {groupNames.length > 1 && (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.filterChips}
             >
-              {groupNames.map(g => (
-                <TouchableOpacity
-                  key={g}
-                  style={[styles.filterChip, selectedGroup === g && styles.filterChipActive]}
-                  onPress={() => setSelectedGroup(prev => prev === g ? null : g)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.filterChipText, selectedGroup === g && styles.filterChipTextActive]}>{g}</Text>
-                </TouchableOpacity>
-              ))}
+              {groupNames.map(g => {
+                const selected = selectedGroup === g;
+                return (
+                  <PressableScale
+                    key={g}
+                    style={styles.filterChipBtn}
+                    onPress={() => setSelectedGroup(prev => prev === g ? null : g)}
+                    haptic="light"
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={`Filter by ${g}${selected ? ', selected' : ''}`}
+                  >
+                    <Chip label={g} tone={selected ? 'gold' : 'neutral'} size="md" />
+                  </PressableScale>
+                );
+              })}
             </ScrollView>
           )}
+
           {finished.length === 0 ? (
             <View style={styles.emptyCard}>
               <View style={styles.emptyIconWrap}>
-                <Ionicons name={q ? 'search-outline' : 'layers-outline'} size={28} color={colors.textDim} />
+                <Ionicons name={q ? 'search-outline' : 'layers-outline'} size={iconSize.md} color={colors.textDim} />
               </View>
               <Text style={styles.emptyText}>{q ? 'No results' : 'No sessions yet'}</Text>
               <Text style={styles.emptySubtext}>
@@ -315,8 +341,8 @@ export default function AllSessionsScreen({ embedded = false }: { embedded?: boo
               {finished.map((s, i) => {
                 const canManage = s.userRole === 'Admin' || s.userRole === 'Owner';
                 return (
-                  <View key={s.sessionId} style={styles.rowWrapper}>
-                    <View style={{ flex: 1 }}>
+                  <MotiView key={s.sessionId} {...slideUpSequence({ reduced, delay: staggerIn(i) })} style={styles.rowWrapper}>
+                    <View style={styles.rowFlex}>
                       <SessionListItem
                         name={s.sessionName}
                         meta={[
@@ -331,23 +357,23 @@ export default function AllSessionsScreen({ embedded = false }: { embedded?: boo
                       />
                     </View>
                     {canManage && (
-                      <TouchableOpacity
+                      <PressableScale
                         style={styles.moreBtn}
                         onPress={() => setActionSheetSession(s)}
+                        haptic="light"
                         hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
                         accessibilityRole="button"
                         accessibilityLabel={`Options for ${s.sessionName}`}
                       >
-                        <Ionicons name="ellipsis-horizontal" size={16} color={colors.textMuted} />
-                      </TouchableOpacity>
+                        <Ionicons name="ellipsis-horizontal" size={iconSize.xs} color={colors.textMuted} />
+                      </PressableScale>
                     )}
-                  </View>
+                  </MotiView>
                 );
               })}
             </View>
           )}
         </View>
-        </Animated.View>
       </ScrollView>
 
       {/* ── Action sheet — outside ScrollView ── */}
@@ -379,117 +405,104 @@ export default function AllSessionsScreen({ embedded = false }: { embedded?: boo
       />
 
       {/* ── Rename modal ── */}
-      <Modal
+      <AppModal
         visible={renameState !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setRenameState(null)}
+        onClose={() => setRenameState(null)}
+        title="Rename Session"
       >
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Rename Session</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={renameInput}
-              onChangeText={setRenameInput}
-              placeholder="Session name"
-              placeholderTextColor={colors.textDim}
-              autoFocus
-              maxLength={80}
-              returnKeyType="done"
-              onSubmitEditing={handleRename}
-            />
-            {renameError ? <Text style={styles.inlineError}>{renameError}</Text> : null}
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.modalCancel}
-                onPress={() => setRenameState(null)}
-                disabled={renaming}
-              >
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalSave, (!renameInput.trim() || renaming) && styles.modalSaveDisabled]}
-                onPress={handleRename}
-                disabled={!renameInput.trim() || renaming}
-              >
-                {renaming ? (
-                  <ActivityIndicator size="small" color={colors.background} />
-                ) : (
-                  <Text style={styles.modalSaveText}>Save</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+        <TextInput
+          style={styles.modalInput}
+          value={renameInput}
+          onChangeText={setRenameInput}
+          placeholder="Session name"
+          placeholderTextColor={colors.textDim}
+          autoFocus
+          maxLength={80}
+          returnKeyType="done"
+          onSubmitEditing={handleRename}
+          accessibilityLabel="Session name"
+        />
+        {renameError ? <Text style={styles.inlineError}>{renameError}</Text> : null}
+        <View style={styles.modalActions}>
+          <PressableScale
+            style={styles.modalCancel}
+            onPress={() => setRenameState(null)}
+            disabled={renaming}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel"
+          >
+            <Text style={styles.modalCancelText}>Cancel</Text>
+          </PressableScale>
+          <PressableScale
+            style={[styles.modalSave, (!renameInput.trim() || renaming) && styles.modalSaveDisabled]}
+            onPress={handleRename}
+            disabled={!renameInput.trim() || renaming}
+            haptic="medium"
+            accessibilityRole="button"
+            accessibilityLabel="Save session name"
+          >
+            {renaming ? (
+              <ActivityIndicator size="small" color={colors.background} />
+            ) : (
+              <Text style={styles.modalSaveText}>Save</Text>
+            )}
+          </PressableScale>
+        </View>
+      </AppModal>
 
       {/* ── Delete confirmation modal ── */}
-      <Modal
+      <AppModal
         visible={deleteConfirmSession !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => !deleting && setDeleteConfirmSession(null)}
+        onClose={() => { if (!deleting) setDeleteConfirmSession(null); }}
+        title="Delete Session"
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Delete Session</Text>
-            <Text style={styles.deleteBody}>
-              Permanently remove "{deleteConfirmSession?.sessionName}"?{'\n'}
-              All buy-ins, cash-outs, and history will be deleted. This cannot be undone.
-            </Text>
-            {deleteError ? <Text style={styles.inlineError}>{deleteError}</Text> : null}
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.modalCancel}
-                onPress={() => setDeleteConfirmSession(null)}
-                disabled={deleting}
-              >
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.deleteBtn, deleting && styles.modalSaveDisabled]}
-                onPress={executeDelete}
-                disabled={deleting}
-              >
-                {deleting ? (
-                  <ActivityIndicator size="small" color={colors.text} />
-                ) : (
-                  <Text style={styles.deleteBtnText}>Delete</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
+        <Text style={styles.deleteBody}>
+          Permanently remove "{deleteConfirmSession?.sessionName}"?{'\n'}
+          All buy-ins, cash-outs, and history will be deleted. This cannot be undone.
+        </Text>
+        {deleteError ? <Text style={styles.inlineError}>{deleteError}</Text> : null}
+        <View style={styles.modalActions}>
+          <PressableScale
+            style={styles.modalCancel}
+            onPress={() => setDeleteConfirmSession(null)}
+            disabled={deleting}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel"
+          >
+            <Text style={styles.modalCancelText}>Cancel</Text>
+          </PressableScale>
+          <PressableScale
+            style={[styles.deleteBtn, deleting && styles.modalSaveDisabled]}
+            onPress={executeDelete}
+            disabled={deleting}
+            haptic="medium"
+            accessibilityRole="button"
+            accessibilityLabel={`Delete ${deleteConfirmSession?.sessionName ?? 'session'}`}
+          >
+            {deleting ? (
+              <ActivityIndicator size="small" color={colors.text} />
+            ) : (
+              <Text style={styles.deleteBtnText}>Delete</Text>
+            )}
+          </PressableScale>
         </View>
-      </Modal>
+      </AppModal>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
   scroll: { flex: 1 },
-  container: { paddingHorizontal: 20, paddingBottom: 120, paddingTop: 8 },
-  center: {
-    flex: 1,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 14,
-    padding: 32,
-  },
+  container: { paddingHorizontal: spacing.xl, paddingBottom: spacing.huge * 3, paddingTop: spacing.sm },
 
   stickyHeader: {
-    paddingHorizontal: 20,
-    paddingBottom: 10,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.sm,
   },
   screenTitle: {
     ...typography.displaySerif,
     color: colors.text,
-    marginBottom: 10,
+    marginBottom: spacing.sm,
   },
   searchRow: {
     flexDirection: 'row',
@@ -497,54 +510,29 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    gap: 8,
+    borderRadius: radii.control,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 1,
+    gap: spacing.sm,
   },
   searchIcon: { flexShrink: 0 },
   searchInput: {
     flex: 1,
-    fontSize: 14,
+    ...typography.body,
     color: colors.text,
     padding: 0,
   },
 
-  section: { marginBottom: 28 },
-  sectionLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-    paddingHorizontal: 2,
-  },
-  clearFilter: { fontSize: 12, color: colors.gold, fontWeight: '600' },
-  filterChips: { flexDirection: 'row', gap: 8, paddingBottom: 12 },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  filterChipActive: {
-    backgroundColor: colors.goldFaint,
-    borderColor: colors.goldMuted,
-  },
-  filterChipText: { fontSize: 12, fontWeight: '600', color: colors.textMuted },
-  filterChipTextActive: { color: colors.gold },
-  sectionLabel: {
-    ...typography.caps,
-    color: colors.textMuted,
-    paddingHorizontal: 2,
-  },
+  section: { marginBottom: spacing.xxl + spacing.xs },
+  clearFilter: { ...typography.caption, color: colors.gold, fontWeight: '700' },
+  filterChips: { flexDirection: 'row', gap: spacing.sm, paddingBottom: spacing.sm, paddingTop: spacing.sm },
+  filterChipBtn: { minHeight: 44, justifyContent: 'center' },
 
   card: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 16,
+    borderRadius: radii.lg,
     overflow: 'hidden',
     ...shadows.sm,
   },
@@ -554,9 +542,9 @@ const styles = StyleSheet.create({
   activeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 15,
-    gap: 12,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md + 3,
+    gap: spacing.md,
   },
   liveDot: {
     width: 10,
@@ -568,7 +556,8 @@ const styles = StyleSheet.create({
   sessionName: { ...typography.label, color: colors.text },
   groupName:   { ...typography.caption, color: colors.textMuted },
   rowWrapper:  { flexDirection: 'row', alignItems: 'center' },
-  moreBtn:     { paddingHorizontal: 14, paddingVertical: 16 },
+  rowFlex:     { flex: 1 },
+  moreBtn:     { paddingHorizontal: spacing.md, paddingVertical: spacing.lg, minWidth: 44, alignItems: 'center', justifyContent: 'center' },
 
   divider: { borderTopWidth: 1, borderTopColor: colors.border },
 
@@ -576,113 +565,92 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.gold,
-    borderRadius: 16,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
     ...shadows.gold,
   },
   newGameLeft: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: spacing.md,
   },
   newGameIconWrap: {
     width: 34,
     height: 34,
-    borderRadius: 10,
-    backgroundColor: 'rgba(15,25,35,0.2)',
+    borderRadius: radii.sm,
+    backgroundColor: colors.goldDark,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  newGameTextWrap: { flex: 1 },
   newGameCtaText: { ...typography.label, color: colors.background },
-  newGameCtaSub:  { ...typography.caption, color: 'rgba(15,25,35,0.6)', marginTop: 1 },
+  newGameCtaSub:  { ...typography.caption, color: colors.background, marginTop: 1 },
 
   emptyCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 16,
-    padding: 32,
+    borderRadius: radii.lg,
+    padding: spacing.xxxl,
     alignItems: 'center' as const,
-    gap: 8,
+    gap: spacing.sm,
   },
   emptyIconWrap: {
     width: 56,
     height: 56,
-    borderRadius: 16,
+    borderRadius: radii.lg,
     backgroundColor: colors.surfaceHigh,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   emptyText:    { ...typography.labelSmall, color: colors.textMuted },
   emptySubtext: { ...typography.caption, color: colors.textDim },
-  errorText:  { ...typography.body, color: colors.textMuted, textAlign: 'center' },
-  retryBtn:   {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-  },
-  retryText:  { ...typography.labelSmall, color: colors.textMuted },
 
-  // ── Modals ─────────────────────────────────────────────────────────────
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: colors.bgOverlay,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  modalCard: {
+  // ── Modal bodies (AppModal provides overlay + card + title) ──
+  modalInput: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 16,
-    padding: 24,
-    gap: 16,
-  },
-  modalTitle: { fontSize: 17, fontWeight: '700', color: colors.text },
-  modalInput: {
-    backgroundColor: colors.surfaceHigh,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    ...typography.body,
     color: colors.text,
   },
-  inlineError: { fontSize: 13, color: colors.error, textAlign: 'center' },
-  modalActions:      { flexDirection: 'row', gap: 10 },
+  inlineError: { ...typography.bodySmall, color: colors.error, textAlign: 'center' },
+  modalActions:      { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
   modalCancel: {
     flex: 1,
-    paddingVertical: 13,
-    borderRadius: 10,
+    minHeight: 48,
+    borderRadius: radii.control,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  modalCancelText:   { fontSize: 15, fontWeight: '600', color: colors.textMuted },
+  modalCancelText:   { ...typography.label, color: colors.textMuted },
   modalSave: {
     flex: 1,
-    paddingVertical: 13,
-    borderRadius: 10,
+    minHeight: 48,
+    borderRadius: radii.control,
     backgroundColor: colors.gold,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   modalSaveDisabled: { opacity: 0.5 },
-  modalSaveText:     { fontSize: 15, fontWeight: '700', color: colors.background },
+  modalSaveText:     { ...typography.label, color: colors.background },
 
-  deleteBody: { fontSize: 14, color: colors.textMuted, lineHeight: 20 },
+  deleteBody: { ...typography.body, color: colors.textMuted },
   deleteBtn: {
     flex: 1,
-    paddingVertical: 13,
-    borderRadius: 10,
+    minHeight: 48,
+    borderRadius: radii.control,
     backgroundColor: colors.error,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  deleteBtnText: { fontSize: 15, fontWeight: '700', color: colors.text },
+  deleteBtnText: { ...typography.label, color: colors.text },
 });
