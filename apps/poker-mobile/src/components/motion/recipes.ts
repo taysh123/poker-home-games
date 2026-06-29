@@ -25,14 +25,13 @@ type MotiValues = {
   scale?: number;
 };
 
-type MotiTransition = {
-  type: 'timing' | 'spring';
-  duration?: number;
-  delay?: number;
-  damping?: number;
-  stiffness?: number;
-  mass?: number;
-};
+// Discriminated union so a recipe spreads directly onto <MotiView> (Moti's
+// `transition` prop is itself discriminated: timing configs carry `duration`,
+// spring configs carry `damping`/`stiffness`/`mass`). A loose union with all
+// fields optional is NOT assignable to that prop — keep these arms separate.
+type MotiTransition =
+  | { type: 'timing'; duration?: number; delay?: number }
+  | { type: 'spring'; damping?: number; stiffness?: number; mass?: number; delay?: number };
 
 export type MotiRecipe = {
   from: MotiValues;

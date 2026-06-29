@@ -65,12 +65,12 @@ describe('motion/recipes — reduced-motion aware', () => {
     expect(normal.from.opacity).toBe(0);
     expect(normal.from.translateY).toBe(12);
     expect(normal.animate.translateY).toBe(0);
-    expect(normal.transition.duration).toBe(durations.normal);
+    expect((normal.transition as { duration?: number }).duration).toBe(durations.normal);
 
     const reduced = slideUpSequence({ reduced: true });
     expect(reduced.from.opacity).toBe(1);
     expect(reduced.from.translateY).toBe(0);
-    expect(reduced.transition.duration).toBe(0);
+    expect((reduced.transition as { duration?: number }).duration).toBe(0);
   });
 
   it('successPop springs by default and is instant under reduced motion', () => {
@@ -81,6 +81,6 @@ describe('motion/recipes — reduced-motion aware', () => {
     const reduced = successPop({ reduced: true });
     expect(reduced.from.scale).toBe(1);
     expect(reduced.transition.type).toBe('timing');
-    expect(reduced.transition.duration).toBe(0);
+    expect((reduced.transition as { duration?: number }).duration).toBe(0);
   });
 });
