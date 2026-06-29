@@ -312,7 +312,7 @@ function makeTabScreenOptions(bottomInset: number) {
       ? { tabBarBackground: () => <GlassView style={StyleSheet.absoluteFill} /> }
       : null),
     tabBarActiveTintColor: colors.gold,
-    tabBarInactiveTintColor: colors.textDim,
+    tabBarInactiveTintColor: colors.textMuted,
     tabBarLabelStyle: {
       fontSize: 10,
       // The tab bar label renders through React Navigation's own text path,

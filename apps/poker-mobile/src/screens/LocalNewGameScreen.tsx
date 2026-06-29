@@ -301,7 +301,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                     onPress={() => setMode(option.value)}
                     haptic="light"
                     accessibilityRole="radio"
-                    accessibilityState={{ selected }}
+                    accessibilityState={{ checked: selected }}
                     accessibilityLabel={`${option.title}. ${option.blurb}`}
                   >
                     <View style={[styles.modeIconWrap, selected && styles.modeIconWrapActive]}>
@@ -394,8 +394,8 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                           style={[styles.presetChip, blindSelected && styles.presetChipSelected]}
                           onPress={() => pickBlindPreset(b)}
                           hitSlop={8}
-                          accessibilityRole="button"
-                          accessibilityState={{ selected: blindSelected }}
+                          accessibilityRole="radio"
+                          accessibilityState={{ checked: blindSelected }}
                           accessibilityLabel={`${BLIND_PRESET_LABELS[b]} blind structure`}
                         >
                           <Text style={[styles.presetChipText, blindSelected && styles.presetChipTextSelected]}>
