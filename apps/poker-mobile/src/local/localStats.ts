@@ -54,7 +54,7 @@ export function gameResult(game: LocalGame): LocalGameResult {
 
 export function computeLocalStats(games: LocalGame[]): LocalStats {
   const finished = games
-    .filter(g => g.status === 'Finished')
+    .filter(g => g.status === 'Finished' && !g.deletedAt) // tombstoned games are excluded from stats
     .sort((a, b) => (b.endedAt ?? b.createdAt).localeCompare(a.endedAt ?? a.createdAt));
 
   const results = finished.map(gameResult);

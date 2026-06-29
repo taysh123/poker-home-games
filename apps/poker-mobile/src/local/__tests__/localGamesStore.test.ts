@@ -12,6 +12,7 @@ import {
   undoLastTxn,
 } from '../localGamesStore';
 import { computeLocalStats } from '../localStats';
+import { liveGames } from '../cloudSync';
 import type { LocalGamesFile } from '../types';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
@@ -45,7 +46,10 @@ describe('createGame', () => {
     expect(game.status).toBe('Active');
     expect(game.players.map(p => p.name)).toEqual(['Alice', 'Bob', 'Carol']);
     expect(game.txns).toEqual([]);
-    expect(game.schemaVersion).toBe(3);
+    expect(game.schemaVersion).toBe(4);
+    // v4: every game carries an updatedAt, stamped at creation = createdAt.
+    expect(game.updatedAt).toBe(game.createdAt);
+    expect(game.deletedAt).toBeUndefined();
   });
 
   it('rejects a second concurrent active game', () => {
@@ -134,10 +138,53 @@ describe('endGame', () => {
   });
 });
 
-describe('deleteGame', () => {
-  it('removes the game', () => {
+describe('deleteGame (tombstone)', () => {
+  it('tombstones the game (keeps the record) and hides it from selectors', () => {
     const { file, gameId } = newGameFile();
-    expect(deleteGame(file, gameId).games).toHaveLength(0);
+    const next = deleteGame(file, gameId);
+    expect(next.games).toHaveLength(1);             // record KEPT (so the delete can sync)
+    expect(next.games[0].deletedAt).toBeDefined();  // tombstoned
+    expect(next.games[0].updatedAt).toBeDefined();
+    expect(liveGames(next.games)).toHaveLength(0);  // hidden from visible-games selectors
+  });
+
+  it('throws for an unknown game', () => {
+    const { file } = newGameFile();
+    expect(() => deleteGame(file, 'nope')).toThrow('Game not found');
+  });
+});
+
+describe('schema v4 — updatedAt + tombstones', () => {
+  it('bumps updatedAt on each mutation', () => {
+    jest.useFakeTimers();
+    try {
+      jest.setSystemTime(new Date('2026-06-20T10:00:00.000Z'));
+      const { file, gameId, playerIds } = newGameFile();
+      expect(file.games[0].updatedAt).toBe('2026-06-20T10:00:00.000Z');
+
+      jest.setSystemTime(new Date('2026-06-20T10:05:00.000Z'));
+      const next = addBuyIn(file, gameId, playerIds[0], 5000);
+      expect(next.games[0].updatedAt).toBe('2026-06-20T10:05:00.000Z');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('a tombstoned active game does not block creating a new game', () => {
+    const { file, gameId } = newGameFile();
+    const deleted = deleteGame(file, gameId); // tombstones the in-progress game
+    const { file: next } = createGame(deleted, { name: 'Fresh', playerNames: ['Z'] });
+    expect(liveGames(next.games)).toHaveLength(1);
+    expect(liveGames(next.games)[0].name).toBe('Fresh');
+  });
+
+  it('computeLocalStats ignores tombstoned finished games', () => {
+    const { file, gameId, playerIds } = newGameFile();
+    let next = addBuyIn(file, gameId, playerIds[0], 5000);
+    next = endGame(next, gameId, [{ playerId: playerIds[0], amountCents: 5000 }]);
+    expect(computeLocalStats(next.games).gamesPlayed).toBe(1);
+    next = deleteGame(next, gameId);
+    expect(computeLocalStats(next.games).gamesPlayed).toBe(0);
   });
 });
 
@@ -169,6 +216,31 @@ describe('persistence', () => {
     expect(await loadFile()).toEqual(emptyFile());
     const keys = await AsyncStorage.getAllKeys();
     expect(keys.some(k => k.startsWith('tpoker.localGames.quarantine.'))).toBe(true);
+  });
+
+  it('migrates a stored v3 file to v4, backfilling updatedAt = endedAt ?? createdAt', async () => {
+    const v3 = {
+      schemaVersion: 3,
+      games: [
+        {
+          id: 'g1', schemaVersion: 3, name: 'Finished', status: 'Finished', mode: 'cash',
+          createdAt: '2026-05-01T00:00:00.000Z', endedAt: '2026-05-01T03:00:00.000Z',
+          players: [{ id: 'p1', name: 'A' }], txns: [],
+        },
+        {
+          id: 'g2', schemaVersion: 3, name: 'Active', status: 'Active', mode: 'cash',
+          createdAt: '2026-05-02T00:00:00.000Z',
+          players: [], txns: [],
+        },
+      ],
+    };
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(v3));
+    const loaded = await loadFile();
+    expect(loaded.schemaVersion).toBe(4);
+    expect(loaded.games[0]).toMatchObject({ schemaVersion: 4, updatedAt: '2026-05-01T03:00:00.000Z' });
+    expect(loaded.games[0].deletedAt).toBeUndefined();
+    // No endedAt → falls back to createdAt.
+    expect(loaded.games[1].updatedAt).toBe('2026-05-02T00:00:00.000Z');
   });
 });
 

@@ -24,6 +24,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import Screen from '../components/Screen';
 import ScreenHeader from '../components/ScreenHeader';
 import RankBadge from '../components/RankBadge';
+import CloudSyncCard from '../components/CloudSyncCard';
 import AppTextInput from '../components/AppTextInput';
 import PrimaryButton from '../components/PrimaryButton';
 import { PressableScale, MotiView, slideUpSequence, staggerIn } from '../components/motion';
@@ -411,6 +412,11 @@ export default function ProfileScreen({ navigation }: Props) {
             />
           </View>
         </View>
+        </MotiView>
+
+        {/* ── Cloud Sync (honest Coming-soon until cloud_sync is live) ──── */}
+        <MotiView {...slideUpSequence({ reduced, delay: staggerIn(4) })}>
+          <CloudSyncCard onGoPremium={() => navigation.navigate('Paywall', { trigger: 'profile' })} />
         </MotiView>
 
         {/* ── Subscription & usage (flag-gated) ─────────────────────────── */}

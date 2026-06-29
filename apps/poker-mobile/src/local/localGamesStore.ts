@@ -38,13 +38,17 @@ import type {
 const STORAGE_KEY = 'tpoker.localGames.v1';
 const QUARANTINE_PREFIX = 'tpoker.localGames.quarantine.';
 
-export const emptyFile = (): LocalGamesFile => ({ schemaVersion: 3, games: [] });
+export const emptyFile = (): LocalGamesFile => ({ schemaVersion: 4, games: [] });
 
 const newId = (): string => Crypto.randomUUID();
 const now = (): string => new Date().toISOString();
 
+/** Intermediate (pre-current) file shapes used only while chaining migrations. */
+type V2File = { schemaVersion: 2; games: any[] };
+type V3File = { schemaVersion: 3; games: any[] };
+
 /** v1 files predate tournaments — every game becomes an explicit cash game (v2 shape). */
-function migrateV1toV2(file: { games: unknown[] }): { schemaVersion: 2; games: any[] } {
+function migrateV1toV2(file: { games: unknown[] }): V2File {
   return {
     schemaVersion: 2,
     games: (file.games as any[]).map(g => ({ ...g, schemaVersion: 2, mode: g.mode ?? 'cash' })),
@@ -56,18 +60,18 @@ function migrateV1toV2(file: { games: unknown[] }): { schemaVersion: 2; games: a
  * a derived clock — convert to explicit payouts[], generated blindLevels[], and a
  * stored clock seeded running from now. New flexibility fields get safe defaults.
  */
-function migrateV2toV3(file: { games: any[] }): LocalGamesFile {
+function migrateV2toV3(file: { games: any[] }): V3File {
   const nowMs = Date.now();
   return {
     schemaVersion: 3,
     games: file.games.map(g => {
       if (g.mode !== 'tournament' || !g.tournament) {
-        return { ...g, schemaVersion: 3 } as LocalGame;
+        return { ...g, schemaVersion: 3 };
       }
       const t = g.tournament;
       // Already v3-shaped (defensive)?
       if (Array.isArray(t.blindLevels) && Array.isArray(t.payouts) && t.clock) {
-        return { ...g, schemaVersion: 3 } as LocalGame;
+        return { ...g, schemaVersion: 3 };
       }
       const blindLevels = generateBlindLevels(t.blindPreset ?? 'standard');
       const payouts = PAYOUT_PRESETS[(t.payoutPreset as keyof typeof PAYOUT_PRESETS)] ?? PAYOUT_PRESETS['50-30-20'];
@@ -84,8 +88,24 @@ function migrateV2toV3(file: { games: any[] }): LocalGamesFile {
           lateRegLevels: 0,
           eliminations: t.eliminations ?? [],
         },
-      } as LocalGame;
+      };
     }),
+  };
+}
+
+/**
+ * v3 → v4: add cloud-sync metadata. `updatedAt` is backfilled to `endedAt ?? createdAt`
+ * (the best available "last touched" estimate); `deletedAt` stays undefined. Additive —
+ * cash and tournament games migrate identically.
+ */
+function migrateV3toV4(file: { games: any[] }): LocalGamesFile {
+  return {
+    schemaVersion: 4,
+    games: file.games.map(g => ({
+      ...g,
+      schemaVersion: 4,
+      updatedAt: g.updatedAt ?? g.endedAt ?? g.createdAt,
+    })) as LocalGame[],
   };
 }
 
@@ -94,7 +114,7 @@ type AnyVersionFile = { schemaVersion: number; games: unknown[] };
 function isValidFile(value: unknown): value is AnyVersionFile {
   if (typeof value !== 'object' || value === null) return false;
   const file = value as { schemaVersion?: number; games?: unknown };
-  return (file.schemaVersion === 1 || file.schemaVersion === 2 || file.schemaVersion === 3)
+  return (file.schemaVersion === 1 || file.schemaVersion === 2 || file.schemaVersion === 3 || file.schemaVersion === 4)
     && Array.isArray(file.games);
 }
 
@@ -102,7 +122,24 @@ function migrateToCurrent(parsed: AnyVersionFile): LocalGamesFile {
   let working: any = parsed;
   if (working.schemaVersion === 1) working = migrateV1toV2(working);
   if (working.schemaVersion === 2) working = migrateV2toV3(working);
+  if (working.schemaVersion === 3) working = migrateV3toV4(working);
   return working as LocalGamesFile;
+}
+
+/**
+ * Parse a serialized games file (JSON string) and migrate it to the current schema.
+ * Returns null on invalid JSON or unexpected shape — callers treat that as "no usable
+ * data" (loadFile quarantines it; cloud sync treats it as an empty cloud copy).
+ * Shared by `loadFile` and the cloud-sync service so both use the SAME migration chain.
+ */
+export function parseStoredFile(raw: string): LocalGamesFile | null {
+  try {
+    const parsed = JSON.parse(raw);
+    if (isValidFile(parsed)) return migrateToCurrent(parsed);
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -118,20 +155,17 @@ export async function loadFile(): Promise<LocalGamesFile> {
   }
   if (!raw) return emptyFile();
 
+  const parsed = parseStoredFile(raw);
+  if (parsed) return parsed;
+
+  // Invalid JSON or unexpected shape → quarantine, don't clear: keep it recoverable.
   try {
-    const parsed = JSON.parse(raw);
-    if (isValidFile(parsed)) return migrateToCurrent(parsed);
-    throw new Error('unexpected shape');
+    await AsyncStorage.setItem(`${QUARANTINE_PREFIX}${Date.now()}`, raw);
+    await AsyncStorage.removeItem(STORAGE_KEY);
   } catch {
-    // Quarantine, don't clear: keep the raw payload recoverable.
-    try {
-      await AsyncStorage.setItem(`${QUARANTINE_PREFIX}${Date.now()}`, raw);
-      await AsyncStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // non-critical
-    }
-    return emptyFile();
+    // non-critical
   }
+  return emptyFile();
 }
 
 export async function saveFile(file: LocalGamesFile): Promise<void> {
@@ -167,7 +201,8 @@ export function createGame(
   file: LocalGamesFile,
   input: CreateGameInput,
 ): { file: LocalGamesFile; game: LocalGame } {
-  if (file.games.some(g => g.status === 'Active')) {
+  // Ignore tombstoned (deleted) records when checking for an in-progress game.
+  if (file.games.some(g => g.status === 'Active' && !g.deletedAt)) {
     throw new Error('A local game is already in progress');
   }
   const isTournament = input.mode === 'tournament';
@@ -195,7 +230,7 @@ export function createGame(
   const t = input.tournament;
   const game: LocalGame = {
     id: newId(),
-    schemaVersion: 3,
+    schemaVersion: 4,
     name: input.name.trim(),
     status: 'Active',
     mode: input.mode ?? 'cash',
@@ -214,6 +249,7 @@ export function createGame(
         }
       : undefined,
     createdAt,
+    updatedAt: createdAt,
     chipRatio: input.chipRatio,
     defaultBuyInCents: isTournament ? input.tournament!.entryFeeCents : input.defaultBuyInCents,
     players,
@@ -229,7 +265,17 @@ function updateGame(
 ): LocalGamesFile {
   const game = file.games.find(g => g.id === gameId);
   if (!game) throw new Error('Game not found');
-  return { ...file, games: file.games.map(g => (g.id === gameId ? update(g) : g)) };
+  return {
+    ...file,
+    games: file.games.map(g => {
+      if (g.id !== gameId) return g;
+      const next = update(g);
+      // Stamp updatedAt only when the mutation actually changed the game (a no-op
+      // update — e.g. undo on an empty stack — returns the same reference and is
+      // left untouched, so its sync timestamp stays put).
+      return next === g ? g : { ...next, updatedAt: now() };
+    }),
+  };
 }
 
 /** Late registration is open while the current level is within the configured window. */
@@ -400,11 +446,17 @@ export function syncTournamentClock(file: LocalGamesFile, gameId: string, nowMs:
   if (clock === game.tournament.clock) return file;
   return {
     ...file,
-    games: file.games.map(g => (g.id === gameId ? { ...g, tournament: { ...g.tournament!, clock } } : g)),
+    games: file.games.map(g =>
+      g.id === gameId ? { ...g, tournament: { ...g.tournament!, clock }, updatedAt: now() } : g,
+    ),
   };
 }
 
+/**
+ * Delete = TOMBSTONE. We set `deletedAt` (and bump `updatedAt`, via updateGame)
+ * but KEEP the record in the array, so the deletion can propagate to other devices
+ * on the next cloud sync. Selectors filter tombstones out (`!g.deletedAt`).
+ */
 export function deleteGame(file: LocalGamesFile, gameId: string): LocalGamesFile {
-  if (!file.games.some(g => g.id === gameId)) throw new Error('Game not found');
-  return { ...file, games: file.games.filter(g => g.id !== gameId) };
+  return updateGame(file, gameId, game => ({ ...game, deletedAt: now() }));
 }

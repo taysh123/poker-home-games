@@ -1,5 +1,6 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as store from '../local/localGamesStore';
+import { liveGames } from '../local/cloudSync';
 import type { LocalGame, LocalGamesFile, LocalTxnTag } from '../local/types';
 import { track } from '../utils/analytics';
 
@@ -143,12 +144,15 @@ export function LocalGamesProvider({ children }: { children: React.ReactNode }) 
     if (next !== file) await commit(next);
   }, [file, commit]);
 
-  const activeGame = file.games.find(g => g.status === 'Active') ?? null;
+  // Tombstoned (deleted) games are retained in the file so deletions sync, but
+  // every consumer sees only the live set.
+  const visible = useMemo(() => liveGames(file.games), [file.games]);
+  const activeGame = visible.find(g => g.status === 'Active') ?? null;
 
   return (
     <LocalGamesContext.Provider
       value={{
-        games: file.games,
+        games: visible,
         activeGame,
         isLoaded,
         startGame,
