@@ -16,12 +16,15 @@ import EmptyState from '../components/EmptyState';
 import PrimaryButton from '../components/PrimaryButton';
 import Screen from '../components/Screen';
 import PressableScale from '../components/motion/PressableScale';
+import SwipeableRow from '../components/SwipeableRow';
 import { MotiView, slideUpSequence, staggerIn } from '../components/motion';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useLocalGames } from '../context/LocalGamesContext';
 import { gameResult } from '../local/localStats';
 import { formatCents } from '../utils/money';
 import { timeAgo } from '../utils/formatters';
+import { confirmDialog } from '../utils/confirm';
+import { mediumTap } from '../utils/haptics';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -30,7 +33,7 @@ export default function LocalSessionsScreen({ embedded = false }: { embedded?: b
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
-  const { games, activeGame } = useLocalGames();
+  const { games, activeGame, deleteGame } = useLocalGames();
 
   const finished = games.filter(g => g.status === 'Finished');
 
@@ -90,12 +93,26 @@ export default function LocalSessionsScreen({ embedded = false }: { embedded?: b
               const result = gameResult(game);
               return (
                 <MotiView key={game.id} {...slideUpSequence({ reduced, delay: staggerIn(i) })}>
-                  <SessionListItem
-                    name={game.name}
-                    meta={`${result.playerCount} players · ${formatCents(result.totalPotCents)} pot · ${timeAgo(result.endedAt)}`}
-                    onPress={() => navigation.navigate('LocalSessionSummary', { gameId: game.id })}
-                    isFirst={i === 0}
-                  />
+                  <SwipeableRow
+                    actionLabel="Delete"
+                    actionIcon="trash-outline"
+                    onAction={() =>
+                      confirmDialog(
+                        'Delete game?',
+                        `"${game.name}" and its results will be permanently removed from this device.`,
+                        'Delete',
+                        async () => { mediumTap(); await deleteGame(game.id); },
+                        { destructive: true },
+                      )
+                    }
+                  >
+                    <SessionListItem
+                      name={game.name}
+                      meta={`${result.playerCount} players · ${formatCents(result.totalPotCents)} pot · ${timeAgo(result.endedAt)}`}
+                      onPress={() => navigation.navigate('LocalSessionSummary', { gameId: game.id })}
+                      isFirst={i === 0}
+                    />
+                  </SwipeableRow>
                 </MotiView>
               );
             })}
