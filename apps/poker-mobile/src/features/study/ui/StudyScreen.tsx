@@ -7,12 +7,14 @@ import Screen from '../../../components/Screen';
 import BrandHeader from '../../../components/BrandHeader';
 import Card from '../../../components/Card';
 import SectionTitle from '../../../components/SectionTitle';
-import PressableScale from '../../../components/motion/PressableScale';
-import AnimatedNumber from '../../../components/motion/AnimatedNumber';
+import { PressableScale, AnimatedNumber, MotiView, slideUpSequence, staggerIn } from '../../../components/motion';
+import ProgressBar from '../../../components/ProgressBar';
+import { useReducedMotion } from '../../../hooks/useReducedMotion';
 import { colors } from '../../../theme/colors';
 import { typography } from '../../../theme/typography';
 import { spacing } from '../../../theme/spacing';
 import { radii } from '../../../theme/radii';
+import { iconSize } from '../../../theme/iconSize';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
 import { useStudy } from '../state/StudyContext';
 import { studyStats } from '../logic/progress';
@@ -57,7 +59,7 @@ export default function StudyScreen() {
       <BrandHeader variant="brand" title="Study" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {isFeatureEnabled('solver') && (
-          <PressableScale onPress={() => navigation.navigate('SolverWorkspace')} haptic="light" style={{ marginBottom: spacing.lg }}>
+          <PressableScale onPress={() => navigation.navigate('SolverWorkspace')} haptic="light" style={{ marginBottom: spacing.lg }} accessibilityRole="button" accessibilityLabel="Open Solver Workspace. Explore ranges, hover for detail, compare.">
             <Card variant="elevated">
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
                 <Ionicons name="grid-outline" size={20} color={colors.gold} />
@@ -75,7 +77,7 @@ export default function StudyScreen() {
           <Text style={styles.heroLabel}>CURRENT STREAK</Text>
           <View style={styles.streakRow}>
             <AnimatedNumber value={progress.currentStreak} format={(n) => String(n)} style={styles.streakNum} />
-            <Text style={styles.streakFlame}>🔥</Text>
+            <Ionicons name="flame" size={iconSize.lg} color={colors.gold} style={styles.streakFlame} />
           </View>
           <Text style={styles.heroSub}>
             {progress.currentStreak === 0
@@ -94,33 +96,41 @@ export default function StudyScreen() {
 
           {/* Daily goal */}
           <View style={styles.goalWrap}>
-            <View style={styles.goalTrack}>
-              <View style={[styles.goalFill, { width: `${goalPct * 100}%` }]} />
-            </View>
+            <ProgressBar
+              value={goalPct}
+              accessibilityLabel={stats.goalMetToday ? 'Daily goal met' : `${stats.answeredToday} of ${progress.dailyGoal} answered today`}
+            />
             <View style={styles.goalRow}>
-              <Text style={styles.goalText}>
-                {stats.goalMetToday ? '✓ Daily goal met' : `${stats.answeredToday} / ${progress.dailyGoal} today`}
-              </Text>
+              {stats.goalMetToday ? (
+                <View style={styles.goalMet}>
+                  <Ionicons name="checkmark-circle" size={iconSize.xs} color={colors.success} />
+                  <Text style={styles.goalText}>Daily goal met</Text>
+                </View>
+              ) : (
+                <Text style={styles.goalText}>{stats.answeredToday} / {progress.dailyGoal} today</Text>
+              )}
               {retention && (
                 <View style={styles.stepper}>
                   <PressableScale
                     onPress={() => setDailyGoal(progress.dailyGoal - 1)}
                     haptic="light"
+                    hitSlop={8}
                     style={styles.stepBtn}
                     accessibilityRole="button"
                     accessibilityLabel="Decrease daily goal"
                   >
-                    <Ionicons name="remove" size={16} color={colors.gold} />
+                    <Ionicons name="remove" size={iconSize.xs} color={colors.gold} />
                   </PressableScale>
                   <Text style={styles.stepVal}>{progress.dailyGoal}</Text>
                   <PressableScale
                     onPress={() => setDailyGoal(progress.dailyGoal + 1)}
                     haptic="light"
+                    hitSlop={8}
                     style={styles.stepBtn}
                     accessibilityRole="button"
                     accessibilityLabel="Increase daily goal"
                   >
-                    <Ionicons name="add" size={16} color={colors.gold} />
+                    <Ionicons name="add" size={iconSize.xs} color={colors.gold} />
                   </PressableScale>
                 </View>
               )}
@@ -170,12 +180,14 @@ export default function StudyScreen() {
             icon="flash"
             title="Spot Trainer"
             sub="A 10-spot quiz — score your reads"
+            index={0}
             onPress={() => navigation.navigate('StudyTrainer', { mode: 'spot' })}
           />
           <TrainCard
             icon="repeat"
             title="Decision Trainer"
             sub="Continuous drilling — build instinct"
+            index={1}
             onPress={() => navigation.navigate('StudyTrainer', { mode: 'decision' })}
           />
           {isFeatureEnabled('content') && (
@@ -183,6 +195,7 @@ export default function StudyScreen() {
               icon="book"
               title="Lessons"
               sub="Read study modules"
+              index={2}
               onPress={() => navigation.navigate('LessonModules')}
             />
           )}
@@ -191,6 +204,7 @@ export default function StudyScreen() {
               icon="help-circle"
               title="Quizzes"
               sub="Multiple-choice — test your reads"
+              index={3}
               onPress={() => navigation.navigate('QuizRunner')}
             />
           )}
@@ -199,6 +213,7 @@ export default function StudyScreen() {
               icon="cube"
               title="Content Packs"
               sub="Browse the curriculum"
+              index={4}
               onPress={() => navigation.navigate('PackCatalog')}
             />
           )}
@@ -224,22 +239,25 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function TrainCard({ icon, title, sub, onPress }: {
-  icon: React.ComponentProps<typeof Ionicons>['name']; title: string; sub: string; onPress: () => void;
+function TrainCard({ icon, title, sub, onPress, index = 0 }: {
+  icon: React.ComponentProps<typeof Ionicons>['name']; title: string; sub: string; onPress: () => void; index?: number;
 }) {
+  const reduced = useReducedMotion();
   return (
-    <PressableScale onPress={onPress} haptic="light">
-      <Card style={styles.trainCard}>
-        <View style={styles.trainIcon}>
-          <Ionicons name={icon} size={22} color={colors.gold} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.trainTitle}>{title}</Text>
-          <Text style={styles.trainSub}>{sub}</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-      </Card>
-    </PressableScale>
+    <MotiView {...slideUpSequence({ reduced, delay: staggerIn(index) })}>
+      <PressableScale onPress={onPress} haptic="light" accessibilityRole="button" accessibilityLabel={`${title}. ${sub}`}>
+        <Card style={styles.trainCard}>
+          <View style={styles.trainIcon}>
+            <Ionicons name={icon} size={iconSize.md} color={colors.gold} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.trainTitle}>{title}</Text>
+            <Text style={styles.trainSub}>{sub}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={iconSize.xs} color={colors.textMuted} />
+        </Card>
+      </PressableScale>
+    </MotiView>
   );
 }
 
@@ -248,12 +266,11 @@ const styles = StyleSheet.create({
   heroLabel: { ...typography.caps, color: colors.textMuted },
   streakRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, marginTop: spacing.xs },
   streakNum: { ...typography.amountHero, color: colors.gold },
-  streakFlame: { fontSize: 30, marginBottom: spacing.sm },
+  streakFlame: { marginBottom: spacing.sm },
   heroSub: { ...typography.bodySmall, color: colors.textMuted, marginTop: spacing.xs },
   goalWrap: { marginTop: spacing.lg, gap: spacing.sm },
-  goalTrack: { height: 8, borderRadius: radii.pill, backgroundColor: colors.surfaceHigh, overflow: 'hidden' },
-  goalFill: { height: '100%', borderRadius: radii.pill, backgroundColor: colors.gold },
   goalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  goalMet: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   goalText: { ...typography.bodySmall, color: colors.textMuted },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   stepBtn: {
