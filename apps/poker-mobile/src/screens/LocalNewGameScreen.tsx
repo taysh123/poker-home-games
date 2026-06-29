@@ -302,6 +302,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                     haptic="light"
                     accessibilityRole="radio"
                     accessibilityState={{ checked: selected }}
+                    aria-checked={selected}
                     accessibilityLabel={`${option.title}. ${option.blurb}`}
                   >
                     <View style={[styles.modeIconWrap, selected && styles.modeIconWrapActive]}>
@@ -396,6 +397,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                           hitSlop={8}
                           accessibilityRole="radio"
                           accessibilityState={{ checked: blindSelected }}
+                          aria-checked={blindSelected}
                           accessibilityLabel={`${BLIND_PRESET_LABELS[b]} blind structure`}
                         >
                           <Text style={[styles.presetChipText, blindSelected && styles.presetChipTextSelected]}>

@@ -103,6 +103,7 @@ export default function OnboardingScreen({ navigation }: Props) {
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         scrollEnabled
+        focusable={true}
         onMomentumScrollEnd={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
           const index = Math.round(e.nativeEvent.contentOffset.x / width);
           if (index !== currentIndex && index >= 0 && index < SLIDES.length) setCurrentIndex(index);

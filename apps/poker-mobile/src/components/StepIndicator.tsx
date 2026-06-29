@@ -71,6 +71,6 @@ const styles = StyleSheet.create({
   stepCircleDone: { borderColor: colors.gold, backgroundColor: colors.gold },
   stepCircleText: { fontSize: 12, fontWeight: '700', color: colors.textMuted },
   stepCircleTextActive: { color: colors.gold },
-  stepLabel: { fontSize: 11, fontWeight: '600', color: colors.textDim, textTransform: 'uppercase' as const, letterSpacing: 0.5 },
+  stepLabel: { fontSize: 11, fontWeight: '600', color: colors.textMuted, textTransform: 'uppercase' as const, letterSpacing: 0.5 },
   stepLabelActive: { color: colors.gold },
 });
