@@ -1,10 +1,8 @@
 import React, { useCallback, useState } from 'react';
 import {
-  Animated,
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
   RefreshControl,
@@ -16,6 +14,9 @@ import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { shadows } from '../theme/shadows';
+import { spacing } from '../theme/spacing';
+import { radii } from '../theme/radii';
+import { iconSize } from '../theme/iconSize';
 import { useAuth } from '../context/AuthContext';
 import {
   getMyPendingSettlements,
@@ -28,23 +29,25 @@ import { successNotification, errorNotification } from '../utils/haptics';
 import { showToast } from '../utils/toast';
 import { confirmDialog } from '../utils/confirm';
 import { formatMoney } from '../utils/formatters';
-import { useScreenEntrance } from '../hooks/useScreenEntrance';
 import SkeletonCard from '../components/SkeletonCard';
 import Screen from '../components/Screen';
 import ScreenHeader from '../components/ScreenHeader';
+import Avatar from '../components/Avatar';
+import { PressableScale, MotiView, slideUpSequence, staggerIn } from '../components/motion';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function PendingSettlementsScreen() {
   const navigation = useNavigation<Nav>();
   const { user } = useAuth();
+  const reduced = useReducedMotion();
   const [settlements, setSettlements] = useState<MyPendingSettlementDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [markingId, setMarkingId] = useState<string | null>(null);
   const [settleAllLoading, setSettleAllLoading] = useState(false);
-  const entrance = useScreenEntrance();
 
   const load = useCallback(async (isRefresh = false) => {
     if (!isRefresh) setLoading(true);
@@ -70,9 +73,15 @@ export default function PendingSettlementsScreen() {
       title="Pending Settlements"
       onBack={() => navigation.goBack()}
       right={
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 4 }}>
-          <Text style={{ color: colors.gold, fontSize: 16, fontWeight: '600' }}>Done</Text>
-        </TouchableOpacity>
+        <PressableScale
+          onPress={() => navigation.goBack()}
+          hitSlop={8}
+          haptic="light"
+          accessibilityRole="button"
+          accessibilityLabel="Done"
+        >
+          <Text style={styles.doneText}>Done</Text>
+        </PressableScale>
       }
     />
   );
@@ -126,11 +135,11 @@ export default function PendingSettlementsScreen() {
       <Screen>
         {header}
         <View style={styles.scroll}>
-          <View style={{ padding: 16, gap: 20 }}>
-            <SkeletonCard height={50} borderRadius={14} />
-            <SkeletonCard height={100} borderRadius={14} />
-            <SkeletonCard height={50} borderRadius={14} />
-            <SkeletonCard height={170} borderRadius={14} />
+          <View style={{ padding: spacing.lg, gap: spacing.xl }}>
+            <SkeletonCard height={50} borderRadius={radii.md} />
+            <SkeletonCard height={100} borderRadius={radii.md} />
+            <SkeletonCard height={50} borderRadius={radii.md} />
+            <SkeletonCard height={170} borderRadius={radii.md} />
           </View>
         </View>
       </Screen>
@@ -143,9 +152,15 @@ export default function PendingSettlementsScreen() {
         {header}
         <View style={styles.center}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
+          <PressableScale
+            style={styles.retryBtn}
+            onPress={() => load()}
+            haptic="light"
+            accessibilityRole="button"
+            accessibilityLabel="Retry loading settlements"
+          >
             <Text style={styles.retryText}>Retry</Text>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
       </Screen>
     );
@@ -157,7 +172,7 @@ export default function PendingSettlementsScreen() {
         {header}
         <View style={styles.center}>
           <View style={styles.emptyIconWrap}>
-            <Ionicons name="checkmark-circle-outline" size={40} color={colors.success} />
+            <Ionicons name="checkmark-circle-outline" size={iconSize.xl} color={colors.success} />
           </View>
           <Text style={styles.emptyTitle}>All settled up!</Text>
           <Text style={styles.emptySubtitle}>No pending payments across any session.</Text>
@@ -178,45 +193,58 @@ export default function PendingSettlementsScreen() {
     {},
   );
 
+  const showSettleAll = settlements.some(s => s.payerUserId === user?.userId);
+
   return (
     <Screen>
     {header}
-    <Animated.ScrollView
-      style={[styles.scroll, entrance.style]}
+    <ScrollView
+      style={styles.scroll}
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} tintColor={colors.gold} progressBackgroundColor={colors.surface} />}
     >
-      {settlements.some(s => s.payerUserId === user?.userId) && (
-        <TouchableOpacity
-          style={styles.settleAllBtn}
-          onPress={handleSettleAll}
-          disabled={settleAllLoading || !!markingId}
-          activeOpacity={0.8}
-        >
-          {settleAllLoading
-            ? <ActivityIndicator size="small" color={colors.background} />
-            : (
-              <>
-                <Ionicons name="checkmark-done-outline" size={16} color={colors.background} />
-                <Text style={styles.settleAllText}>Settle All My Debts</Text>
-              </>
-            )}
-        </TouchableOpacity>
+      {showSettleAll && (
+        <MotiView {...slideUpSequence({ reduced })}>
+          <PressableScale
+            style={styles.settleAllBtn}
+            onPress={handleSettleAll}
+            disabled={settleAllLoading || !!markingId}
+            haptic="medium"
+            accessibilityRole="button"
+            accessibilityLabel="Settle all my debts"
+            accessibilityState={{ disabled: settleAllLoading || !!markingId }}
+          >
+            {settleAllLoading
+              ? <ActivityIndicator size="small" color={colors.background} />
+              : (
+                <>
+                  <Ionicons name="checkmark-done-outline" size={iconSize.xs} color={colors.background} />
+                  <Text style={styles.settleAllText}>Settle All My Debts</Text>
+                </>
+              )}
+          </PressableScale>
+        </MotiView>
       )}
 
-      {Object.entries(bySession).map(([sessionId, group]) => (
-        <View key={sessionId} style={styles.sessionGroup}>
-          <TouchableOpacity
+      {Object.entries(bySession).map(([sessionId, group], gi) => (
+        <MotiView
+          key={sessionId}
+          {...slideUpSequence({ reduced, delay: staggerIn(gi + (showSettleAll ? 1 : 0)) })}
+          style={styles.sessionGroup}
+        >
+          <PressableScale
             style={styles.sessionHeader}
             onPress={() => navigation.navigate('Session', { sessionId, groupId: '' })}
-            activeOpacity={0.7}
+            haptic="light"
+            accessibilityRole="button"
+            accessibilityLabel={`Open session ${group.sessionName}`}
           >
             <View style={styles.sessionHeaderLeft}>
               <Text style={styles.sessionName} numberOfLines={1}>{group.sessionName}</Text>
-              {group.groupName && <Text style={styles.sessionMeta}>{group.groupName}</Text>}
+              {group.groupName ? <Text style={styles.sessionMeta}>{group.groupName}</Text> : null}
             </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.gold} />
-          </TouchableOpacity>
+            <Ionicons name="chevron-forward" size={iconSize.xs} color={colors.gold} />
+          </PressableScale>
 
           <View style={styles.settlementList}>
             {group.items.map((s, i) => {
@@ -229,45 +257,43 @@ export default function PendingSettlementsScreen() {
                   <View style={styles.settlementContent}>
                     <View style={styles.settlementFlow}>
                       <View style={styles.party}>
-                        <View style={[styles.partyAvatar, iAmPayer && styles.partyAvatarSelf]}>
-                          <Text style={styles.partyAvatarText}>{s.payerName[0]?.toUpperCase() ?? '?'}</Text>
-                        </View>
+                        <Avatar name={s.payerName} size={32} ring={iAmPayer ? 'gold' : undefined} />
                         <Text style={[styles.partyName, iAmPayer && styles.partyNameSelf]} numberOfLines={1}>
                           {iAmPayer ? 'You' : s.payerName}
                         </Text>
                       </View>
                       <View style={styles.flowCenter}>
-                        <Ionicons name="arrow-forward" size={14} color={colors.textDim} />
+                        <Ionicons name="arrow-forward" size={iconSize.xs} color={colors.textDim} />
                         <Text style={styles.flowAmount}>{formatMoney(s.amount)}</Text>
                       </View>
                       <View style={styles.party}>
-                        <View style={[styles.partyAvatar, !iAmPayer && styles.partyAvatarSelf]}>
-                          <Text style={styles.partyAvatarText}>{s.receiverName[0]?.toUpperCase() ?? '?'}</Text>
-                        </View>
+                        <Avatar name={s.receiverName} size={32} ring={!iAmPayer ? 'gold' : undefined} />
                         <Text style={[styles.partyName, !iAmPayer && styles.partyNameSelf]} numberOfLines={1}>
                           {iAmPayer ? s.receiverName : 'You'}
                         </Text>
                       </View>
                     </View>
 
-                    {iAmPayer && (
-                      <TouchableOpacity
+                    {iAmPayer ? (
+                      <PressableScale
                         style={styles.markPaidBtn}
                         onPress={() => handleMarkPaid(s.id)}
                         disabled={markingId === s.id}
-                        activeOpacity={0.8}
+                        haptic="medium"
+                        accessibilityRole="button"
+                        accessibilityLabel={`Mark ${formatMoney(s.amount)} to ${s.receiverName} as paid`}
+                        accessibilityState={{ disabled: markingId === s.id }}
                       >
                         {markingId === s.id
                           ? <ActivityIndicator size="small" color={colors.background} />
                           : (
                             <>
-                              <Ionicons name="checkmark-circle-outline" size={14} color={colors.background} />
+                              <Ionicons name="checkmark-circle-outline" size={iconSize.xs} color={colors.background} />
                               <Text style={styles.markPaidText}>Mark Paid</Text>
                             </>
                           )}
-                      </TouchableOpacity>
-                    )}
-                    {!iAmPayer && (
+                      </PressableScale>
+                    ) : (
                       <View style={styles.awaitingBadge}>
                         <Text style={styles.awaitingText}>Awaiting payment</Text>
                       </View>
@@ -277,35 +303,36 @@ export default function PendingSettlementsScreen() {
               );
             })}
           </View>
-        </View>
+        </MotiView>
       ))}
 
-      <View style={{ height: 40 }} />
-    </Animated.ScrollView>
+      <View style={{ height: spacing.huge }} />
+    </ScrollView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
-  content: { padding: 16 },
+  content: { padding: spacing.lg },
+  doneText: { color: colors.gold, fontSize: 16, fontWeight: '600' },
   center: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 32,
-    gap: 12,
+    padding: spacing.xxxl,
+    gap: spacing.md,
   },
   errorText: { color: colors.error, fontSize: 15, textAlign: 'center' },
-  retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: colors.border },
+  retryBtn: { paddingHorizontal: spacing.xl, paddingVertical: spacing.md, minHeight: 44, justifyContent: 'center', borderRadius: radii.sm, borderWidth: 1, borderColor: colors.border },
   retryText: { color: colors.textMuted, fontSize: 14, fontWeight: '600' },
   emptyIconWrap: {
     width: 80,
     height: 80,
-    borderRadius: 22,
-    backgroundColor: 'rgba(39,174,96,0.08)',
+    borderRadius: radii.xl,
+    backgroundColor: colors.successFaint,
     borderWidth: 1,
-    borderColor: 'rgba(39,174,96,0.25)',
+    borderColor: colors.success,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -316,17 +343,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: spacing.sm,
     backgroundColor: colors.success,
-    borderRadius: 14,
-    paddingVertical: 14,
-    marginBottom: 20,
+    borderRadius: radii.md,
+    paddingVertical: spacing.md,
+    minHeight: 48,
+    marginBottom: spacing.xl,
     ...shadows.goldSm,
   },
   settleAllText: { fontSize: 15, fontWeight: '700', color: colors.background },
 
   sessionGroup: {
-    marginBottom: 20,
+    marginBottom: spacing.xl,
   },
   sessionHeader: {
     flexDirection: 'row',
@@ -335,16 +363,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderBottomWidth: 0,
-    borderTopLeftRadius: 14,
-    borderTopRightRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 8,
+    borderTopLeftRadius: radii.md,
+    borderTopRightRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    minHeight: 48,
+    gap: spacing.sm,
   },
   sessionHeaderLeft: { flex: 1, gap: 2 },
   sessionName: { ...typography.label, color: colors.text },
   sessionMeta: { fontSize: 12, color: colors.textMuted },
-  sessionChevron: { fontSize: 20, color: colors.gold, fontWeight: '300' },
 
   settlementList: {
     backgroundColor: colors.surface,
@@ -352,8 +380,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    borderBottomLeftRadius: 14,
-    borderBottomRightRadius: 14,
+    borderBottomLeftRadius: radii.md,
+    borderBottomRightRadius: radii.md,
     overflow: 'hidden',
   },
   settlementRow: {
@@ -363,49 +391,37 @@ const styles = StyleSheet.create({
   accent: { width: 4 },
   accentPay: { backgroundColor: colors.error },
   accentReceive: { backgroundColor: colors.success },
-  settlementContent: { flex: 1, padding: 14, gap: 10 },
+  settlementContent: { flex: 1, padding: spacing.md, gap: spacing.sm },
 
   settlementFlow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  party: { alignItems: 'center', gap: 4, flex: 1 },
-  partyAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.surfaceHigh,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  partyAvatarSelf: { backgroundColor: 'rgba(201,168,76,0.15)', borderColor: colors.gold },
-  partyAvatarText: { fontSize: 13, fontWeight: '700', color: colors.textMuted },
+  party: { alignItems: 'center', gap: spacing.xs, flex: 1 },
   partyName: { fontSize: 12, fontWeight: '600', color: colors.textMuted, textAlign: 'center' },
   partyNameSelf: { color: colors.gold },
-  flowCenter: { alignItems: 'center', gap: 2, paddingHorizontal: 8 },
-  flowArrow: { fontSize: 16, color: colors.textDim },
+  flowCenter: { alignItems: 'center', gap: 2, paddingHorizontal: spacing.sm },
   flowAmount: { ...typography.amount, color: colors.gold },
 
   markPaidBtn: {
     alignSelf: 'flex-end',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.xs,
     backgroundColor: colors.gold,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: 36,
     ...shadows.goldSm,
   },
   markPaidText: { fontSize: 13, fontWeight: '700', color: colors.background },
   awaitingBadge: {
     alignSelf: 'flex-end',
-    paddingHorizontal: 10,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 5,
-    borderRadius: 6,
+    borderRadius: radii.sm,
     backgroundColor: colors.surfaceHigh,
     borderWidth: 1,
     borderColor: colors.border,
