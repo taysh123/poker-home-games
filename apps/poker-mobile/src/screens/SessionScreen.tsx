@@ -2101,10 +2101,9 @@ function MetaChip({ label, gold }: { label: string; gold?: boolean }) {
   );
 }
 
+// Tokenized rank label — "#1", "#2", … (no emoji glyphs). Top-3 are tinted gold/
+// silver/bronze via RANK_COLORS at the call sites.
 function rankLabel(rank: number): string {
-  if (rank === 1) return '🥇';
-  if (rank === 2) return '🥈';
-  if (rank === 3) return '🥉';
   return `#${rank}`;
 }
 
@@ -2236,7 +2235,7 @@ const styles = StyleSheet.create({
   playerName: { ...typography.label, color: colors.text },
   playerNameFirst: { color: colors.gold },
   playerMeta: { ...typography.caption, color: colors.textMuted },
-  rankLabel: { fontSize: 14 },
+  rankLabel: { fontSize: 14, fontWeight: '700', color: colors.goldLight },
   playerRight: { alignItems: 'flex-end', gap: 8 },
   plValue: { ...typography.amount, letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
   plValueFirst: { fontSize: 22, fontWeight: '800' },
@@ -2844,7 +2843,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     borderRadius: 6,
   },
-  summaryRank: { fontSize: 18, width: 30, textAlign: 'center' },
+  summaryRank: { fontSize: 18, width: 30, textAlign: 'center', fontWeight: '700', color: colors.goldLight },
   summaryPlayerName: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.text },
   summaryPL: { fontSize: 16, fontWeight: '800' },
   summarySettlementRow: { paddingVertical: 6 },

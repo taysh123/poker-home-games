@@ -5,6 +5,7 @@ import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { typography } from '../theme/typography';
 import { iconSize } from '../theme/iconSize';
+import { radii } from '../theme/radii';
 import PressableScale from './motion/PressableScale';
 
 type Props = {
@@ -38,7 +39,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     // 12 matches AppTextInput + PrimaryButton (the auth-card form-control radius).
-    borderRadius: 12,
+    borderRadius: radii.control,
     paddingVertical: 14,
     minHeight: 52,
     backgroundColor: colors.surface,

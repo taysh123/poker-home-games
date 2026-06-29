@@ -139,7 +139,7 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
           name: p.player.name,
           valueText: p.payoutCents > 0 ? `wins ${formatCents(p.payoutCents)}` : formatCentsSigned(p.netCents),
           positive: p.netCents >= 0,
-          medal: p.position === 1 ? '🥇' : p.position === 2 ? '🥈' : '🥉',
+          medal: `#${p.position}`,
         }))
       : results.slice(0, 3).map(r => ({
           name: r.player.name,
