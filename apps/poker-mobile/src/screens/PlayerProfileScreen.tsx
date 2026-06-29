@@ -4,6 +4,7 @@ import {
   Text,
   ScrollView,
   StyleSheet,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -41,42 +42,41 @@ export default function PlayerProfileScreen({ route, navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [myUserId, setMyUserId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadProfile = useCallback(async (isRefresh = false) => {
+    if (!isRefresh) setLoading(true);
+    setError(null);
+    try {
+      const token = await storage.getItemAsync('accessToken');
+      const userStr = await storage.getItemAsync('user');
+      const me = userStr ? JSON.parse(userStr) : null;
+      if (!token) return;
+
+      setMyUserId(me?.userId ?? null);
+
+      const [profileData, h2hData] = await Promise.all([
+        getPlayerProfile(token, userId),
+        me?.userId && me.userId !== userId
+          ? getHeadToHead(token, userId).catch(() => null)
+          : Promise.resolve(null),
+      ]);
+
+      setProfile(profileData);
+      setH2H(h2hData);
+    } catch (e: any) {
+      setError('Failed to load player profile.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [userId]);
 
   useFocusEffect(useCallback(() => {
-    let cancelled = false;
+    void loadProfile();
+  }, [loadProfile]));
 
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const token = await storage.getItemAsync('accessToken');
-        const userStr = await storage.getItemAsync('user');
-        const me = userStr ? JSON.parse(userStr) : null;
-        if (!token) return;
-
-        setMyUserId(me?.userId ?? null);
-
-        const [profileData, h2hData] = await Promise.all([
-          getPlayerProfile(token, userId),
-          me?.userId && me.userId !== userId
-            ? getHeadToHead(token, userId).catch(() => null)
-            : Promise.resolve(null),
-        ]);
-
-        if (!cancelled) {
-          setProfile(profileData);
-          setH2H(h2hData);
-        }
-      } catch (e: any) {
-        if (!cancelled) setError('Failed to load player profile.');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => { cancelled = true; };
-  }, [userId]));
+  const onRefresh = useCallback(() => { setRefreshing(true); void loadProfile(true); }, [loadProfile]);
 
   const isOwnProfile = myUserId === userId;
 
@@ -151,6 +151,15 @@ export default function PlayerProfileScreen({ route, navigation }: Props) {
       style={styles.container}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={colors.gold}
+          colors={[colors.gold]}
+          progressBackgroundColor={colors.surface}
+        />
+      }
     >
       {/* Hero */}
       <MotiView

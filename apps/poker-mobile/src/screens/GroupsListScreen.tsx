@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Share,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -52,6 +53,7 @@ export default function GroupsListScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [invitationCount, setInvitationCount] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Action sheet state
   const [actionSheetGroup, setActionSheetGroup] = useState<MyGroupDto | null>(null);
@@ -61,8 +63,8 @@ export default function GroupsListScreen() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
-  const loadGroups = useCallback(async () => {
-    setLoading(true);
+  const loadGroups = useCallback(async (isRefresh = false) => {
+    if (!isRefresh) setLoading(true);
     setError(null);
     try {
       const token = await SecureStore.getItemAsync('accessToken');
@@ -73,6 +75,7 @@ export default function GroupsListScreen() {
       setError('Failed to load groups. Tap to retry.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
@@ -93,6 +96,12 @@ export default function GroupsListScreen() {
       void loadInvitationCount();
     }, [loadGroups, loadInvitationCount]),
   );
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    void loadGroups(true);
+    void loadInvitationCount();
+  }, [loadGroups, loadInvitationCount]);
 
 
   async function handleShareInvite(group: MyGroupDto) {
@@ -282,6 +291,15 @@ export default function GroupsListScreen() {
         contentContainerStyle={styles.listContent}
         data={groups}
         keyExtractor={(item) => item.id}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.gold}
+            colors={[colors.gold]}
+            progressBackgroundColor={colors.surface}
+          />
+        }
         renderItem={({ item, index }) => {
           const isOwner = item.role === 'Owner';
           const isAdmin = item.role === 'Admin';

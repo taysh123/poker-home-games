@@ -9,6 +9,7 @@ import {
   Share,
   Platform,
   Animated,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { USE_NATIVE_DRIVER } from '../theme/motion';
@@ -83,6 +84,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   const [searchLoading, setSearchLoading] = useState(false);
   const [rivals, setRivals] = useState<GroupRivalryDto[]>([]);
   const [shareLoading, setShareLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [lbPeriod, setLbPeriod] = useState<'week' | 'month' | 'all'>('all');
   const [lbLoading, setLbLoading] = useState(false);
   const [activityHasMore, setActivityHasMore] = useState(false);
@@ -96,7 +98,8 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (isRefresh = false) => {
+    if (!isRefresh) setLoading(true);
     setError(null);
     try {
       const token = await SecureStore.getItemAsync('accessToken');
@@ -120,6 +123,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
       setError('Failed to load group details.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [groupId]);
 
@@ -158,7 +162,6 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
     useCallback(() => {
       fadeAnim.setValue(reduced ? 1 : 0);
       slideAnim.setValue(reduced ? 0 : 20);
-      setLoading(true);
       load().then(() => {
         if (reduced) { fadeAnim.setValue(1); slideAnim.setValue(0); return; }
         Animated.parallel([
@@ -168,6 +171,8 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
       });
     }, [load, reduced]),
   );
+
+  const onRefresh = useCallback(() => { setRefreshing(true); void load(true); }, [load]);
 
   React.useEffect(() => {
     if (!showInviteOnLoad || hasAutoInvited.current || loading || !group) return;
@@ -392,6 +397,15 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
       contentContainerStyle={styles.listContent}
       data={members}
       keyExtractor={(item) => item.userId}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={colors.gold}
+          colors={[colors.gold]}
+          progressBackgroundColor={colors.surface}
+        />
+      }
       ListHeaderComponent={
         <View style={styles.headerSection}>
           {/* Group info */}

@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Text, FlatList, StyleSheet, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -47,25 +47,33 @@ export default function AchievementsScreen() {
   const { localAchievements } = useEngagement();
   const reduced = useReducedMotion();
   const [serverItems, setServerItems] = useState<Item[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadAchievements = useCallback(async () => {
+    if (!user) { setServerItems([]); return; }
+    try {
+      const token = await storage.getItemAsync('accessToken');
+      if (!token) return;
+      const res = await getMyAchievements(token);
+      const items: Item[] = [
+        ...res.earned.map(a => ({ ...a, earned: true })),
+        ...res.locked.map(a => ({ ...a, earned: false })),
+      ];
+      setServerItems(items);
+    } catch { /* server achievements are best-effort; local still render */ }
+    finally {
+      setRefreshing(false);
+    }
+  }, [user]);
 
   useEffect(() => {
-    let cancelled = false;
-    if (!user) { setServerItems([]); return; }
-    (async () => {
-      try {
-        const token = await storage.getItemAsync('accessToken');
-        if (!token) return;
-        const res = await getMyAchievements(token);
-        if (cancelled) return;
-        const items: Item[] = [
-          ...res.earned.map(a => ({ ...a, earned: true })),
-          ...res.locked.map(a => ({ ...a, earned: false })),
-        ];
-        setServerItems(items);
-      } catch { /* server achievements are best-effort; local still render */ }
-    })();
-    return () => { cancelled = true; };
-  }, [user]);
+    void loadAchievements();
+  }, [loadAchievements]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    void loadAchievements();
+  }, [loadAchievements]);
 
   const localItems: Item[] = localAchievements.map(a => ({
     key: a.key, name: a.name, description: a.description, iconKey: a.iconKey, rarity: a.rarity, earned: a.earned,
@@ -90,6 +98,15 @@ export default function AchievementsScreen() {
         keyExtractor={(s) => s.key}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.gold}
+            colors={[colors.gold]}
+            progressBackgroundColor={colors.surface}
+          />
+        }
         ListHeaderComponent={
           total > 0 ? (
             <Card style={styles.progressCard}>
