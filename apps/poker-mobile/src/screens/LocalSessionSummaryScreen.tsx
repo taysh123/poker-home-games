@@ -21,10 +21,16 @@ import { useLocalGames } from '../context/LocalGamesContext';
 import { settleGame } from '../local/settlements';
 import { contributionCents, tournamentResult } from '../local/tournament';
 import ShareCard, { canShareImages, shareCardImage, ShareCardData } from '../components/ShareCard';
+import CrossPillarCTA from '../components/CrossPillarCTA';
+import ContentContainer from '../components/ContentContainer';
+import { nameWritingDirection } from '../utils/rtl';
+import { isFeatureEnabled } from '../config/features';
 import { formatDate } from '../utils/formatters';
 import { formatCents, formatCentsSigned } from '../utils/money';
 import { formatDuration } from '../utils/formatters';
 import { confirmDialog } from '../utils/confirm';
+import { useAuth } from '../context/AuthContext';
+import { markSignupIntent } from '../utils/analytics';
 import AnimatedNumber from '../components/motion/AnimatedNumber';
 import Celebration from '../components/motion/Celebration';
 
@@ -35,6 +41,7 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
   const { gameId } = route.params;
   const insets = useSafeAreaInsets();
   const { games, deleteGame } = useLocalGames();
+  const { user } = useAuth();
 
   const game = games.find(g => g.id === gameId);
   const isTournament = game?.mode === 'tournament';
@@ -151,23 +158,49 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
     <View style={styles.flex}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.popToTop()} hitSlop={12} activeOpacity={0.75}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.popToTop()} hitSlop={12} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel="Close summary">
           <Ionicons name="close" size={20} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{game.name}</Text>
         <View style={styles.headerActions}>
           {canShareImages && (
-            <TouchableOpacity style={styles.backBtn} onPress={handleShareImage} hitSlop={12} activeOpacity={0.75}>
+            <TouchableOpacity style={styles.backBtn} onPress={handleShareImage} hitSlop={12} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel="Share result card">
               <Ionicons name="share-outline" size={18} color={colors.gold} />
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={styles.backBtn} onPress={handleDelete} hitSlop={12} activeOpacity={0.75}>
+          <TouchableOpacity style={styles.backBtn} onPress={handleDelete} hitSlop={12} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel="Delete this game">
             <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+        <ContentContainer>
+        {/* Cash games: a clean player list of who won and lost, up top where the felt used to be. */}
+        {!podium && results.length > 0 && (
+          <>
+            <Text style={[styles.sectionTitle, styles.sectionTitleFirst]}>RESULTS</Text>
+            {results.map(({ player, netCents }, index) => {
+              const isWinner = index === 0 && netCents > 0;
+              return (
+                <View key={player.id} style={[styles.resultRow, isWinner && styles.resultRowWinner]}>
+                  <Text style={[styles.resultRank, isWinner && styles.resultRankWinner]}>
+                    {`#${index + 1}`}
+                  </Text>
+                  <Text style={[styles.resultName, { writingDirection: nameWritingDirection(player.name) }]} numberOfLines={1}>
+                    {player.name}
+                  </Text>
+                  <Text style={[
+                    styles.resultNet,
+                    netCents > 0 ? styles.netPositive : netCents < 0 ? styles.netNegative : styles.netEven,
+                  ]}>
+                    {formatCentsSigned(netCents)}
+                  </Text>
+                </View>
+              );
+            })}
+          </>
+        )}
         {/* Game over hero (celebration) */}
         <View style={styles.heroCard}>
           <LinearGradient
@@ -197,8 +230,8 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
           )}
           {championName && (
             <View style={styles.championRow}>
-              <Text style={styles.championTrophy}>🏆</Text>
-              <Text style={styles.championName} numberOfLines={1}>{championName}</Text>
+              <Ionicons name="trophy" size={16} color={colors.goldLight} accessibilityLabel="Champion" />
+              <Text style={[styles.championName, { writingDirection: nameWritingDirection(championName) }]} numberOfLines={1}>{championName}</Text>
               {championSub && <Text style={styles.championSub}>{championSub}</Text>}
             </View>
           )}
@@ -209,16 +242,15 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
           <>
             <Text style={styles.sectionTitle}>FINAL STANDINGS</Text>
             {podium.map(({ player, position, payoutCents, netCents }) => {
-              const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : null;
               const isChampion = position === 1;
               return (
                 <View key={player.id} style={[styles.resultRow, isChampion && styles.resultRowWinner]}>
                   <Text style={[styles.resultRank, isChampion && styles.resultRankWinner]}>
-                    {medal ?? `#${position}`}
+                    {`#${position}`}
                   </Text>
                   <View style={styles.podiumInfo}>
                     <View style={styles.podiumNameRow}>
-                      <Text style={styles.podiumName} numberOfLines={1}>{player.name}</Text>
+                      <Text style={[styles.podiumName, { writingDirection: nameWritingDirection(player.name) }]} numberOfLines={1}>{player.name}</Text>
                       {payoutCents > 0 && (
                         <View style={styles.itmBadge}><Text style={styles.itmBadgeText}>ITM</Text></View>
                       )}
@@ -239,26 +271,6 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
           </>
         )}
 
-        {/* Results (cash games) */}
-        {!podium && <Text style={styles.sectionTitle}>RESULTS</Text>}
-        {results.map(({ player, netCents }, index) => {
-          const isWinner = index === 0 && netCents > 0;
-          return (
-            <View key={player.id} style={[styles.resultRow, isWinner && styles.resultRowWinner]}>
-              <Text style={[styles.resultRank, isWinner && styles.resultRankWinner]}>
-                {isWinner ? '🏆' : `#${index + 1}`}
-              </Text>
-              <Text style={styles.resultName} numberOfLines={1}>{player.name}</Text>
-              <Text style={[
-                styles.resultNet,
-                netCents > 0 ? styles.netPositive : netCents < 0 ? styles.netNegative : styles.netEven,
-              ]}>
-                {formatCentsSigned(netCents)}
-              </Text>
-            </View>
-          );
-        })}
-
         {/* Cash settlements */}
         <Text style={styles.sectionTitle}>CASH SETTLEMENTS</Text>
         {transfers.length === 0 ? (
@@ -270,9 +282,9 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
           transfers.map((t, i) => (
             <View key={i} style={styles.transferRow}>
               <View style={styles.transferNames}>
-                <Text style={styles.transferPayer}>{playerName(t.fromPlayerId)}</Text>
+                <Text style={[styles.transferPayer, { writingDirection: nameWritingDirection(playerName(t.fromPlayerId)) }]} numberOfLines={1}>{playerName(t.fromPlayerId)}</Text>
                 <Ionicons name="arrow-forward" size={14} color={colors.gold} />
-                <Text style={styles.transferReceiver}>{playerName(t.toPlayerId)}</Text>
+                <Text style={[styles.transferReceiver, { writingDirection: nameWritingDirection(playerName(t.toPlayerId)) }]} numberOfLines={1}>{playerName(t.toPlayerId)}</Text>
               </View>
               <Text style={styles.transferAmount}>{formatCents(t.amountCents)}</Text>
             </View>
@@ -280,8 +292,47 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
         )}
 
         <View style={{ height: 32 }} />
+        {user === null && (
+          <TouchableOpacity
+            style={styles.saveCard}
+            onPress={() => { markSignupIntent(); navigation.navigate('Login'); }}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Save this game to a free account to keep your history across devices"
+          >
+            <View style={styles.saveIconWrap}>
+              <Ionicons name="cloud-upload-outline" size={20} color={colors.gold} />
+            </View>
+            <View style={styles.saveText}>
+              <Text style={styles.saveTitle}>Save this game</Text>
+              <Text style={styles.saveSub}>Create a free account to keep your stats, groups, and history across devices.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+        )}
+        {isFeatureEnabled('retention') && (isFeatureEnabled('bankroll') || isFeatureEnabled('coach')) && (
+          <View style={{ gap: 10, marginBottom: 16 }}>
+            {isFeatureEnabled('bankroll') && (
+              <CrossPillarCTA
+                icon="wallet-outline"
+                label="Log to Bankroll"
+                sub="Track this session in your bankroll"
+                onPress={() => navigation.navigate('LogSession')}
+              />
+            )}
+            {isFeatureEnabled('coach') && (
+              <CrossPillarCTA
+                icon="sparkles"
+                label="Analyze a hand"
+                sub="Get an AI read on a tough spot"
+                onPress={() => navigation.navigate('CoachInput', { method: 'manual' })}
+              />
+            )}
+          </View>
+        )}
         <PrimaryButton label="Done" onPress={() => navigation.popToTop()} />
         <View style={{ height: 40 }} />
+        </ContentContainer>
       </ScrollView>
       {justEnded && <Celebration />}
       <ShareCard ref={shareRef} data={shareData} />
@@ -336,7 +387,6 @@ const styles = StyleSheet.create({
   heroMeta: { ...typography.bodySmall, color: colors.textMuted },
 
   championRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
-  championTrophy: { fontSize: 16 },
   championName: { fontFamily: Sora['700'], fontSize: 16, color: colors.goldLight },
   championSub: { ...typography.amount, fontSize: 14, color: colors.textMuted },
 
@@ -346,6 +396,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
     marginBottom: 2,
   },
+  sectionTitleFirst: { marginTop: 0 },
 
   resultRow: {
     flexDirection: 'row',
@@ -360,7 +411,7 @@ const styles = StyleSheet.create({
   resultRowWinner: { borderColor: colors.goldMuted, backgroundColor: colors.goldFaint },
   resultRank: { width: 34, fontSize: 14, fontWeight: '700', color: colors.textMuted },
   resultRankWinner: { fontSize: 18 },
-  resultName: { flex: 1, fontSize: 16, fontWeight: '600', color: colors.text },
+  resultName: { flex: 1, fontSize: 16, fontWeight: '600', color: colors.text, textAlign: 'left' },
   podiumInfo: { flex: 1, gap: 2 },
   podiumNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   podiumName: { fontSize: 16, fontWeight: '600', color: colors.text },
@@ -405,4 +456,27 @@ const styles = StyleSheet.create({
   transferPayer: { fontSize: 15, fontWeight: '600', color: colors.text },
   transferReceiver: { fontSize: 15, fontWeight: '600', color: colors.goldLight },
   transferAmount: { fontSize: 16, fontWeight: '800', color: colors.gold, fontVariant: ['tabular-nums'] },
+
+  saveCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.goldMuted,
+    gap: 12,
+    marginBottom: 16,
+  },
+  saveIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.goldFaint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveText: { flex: 1, gap: 3 },
+  saveTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
+  saveSub: { fontSize: 12, color: colors.textMuted, lineHeight: 17 },
 });

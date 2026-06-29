@@ -1,0 +1,1810 @@
+{
+ "dataset_version": "0.8.1",
+ "claims": [
+  {
+   "grounding_id": "CG-001",
+   "concept_id": "CK-001",
+   "claim_text": "UTG opens ~13.4% (RFI) at 100bb 6-max",
+   "numeric_value": 13.4,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-0001"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "UTG opens ~13.4% (RFI) at 100bb 6-max (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-002",
+   "concept_id": "CK-001",
+   "claim_text": "HJ opens ~18.2% (RFI) at 100bb 6-max",
+   "numeric_value": 18.2,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-0170"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "HJ opens ~18.2% (RFI) at 100bb 6-max (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-003",
+   "concept_id": "CK-001",
+   "claim_text": "CO opens ~23.3% (RFI) at 100bb 6-max",
+   "numeric_value": 23.3,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-0339"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "CO opens ~23.3% (RFI) at 100bb 6-max (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-004",
+   "concept_id": "CK-001",
+   "claim_text": "BTN opens ~38.5% (RFI) at 100bb 6-max",
+   "numeric_value": 38.5,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-0508"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "BTN opens ~38.5% (RFI) at 100bb 6-max (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-005",
+   "concept_id": "CK-001",
+   "claim_text": "SB opens ~40.2% (RFI) at 100bb 6-max",
+   "numeric_value": 40.2,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-0677"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "SB opens ~40.2% (RFI) at 100bb 6-max (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-006",
+   "concept_id": "CK-002",
+   "claim_text": "UTG opens ~13.4% (RFI) at 100bb 6-max",
+   "numeric_value": 13.4,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-0001"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "UTG opens ~13.4% (RFI) at 100bb 6-max (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-007",
+   "concept_id": "CK-002",
+   "claim_text": "HJ opens ~18.2% (RFI) at 100bb 6-max",
+   "numeric_value": 18.2,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-0170"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "HJ opens ~18.2% (RFI) at 100bb 6-max (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-008",
+   "concept_id": "CK-002",
+   "claim_text": "CO opens ~23.3% (RFI) at 100bb 6-max",
+   "numeric_value": 23.3,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-0339"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "CO opens ~23.3% (RFI) at 100bb 6-max (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-009",
+   "concept_id": "CK-002",
+   "claim_text": "BTN opens ~38.5% (RFI) at 100bb 6-max",
+   "numeric_value": 38.5,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-0508"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "BTN opens ~38.5% (RFI) at 100bb 6-max (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-010",
+   "concept_id": "CK-002",
+   "claim_text": "SB opens ~40.2% (RFI) at 100bb 6-max",
+   "numeric_value": 40.2,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-0677"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "SB opens ~40.2% (RFI) at 100bb 6-max (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-011",
+   "concept_id": "CK-003",
+   "claim_text": "BB defends widest because it closes action.",
+   "numeric_value": null,
+   "unit": null,
+   "evidence_node_ids": [
+    "RNG-0001"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "BB defends widest because it closes action. (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Qualitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-012",
+   "concept_id": "CK-004",
+   "claim_text": "3-Bet BB vs BTN open: 3-bets ~7.0% of combos",
+   "numeric_value": 7.0,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-3551"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium-High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "3-Bet BB vs BTN open: 3-bets ~7.0% of combos (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-013",
+   "concept_id": "CK-004",
+   "claim_text": "3-Bet BB vs CO open: 3-bets ~5.5% of combos",
+   "numeric_value": 5.5,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-3552"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium-High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "3-Bet BB vs CO open: 3-bets ~5.5% of combos (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-014",
+   "concept_id": "CK-004",
+   "claim_text": "3-Bet BB vs SB open (BvB): 3-bets ~12.5% of combos",
+   "numeric_value": 12.5,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-2198"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium-High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "3-Bet BB vs SB open (BvB): 3-bets ~12.5% of combos (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-015",
+   "concept_id": "CK-004",
+   "claim_text": "3-Bet BTN vs CO open: 3-bets ~8.3% of combos",
+   "numeric_value": 8.3,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-1860"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium-High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "3-Bet BTN vs CO open: 3-bets ~8.3% of combos (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-016",
+   "concept_id": "CK-004",
+   "claim_text": "3-Bet BTN vs UTG open: 3-bets ~3.7% of combos",
+   "numeric_value": 3.7,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-3550"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium-High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "3-Bet BTN vs UTG open: 3-bets ~3.7% of combos (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-017",
+   "concept_id": "CK-004",
+   "claim_text": "3-Bet CO vs HJ open: 3-bets ~7.1% of combos",
+   "numeric_value": 7.1,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-2029"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium-High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "3-Bet CO vs HJ open: 3-bets ~7.1% of combos (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-018",
+   "concept_id": "CK-004",
+   "claim_text": "3-Bet SB vs BTN open (polar): 3-bets ~11.5% of combos",
+   "numeric_value": 11.5,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-1691"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium-High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "3-Bet SB vs BTN open (polar): 3-bets ~11.5% of combos (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-019",
+   "concept_id": "CK-004",
+   "claim_text": "3-Bet SB vs CO open: 3-bets ~6.4% of combos",
+   "numeric_value": 6.4,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-3553"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium-High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "3-Bet SB vs CO open: 3-bets ~6.4% of combos (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-020",
+   "concept_id": "CK-005",
+   "claim_text": "3-Bet BB vs BTN open: 3-bets ~7.0% of combos",
+   "numeric_value": 7.0,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-3551"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium-High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "3-Bet BB vs BTN open: 3-bets ~7.0% of combos (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-021",
+   "concept_id": "CK-005",
+   "claim_text": "3-Bet BB vs CO open: 3-bets ~5.5% of combos",
+   "numeric_value": 5.5,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-3552"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium-High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "3-Bet BB vs CO open: 3-bets ~5.5% of combos (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-022",
+   "concept_id": "CK-005",
+   "claim_text": "3-Bet BB vs SB open (BvB): 3-bets ~12.5% of combos",
+   "numeric_value": 12.5,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-2198"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium-High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "3-Bet BB vs SB open (BvB): 3-bets ~12.5% of combos (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-023",
+   "concept_id": "CK-005",
+   "claim_text": "3-Bet BTN vs CO open: 3-bets ~8.3% of combos",
+   "numeric_value": 8.3,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-1860"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium-High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "3-Bet BTN vs CO open: 3-bets ~8.3% of combos (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-024",
+   "concept_id": "CK-005",
+   "claim_text": "3-Bet BTN vs UTG open: 3-bets ~3.7% of combos",
+   "numeric_value": 3.7,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-3550"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium-High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "3-Bet BTN vs UTG open: 3-bets ~3.7% of combos (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-025",
+   "concept_id": "CK-005",
+   "claim_text": "3-Bet CO vs HJ open: 3-bets ~7.1% of combos",
+   "numeric_value": 7.1,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-2029"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium-High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "3-Bet CO vs HJ open: 3-bets ~7.1% of combos (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-026",
+   "concept_id": "CK-005",
+   "claim_text": "3-Bet SB vs BTN open (polar): 3-bets ~11.5% of combos",
+   "numeric_value": 11.5,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-1691"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium-High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "3-Bet SB vs BTN open (polar): 3-bets ~11.5% of combos (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-027",
+   "concept_id": "CK-005",
+   "claim_text": "3-Bet SB vs CO open: 3-bets ~6.4% of combos",
+   "numeric_value": 6.4,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-3553"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium-High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "3-Bet SB vs CO open: 3-bets ~6.4% of combos (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-028",
+   "concept_id": "CK-006",
+   "claim_text": "4-Bet BTN vs SB 3bet (value+bluff): 4-bets ~8.1% of combos",
+   "numeric_value": 8.1,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-2874"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium-High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "4-Bet BTN vs SB 3bet (value+bluff): 4-bets ~8.1% of combos (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-029",
+   "concept_id": "CK-006",
+   "claim_text": "4-Bet CO vs BTN 3bet: 4-bets ~3.0% of combos",
+   "numeric_value": 3.0,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-3555"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium-High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "4-Bet CO vs BTN 3bet: 4-bets ~3.0% of combos (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-030",
+   "concept_id": "CK-006",
+   "claim_text": "4-Bet UTG vs CO 3bet: 4-bets ~1.8% of combos",
+   "numeric_value": 1.8,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-3554"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium-High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "4-Bet UTG vs CO 3bet: 4-bets ~1.8% of combos (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-031",
+   "concept_id": "CK-007",
+   "claim_text": "BTN jams ~46.0% at 10bb (Nash push/fold)",
+   "numeric_value": 46.0,
+   "unit": "%",
+   "evidence_node_ids": [
+    "PF-1960"
+   ],
+   "evidence_sheet": "PushFold_Ranges",
+   "verification_tier": "Nash-Solved",
+   "confidence_level": "High",
+   "confidence_score": 95.0,
+   "evidence_count": 1,
+   "citation": "PokerCoaching (https://pokercoaching.com/push-fold-charts/)",
+   "assertion_template": "BTN jams ~46.0% at 10bb (Nash push/fold) (Nash-Solved; source: PokerCoaching). Model-dependent (ICM/payouts).",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-032",
+   "concept_id": "CK-007",
+   "claim_text": "CO jams ~33.0% at 10bb (Nash push/fold)",
+   "numeric_value": 33.0,
+   "unit": "%",
+   "evidence_node_ids": [
+    "PF-1265"
+   ],
+   "evidence_sheet": "PushFold_Ranges",
+   "verification_tier": "Nash-Solved",
+   "confidence_level": "High",
+   "confidence_score": 95.0,
+   "evidence_count": 1,
+   "citation": "PokerCoaching (https://pokercoaching.com/push-fold-charts/)",
+   "assertion_template": "CO jams ~33.0% at 10bb (Nash push/fold) (Nash-Solved; source: PokerCoaching). Model-dependent (ICM/payouts).",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-033",
+   "concept_id": "CK-007",
+   "claim_text": "SB jams ~47.8% at 10bb (Nash push/fold)",
+   "numeric_value": 47.8,
+   "unit": "%",
+   "evidence_node_ids": [
+    "PF-2727"
+   ],
+   "evidence_sheet": "PushFold_Ranges",
+   "verification_tier": "Nash-Solved",
+   "confidence_level": "High",
+   "confidence_score": 95.0,
+   "evidence_count": 1,
+   "citation": "PokerCoaching (https://pokercoaching.com/push-fold-charts/)",
+   "assertion_template": "SB jams ~47.8% at 10bb (Nash push/fold) (Nash-Solved; source: PokerCoaching). Model-dependent (ICM/payouts).",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-034",
+   "concept_id": "CK-007",
+   "claim_text": "UTG jams ~20.1% at 10bb (Nash push/fold)",
+   "numeric_value": 20.1,
+   "unit": "%",
+   "evidence_node_ids": [
+    "PF-0275"
+   ],
+   "evidence_sheet": "PushFold_Ranges",
+   "verification_tier": "Nash-Solved",
+   "confidence_level": "High",
+   "confidence_score": 95.0,
+   "evidence_count": 1,
+   "citation": "PokerCoaching (https://pokercoaching.com/push-fold-charts/)",
+   "assertion_template": "UTG jams ~20.1% at 10bb (Nash push/fold) (Nash-Solved; source: PokerCoaching). Model-dependent (ICM/payouts).",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-035",
+   "concept_id": "CK-008",
+   "claim_text": "Squeeze BB vs CO open + BTN call: squeezes ~5.4% of combos",
+   "numeric_value": 5.4,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-3558"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "Squeeze BB vs CO open + BTN call: squeezes ~5.4% of combos (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-036",
+   "concept_id": "CK-008",
+   "claim_text": "Squeeze SB vs BTN open + BB call: squeezes ~4.7% of combos",
+   "numeric_value": 4.7,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-3559"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "Squeeze SB vs BTN open + BB call: squeezes ~4.7% of combos (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-037",
+   "concept_id": "CK-009",
+   "claim_text": "Who's favored decides sizing.",
+   "numeric_value": null,
+   "unit": null,
+   "evidence_node_ids": [
+    "PSRPIP-0001"
+   ],
+   "evidence_sheet": "Coach_Knowledge_Map",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium-High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Synthesized (multi-source) (https://blog.gtowizard.com/)",
+   "assertion_template": "Who's favored decides sizing. (Calibrated; source: Synthesized). Not solver-exact.",
+   "grounding_type": "Qualitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-038",
+   "concept_id": "CK-010",
+   "claim_text": "3-Bet Pot In Position: flop c-bet ~71.0% (avg over boards)",
+   "numeric_value": 71.0,
+   "unit": "%",
+   "evidence_node_ids": [
+    "FCB-0003"
+   ],
+   "evidence_sheet": "Flop_CBet_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Upswing / Run It Once / Janda (https://upswingpoker.com/)",
+   "assertion_template": "3-Bet Pot In Position: flop c-bet ~71.0% (avg over boards) (Calibrated; source: Upswing / Run It Once / Janda). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-039",
+   "concept_id": "CK-010",
+   "claim_text": "3-Bet Pot Out of Position: flop c-bet ~71.0% (avg over boards)",
+   "numeric_value": 71.0,
+   "unit": "%",
+   "evidence_node_ids": [
+    "FCB-0004"
+   ],
+   "evidence_sheet": "Flop_CBet_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Upswing / Run It Once / Janda (https://upswingpoker.com/)",
+   "assertion_template": "3-Bet Pot Out of Position: flop c-bet ~71.0% (avg over boards) (Calibrated; source: Upswing / Run It Once / Janda). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-040",
+   "concept_id": "CK-010",
+   "claim_text": "Single Raised Pot In Position: flop c-bet ~68.7% (avg over boards)",
+   "numeric_value": 68.7,
+   "unit": "%",
+   "evidence_node_ids": [
+    "FCB-0001"
+   ],
+   "evidence_sheet": "Flop_CBet_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Upswing / Run It Once / Janda (https://upswingpoker.com/)",
+   "assertion_template": "Single Raised Pot In Position: flop c-bet ~68.7% (avg over boards) (Calibrated; source: Upswing / Run It Once / Janda). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-041",
+   "concept_id": "CK-010",
+   "claim_text": "Single Raised Pot Out of Position: flop c-bet ~68.7% (avg over boards)",
+   "numeric_value": 68.7,
+   "unit": "%",
+   "evidence_node_ids": [
+    "FCB-0002"
+   ],
+   "evidence_sheet": "Flop_CBet_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Upswing / Run It Once / Janda (https://upswingpoker.com/)",
+   "assertion_template": "Single Raised Pot Out of Position: flop c-bet ~68.7% (avg over boards) (Calibrated; source: Upswing / Run It Once / Janda). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-042",
+   "concept_id": "CK-011",
+   "claim_text": "Classify who the board favors.",
+   "numeric_value": null,
+   "unit": null,
+   "evidence_node_ids": [
+    "PSRPIP-0001"
+   ],
+   "evidence_sheet": "Coach_Knowledge_Map",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium-High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Synthesized (multi-source) (https://blog.gtowizard.com/)",
+   "assertion_template": "Classify who the board favors. (Calibrated; source: Synthesized). Not solver-exact.",
+   "grounding_type": "Qualitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-043",
+   "concept_id": "CK-012",
+   "claim_text": "Turn barrel ~53.0% after betting flop and getting called",
+   "numeric_value": 53.0,
+   "unit": "%",
+   "evidence_node_ids": [
+    "TRN-0001"
+   ],
+   "evidence_sheet": "Turn_Strategy_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Upswing / Run It Once (https://upswingpoker.com/)",
+   "assertion_template": "Turn barrel ~53.0% after betting flop and getting called (Calibrated; source: Upswing / Run It Once). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-044",
+   "concept_id": "CK-013",
+   "claim_text": "Pair value with semi-bluffs OOP.",
+   "numeric_value": null,
+   "unit": null,
+   "evidence_node_ids": [
+    "PSRPIP-0001"
+   ],
+   "evidence_sheet": "Coach_Knowledge_Map",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Synthesized (multi-source) (https://blog.gtowizard.com/)",
+   "assertion_template": "Pair value with semi-bluffs OOP. (Calibrated; source: Synthesized). Not solver-exact.",
+   "grounding_type": "Qualitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-045",
+   "concept_id": "CK-014",
+   "claim_text": "Attack capped/give-up ranges.",
+   "numeric_value": null,
+   "unit": null,
+   "evidence_node_ids": [
+    "PSRPIP-0001"
+   ],
+   "evidence_sheet": "Coach_Knowledge_Map",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Synthesized (multi-source) (https://blog.gtowizard.com/)",
+   "assertion_template": "Attack capped/give-up ranges. (Calibrated; source: Synthesized). Not solver-exact.",
+   "grounding_type": "Qualitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-046",
+   "concept_id": "CK-015",
+   "claim_text": "Defend to MDF using blockers.",
+   "numeric_value": null,
+   "unit": null,
+   "evidence_node_ids": [
+    "PSRPIP-0001"
+   ],
+   "evidence_sheet": "Coach_Knowledge_Map",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Synthesized (multi-source) (https://blog.gtowizard.com/)",
+   "assertion_template": "Defend to MDF using blockers. (Calibrated; source: Synthesized). Not solver-exact.",
+   "grounding_type": "Qualitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-047",
+   "concept_id": "CK-016",
+   "claim_text": "Value-bet hands worse hands call.",
+   "numeric_value": null,
+   "unit": null,
+   "evidence_node_ids": [
+    "PSRPIP-0001"
+   ],
+   "evidence_sheet": "Coach_Knowledge_Map",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Synthesized (multi-source) (https://blog.gtowizard.com/)",
+   "assertion_template": "Value-bet hands worse hands call. (Calibrated; source: Synthesized). Not solver-exact.",
+   "grounding_type": "Qualitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-048",
+   "concept_id": "CK-017",
+   "claim_text": "Polar nut-advantage on static boards.",
+   "numeric_value": null,
+   "unit": null,
+   "evidence_node_ids": [
+    "PSRPIP-0001"
+   ],
+   "evidence_sheet": "Coach_Knowledge_Map",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Synthesized (multi-source) (https://blog.gtowizard.com/)",
+   "assertion_template": "Polar nut-advantage on static boards. (Calibrated; source: Synthesized). Not solver-exact.",
+   "grounding_type": "Qualitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-049",
+   "concept_id": "CK-018",
+   "claim_text": "Small OOP bets to set the price.",
+   "numeric_value": null,
+   "unit": null,
+   "evidence_node_ids": [
+    "PSRPIP-0001"
+   ],
+   "evidence_sheet": "Coach_Knowledge_Map",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Synthesized (multi-source) (https://blog.gtowizard.com/)",
+   "assertion_template": "Small OOP bets to set the price. (Calibrated; source: Synthesized). Not solver-exact.",
+   "grounding_type": "Qualitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-050",
+   "concept_id": "CK-019",
+   "claim_text": "Plan commitment from the flop.",
+   "numeric_value": null,
+   "unit": null,
+   "evidence_node_ids": [
+    "PSRPIP-0001"
+   ],
+   "evidence_sheet": "Coach_Knowledge_Map",
+   "verification_tier": "Calibrated",
+   "confidence_level": "High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Synthesized (multi-source) (https://blog.gtowizard.com/)",
+   "assertion_template": "Plan commitment from the flop. (Calibrated; source: Synthesized). Not solver-exact.",
+   "grounding_type": "Qualitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-051",
+   "concept_id": "CK-020",
+   "claim_text": "BTN jams ~46.0% at 10bb (Nash push/fold)",
+   "numeric_value": 46.0,
+   "unit": "%",
+   "evidence_node_ids": [
+    "PF-1960"
+   ],
+   "evidence_sheet": "PushFold_Ranges",
+   "verification_tier": "Nash-Solved",
+   "confidence_level": "High",
+   "confidence_score": 95.0,
+   "evidence_count": 1,
+   "citation": "PokerCoaching (https://pokercoaching.com/push-fold-charts/)",
+   "assertion_template": "BTN jams ~46.0% at 10bb (Nash push/fold) (Nash-Solved; source: PokerCoaching). Model-dependent (ICM/payouts).",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-052",
+   "concept_id": "CK-020",
+   "claim_text": "CO jams ~33.0% at 10bb (Nash push/fold)",
+   "numeric_value": 33.0,
+   "unit": "%",
+   "evidence_node_ids": [
+    "PF-1265"
+   ],
+   "evidence_sheet": "PushFold_Ranges",
+   "verification_tier": "Nash-Solved",
+   "confidence_level": "High",
+   "confidence_score": 95.0,
+   "evidence_count": 1,
+   "citation": "PokerCoaching (https://pokercoaching.com/push-fold-charts/)",
+   "assertion_template": "CO jams ~33.0% at 10bb (Nash push/fold) (Nash-Solved; source: PokerCoaching). Model-dependent (ICM/payouts).",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-053",
+   "concept_id": "CK-020",
+   "claim_text": "SB jams ~47.8% at 10bb (Nash push/fold)",
+   "numeric_value": 47.8,
+   "unit": "%",
+   "evidence_node_ids": [
+    "PF-2727"
+   ],
+   "evidence_sheet": "PushFold_Ranges",
+   "verification_tier": "Nash-Solved",
+   "confidence_level": "High",
+   "confidence_score": 95.0,
+   "evidence_count": 1,
+   "citation": "PokerCoaching (https://pokercoaching.com/push-fold-charts/)",
+   "assertion_template": "SB jams ~47.8% at 10bb (Nash push/fold) (Nash-Solved; source: PokerCoaching). Model-dependent (ICM/payouts).",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-054",
+   "concept_id": "CK-020",
+   "claim_text": "UTG jams ~20.1% at 10bb (Nash push/fold)",
+   "numeric_value": 20.1,
+   "unit": "%",
+   "evidence_node_ids": [
+    "PF-0275"
+   ],
+   "evidence_sheet": "PushFold_Ranges",
+   "verification_tier": "Nash-Solved",
+   "confidence_level": "High",
+   "confidence_score": 95.0,
+   "evidence_count": 1,
+   "citation": "PokerCoaching (https://pokercoaching.com/push-fold-charts/)",
+   "assertion_template": "UTG jams ~20.1% at 10bb (Nash push/fold) (Nash-Solved; source: PokerCoaching). Model-dependent (ICM/payouts).",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-055",
+   "concept_id": "CK-021",
+   "claim_text": "UTG opens ~13.4% (RFI) at 100bb 6-max",
+   "numeric_value": 13.4,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-0001"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "UTG opens ~13.4% (RFI) at 100bb 6-max (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-056",
+   "concept_id": "CK-021",
+   "claim_text": "HJ opens ~18.2% (RFI) at 100bb 6-max",
+   "numeric_value": 18.2,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-0170"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "HJ opens ~18.2% (RFI) at 100bb 6-max (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-057",
+   "concept_id": "CK-021",
+   "claim_text": "CO opens ~23.3% (RFI) at 100bb 6-max",
+   "numeric_value": 23.3,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-0339"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "CO opens ~23.3% (RFI) at 100bb 6-max (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-058",
+   "concept_id": "CK-021",
+   "claim_text": "BTN opens ~38.5% (RFI) at 100bb 6-max",
+   "numeric_value": 38.5,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-0508"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "BTN opens ~38.5% (RFI) at 100bb 6-max (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-059",
+   "concept_id": "CK-021",
+   "claim_text": "SB opens ~40.2% (RFI) at 100bb 6-max",
+   "numeric_value": 40.2,
+   "unit": "%",
+   "evidence_node_ids": [
+    "RNG-0677"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "SB opens ~40.2% (RFI) at 100bb 6-max (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-060",
+   "concept_id": "CK-021",
+   "claim_text": "BTN jams ~46.0% at 10bb (Nash push/fold)",
+   "numeric_value": 46.0,
+   "unit": "%",
+   "evidence_node_ids": [
+    "PF-1960"
+   ],
+   "evidence_sheet": "PushFold_Ranges",
+   "verification_tier": "Nash-Solved",
+   "confidence_level": "High",
+   "confidence_score": 95.0,
+   "evidence_count": 1,
+   "citation": "PokerCoaching (https://pokercoaching.com/push-fold-charts/)",
+   "assertion_template": "BTN jams ~46.0% at 10bb (Nash push/fold) (Nash-Solved; source: PokerCoaching). Model-dependent (ICM/payouts).",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-061",
+   "concept_id": "CK-021",
+   "claim_text": "CO jams ~33.0% at 10bb (Nash push/fold)",
+   "numeric_value": 33.0,
+   "unit": "%",
+   "evidence_node_ids": [
+    "PF-1265"
+   ],
+   "evidence_sheet": "PushFold_Ranges",
+   "verification_tier": "Nash-Solved",
+   "confidence_level": "High",
+   "confidence_score": 95.0,
+   "evidence_count": 1,
+   "citation": "PokerCoaching (https://pokercoaching.com/push-fold-charts/)",
+   "assertion_template": "CO jams ~33.0% at 10bb (Nash push/fold) (Nash-Solved; source: PokerCoaching). Model-dependent (ICM/payouts).",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-062",
+   "concept_id": "CK-021",
+   "claim_text": "SB jams ~47.8% at 10bb (Nash push/fold)",
+   "numeric_value": 47.8,
+   "unit": "%",
+   "evidence_node_ids": [
+    "PF-2727"
+   ],
+   "evidence_sheet": "PushFold_Ranges",
+   "verification_tier": "Nash-Solved",
+   "confidence_level": "High",
+   "confidence_score": 95.0,
+   "evidence_count": 1,
+   "citation": "PokerCoaching (https://pokercoaching.com/push-fold-charts/)",
+   "assertion_template": "SB jams ~47.8% at 10bb (Nash push/fold) (Nash-Solved; source: PokerCoaching). Model-dependent (ICM/payouts).",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-063",
+   "concept_id": "CK-021",
+   "claim_text": "UTG jams ~20.1% at 10bb (Nash push/fold)",
+   "numeric_value": 20.1,
+   "unit": "%",
+   "evidence_node_ids": [
+    "PF-0275"
+   ],
+   "evidence_sheet": "PushFold_Ranges",
+   "verification_tier": "Nash-Solved",
+   "confidence_level": "High",
+   "confidence_score": 95.0,
+   "evidence_count": 1,
+   "citation": "PokerCoaching (https://pokercoaching.com/push-fold-charts/)",
+   "assertion_template": "UTG jams ~20.1% at 10bb (Nash push/fold) (Nash-Solved; source: PokerCoaching). Model-dependent (ICM/payouts).",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-064",
+   "concept_id": "CK-022",
+   "claim_text": "BTN jams ~46.0% at 10bb (Nash push/fold)",
+   "numeric_value": 46.0,
+   "unit": "%",
+   "evidence_node_ids": [
+    "PF-1960"
+   ],
+   "evidence_sheet": "PushFold_Ranges",
+   "verification_tier": "Nash-Solved",
+   "confidence_level": "High",
+   "confidence_score": 95.0,
+   "evidence_count": 1,
+   "citation": "PokerCoaching (https://pokercoaching.com/push-fold-charts/)",
+   "assertion_template": "BTN jams ~46.0% at 10bb (Nash push/fold) (Nash-Solved; source: PokerCoaching). Model-dependent (ICM/payouts).",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-065",
+   "concept_id": "CK-022",
+   "claim_text": "CO jams ~33.0% at 10bb (Nash push/fold)",
+   "numeric_value": 33.0,
+   "unit": "%",
+   "evidence_node_ids": [
+    "PF-1265"
+   ],
+   "evidence_sheet": "PushFold_Ranges",
+   "verification_tier": "Nash-Solved",
+   "confidence_level": "High",
+   "confidence_score": 95.0,
+   "evidence_count": 1,
+   "citation": "PokerCoaching (https://pokercoaching.com/push-fold-charts/)",
+   "assertion_template": "CO jams ~33.0% at 10bb (Nash push/fold) (Nash-Solved; source: PokerCoaching). Model-dependent (ICM/payouts).",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-066",
+   "concept_id": "CK-022",
+   "claim_text": "SB jams ~47.8% at 10bb (Nash push/fold)",
+   "numeric_value": 47.8,
+   "unit": "%",
+   "evidence_node_ids": [
+    "PF-2727"
+   ],
+   "evidence_sheet": "PushFold_Ranges",
+   "verification_tier": "Nash-Solved",
+   "confidence_level": "High",
+   "confidence_score": 95.0,
+   "evidence_count": 1,
+   "citation": "PokerCoaching (https://pokercoaching.com/push-fold-charts/)",
+   "assertion_template": "SB jams ~47.8% at 10bb (Nash push/fold) (Nash-Solved; source: PokerCoaching). Model-dependent (ICM/payouts).",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-067",
+   "concept_id": "CK-022",
+   "claim_text": "UTG jams ~20.1% at 10bb (Nash push/fold)",
+   "numeric_value": 20.1,
+   "unit": "%",
+   "evidence_node_ids": [
+    "PF-0275"
+   ],
+   "evidence_sheet": "PushFold_Ranges",
+   "verification_tier": "Nash-Solved",
+   "confidence_level": "High",
+   "confidence_score": 95.0,
+   "evidence_count": 1,
+   "citation": "PokerCoaching (https://pokercoaching.com/push-fold-charts/)",
+   "assertion_template": "UTG jams ~20.1% at 10bb (Nash push/fold) (Nash-Solved; source: PokerCoaching). Model-dependent (ICM/payouts).",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-068",
+   "concept_id": "CK-023",
+   "claim_text": "Switch strategy by depth.",
+   "numeric_value": null,
+   "unit": null,
+   "evidence_node_ids": [
+    "MTT-0001"
+   ],
+   "evidence_sheet": "Coach_Knowledge_Map",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Synthesized (multi-source) (https://blog.gtowizard.com/)",
+   "assertion_template": "Switch strategy by depth. (Calibrated; source: Synthesized). Not solver-exact.",
+   "grounding_type": "Qualitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-069",
+   "concept_id": "CK-024",
+   "claim_text": "More dead money → widen.",
+   "numeric_value": null,
+   "unit": null,
+   "evidence_node_ids": [
+    "MTT-0001"
+   ],
+   "evidence_sheet": "Coach_Knowledge_Map",
+   "verification_tier": "Calibrated",
+   "confidence_level": "High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Synthesized (multi-source) (https://blog.gtowizard.com/)",
+   "assertion_template": "More dead money → widen. (Calibrated; source: Synthesized). Not solver-exact.",
+   "grounding_type": "Qualitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-070",
+   "concept_id": "CK-025",
+   "claim_text": "ICM chip-EV breakeven ~33.0%",
+   "numeric_value": 33.0,
+   "unit": "%",
+   "evidence_node_ids": [
+    "ICM-0001"
+   ],
+   "evidence_sheet": "ICM_Decisions",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "GTO Wizard (https://blog.gtowizard.com/what-happens-when-playing-chip-ev-and-icm-is-significant/)",
+   "assertion_template": "ICM chip-EV breakeven ~33.0% (Calibrated; source: GTO Wizard). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-071",
+   "concept_id": "CK-025",
+   "claim_text": "ICM normal-bubble required equity ~37.5%",
+   "numeric_value": 37.5,
+   "unit": "%",
+   "evidence_node_ids": [
+    "ICM-0001"
+   ],
+   "evidence_sheet": "ICM_Decisions",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "GTO Wizard (https://blog.gtowizard.com/what-happens-when-playing-chip-ev-and-icm-is-significant/)",
+   "assertion_template": "ICM normal-bubble required equity ~37.5% (Calibrated; source: GTO Wizard). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-072",
+   "concept_id": "CK-025",
+   "claim_text": "ICM high-bubble-factor required equity ~61.0%",
+   "numeric_value": 61.0,
+   "unit": "%",
+   "evidence_node_ids": [
+    "ICM-0001"
+   ],
+   "evidence_sheet": "ICM_Decisions",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "GTO Wizard (https://blog.gtowizard.com/what-happens-when-playing-chip-ev-and-icm-is-significant/)",
+   "assertion_template": "ICM high-bubble-factor required equity ~61.0% (Calibrated; source: GTO Wizard). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-073",
+   "concept_id": "CK-026",
+   "claim_text": "ICM chip-EV breakeven ~33.0%",
+   "numeric_value": 33.0,
+   "unit": "%",
+   "evidence_node_ids": [
+    "ICM-0001"
+   ],
+   "evidence_sheet": "ICM_Decisions",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "GTO Wizard (https://blog.gtowizard.com/what-happens-when-playing-chip-ev-and-icm-is-significant/)",
+   "assertion_template": "ICM chip-EV breakeven ~33.0% (Calibrated; source: GTO Wizard). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-074",
+   "concept_id": "CK-026",
+   "claim_text": "ICM normal-bubble required equity ~37.5%",
+   "numeric_value": 37.5,
+   "unit": "%",
+   "evidence_node_ids": [
+    "ICM-0001"
+   ],
+   "evidence_sheet": "ICM_Decisions",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "GTO Wizard (https://blog.gtowizard.com/what-happens-when-playing-chip-ev-and-icm-is-significant/)",
+   "assertion_template": "ICM normal-bubble required equity ~37.5% (Calibrated; source: GTO Wizard). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-075",
+   "concept_id": "CK-026",
+   "claim_text": "ICM high-bubble-factor required equity ~61.0%",
+   "numeric_value": 61.0,
+   "unit": "%",
+   "evidence_node_ids": [
+    "ICM-0001"
+   ],
+   "evidence_sheet": "ICM_Decisions",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "GTO Wizard (https://blog.gtowizard.com/what-happens-when-playing-chip-ev-and-icm-is-significant/)",
+   "assertion_template": "ICM high-bubble-factor required equity ~61.0% (Calibrated; source: GTO Wizard). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-076",
+   "concept_id": "CK-027",
+   "claim_text": "ICM chip-EV breakeven ~33.0%",
+   "numeric_value": 33.0,
+   "unit": "%",
+   "evidence_node_ids": [
+    "ICM-0001"
+   ],
+   "evidence_sheet": "ICM_Decisions",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "GTO Wizard (https://blog.gtowizard.com/what-happens-when-playing-chip-ev-and-icm-is-significant/)",
+   "assertion_template": "ICM chip-EV breakeven ~33.0% (Calibrated; source: GTO Wizard). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-077",
+   "concept_id": "CK-027",
+   "claim_text": "ICM normal-bubble required equity ~37.5%",
+   "numeric_value": 37.5,
+   "unit": "%",
+   "evidence_node_ids": [
+    "ICM-0001"
+   ],
+   "evidence_sheet": "ICM_Decisions",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "GTO Wizard (https://blog.gtowizard.com/what-happens-when-playing-chip-ev-and-icm-is-significant/)",
+   "assertion_template": "ICM normal-bubble required equity ~37.5% (Calibrated; source: GTO Wizard). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-078",
+   "concept_id": "CK-027",
+   "claim_text": "ICM high-bubble-factor required equity ~61.0%",
+   "numeric_value": 61.0,
+   "unit": "%",
+   "evidence_node_ids": [
+    "ICM-0001"
+   ],
+   "evidence_sheet": "ICM_Decisions",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "GTO Wizard (https://blog.gtowizard.com/what-happens-when-playing-chip-ev-and-icm-is-significant/)",
+   "assertion_template": "ICM high-bubble-factor required equity ~61.0% (Calibrated; source: GTO Wizard). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-079",
+   "concept_id": "CK-028",
+   "claim_text": "ICM chip-EV breakeven ~33.0%",
+   "numeric_value": 33.0,
+   "unit": "%",
+   "evidence_node_ids": [
+    "ICM-0001"
+   ],
+   "evidence_sheet": "ICM_Decisions",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "GTO Wizard (https://blog.gtowizard.com/what-happens-when-playing-chip-ev-and-icm-is-significant/)",
+   "assertion_template": "ICM chip-EV breakeven ~33.0% (Calibrated; source: GTO Wizard). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-080",
+   "concept_id": "CK-028",
+   "claim_text": "ICM normal-bubble required equity ~37.5%",
+   "numeric_value": 37.5,
+   "unit": "%",
+   "evidence_node_ids": [
+    "ICM-0001"
+   ],
+   "evidence_sheet": "ICM_Decisions",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "GTO Wizard (https://blog.gtowizard.com/what-happens-when-playing-chip-ev-and-icm-is-significant/)",
+   "assertion_template": "ICM normal-bubble required equity ~37.5% (Calibrated; source: GTO Wizard). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-081",
+   "concept_id": "CK-028",
+   "claim_text": "ICM high-bubble-factor required equity ~61.0%",
+   "numeric_value": 61.0,
+   "unit": "%",
+   "evidence_node_ids": [
+    "ICM-0001"
+   ],
+   "evidence_sheet": "ICM_Decisions",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "GTO Wizard (https://blog.gtowizard.com/what-happens-when-playing-chip-ev-and-icm-is-significant/)",
+   "assertion_template": "ICM high-bubble-factor required equity ~61.0% (Calibrated; source: GTO Wizard). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-082",
+   "concept_id": "CK-029",
+   "claim_text": "ICM chip-EV breakeven ~33.0%",
+   "numeric_value": 33.0,
+   "unit": "%",
+   "evidence_node_ids": [
+    "ICM-0001"
+   ],
+   "evidence_sheet": "ICM_Decisions",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "GTO Wizard (https://blog.gtowizard.com/what-happens-when-playing-chip-ev-and-icm-is-significant/)",
+   "assertion_template": "ICM chip-EV breakeven ~33.0% (Calibrated; source: GTO Wizard). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-083",
+   "concept_id": "CK-029",
+   "claim_text": "ICM normal-bubble required equity ~37.5%",
+   "numeric_value": 37.5,
+   "unit": "%",
+   "evidence_node_ids": [
+    "ICM-0001"
+   ],
+   "evidence_sheet": "ICM_Decisions",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "GTO Wizard (https://blog.gtowizard.com/what-happens-when-playing-chip-ev-and-icm-is-significant/)",
+   "assertion_template": "ICM normal-bubble required equity ~37.5% (Calibrated; source: GTO Wizard). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-084",
+   "concept_id": "CK-029",
+   "claim_text": "ICM high-bubble-factor required equity ~61.0%",
+   "numeric_value": 61.0,
+   "unit": "%",
+   "evidence_node_ids": [
+    "ICM-0001"
+   ],
+   "evidence_sheet": "ICM_Decisions",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "GTO Wizard (https://blog.gtowizard.com/what-happens-when-playing-chip-ev-and-icm-is-significant/)",
+   "assertion_template": "ICM high-bubble-factor required equity ~61.0% (Calibrated; source: GTO Wizard). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-085",
+   "concept_id": "CK-030",
+   "claim_text": "ICM chip-EV breakeven ~33.0%",
+   "numeric_value": 33.0,
+   "unit": "%",
+   "evidence_node_ids": [
+    "ICM-0001"
+   ],
+   "evidence_sheet": "ICM_Decisions",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "GTO Wizard (https://blog.gtowizard.com/what-happens-when-playing-chip-ev-and-icm-is-significant/)",
+   "assertion_template": "ICM chip-EV breakeven ~33.0% (Calibrated; source: GTO Wizard). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-086",
+   "concept_id": "CK-030",
+   "claim_text": "ICM normal-bubble required equity ~37.5%",
+   "numeric_value": 37.5,
+   "unit": "%",
+   "evidence_node_ids": [
+    "ICM-0001"
+   ],
+   "evidence_sheet": "ICM_Decisions",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "GTO Wizard (https://blog.gtowizard.com/what-happens-when-playing-chip-ev-and-icm-is-significant/)",
+   "assertion_template": "ICM normal-bubble required equity ~37.5% (Calibrated; source: GTO Wizard). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-087",
+   "concept_id": "CK-030",
+   "claim_text": "ICM high-bubble-factor required equity ~61.0%",
+   "numeric_value": 61.0,
+   "unit": "%",
+   "evidence_node_ids": [
+    "ICM-0001"
+   ],
+   "evidence_sheet": "ICM_Decisions",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "GTO Wizard (https://blog.gtowizard.com/what-happens-when-playing-chip-ev-and-icm-is-significant/)",
+   "assertion_template": "ICM high-bubble-factor required equity ~61.0% (Calibrated; source: GTO Wizard). Not solver-exact.",
+   "grounding_type": "Quantitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-088",
+   "concept_id": "CK-031",
+   "claim_text": "Don't fold — value relentlessly.",
+   "numeric_value": null,
+   "unit": null,
+   "evidence_node_ids": [
+    "PSRPIP-0001"
+   ],
+   "evidence_sheet": "Coach_Knowledge_Map",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Synthesized (multi-source) (https://blog.gtowizard.com/)",
+   "assertion_template": "Don't fold — value relentlessly. (Calibrated; source: Synthesized). Not solver-exact.",
+   "grounding_type": "Qualitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-089",
+   "concept_id": "CK-032",
+   "claim_text": "Steal & bluff relentlessly.",
+   "numeric_value": null,
+   "unit": null,
+   "evidence_node_ids": [
+    "PSRPIP-0001"
+   ],
+   "evidence_sheet": "Coach_Knowledge_Map",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Synthesized (multi-source) (https://blog.gtowizard.com/)",
+   "assertion_template": "Steal & bluff relentlessly. (Calibrated; source: Synthesized). Not solver-exact.",
+   "grounding_type": "Qualitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-090",
+   "concept_id": "CK-033",
+   "claim_text": "Pool-specific — verify.",
+   "numeric_value": null,
+   "unit": null,
+   "evidence_node_ids": [
+    "PSRPIP-0001"
+   ],
+   "evidence_sheet": "Coach_Knowledge_Map",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Low",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Synthesized (multi-source) (https://blog.gtowizard.com/)",
+   "assertion_template": "Pool-specific — verify. (Calibrated; source: Synthesized). Not solver-exact.",
+   "grounding_type": "Qualitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-091",
+   "concept_id": "CK-034",
+   "claim_text": "Count combos to read ranges.",
+   "numeric_value": null,
+   "unit": null,
+   "evidence_node_ids": [
+    "PSRPOOP-0001"
+   ],
+   "evidence_sheet": "Coach_Knowledge_Map",
+   "verification_tier": "Calibrated",
+   "confidence_level": "High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Synthesized (multi-source) (https://blog.gtowizard.com/)",
+   "assertion_template": "Count combos to read ranges. (Calibrated; source: Synthesized). Not solver-exact.",
+   "grounding_type": "Qualitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-092",
+   "concept_id": "CK-035",
+   "claim_text": "A check-back caps the range.",
+   "numeric_value": null,
+   "unit": null,
+   "evidence_node_ids": [
+    "PSRPOOP-0001"
+   ],
+   "evidence_sheet": "Coach_Knowledge_Map",
+   "verification_tier": "Calibrated",
+   "confidence_level": "Medium-High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Synthesized (multi-source) (https://blog.gtowizard.com/)",
+   "assertion_template": "A check-back caps the range. (Calibrated; source: Synthesized). Not solver-exact.",
+   "grounding_type": "Qualitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-093",
+   "concept_id": "CK-036",
+   "claim_text": "Keep decisions EV-based, not emotional.",
+   "numeric_value": null,
+   "unit": null,
+   "evidence_node_ids": [
+    "RNG-0001"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "Keep decisions EV-based, not emotional. (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Qualitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-094",
+   "concept_id": "CK-037",
+   "claim_text": "Expect swings; judge process not results.",
+   "numeric_value": null,
+   "unit": null,
+   "evidence_node_ids": [
+    "RNG-0001"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "Expect swings; judge process not results. (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Qualitative",
+   "safe_to_assert": true
+  },
+  {
+   "grounding_id": "CG-095",
+   "concept_id": "CK-038",
+   "claim_text": "Roll sized to game & variance.",
+   "numeric_value": null,
+   "unit": null,
+   "evidence_node_ids": [
+    "RNG-0001"
+   ],
+   "evidence_sheet": "Range_Viewer_Database",
+   "verification_tier": "Calibrated",
+   "confidence_level": "High",
+   "confidence_score": 75.0,
+   "evidence_count": 1,
+   "citation": "Derived from calibrated ranges (https://blog.gtowizard.com/)",
+   "assertion_template": "Roll sized to game & variance. (Calibrated; source: Derived from calibrated ranges). Not solver-exact.",
+   "grounding_type": "Qualitative",
+   "safe_to_assert": true
+  }
+ ]
+}

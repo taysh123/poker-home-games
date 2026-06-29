@@ -1,0 +1,34 @@
+/**
+ * Bundled-artifact version drift guard. Every JSON artifact shipped under assets/content/<v>/ must declare
+ * the same `dataset_version` as `CONTENT_DATASET_VERSION` (and the literal require() paths in
+ * bundledArtifacts.ts must point at that folder). If a version bump is half-finished, this fails loudly.
+ */
+import { CONTENT_DATASET_VERSION } from '../datasetVersion';
+import {
+  coachGroundingArtifact,
+  quizSamplePackArtifact,
+  analyticsContractArtifact,
+  packManifestsPackArtifact,
+  premiumContentCatalogPackArtifact,
+} from '../bundledArtifacts';
+
+describe('bundled artifacts ↔ CONTENT_DATASET_VERSION', () => {
+  it('coach grounding dataset_version matches', () => {
+    expect((coachGroundingArtifact() as { dataset_version: string }).dataset_version).toBe(CONTENT_DATASET_VERSION);
+  });
+  it('analytics contract dataset_version matches', () => {
+    expect((analyticsContractArtifact() as { dataset_version: string }).dataset_version).toBe(CONTENT_DATASET_VERSION);
+  });
+  it('quiz sample pack manifest dataset_version matches', () => {
+    expect((quizSamplePackArtifact() as { manifest: { dataset_version: string } }).manifest.dataset_version)
+      .toBe(CONTENT_DATASET_VERSION);
+  });
+  it('pack_manifests pack manifest dataset_version matches', () => {
+    expect((packManifestsPackArtifact() as { manifest: { dataset_version: string } }).manifest.dataset_version)
+      .toBe(CONTENT_DATASET_VERSION);
+  });
+  it('premium_content_catalog pack manifest dataset_version matches', () => {
+    expect((premiumContentCatalogPackArtifact() as { manifest: { dataset_version: string } }).manifest.dataset_version)
+      .toBe(CONTENT_DATASET_VERSION);
+  });
+});

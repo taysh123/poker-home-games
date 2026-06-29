@@ -23,6 +23,16 @@ public sealed class ChangePasswordCommandHandler(
             throw new UnauthorizedException("Current password is incorrect.");
 
         user.UpdatePassword(passwordHasher.Hash(request.NewPassword));
+
+        // A password change must invalidate every existing session — otherwise a
+        // compromised account stays reachable via its old refresh tokens for up to
+        // 30 days. Revoke all active tokens so other devices are forced to re-login.
+        var activeTokens = await context.RefreshTokens
+            .Where(rt => rt.UserId == user.Id && !rt.IsRevoked)
+            .ToListAsync(cancellationToken);
+        foreach (var token in activeTokens)
+            token.Revoke();
+
         await context.SaveChangesAsync(cancellationToken);
 
         return Unit.Value;

@@ -310,6 +310,137 @@ namespace PokerApp.Infrastructure.Persistence.Migrations
                     b.ToTable("CashOuts", (string)null);
                 });
 
+            modelBuilder.Entity("PokerApp.Domain.Entities.CreditBalance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Consumed")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Granted")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("LastConsumedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PeriodKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "PeriodKey")
+                        .IsUnique()
+                        .HasDatabaseName("IX_CreditBalances_UserId_PeriodKey");
+
+                    b.ToTable("CreditBalances", (string)null);
+                });
+
+            modelBuilder.Entity("PokerApp.Domain.Entities.CreditLedgerEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Delta")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("PeriodKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("SourceRef")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("IX_CreditLedger_IdempotencyKey");
+
+                    b.HasIndex("UserId", "PeriodKey")
+                        .HasDatabaseName("IX_CreditLedger_UserId_PeriodKey");
+
+                    b.ToTable("CreditLedgerEntries", (string)null);
+                });
+
+            modelBuilder.Entity("PokerApp.Domain.Entities.DeviceBinding", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeviceId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("FirstSeenUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("LastSeenUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("SeenCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeviceId")
+                        .HasDatabaseName("IX_DeviceBindings_DeviceId");
+
+                    b.HasIndex("UserId", "DeviceId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_DeviceBindings_UserId_DeviceId");
+
+                    b.ToTable("DeviceBindings", (string)null);
+                });
+
             modelBuilder.Entity("PokerApp.Domain.Entities.DeviceToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -814,6 +945,106 @@ namespace PokerApp.Infrastructure.Persistence.Migrations
                     b.ToTable("Settlements", (string)null);
                 });
 
+            modelBuilder.Entity("PokerApp.Domain.Entities.StoreWebhookEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NotificationUuid")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("ProcessedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Store")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NotificationUuid")
+                        .IsUnique()
+                        .HasDatabaseName("IX_StoreWebhookEvents_NotificationUuid");
+
+                    b.ToTable("StoreWebhookEvents", (string)null);
+                });
+
+            modelBuilder.Entity("PokerApp.Domain.Entities.Subscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("AutoRenew")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CurrentPeriodEnd")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CurrentPeriodStart")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsSandbox")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("LatestEventAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("OriginalTransactionId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Plan")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("ProductId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Store")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_Subscriptions_UserId");
+
+                    b.HasIndex("Store", "OriginalTransactionId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Subscriptions_Store_OriginalTransactionId");
+
+                    b.ToTable("Subscriptions", (string)null);
+                });
+
             modelBuilder.Entity("PokerApp.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -822,6 +1053,10 @@ namespace PokerApp.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("AppRole")
                         .HasColumnType("integer");
+
+                    b.Property<string>("AppleSubjectId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.Property<string>("AvatarColor")
                         .HasMaxLength(7)
@@ -838,6 +1073,11 @@ namespace PokerApp.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
+
+                    b.Property<bool>("EmailVerified")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("GoogleId")
                         .HasMaxLength(255)
@@ -856,6 +1096,9 @@ namespace PokerApp.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AppleSubjectId")
+                        .HasDatabaseName("IX_Users_AppleSubjectId");
 
                     b.HasIndex("Email")
                         .IsUnique()
@@ -965,6 +1208,33 @@ namespace PokerApp.Infrastructure.Persistence.Migrations
                     b.Navigation("SessionPlayer");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("PokerApp.Domain.Entities.CreditBalance", b =>
+                {
+                    b.HasOne("PokerApp.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PokerApp.Domain.Entities.CreditLedgerEntry", b =>
+                {
+                    b.HasOne("PokerApp.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PokerApp.Domain.Entities.DeviceBinding", b =>
+                {
+                    b.HasOne("PokerApp.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("PokerApp.Domain.Entities.DeviceToken", b =>
@@ -1152,6 +1422,15 @@ namespace PokerApp.Infrastructure.Persistence.Migrations
                     b.Navigation("ReceiverUser");
 
                     b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("PokerApp.Domain.Entities.Subscription", b =>
+                {
+                    b.HasOne("PokerApp.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("PokerApp.Domain.Entities.UserAchievement", b =>

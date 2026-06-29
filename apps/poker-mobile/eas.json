@@ -18,6 +18,16 @@
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "12435044751-eruvq9uduc9sk5mietg9eiab2epddsp6.apps.googleusercontent.com"
       }
     },
+    "beta": {
+      "extends": "preview",
+      "autoIncrement": true,
+      "channel": "beta",
+      "env": {
+        "EXPO_PUBLIC_APP_VARIANT": "beta",
+        "EXPO_PUBLIC_API_URL": "https://poker-home-games-production.up.railway.app",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "12435044751-eruvq9uduc9sk5mietg9eiab2epddsp6.apps.googleusercontent.com"
+      }
+    },
     "production": {
       "autoIncrement": true,
       "env": {

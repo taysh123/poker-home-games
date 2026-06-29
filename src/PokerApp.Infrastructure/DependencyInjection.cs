@@ -1,8 +1,10 @@
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using PokerApp.Application.Common.Interfaces;
+using PokerApp.Infrastructure.Billing;
 using PokerApp.Infrastructure.Identity;
 using PokerApp.Infrastructure.Persistence;
 using PokerApp.Infrastructure.Services;
@@ -37,6 +39,99 @@ public static class DependencyInjection
         services.AddScoped<ICurrentUserService, CurrentUserService>();
 
         services.AddScoped<IGoogleAuthService, GoogleAuthService>();
+        services.AddScoped<IAppleAuthService, AppleAuthService>();
+        services.AddScoped<IAuthAbuseGuard, AuthAbuseGuard>();
+
+        // Auth policy (verified-only hardening) — fail-closed defaults if section is absent.
+        var authSettings = configuration.GetSection("AuthSettings").Get<AuthSettings>() ?? new AuthSettings();
+        services.AddSingleton(authSettings);
+        services.AddSingleton<IAuthPolicy, AuthPolicy>();
+
+        // B2 — server-authoritative monetization enforcement.
+        var aiCreditSettings = configuration.GetSection("AiCreditSettings").Get<AiCreditSettings>() ?? new AiCreditSettings();
+        services.AddSingleton(aiCreditSettings);
+        services.AddSingleton<IAiCreditPolicyProvider, AiCreditPolicyProvider>();
+        services.AddScoped<IEntitlementService, EntitlementService>();
+        services.AddScoped<ICreditLedger, CreditLedger>();
+
+        // AI Coach provider (vendor-neutral; key lives server-side only). Default = deterministic mock
+        // (fail-closed, unchanged behaviour); "anthropic" selects the real AnthropicCoachAiProvider (behind the
+        // server key), "vendor" a generic stub. Mirrors the billing provider config switch below.
+        var coachAiSettings = configuration.GetSection("CoachAiSettings").Get<CoachAiSettings>() ?? new CoachAiSettings();
+        services.AddSingleton(coachAiSettings);
+        services.AddScoped<ICoachAiProvider>(sp =>
+        {
+            // Bound the outbound AI call: default HttpClient has a 100s timeout and unbounded
+            // response buffering, so a slow/large upstream could pin a request thread.
+            var http = sp.GetRequiredService<IHttpClientFactory>().CreateClient();
+            http.Timeout = TimeSpan.FromSeconds(30);
+            http.MaxResponseContentBufferSize = 2 * 1024 * 1024; // 2 MB
+            return CoachAiProviderFactory.Create(coachAiSettings, http);
+        });
+
+        // B3 — real store verification (provider-selected; mock retained for dev/tests).
+        var billingSettings = configuration.GetSection("BillingSettings").Get<BillingSettings>() ?? new BillingSettings();
+        var appleStoreSettings = configuration.GetSection("AppleStoreSettings").Get<AppleStoreSettings>() ?? new AppleStoreSettings();
+        var googlePlaySettings = configuration.GetSection("GooglePlaySettings").Get<GooglePlaySettings>() ?? new GooglePlaySettings();
+        services.AddSingleton(billingSettings);
+        services.AddSingleton(appleStoreSettings);
+        services.AddSingleton(googlePlaySettings);
+
+        // Stripe (web) + RevenueCat (mobile) config — EMPTY ⇒ inert/fail-closed (mock stays active). The Stripe
+        // Checkout service is registered always (it returns null/BadRequest when unconfigured).
+        var stripeSettings = configuration.GetSection("StripeSettings").Get<StripeSettings>() ?? new StripeSettings();
+        var revenueCatSettings = configuration.GetSection("RevenueCatSettings").Get<RevenueCatSettings>() ?? new RevenueCatSettings();
+        services.AddSingleton(stripeSettings);
+        services.AddSingleton(revenueCatSettings);
+        services.AddScoped<IStripeCheckoutService>(sp =>
+            new StripeCheckoutService(stripeSettings, sp.GetRequiredService<IWebSettings>(), sp.GetRequiredService<IHttpClientFactory>().CreateClient()));
+
+        // Paddle Billing (web billing — current API, Merchant of Record). EMPTY ⇒ inert/fail-closed: the Stripe
+        // path (or mock) stays active. Bound from the "Paddle" section (env: Paddle__ApiKey, __PriceMonthlyId, …).
+        var paddleSettings = configuration.GetSection("Paddle").Get<PaddleSettings>() ?? new PaddleSettings();
+        services.AddSingleton(paddleSettings);
+        services.AddScoped<PaddleCheckoutService>(sp =>
+            new PaddleCheckoutService(paddleSettings, sp.GetRequiredService<IHttpClientFactory>().CreateClient()));
+        services.AddScoped<IPaddleCheckoutService>(sp => sp.GetRequiredService<PaddleCheckoutService>());
+
+        // Active web-checkout provider: Paddle when configured (API key + both price ids), else the existing Stripe
+        // path. Both implementations stay fail-closed (null/BadRequest) when their own credentials are absent.
+        services.AddScoped<ICheckoutService>(sp =>
+            paddleSettings.IsConfigured
+                ? sp.GetRequiredService<IPaddleCheckoutService>()
+                : sp.GetRequiredService<IStripeCheckoutService>());
+
+        var appleRoots = appleStoreSettings.RootCertsPem
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Select(p => X509Certificate2.CreateFromPem(p))
+            .ToList();
+        services.AddSingleton(new AppleJwsVerifier(appleRoots));
+        services.AddSingleton<IOidcKeySource, GoogleOidcKeySource>();
+        services.AddScoped<IGooglePlaySubscriptionsClient, GooglePlaySubscriptionsClient>();
+        services.AddScoped<IStoreNotificationVerifier, StoreNotificationVerifier>();
+
+        if (string.Equals(billingSettings.Provider, "direct", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddScoped<AppleBillingVerifier>();
+            services.AddScoped<GooglePlayBillingVerifier>();
+            services.AddScoped(sp => new StripeBillingVerifier(stripeSettings, billingSettings, sp.GetRequiredService<IHttpClientFactory>().CreateClient()));
+            services.AddScoped(sp => new RevenueCatBillingVerifier(revenueCatSettings, billingSettings, sp.GetRequiredService<IHttpClientFactory>().CreateClient()));
+            services.AddScoped(sp => new PaddleBillingVerifier(paddleSettings, billingSettings, sp.GetRequiredService<IHttpClientFactory>().CreateClient()));
+            services.AddScoped<IBillingVerifier, DirectBillingVerifier>();
+        }
+        else
+        {
+            services.AddScoped<IBillingVerifier, MockBillingVerifier>();
+        }
+
+        // B5 — fraud/abuse + observability + top-ups (safe defaults: blocking off, top-ups disabled).
+        var fraudSettings = configuration.GetSection("FraudSettings").Get<FraudSettings>() ?? new FraudSettings();
+        var topUpSettings = configuration.GetSection("TopUpSettings").Get<TopUpSettings>() ?? new TopUpSettings();
+        services.AddSingleton(fraudSettings);
+        services.AddSingleton(topUpSettings);
+        services.AddSingleton<ITopUpCatalog, TopUpCatalog>();
+        services.AddSingleton<IAuditLog, AuditLog>();
+        services.AddScoped<IFraudEvaluator, FraudEvaluator>();
 
         services.Configure<WebSettings>(configuration.GetSection("AppSettings"));
         services.AddSingleton<IWebSettings>(sp =>

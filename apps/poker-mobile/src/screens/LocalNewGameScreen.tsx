@@ -26,6 +26,7 @@ import DealInOverlay from '../components/DealInOverlay';
 import ScreenHeader from '../components/ScreenHeader';
 import { getRecentGuests, recordGuestName } from '../utils/guestHistory';
 import { parseAmountToCents, formatCents } from '../utils/money';
+import { currencySymbol } from '../utils/currency';
 import { useLocalGames } from '../context/LocalGamesContext';
 import { showToast } from '../utils/toast';
 import { infoDialog } from '../utils/confirm';
@@ -53,6 +54,7 @@ const DEFAULT_PAYOUTS: Record<number, number[]> = {
  */
 export default function LocalNewGameScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const sym = currencySymbol();
   const { startGame, activeGame } = useLocalGames();
 
   const [step, setStep] = useState(1);
@@ -318,7 +320,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                   onChangeText={setEntryFee}
                   placeholder="50"
                   keyboardType="decimal-pad"
-                  prefix="₪"
+                  prefix={sym}
                   error={entryFeeError}
                   hint="everyone pays this into the prize pool"
                 />
@@ -346,7 +348,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                   </View>
                   {payoutPcts.map((pct, i) => (
                     <View key={i} style={styles.payoutRow}>
-                      <Text style={styles.payoutRank}>{i + 1 === 1 ? '🥇' : i + 1 === 2 ? '🥈' : i + 1 === 3 ? '🥉' : `#${i + 1}`}</Text>
+                      <Text style={styles.payoutRank}>{`#${i + 1}`}</Text>
                       <View style={styles.payoutInputWrap}>
                         <TextInput
                           style={styles.payoutInput}
@@ -355,6 +357,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                           placeholder="0"
                           placeholderTextColor={colors.textDim}
                           keyboardType="number-pad"
+                          accessibilityLabel={`Payout percentage for place ${i + 1}`}
                         />
                       </View>
                       <Text style={styles.payoutPct}>%</Text>
@@ -490,7 +493,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                     onChangeText={setAddOnAmount}
                     placeholder="50"
                     keyboardType="decimal-pad"
-                    prefix="₪"
+                    prefix={sym}
                     hint="added to the prize pool"
                   />
                 )}
@@ -504,7 +507,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                     onChangeText={setChipRatio}
                     placeholder="e.g. 100"
                     keyboardType="decimal-pad"
-                    hint="chips per ₪"
+                    hint={`chips per ${sym}`}
                   />
                 </View>
                 <View style={styles.halfField}>
@@ -514,7 +517,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                     onChangeText={setDefaultBuyIn}
                     placeholder="0"
                     keyboardType="decimal-pad"
-                    prefix="₪"
+                    prefix={sym}
                     error={buyInError}
                   />
                 </View>
@@ -599,7 +602,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                       {defaultBuyIn && parseAmountToCents(defaultBuyIn) !== null
                         ? <Text style={styles.reviewChip}>{formatCents(parseAmountToCents(defaultBuyIn)!)} buy-in</Text>
                         : null}
-                      {chipRatio ? <Text style={styles.reviewChip}>{chipRatio} chips/₪</Text> : null}
+                      {chipRatio ? <Text style={styles.reviewChip}>{chipRatio} chips/{sym}</Text> : null}
                     </>
                   )}
                 </View>
@@ -620,7 +623,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
             <View style={styles.actionRow}>
               <PrimaryButton label="Back" onPress={() => goToStep(2)} variant="outline" fullWidth={false} style={styles.stepBackBtn} />
               <PrimaryButton
-                label="Deal 'Em In 🃏"
+                label="Deal 'Em In"
                 onPress={handleStartGame}
                 loading={starting}
                 fullWidth={false}
@@ -713,7 +716,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
-  presetChipSelected: { borderColor: colors.gold, backgroundColor: 'rgba(201,168,76,0.12)' },
+  presetChipSelected: { borderColor: colors.gold, backgroundColor: colors.goldSubtle },
   presetChipText: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
   presetChipTextSelected: { color: colors.gold },
 
@@ -817,8 +820,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(201,168,76,0.4)',
-    backgroundColor: 'rgba(201,168,76,0.10)',
+    borderColor: colors.goldMuted,
+    backgroundColor: colors.goldSubtle,
   },
   playerChipText: { fontSize: 13, fontWeight: '600', color: colors.gold },
 
@@ -858,9 +861,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
-    backgroundColor: 'rgba(201,168,76,0.12)',
+    backgroundColor: colors.goldSubtle,
     borderWidth: 1,
-    borderColor: 'rgba(201,168,76,0.3)',
+    borderColor: colors.goldMuted,
   },
   reviewPlayerChip: {
     paddingHorizontal: 12,

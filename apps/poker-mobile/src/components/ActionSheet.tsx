@@ -64,9 +64,9 @@ export default function ActionSheet({ visible, onClose, title, subtitle, options
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <View style={StyleSheet.absoluteFill}>
+      <View style={StyleSheet.absoluteFill} accessibilityViewIsModal>
         {/* Backdrop */}
-        <TouchableWithoutFeedback onPress={onClose}>
+        <TouchableWithoutFeedback onPress={onClose} accessibilityRole="button" accessibilityLabel="Dismiss">
           <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]} />
         </TouchableWithoutFeedback>
 
@@ -93,6 +93,8 @@ export default function ActionSheet({ visible, onClose, title, subtitle, options
                   style={styles.option}
                   onPress={() => handleOption(opt)}
                   activeOpacity={0.6}
+                  accessibilityRole="button"
+                  accessibilityLabel={opt.label}
                 >
                   <Text
                     style={[
@@ -113,6 +115,8 @@ export default function ActionSheet({ visible, onClose, title, subtitle, options
               style={styles.cancelCard}
               onPress={onClose}
               activeOpacity={0.6}
+              accessibilityRole="button"
+              accessibilityLabel={cancelOption.label}
             >
               <Text style={styles.cancelLabel}>{cancelOption.label}</Text>
             </TouchableOpacity>

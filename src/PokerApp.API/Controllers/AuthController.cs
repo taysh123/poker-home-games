@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using PokerApp.Application.Features.Auth.Commands.AppleLogin;
 using PokerApp.Application.Features.Auth.Commands.ChangePassword;
 using PokerApp.Application.Features.Auth.Commands.DeleteAccount;
 using PokerApp.Application.Features.Auth.Commands.GoogleLogin;
@@ -30,6 +31,23 @@ public class AuthController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GoogleLogin(
         [FromBody] GoogleLoginCommand command,
+        CancellationToken cancellationToken)
+    {
+        var response = await mediator.Send(command, cancellationToken);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Signs in (or registers) a user using an Apple identity token from the mobile client.
+    /// Matches by Apple subject; links to a same-email account only when Apple verifies a real
+    /// (non-relay) email. Verified-identity account creation; no password.
+    /// </summary>
+    [HttpPost("apple")]
+    [EnableRateLimiting("auth-login")]
+    [ProducesResponseType(typeof(AppleLoginResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> AppleLogin(
+        [FromBody] AppleLoginCommand command,
         CancellationToken cancellationToken)
     {
         var response = await mediator.Send(command, cancellationToken);

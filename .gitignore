@@ -25,3 +25,17 @@ appsettings.Development.json
 ## Build outputs
 publish/
 out/
+
+## Stray editor/OS junk
+**/New Text Document*.txt
+
+## Stray workbook downloads dropped at the repo root (the canonical workbook lives under
+## content/release-*/ and is LFS-tracked via .gitattributes; root-level .xlsx are never committed)
+/*.xlsx
+
+## Generated content exports (reproducible from the LFS workbook via tools/content-export)
+content/release-*/exports/
+__pycache__/
+
+# Claude Code local worktrees (harness-managed; never tracked)
+/.claude/worktrees/

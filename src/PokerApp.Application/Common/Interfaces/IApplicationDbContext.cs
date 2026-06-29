@@ -26,6 +26,13 @@ public interface IApplicationDbContext
     DbSet<UserAchievement> UserAchievements { get; }
     DbSet<Notification> Notifications { get; }
     DbSet<DeviceToken> DeviceTokens { get; }
+    // B2 — monetization enforcement (server-authoritative)
+    DbSet<Subscription> Subscriptions { get; }
+    DbSet<CreditLedgerEntry> CreditLedgerEntries { get; }
+    DbSet<CreditBalance> CreditBalances { get; }
+    DbSet<StoreWebhookEvent> StoreWebhookEvents { get; }
+    // B5 — fraud / abuse
+    DbSet<DeviceBinding> DeviceBindings { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

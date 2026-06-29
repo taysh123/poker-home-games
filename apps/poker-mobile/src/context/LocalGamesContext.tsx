@@ -1,6 +1,10 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import * as store from '../local/localGamesStore';
 import type { LocalGame, LocalGamesFile, LocalTxnTag } from '../local/types';
+import { track } from '../utils/analytics';
+
+/** Bucket player counts (PII-free analytics — never the raw count). */
+const playersBand = (n: number): string => (n <= 3 ? '2-3' : n <= 6 ? '4-6' : '7+');
 
 /**
  * Thin React wrapper around localGamesStore. Holds the loaded file in state;
@@ -80,6 +84,7 @@ export function LocalGamesProvider({ children }: { children: React.ReactNode }) 
   const startGame = useCallback(async (input: store.CreateGameInput) => {
     const { file: next, game } = store.createGame(file, input);
     await commit(next);
+    track('local_game_started', { mode: game.mode });
     return game;
   }, [file, commit]);
 
@@ -100,7 +105,9 @@ export function LocalGamesProvider({ children }: { children: React.ReactNode }) 
   }, [file, commit]);
 
   const endGame = useCallback(async (gameId: string, finalStacks: { playerId: string; amountCents: number }[]) => {
+    const game = file.games.find(g => g.id === gameId);
     await commit(store.endGame(file, gameId, finalStacks));
+    if (game) track('local_game_finished', { mode: game.mode, players_band: playersBand(game.players.length) });
   }, [file, commit]);
 
   const deleteGame = useCallback(async (gameId: string) => {

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import PressableScale from '../components/motion/PressableScale';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -21,6 +22,7 @@ import { useLocalGames } from '../context/LocalGamesContext';
 import { gameResult } from '../local/localStats';
 import { formatCents } from '../utils/money';
 import { timeAgo } from '../utils/formatters';
+import { markSignupIntent } from '../utils/analytics';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -49,17 +51,18 @@ export default function GuestHomeScreen() {
             <Text style={styles.tagline}>Your home game, handled.</Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.signInBtn} onPress={() => navigation.navigate('Login')} activeOpacity={0.8}>
+        <TouchableOpacity style={styles.signInBtn} onPress={() => navigation.navigate('Login')} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Sign in">
           <Text style={styles.signInBtnText}>Sign In</Text>
         </TouchableOpacity>
       </View>
 
       {/* Active game */}
       {activeGame && (
-        <TouchableOpacity
+        <PressableScale
           style={styles.activeCard}
           onPress={() => navigation.navigate('LocalSession', { gameId: activeGame.id })}
-          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel={`Resume live game ${activeGame.name}`}
         >
           <View style={styles.activeDotWrap}>
             <View style={styles.activeDot} />
@@ -71,7 +74,7 @@ export default function GuestHomeScreen() {
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.gold} />
-        </TouchableOpacity>
+        </PressableScale>
       )}
 
       {/* Start a game — Cash and Tournament as first-class choices */}
@@ -81,28 +84,30 @@ export default function GuestHomeScreen() {
             Start a game — right now, no account needed.
           </Text>
           <View style={styles.heroRow}>
-            <TouchableOpacity
+            <PressableScale
               style={styles.heroCard}
               onPress={() => navigation.navigate('LocalNewGame', { mode: 'cash' })}
-              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Start a cash game. Buy-ins, cash-outs, settle up."
             >
               <View style={styles.heroIconWrap}>
                 <Ionicons name="play" size={22} color={colors.background} style={{ marginLeft: 2 }} />
               </View>
               <Text style={styles.heroTitle}>Cash Game</Text>
               <Text style={styles.heroSubtitle}>Buy-ins, cash-outs, settle up</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableScale>
+            <PressableScale
               style={styles.heroCard}
               onPress={() => navigation.navigate('LocalNewGame', { mode: 'tournament' })}
-              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Start a tournament. Blind clock, prize pool, podium."
             >
               <View style={[styles.heroIconWrap, styles.heroIconWrapAlt]}>
                 <Ionicons name="trophy" size={20} color={colors.gold} />
               </View>
               <Text style={styles.heroTitle}>Tournament</Text>
               <Text style={styles.heroSubtitle}>Blind clock, prize pool, podium</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </View>
         </View>
       )}
@@ -128,8 +133,8 @@ export default function GuestHomeScreen() {
         </View>
       )}
 
-      {/* Sign-in upsell */}
-      <TouchableOpacity style={styles.upsellCard} onPress={() => navigation.navigate('Login')} activeOpacity={0.85}>
+      {/* Sign-in upsell — contextual account creation (value already shown) */}
+      <TouchableOpacity style={styles.upsellCard} onPress={() => { markSignupIntent(); navigation.navigate('Login'); }} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel="Make it official. Create a free account for groups, lifetime stats, leaderboards, and game history across devices.">
         <View style={styles.upsellIconWrap}>
           <Ionicons name="cloud-upload-outline" size={20} color={colors.gold} />
         </View>

@@ -72,7 +72,7 @@ import * as SecureStore from '../utils/storage'; // not 'expo-secure-store'
 
 | File | Purpose |
 |------|---------|
-| `useGoogleAuth.ts` | Wraps `expo-auth-session` Google OAuth. Returns `{ prompt, ready }`. Disabled on web (no `webClientId`). |
+| `useGoogleAuth.ts` | Wraps `expo-auth-session` Google OAuth (id_token flow). Returns `{ prompt, ready }`. Works on web + native via hardcoded PUBLIC client-ID fallbacks; web redirect = page origin (pin port 8081). Expo Go unsupported on SDK 54. |
 
 ---
 

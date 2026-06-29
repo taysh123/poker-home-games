@@ -31,6 +31,13 @@ function useGoogleAuthNative(onResult: (result: GoogleAuthResult) => void) {
     webClientId: WEB_CLIENT_ID,
   });
 
+  // Dev diagnostic: the EXACT redirect_uri sent to Google. On web this is the page origin; it must be
+  // registered VERBATIM in the OAuth client's Authorized redirect URIs (Google matches it character-for-
+  // character — scheme/host/port/trailing-slash). A mismatch here is the cause of Error 400 redirect_uri_mismatch.
+  useEffect(() => {
+    if (__DEV__ && request?.redirectUri) console.log('[google] redirectUri =', request.redirectUri);
+  }, [request]);
+
   useEffect(() => {
     if (!response) return;
 

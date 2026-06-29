@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tpoker.app/schemas/lesson-doc.schema.json",
+  "title": "LessonDoc",
+  "description": "A concept/lesson. Body is Markdown. Tolerant: unknown fields are ignored (forward-compatible).",
+  "type": "object",
+  "required": ["id", "title", "body"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "body": { "type": "string", "minLength": 1, "description": "Markdown content." },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "estMinutes": { "type": "integer", "minimum": 1 },
+    "mediaRefs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Opaque references to media assets resolved by the app/CDN."
+    }
+  }
+}

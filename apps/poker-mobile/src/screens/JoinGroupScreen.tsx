@@ -9,6 +9,7 @@ import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { joinGroupByInviteLink } from '../api/groupsApi';
+import { track } from '../utils/analytics';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { savePendingInvite } from '../utils/pendingInvite';
 
@@ -46,6 +47,7 @@ export default function JoinGroupScreen({ route, navigation }: Props) {
         return;
       }
       const result = await joinGroupByInviteLink(token, inviteToken);
+      track('group_joined');
       setGroupId(result.groupId);
       setGroupName(result.groupName);
       setStatus('success');

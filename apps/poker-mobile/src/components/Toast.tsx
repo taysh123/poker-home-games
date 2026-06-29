@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, Animated, StyleSheet, Text, View } from 'react-native';
 import { registerToastListener } from '../utils/toast';
 import { colors } from '../theme/colors';
 import { USE_NATIVE_DRIVER } from '../theme/motion';
@@ -30,6 +30,9 @@ export default function Toast() {
       if (timer.current) clearTimeout(timer.current);
       setMessage(text);
       setVariant(v);
+      // Toasts are the app's primary feedback channel — announce to screen readers
+      // (the container is pointerEvents="none", so VoiceOver/TalkBack won't reach it otherwise).
+      AccessibilityInfo.announceForAccessibility?.(text);
 
       Animated.parallel([
         Animated.timing(opacity, { toValue: 1, duration: 220, useNativeDriver: USE_NATIVE_DRIVER }),
@@ -49,9 +52,15 @@ export default function Toast() {
     <Animated.View
       style={[styles.container, { opacity, transform: [{ translateY }] }]}
       pointerEvents="none"
+      accessibilityLiveRegion="polite"
     >
-      <View style={[styles.pill, { backgroundColor: BG[variant] }]}>
-        <Text style={styles.icon}>{ICONS[variant]}</Text>
+      <View
+        style={[styles.pill, { backgroundColor: BG[variant] }]}
+        accessible
+        accessibilityRole="alert"
+        accessibilityLabel={message}
+      >
+        <Text style={styles.icon} importantForAccessibility="no">{ICONS[variant]}</Text>
         <Text style={styles.text}>{message}</Text>
       </View>
     </Animated.View>

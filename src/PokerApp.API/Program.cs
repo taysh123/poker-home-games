@@ -8,6 +8,7 @@ using Microsoft.OpenApi.Models;
 using PokerApp.API.Middleware;
 using PokerApp.Application;
 using PokerApp.Infrastructure;
+using PokerApp.Infrastructure.Identity;
 using PokerApp.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -70,6 +71,15 @@ builder.Services.AddRateLimiter(options =>
         opt.QueueLimit = 0;
         opt.AutoReplenishment = true;
     });
+
+    // AI analyses: cap request rate (cost control is also enforced per-account in the credit ledger).
+    options.AddFixedWindowLimiter("coach-analyze", opt =>
+    {
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.PermitLimit = 12;
+        opt.QueueLimit = 0;
+        opt.AutoReplenishment = true;
+    });
 });
 
 // ── Response compression + controllers + Swagger ────────────────────────────
@@ -109,24 +119,17 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // ── JWT Authentication ──────────────────────────────────────────────────────
-// Tolerate missing/short secret at startup — log critical and skip wiring
-// validation params (keys with insufficient bytes throw at request time, and
-// we don't want the entire container to refuse to start over a missing env
-// var that would otherwise be obvious in the logs).
+// Fail-closed: outside Development a missing/short secret is fatal (tokens signed with a padded key never
+// validate → silently-broken auth). JwtKey.ResolveSigningKey throws in that case; Development still pads so
+// local dev boots. A correctly-configured prod (>=64-char secret) is unaffected. See JwtKey.cs.
 var jwtSection = builder.Configuration.GetSection("JwtSettings");
 var jwtSecret = jwtSection["SecretKey"] ?? string.Empty;
+var jwtSigningKey = JwtKey.ResolveSigningKey(jwtSecret, requireStrongSecret: !builder.Environment.IsDevelopment());
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        // SymmetricSecurityKey requires >= 256 bits (32 bytes). Pad short
-        // secrets so the middleware can construct — tokens signed with the
-        // padded key won't validate, but the container starts and we get
-        // /health up so Railway can surface the misconfiguration in logs.
-        var keyBytes = Encoding.UTF8.GetBytes(jwtSecret);
-        if (keyBytes.Length < 32) keyBytes = keyBytes.Concat(new byte[32 - keyBytes.Length]).ToArray();
-
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -135,7 +138,7 @@ builder.Services
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwtSection["Issuer"],
             ValidAudience = jwtSection["Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
+            IssuerSigningKey = jwtSigningKey,
             ClockSkew = TimeSpan.FromSeconds(30)
         };
     });
@@ -162,6 +165,39 @@ startupLogger.LogInformation("PokerApp.API starting. Env={Env} Port={Port} JwtSe
     !string.IsNullOrWhiteSpace(jwtSecret) && jwtSecret.Length >= 32,
     string.Join(",", prodOrigins));
 
+// Make a CORS misconfiguration loud: outside Development with no AllowedOrigins set, we fall back to the
+// hardcoded production domain. That keeps the web app working, but if it's unintended (e.g. a new domain) it
+// would silently reject the real origin — so surface it.
+if (!app.Environment.IsDevelopment() && configuredOrigins.Length == 0)
+{
+    startupLogger.LogCritical(
+        "CORS: AllowedOrigins is not configured — falling back to the hardcoded production origin(s): {Origins}. " +
+        "Set AllowedOrigins__0 to your web domain if this is not intended.", string.Join(",", prodOrigins));
+}
+
+// Fail-loud on a billing misconfig in Production. The mock verifier grants premium for ANY non-empty
+// receipt (safe for dev/tests; catastrophic in prod). We log rather than hard-fail because the paywall
+// flag is OFF and purchase validation isn't user-reachable yet — but a forgotten env var must be impossible
+// to miss. Mirrors the JWT/CORS fail-closed posture. See BillingSettings + MockBillingVerifier.
+if (app.Environment.IsProduction())
+{
+    var billingProvider = builder.Configuration.GetSection("BillingSettings")["Provider"];
+    var acceptSandbox = builder.Configuration.GetSection("BillingSettings")["AcceptSandbox"];
+    if (!string.Equals(billingProvider, "direct", StringComparison.OrdinalIgnoreCase))
+    {
+        startupLogger.LogCritical(
+            "BILLING: Production is running the MOCK billing verifier (BillingSettings:Provider={Provider}). " +
+            "The mock grants premium for ANY non-empty receipt — set BillingSettings__Provider=direct before " +
+            "enabling purchases.", billingProvider ?? "(null)");
+    }
+    else if (string.Equals(acceptSandbox, "true", StringComparison.OrdinalIgnoreCase))
+    {
+        startupLogger.LogCritical(
+            "BILLING: Production has BillingSettings:AcceptSandbox=true — sandbox/TestFlight receipts can grant " +
+            "production entitlements. Set BillingSettings__AcceptSandbox=false in production.");
+    }
+}
+
 // /health registered BEFORE auth/rate-limit/exception middleware so Railway
 // can confirm liveness even if downstream middleware misbehaves.
 app.MapGet("/health", () => Results.Text("Healthy"));
@@ -171,6 +207,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "PokerApp API v1"));
 }
+
+// Defensive HTTP security headers on every response (belt-and-suspenders with Railway's TLS edge):
+// nosniff, frame-deny (clickjacking), referrer + permissions policy, report-only CSP, HSTS (prod). Additive.
+app.UseMiddleware<SecurityHeadersMiddleware>();
 
 // CORS must come BEFORE the exception middleware so error responses
 // (including 500s) carry the Access-Control-Allow-Origin header. Otherwise

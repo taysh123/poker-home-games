@@ -23,6 +23,7 @@ import { shadows } from '../theme/shadows';
 import { spacing } from '../theme/spacing';
 import { radii } from '../theme/radii';
 import { pulse, fadeIn, slideUp } from '../theme/motion';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useAuth } from '../context/AuthContext';
 import { getMyGroups, getMyInvitations, getCrossGroupActivity, MyGroupDto, PendingInvitationDto, CrossGroupActivityDto } from '../api/groupsApi';
 import { getMyNotifications } from '../api/notificationsApi';
@@ -30,6 +31,8 @@ import { getMyStats, MyStatsDto, RecentSessionDto } from '../api/statsApi';
 import { getMyPendingSettlements, MyPendingSettlementDto } from '../api/settlementsApi';
 import { getWeeklyDigest, WeeklyDigestDto } from '../api/digestApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { goToSessions, goToStats } from '../navigation/navHelpers';
+import RankBadge from '../components/RankBadge';
 import SkeletonCard from '../components/SkeletonCard';
 import StatWidget from '../components/StatWidget';
 import SessionListItem from '../components/SessionListItem';
@@ -60,6 +63,7 @@ export default function HomeScreen() {
   const navigation = useNavigation<HomeNav>();
   const insets = useSafeAreaInsets();
   const { refresh: refreshActiveSession } = useActiveSession();
+  const reducedMotion = useReducedMotion();
 
   const [loggingOut, setLoggingOut] = useState(false);
   const [groups, setGroups] = useState<MyGroupDto[]>([]);
@@ -81,10 +85,24 @@ export default function HomeScreen() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    pulse(pulseAnim).start();
-  }, []);
+    // Respect OS Reduce Motion — keep the live indicator steady instead of pulsing.
+    if (reducedMotion) { pulseAnim.setValue(1); return; }
+    const loop = pulse(pulseAnim);
+    loop.start();
+    return () => loop.stop();
+  }, [reducedMotion]);
 
+  const hasAnimated = useRef(false);
   const runEntranceAnimation = useCallback(() => {
+    // Reduced motion (or already-animated this mount): show final state instantly, no entrance.
+    // The entrance is a once-per-mount beat; without this guard it re-fired on every tab focus.
+    if (reducedMotion || hasAnimated.current) {
+      heroOpacity.setValue(1);
+      heroY.setValue(0);
+      contentOpacity.setValue(1);
+      return;
+    }
+    hasAnimated.current = true;
     heroOpacity.setValue(0);
     heroY.setValue(20);
     contentOpacity.setValue(0);
@@ -95,7 +113,7 @@ export default function HomeScreen() {
       ]),
       fadeIn(contentOpacity, { duration: 300 }),
     ]).start();
-  }, []);
+  }, [reducedMotion]);
 
   const loadAll = useCallback(async (isRefresh = false) => {
     if (!isRefresh) setStatsLoading(true);
@@ -203,6 +221,8 @@ export default function HomeScreen() {
             style={styles.notifBtn}
             onPress={() => navigation.navigate('Notifications')}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={unreadNotifications > 0 ? `Notifications, ${unreadNotifications} unread` : 'Notifications'}
           >
             <Ionicons name="notifications-outline" size={20} color={unreadNotifications > 0 ? colors.gold : colors.textMuted} />
             {(unreadNotifications > 0 || invitations.length > 0) && (
@@ -212,6 +232,8 @@ export default function HomeScreen() {
           <TouchableOpacity
             onPress={() => navigation.navigate('Profile')}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Profile"
           >
             <Avatar
               name={user?.username ?? '?'}
@@ -226,6 +248,8 @@ export default function HomeScreen() {
             onPress={handleLogout}
             disabled={loggingOut}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Log out"
           >
             {loggingOut
               ? <ActivityIndicator color={colors.textMuted} size="small" />
@@ -498,11 +522,14 @@ export default function HomeScreen() {
           <Ionicons name="chevron-forward" size={18} color={colors.gold} />
         </TouchableOpacity>
 
+        {/* Rank / XP (retention only; renders null when off) */}
+        <RankBadge onPress={() => navigation.navigate('Achievements')} />
+
         {/* ── Stats Widgets ── */}
         <View style={styles.section}>
           <View style={styles.sectionRow}>
             <Text style={styles.sectionTitle}>Your Numbers</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Stats')}>
+            <TouchableOpacity onPress={() => goToStats(navigation)}>
               <Text style={styles.seeAll}>Full stats</Text>
             </TouchableOpacity>
           </View>
@@ -561,7 +588,7 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionRow}>
             <Text style={styles.sectionTitle}>Recent Sessions</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('AllSessions')}>
+            <TouchableOpacity onPress={() => goToSessions(navigation)}>
               <Text style={styles.seeAll}>See all</Text>
             </TouchableOpacity>
           </View>

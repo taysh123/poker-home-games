@@ -42,7 +42,7 @@ export default function BrandHeader({ variant = 'screen', title, subtitle, onBac
     <View style={[styles.container, { paddingTop: insets.top + spacing.md }]}>
       <View style={styles.row}>
         {onBack ? (
-          <TouchableOpacity style={styles.backBtn} onPress={onBack} hitSlop={8} activeOpacity={0.75}>
+          <TouchableOpacity style={styles.backBtn} onPress={onBack} hitSlop={8} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel="Back">
             <Ionicons name="chevron-back" size={20} color={colors.text} />
           </TouchableOpacity>
         ) : null}

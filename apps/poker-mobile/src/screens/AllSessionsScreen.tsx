@@ -35,7 +35,7 @@ import Screen from '../components/Screen';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-export default function AllSessionsScreen() {
+export default function AllSessionsScreen({ embedded = false }: { embedded?: boolean } = {}) {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
   const entrance = useScreenEntrance();
@@ -144,8 +144,8 @@ export default function AllSessionsScreen() {
   }, []);
 
   const stickyHeader = (
-    <View style={[styles.stickyHeader, { paddingTop: insets.top + 12 }]}>
-      <Text style={styles.screenTitle}>Sessions</Text>
+    <View style={[styles.stickyHeader, { paddingTop: embedded ? 4 : insets.top + 12 }]}>
+      {!embedded && <Text style={styles.screenTitle}>Sessions</Text>}
       <View style={styles.searchRow}>
         <Ionicons name="search-outline" size={16} color={colors.textDim} style={styles.searchIcon} />
         <TextInput
@@ -335,6 +335,8 @@ export default function AllSessionsScreen() {
                         style={styles.moreBtn}
                         onPress={() => setActionSheetSession(s)}
                         hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Options for ${s.sessionName}`}
                       >
                         <Ionicons name="ellipsis-horizontal" size={16} color={colors.textMuted} />
                       </TouchableOpacity>

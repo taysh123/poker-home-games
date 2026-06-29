@@ -2,6 +2,7 @@ using System.Text;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PokerApp.Application.Common;
 using PokerApp.Application.Features.Sessions.Commands.AddPlayer;
 using PokerApp.Application.Features.Sessions.Commands.CreateSession;
 using PokerApp.Application.Features.Sessions.Commands.DeleteSession;
@@ -273,7 +274,7 @@ public class SessionsController(IMediator mediator) : ControllerBase
         var sb = new StringBuilder();
         sb.AppendLine("Player,Buy-In (ILS),Cash-Out (ILS),P&L (ILS)");
         foreach (var p in data.Players.OrderByDescending(p => p.ProfitLoss))
-            sb.AppendLine($"\"{p.Username}\",{p.TotalBuyIn},{p.TotalCashOut},{p.ProfitLoss}");
+            sb.AppendLine($"{CsvSafe.Field(p.Username)},{p.TotalBuyIn},{p.TotalCashOut},{p.ProfitLoss}");
 
         var bytes = Encoding.UTF8.GetBytes(sb.ToString());
         var fileName = $"session-{data.SessionName.Replace(" ", "-")}.csv";

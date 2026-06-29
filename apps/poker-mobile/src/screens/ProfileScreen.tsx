@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
+import { isFeatureEnabled } from '../config/features';
 import { typography } from '../theme/typography';
 import { shadows } from '../theme/shadows';
 import { useAuth } from '../context/AuthContext';
@@ -24,6 +25,8 @@ import { updateProfile, changePassword, deleteAccount } from '../api/profileApi'
 import { RootStackParamList } from '../navigation/AppNavigator';
 import Screen from '../components/Screen';
 import ScreenHeader from '../components/ScreenHeader';
+import RankBadge from '../components/RankBadge';
+import { useCurrency } from '../context/CurrencyContext';
 import Avatar from '../components/Avatar';
 import { AVATAR_COLORS } from '../utils/avatarColor';
 import { confirmDialog } from '../utils/confirm';
@@ -40,6 +43,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Profile'>;
 
 export default function ProfileScreen({ navigation }: Props) {
   const { user, updateUser, logout } = useAuth();
+  const { code: currencyCode } = useCurrency();
 
   // Profile edit state
   const [editingProfile, setEditingProfile] = useState(false);
@@ -199,6 +203,9 @@ export default function ProfileScreen({ navigation }: Props) {
           <Text style={styles.avatarUsername} numberOfLines={1}>{user?.username}</Text>
           <Text style={styles.avatarEmail} numberOfLines={1}>{user?.email}</Text>
         </View>
+
+        {/* Rank / XP — tap for all achievements (retention only; renders null when off) */}
+        <RankBadge onPress={() => navigation.navigate('Achievements')} />
 
         {/* ── Identity section ────────────────────────────────────────── */}
         <View style={styles.section}>
@@ -379,6 +386,62 @@ export default function ProfileScreen({ navigation }: Props) {
           </TouchableOpacity>
         </View>
 
+        {/* ── Subscription & usage (flag-gated) ─────────────────────────── */}
+        {isFeatureEnabled('paywall') && (
+          <View style={styles.section}>
+            <View style={[styles.sectionHeader, { marginBottom: 12 }]}>
+              <View style={styles.sectionTitleRow}>
+                <View style={styles.sectionIconWrap}>
+                  <Ionicons name="sparkles-outline" size={14} color={colors.gold} />
+                </View>
+                <Text style={styles.sectionTitle}>Subscription & usage</Text>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.aboutRow} onPress={() => navigation.navigate('Paywall', { trigger: 'profile' })} activeOpacity={0.7}>
+              <Ionicons name="star-outline" size={16} color={colors.textMuted} />
+              <Text style={styles.aboutRowText}>T Poker Premium</Text>
+              <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {isFeatureEnabled('reminders') && (
+          <View style={styles.section}>
+            <View style={[styles.sectionHeader, { marginBottom: 12 }]}>
+              <View style={styles.sectionTitleRow}>
+                <View style={styles.sectionIconWrap}>
+                  <Ionicons name="notifications-outline" size={14} color={colors.gold} />
+                </View>
+                <Text style={styles.sectionTitle}>Reminders</Text>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.aboutRow} onPress={() => navigation.navigate('NotificationPreferences')} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Reminder preferences">
+              <Ionicons name="alarm-outline" size={16} color={colors.textMuted} />
+              <Text style={styles.aboutRowText}>Reminder preferences</Text>
+              <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {isFeatureEnabled('currencyPrefs') && (
+          <View style={styles.section}>
+            <View style={[styles.sectionHeader, { marginBottom: 12 }]}>
+              <View style={styles.sectionTitleRow}>
+                <View style={styles.sectionIconWrap}>
+                  <Ionicons name="cash-outline" size={14} color={colors.gold} />
+                </View>
+                <Text style={styles.sectionTitle}>Display</Text>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.aboutRow} onPress={() => navigation.navigate('CurrencyPicker')} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={`Preferred currency, currently ${currencyCode}`}>
+              <Ionicons name="globe-outline" size={16} color={colors.textMuted} />
+              <Text style={styles.aboutRowText}>Currency</Text>
+              <Text style={styles.aboutRowValue}>{currencyCode}</Text>
+              <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* ── About & Support ─────────────────────────────────────────── */}
         <View style={styles.section}>
           <View style={[styles.sectionHeader, { marginBottom: 12 }]}>
@@ -407,6 +470,16 @@ export default function ProfileScreen({ navigation }: Props) {
           >
             <Ionicons name="shield-checkmark-outline" size={16} color={colors.textMuted} />
             <Text style={styles.aboutRowText}>Privacy Policy</Text>
+            <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.aboutRow}
+            onPress={() => Linking.openURL('https://poker-home-games-three.vercel.app/terms.html')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="document-text-outline" size={16} color={colors.textMuted} />
+            <Text style={styles.aboutRowText}>Terms of Service</Text>
             <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
           </TouchableOpacity>
 
@@ -600,6 +673,7 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   aboutRowText: { flex: 1, fontSize: 14, color: colors.textHigh, fontWeight: '500' },
+  aboutRowValue: { fontSize: 13, color: colors.gold, fontWeight: '600', marginRight: 6 },
   aboutResponsible: {
     fontSize: 12,
     color: colors.textDim,

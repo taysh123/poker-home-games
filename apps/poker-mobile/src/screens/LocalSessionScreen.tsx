@@ -8,6 +8,7 @@ import {
   Platform,
   Modal,
   Dimensions,
+  useWindowDimensions,
   KeyboardAvoidingView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +26,7 @@ import { useLocalGames } from '../context/LocalGamesContext';
 import { computeBalances } from '../local/settlements';
 import type { LocalPlayer } from '../local/types';
 import { formatCents, formatCentsSigned, parseAmountToCents } from '../utils/money';
+import { currencySymbol } from '../utils/currency';
 import { timeAgo } from '../utils/formatters';
 import { lightTap, successNotification } from '../utils/haptics';
 import { showToast } from '../utils/toast';
@@ -35,6 +37,12 @@ import { isLateRegOpen } from '../local/localGamesStore';
 import Screen from '../components/Screen';
 import AnimatedNumber from '../components/motion/AnimatedNumber';
 import Avatar from '../components/Avatar';
+import ContentContainer from '../components/ContentContainer';
+import TableScene from '../components/table/TableScene';
+import type { SeatProps } from '../components/table/TableSeat';
+import { tableDimensions } from '../utils/tableLayout';
+import { nameWritingDirection } from '../utils/rtl';
+import { isFeatureEnabled } from '../config/features';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocalSession'>;
 
@@ -47,11 +55,17 @@ type AmountModalState =
 export default function LocalSessionScreen({ route, navigation }: Props) {
   const { gameId } = route.params;
   const insets = useSafeAreaInsets();
+  const sym = currencySymbol();
   const { games, addBuyIn, addCashOut, addPlayer, undoLastTxn, endGame, eliminatePlayer, undoElimination, deleteGame, syncClock, pauseClock, resumeClock, gotoLevel, finishTournamentEarly } =
     useLocalGames();
 
   const game = games.find(g => g.id === gameId);
   const isTournament = game?.mode === 'tournament';
+  // Immersive cash table (felt + seats) is the beta/dev presentation of the live cash screen; prod keeps
+  // the proven flat list until `immersive` is flipped on. Tournaments keep the dashboard + list.
+  const immersive = isFeatureEnabled('immersive');
+  const { width: winW } = useWindowDimensions();
+  const { width: TABLE_W, height: TABLE_H } = tableDimensions(winW - 40);
 
   // 1-second tick drives the blind countdown (tournaments only) and auto-advances
   // the stored clock when a running level expires.
@@ -101,6 +115,13 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
     () => game?.txns.filter(t => t.kind === 'buyin').reduce((s, t) => s + t.amountCents, 0) ?? 0,
     [game],
   );
+
+  // Immersive cash table: one tappable seat per player (name + buy-in); tapping opens the action sheet.
+  const liveSeats: SeatProps[] = standings.map(({ player, buyInCents }) => ({
+    name: player.name,
+    sub: formatCents(buyInCents),
+    onPress: () => setSheetPlayer(player),
+  }));
 
   // Safety: if someone lands here after the game finished, forward to summary.
   useEffect(() => {
@@ -288,7 +309,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
     <Screen>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={12} activeOpacity={0.75}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={12} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel="Back">
           <Ionicons name="chevron-back" size={20} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
@@ -298,12 +319,13 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
             <Text style={styles.liveText}>LIVE · started {timeAgo(game.createdAt)}</Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.backBtn} onPress={handleUndo} hitSlop={12} activeOpacity={0.75} disabled={game.txns.length === 0}>
+        <TouchableOpacity style={styles.backBtn} onPress={handleUndo} hitSlop={12} activeOpacity={0.75} disabled={game.txns.length === 0} accessibilityRole="button" accessibilityLabel="Undo last action" accessibilityState={{ disabled: game.txns.length === 0 }}>
           <Ionicons name="arrow-undo-outline" size={18} color={game.txns.length === 0 ? colors.textDim : colors.text} />
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+        <ContentContainer style={styles.contentInner}>
         {/* Pot summary */}
         <View style={styles.potCard}>
           <LinearGradient
@@ -374,10 +396,13 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
                   onPress={() => { lightTap(); gotoLevel(game.id, -1); }}
                   disabled={view.levelNumber <= 1}
                   hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Previous blind level"
+                  accessibilityState={{ disabled: view.levelNumber <= 1 }}
                 >
                   <Ionicons name="play-skip-back" size={16} color={view.levelNumber <= 1 ? colors.textDim : colors.text} />
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.dashCtrlBtn, styles.dashCtrlPrimary]} onPress={toggleClockPause} hitSlop={8}>
+                <TouchableOpacity style={[styles.dashCtrlBtn, styles.dashCtrlPrimary]} onPress={toggleClockPause} hitSlop={8} accessibilityRole="button" accessibilityLabel={view.paused ? 'Resume the clock' : 'Pause the clock'}>
                   <Ionicons name={view.paused ? 'play' : 'pause'} size={18} color={colors.background} />
                   <Text style={styles.dashCtrlPrimaryText}>{view.paused ? 'Resume' : 'Pause'}</Text>
                 </TouchableOpacity>
@@ -386,6 +411,9 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
                   onPress={() => { lightTap(); gotoLevel(game.id, 1); }}
                   disabled={atLastLevel}
                   hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Next blind level"
+                  accessibilityState={{ disabled: atLastLevel }}
                 >
                   <Ionicons name="play-skip-forward" size={16} color={atLastLevel ? colors.textDim : colors.text} />
                 </TouchableOpacity>
@@ -416,13 +444,28 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{isTournament ? 'IN THE GAME' : 'AT THE TABLE'}</Text>
           {(!isTournament || isLateRegOpen(game)) && (
-            <TouchableOpacity onPress={() => openAmountModal({ kind: 'addPlayer' })} hitSlop={8}>
+            <TouchableOpacity
+              onPress={() => openAmountModal({ kind: 'addPlayer' })}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={isTournament ? 'Register a late entry' : 'Add a player'}
+            >
               <Text style={styles.sectionAction}>+ {isTournament ? 'Late Reg' : 'Add Player'}</Text>
             </TouchableOpacity>
           )}
         </View>
 
-        {(() => {
+        {(!isTournament && immersive) ? (
+          <View style={styles.tableSceneWrapper}>
+            <TableScene
+              players={liveSeats}
+              width={TABLE_W}
+              height={TABLE_H}
+              potCents={totalPotCents}
+              style={styles.tableScene}
+            />
+          </View>
+        ) : (() => {
           const bustedPositions = new Map(
             (game.tournament?.eliminations ?? []).map(e => [e.playerId, e.position]),
           );
@@ -444,13 +487,17 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
                     style={[styles.playerRow, isLeader && styles.playerRowLeader]}
                     onPress={() => setSheetPlayer(player)}
                     activeOpacity={0.75}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${player.name}. Tap for actions.`}
                   >
                     <Avatar name={player.name} size={40} />
                     <View style={styles.playerInfo}>
-                      <Text style={styles.playerName} numberOfLines={1}>
-                        {player.name}
-                        {isLeader ? '  👑' : ''}
-                      </Text>
+                      <View style={styles.playerNameRow}>
+                        <Text style={[styles.playerName, { writingDirection: nameWritingDirection(player.name) }]} numberOfLines={1}>{player.name}</Text>
+                        {isLeader && (
+                          <Ionicons name="trophy" size={13} color={colors.goldLight} style={styles.leaderCrown} accessibilityLabel="Chip leader" />
+                        )}
+                      </View>
                       <Text style={styles.playerMeta}>
                         in {formatCents(buyInCents)}{!isTournament && cashOutCents > 0 ? ` · out ${formatCents(cashOutCents)}` : ''}
                       </Text>
@@ -476,7 +523,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
                     <View key={player.id} style={[styles.playerRow, styles.playerRowBusted]}>
                       <Avatar name={player.name} size={40} />
                       <View style={styles.playerInfo}>
-                        <Text style={[styles.playerName, styles.playerNameBusted]} numberOfLines={1}>{player.name}</Text>
+                        <Text style={[styles.playerName, styles.playerNameBusted, { writingDirection: nameWritingDirection(player.name) }]} numberOfLines={1}>{player.name}</Text>
                         <Text style={styles.playerMeta}>in {formatCents(buyInCents)}</Text>
                       </View>
                       <View style={styles.positionBadge}>
@@ -491,6 +538,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
         })()}
 
         <View style={{ height: 120 }} />
+        </ContentContainer>
       </ScrollView>
 
       {/* Bottom action bar */}
@@ -539,12 +587,11 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
             <ScrollView style={{ maxHeight: Math.min(320, Dimensions.get('window').height * 0.4) }}>
               {(rankOrder ?? []).map((pid, i) => {
                 const p = game.players.find(pl => pl.id === pid);
-                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
                 return (
                   <View key={pid} style={styles.rankRow}>
-                    <Text style={styles.rankMedal}>{medal}</Text>
+                    <Text style={styles.rankMedal}>{`#${i + 1}`}</Text>
                     <Avatar name={p?.name ?? '?'} size={34} />
-                    <Text style={styles.rankName} numberOfLines={1}>{p?.name}</Text>
+                    <Text style={[styles.rankName, { writingDirection: nameWritingDirection(p?.name) }]} numberOfLines={1}>{p?.name}</Text>
                     <View style={styles.rankArrows}>
                       <TouchableOpacity style={styles.rankArrow} onPress={() => moveRank(i, -1)} disabled={i === 0} hitSlop={6}>
                         <Ionicons name="chevron-up" size={18} color={i === 0 ? colors.textDim : colors.gold} />
@@ -645,7 +692,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
               onChangeText={setAmountInput}
               placeholder={amountModal?.kind === 'addPlayer' ? 'Player name...' : '0'}
               keyboardType={amountModal?.kind === 'addPlayer' ? 'default' : 'decimal-pad'}
-              prefix={amountModal?.kind === 'addPlayer' ? undefined : '₪'}
+              prefix={amountModal?.kind === 'addPlayer' ? undefined : sym}
               error={amountError}
               autoFocus
             />
@@ -672,83 +719,82 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
               </View>
               <Text style={styles.finalCountTitle} maxFontSizeMultiplier={1.3}>The Final Count</Text>
             </View>
-            <Text style={styles.modalSubtitle}>
-              Last step — count each player's remaining chips. We'll settle the rest.
-            </Text>
-
-            <ScrollView
-              style={[styles.stacksScroll, { maxHeight: Math.min(280, Dimensions.get('window').height * 0.25) }]}
-              keyboardShouldPersistTaps="handled"
-            >
-              {game.players.map(p => {
-                const isEmpty = !(finalStacks[p.id] ?? '').trim();
-                return (
-                  <View key={p.id} style={styles.stackRow}>
-                    <View style={styles.stackNameWrap}>
-                      <Text style={styles.stackName} numberOfLines={1}>{p.name}</Text>
-                      {isEmpty && <Text style={styles.bustedHint}>Busted · ₪0</Text>}
-                    </View>
-                    <View style={styles.stackInputWrap}>
-                      <AppTextInput
-                        label=""
-                        value={finalStacks[p.id] ?? ''}
-                        onChangeText={v => setFinalStacks(prev => ({ ...prev, [p.id]: v }))}
-                        placeholder="0"
-                        keyboardType="decimal-pad"
-                        prefix="₪"
-                      />
-                    </View>
-                  </View>
-                );
-              })}
-            </ScrollView>
-
-            {/* Balance indicator */}
-            <View style={[styles.countCard, stacksMismatch ? styles.countCardWarn : styles.countCardOk]}>
-              <Text style={[styles.countHeadline, stacksMismatch && styles.countHeadlineWarn]}>
-                Counted {formatCents(stacksTotalCents)} of {formatCents(remainingCents)} on the table
+            <ScrollView style={styles.endScroll} contentContainerStyle={styles.endScrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalSubtitle}>
+                Last step — count each player's remaining chips. We'll settle the rest.
               </Text>
-              {stacksMismatch ? (
-                <>
-                  <Text style={styles.countDetailWarn}>
-                    {stacksTotalCents < remainingCents
-                      ? `${formatCents(mismatchCents)} unaccounted for`
-                      : `${formatCents(mismatchCents)} over the table total`}
-                  </Text>
-                  <Text style={styles.countWhy}>
-                    Chips counted should equal buy-ins minus cash-outs — recount or check for a missed transaction.
-                  </Text>
-                </>
-              ) : (
-                <View style={styles.countOkRow}>
-                  <Ionicons name="checkmark-circle" size={15} color={colors.success} />
-                  <Text style={styles.countOkText}>Totals match — every shekel is accounted for.</Text>
-                </View>
+
+              <View style={styles.stacksBlock}>
+                {game.players.map(p => {
+                  const isEmpty = !(finalStacks[p.id] ?? '').trim();
+                  return (
+                    <View key={p.id} style={styles.stackRow}>
+                      <View style={styles.stackNameWrap}>
+                        <Text style={[styles.stackName, { writingDirection: nameWritingDirection(p.name) }]} numberOfLines={1}>{p.name}</Text>
+                        {isEmpty && <Text style={styles.bustedHint}>Busted · {sym}0</Text>}
+                      </View>
+                      <View style={styles.stackInputWrap}>
+                        <AppTextInput
+                          label=""
+                          value={finalStacks[p.id] ?? ''}
+                          onChangeText={v => setFinalStacks(prev => ({ ...prev, [p.id]: v }))}
+                          placeholder="0"
+                          keyboardType="decimal-pad"
+                          prefix={sym}
+                        />
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+
+              {/* Balance indicator */}
+              <View style={[styles.countCard, stacksMismatch ? styles.countCardWarn : styles.countCardOk]}>
+                <Text style={[styles.countHeadline, stacksMismatch && styles.countHeadlineWarn]}>
+                  Counted {formatCents(stacksTotalCents)} of {formatCents(remainingCents)} on the table
+                </Text>
+                {stacksMismatch ? (
+                  <>
+                    <Text style={styles.countDetailWarn}>
+                      {stacksTotalCents < remainingCents
+                        ? `${formatCents(mismatchCents)} unaccounted for`
+                        : `${formatCents(mismatchCents)} over the table total`}
+                    </Text>
+                    <Text style={styles.countWhy}>
+                      Chips counted should equal buy-ins minus cash-outs — recount or check for a missed transaction.
+                    </Text>
+                  </>
+                ) : (
+                  <View style={styles.countOkRow}>
+                    <Ionicons name="checkmark-circle" size={15} color={colors.success} />
+                    <Text style={styles.countOkText}>Totals match — every shekel is accounted for.</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Inline override — replaces the old post-hoc confirm dialog */}
+              {stacksMismatch && (
+                <TouchableOpacity
+                  style={[styles.overrideRow, overrideArmed && styles.overrideRowArmed]}
+                  onPress={() => setOverrideArmed(v => !v)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons
+                    name={overrideArmed ? 'checkbox' : 'square-outline'}
+                    size={22}
+                    color={overrideArmed ? colors.error : colors.textMuted}
+                  />
+                  <View style={styles.overrideTextWrap}>
+                    <Text style={styles.overrideLabel}>End anyway with an unbalanced count</Text>
+                    <Text style={styles.overrideCaption}>Results will be off by {formatCents(mismatchCents)}.</Text>
+                  </View>
+                </TouchableOpacity>
               )}
-            </View>
 
-            {/* Inline override — replaces the old post-hoc confirm dialog */}
-            {stacksMismatch && (
-              <TouchableOpacity
-                style={[styles.overrideRow, overrideArmed && styles.overrideRowArmed]}
-                onPress={() => setOverrideArmed(v => !v)}
-                activeOpacity={0.8}
-              >
-                <Ionicons
-                  name={overrideArmed ? 'checkbox' : 'square-outline'}
-                  size={22}
-                  color={overrideArmed ? colors.error : colors.textMuted}
-                />
-                <View style={styles.overrideTextWrap}>
-                  <Text style={styles.overrideLabel}>End anyway with an unbalanced count</Text>
-                  <Text style={styles.overrideCaption}>Results will be off by {formatCents(mismatchCents)}.</Text>
-                </View>
-              </TouchableOpacity>
-            )}
-
-            <Text style={styles.finalityFooter}>
-              Winners, losers, and who-pays-who are calculated automatically. This ends the game — it can't be reopened.
-            </Text>
+              <Text style={styles.finalityFooter}>
+                Winners, losers, and who-pays-who are calculated automatically. This ends the game — it can't be reopened.
+              </Text>
+            </ScrollView>
 
             <View style={styles.modalActions}>
               <PrimaryButton label="Keep Playing" onPress={() => setEnding(false)} variant="outline" fullWidth={false} style={styles.modalBtn} />
@@ -798,7 +844,10 @@ const styles = StyleSheet.create({
   liveText: { fontSize: 11, fontWeight: '700', color: colors.goldLight, letterSpacing: 0.5 },
 
   scroll: { flex: 1 },
-  content: { padding: 20, gap: 12 },
+  content: { padding: 20 },
+  contentInner: { gap: 12 },
+  tableSceneWrapper: { alignSelf: 'center', marginVertical: 4 },
+  tableScene: { alignSelf: 'center' },
 
   potCard: {
     alignItems: 'center',
@@ -909,6 +958,8 @@ const styles = StyleSheet.create({
   playerRowLeader: { borderColor: colors.goldMuted, backgroundColor: colors.goldFaint },
   playerInfo: { flex: 1, gap: 2 },
   playerName: { fontSize: 16, fontWeight: '600', color: colors.text },
+  playerNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  leaderCrown: { marginTop: 1 },
   playerMeta: { fontSize: 12, color: colors.textMuted },
   playerNet: { fontSize: 16, fontWeight: '800', fontVariant: ['tabular-nums'] },
   netPositive: { color: colors.success },
@@ -952,10 +1003,12 @@ const styles = StyleSheet.create({
   modalBtn: { flex: 1 },
   modalBtnPrimary: { flex: 2 },
 
-  stacksScroll: { maxHeight: 280 },
-  stackRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
+  endScroll: { flexShrink: 1 },
+  endScrollContent: { gap: 14 },
+  stacksBlock: { gap: 6 },
+  stackRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   stackNameWrap: { flex: 1, gap: 2 },
-  stackName: { fontSize: 15, fontWeight: '600', color: colors.text },
+  stackName: { fontSize: 15, fontWeight: '600', color: colors.text, textAlign: 'left' },
   bustedHint: { fontSize: 12, fontWeight: '500', color: colors.textMuted },
   stackInputWrap: { width: 140 },
 
@@ -979,7 +1032,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 5,
   },
-  countCardOk: { backgroundColor: 'rgba(39,174,96,0.08)', borderColor: 'rgba(39,174,96,0.35)' },
+  countCardOk: { backgroundColor: colors.successFaint, borderColor: colors.success },
   countCardWarn: { backgroundColor: colors.errorFaint, borderColor: colors.errorMuted },
   countHeadline: { fontSize: 14, fontWeight: '700', color: colors.text },
   countHeadlineWarn: { color: colors.text },

@@ -1,7 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Linking } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { DMSerifDisplay_400Regular } from '@expo-google-fonts/dm-serif-display';
 import {
   useFonts,
@@ -21,10 +22,22 @@ import * as WebBrowser from 'expo-web-browser';
 import { NavigationContainerRef } from '@react-navigation/native';
 import { applyInterDefault } from './src/theme/fonts';
 import { AuthProvider } from './src/context/AuthContext';
+import { CurrencyProvider } from './src/context/CurrencyContext';
 import { ActiveSessionProvider } from './src/context/ActiveSessionContext';
 import { LocalGamesProvider } from './src/context/LocalGamesContext';
+import { EntitlementsProvider } from './src/context/EntitlementsContext';
+import { ContentProvider } from './src/context/ContentContext';
+import { PremiumProvider } from './src/features/premium/state/PremiumContext';
+import { BankrollProvider } from './src/features/bankroll/state/BankrollContext';
+import { StudyProvider } from './src/features/study/state/StudyContext';
+import { CoachProvider } from './src/features/coach/state/CoachContext';
+import { MasteryProvider } from './src/features/mastery/state/MasteryContext';
+import { EngagementProvider } from './src/features/engagement/state/EngagementContext';
+import { ReminderScheduler } from './src/hooks/useReminderScheduler';
 import AppNavigator from './src/navigation/AppNavigator';
 import { RootStackParamList } from './src/navigation/AppNavigator';
+import { isFeatureEnabled } from './src/config/features';
+import BrandSplash from './src/components/brand/BrandSplash';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -42,6 +55,8 @@ function extractDeepLink(url: string): { type: 'session' | 'group'; token: strin
 
 export default function App() {
   const navRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
+  // Dual-brand launch splash (flag-gated). When off, start already "done".
+  const [splashDone, setSplashDone] = useState(!isFeatureEnabled('v2Splash'));
   // Serif display accents (titles + hero numerals). On fontError we proceed —
   // unknown fontFamily falls back to the system font, which is cosmetic only.
   const [fontsLoaded, fontError] = useFonts({
@@ -85,14 +100,36 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+      <CurrencyProvider>
       <AuthProvider>
-        <ActiveSessionProvider>
-          <LocalGamesProvider>
-            <StatusBar style="light" />
-            <AppNavigator navigationRef={navRef} />
-          </LocalGamesProvider>
-        </ActiveSessionProvider>
+        <PremiumProvider>
+        <EntitlementsProvider>
+          <ContentProvider>
+          <ActiveSessionProvider>
+            <LocalGamesProvider>
+              <BankrollProvider>
+                <StudyProvider>
+                  <MasteryProvider>
+                  <CoachProvider>
+                    <EngagementProvider>
+                      <StatusBar style="light" />
+                      <ReminderScheduler />
+                      <AppNavigator navigationRef={navRef} />
+                      {!splashDone && <BrandSplash onDone={() => setSplashDone(true)} />}
+                    </EngagementProvider>
+                  </CoachProvider>
+                  </MasteryProvider>
+                </StudyProvider>
+              </BankrollProvider>
+            </LocalGamesProvider>
+          </ActiveSessionProvider>
+          </ContentProvider>
+        </EntitlementsProvider>
+        </PremiumProvider>
       </AuthProvider>
+      </CurrencyProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

@@ -19,7 +19,11 @@ import { useAuth } from '../context/AuthContext';
 import { useActiveSession } from '../context/ActiveSessionContext';
 import { useLocalGames } from '../context/LocalGamesContext';
 import { consumePendingInvite } from '../utils/pendingInvite';
+import { consumePendingCheckout } from '../utils/pendingCheckout';
+import LandingScreen from '../screens/LandingScreen';
+import { resolveWebLanding } from '../features/landing/landingRouting';
 import { usePushNotificationListeners } from '../hooks/usePushNotifications';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import HomeScreen from '../screens/HomeScreen';
@@ -39,6 +43,7 @@ import JoinSessionScreen from '../screens/JoinSessionScreen';
 import JoinGroupScreen from '../screens/JoinGroupScreen';
 import PlayerProfileScreen from '../screens/PlayerProfileScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
+import OnboardingV2Screen from '../screens/OnboardingV2Screen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import LocalNewGameScreen from '../screens/LocalNewGameScreen';
 import LocalSessionScreen from '../screens/LocalSessionScreen';
@@ -49,9 +54,34 @@ import GroupsAuthGateScreen from '../screens/GroupsAuthGateScreen';
 import GuestStatsScreen from '../screens/GuestStatsScreen';
 import GlassView from '../components/motion/GlassView';
 import Toast from '../components/Toast';
+import OfflineBanner from '../components/OfflineBanner';
 import * as storage from '../utils/storage';
+import { isFeatureEnabled } from '../config/features';
+import BankrollScreen from '../features/bankroll/ui/BankrollScreen';
+import LogSessionScreen from '../features/bankroll/ui/LogSessionScreen';
+import StudyScreen from '../features/study/ui/StudyScreen';
+import SpotTrainerScreen from '../features/study/ui/SpotTrainerScreen';
+import SolverWorkspaceScreen from '../features/solver/ui/SolverWorkspaceScreen';
+import LessonModulesScreen from '../features/study/ui/LessonModulesScreen';
+import LessonReaderScreen from '../features/study/ui/LessonReaderScreen';
+import QuizRunnerScreen from '../features/study/ui/QuizRunnerScreen';
+import PackCatalogScreen from '../features/premium/ui/PackCatalogScreen';
+import PackDetailScreen from '../features/premium/ui/PackDetailScreen';
+import CoachScreen from '../features/coach/ui/CoachScreen';
+import CoachInputScreen from '../features/coach/ui/CoachInputScreen';
+import CoachResultScreen from '../features/coach/ui/CoachResultScreen';
+import CoachGroundingScreen from '../features/coach/ui/CoachGroundingScreen';
+import type { CoachInputKind } from '../features/coach/types';
+import PaywallScreen from '../features/premium/ui/PaywallScreen';
+import TrackScreen from '../screens/TrackScreen';
+import AchievementsScreen from '../screens/AchievementsScreen';
+import NotificationPreferencesScreen from '../screens/NotificationPreferencesScreen';
+import CurrencyPickerScreen from '../screens/CurrencyPickerScreen';
+
+type TrackSegment = 'bankroll' | 'sessions' | 'stats';
 
 export type RootStackParamList = {
+  Landing: undefined;
   Onboarding: undefined;
   Login: undefined;
   Register: undefined;
@@ -73,6 +103,30 @@ export type RootStackParamList = {
   LocalNewGame: { mode?: 'cash' | 'tournament' } | undefined;
   LocalSession: { gameId: string };
   LocalSessionSummary: { gameId: string };
+  // V2 — Bankroll tracker (Track pillar)
+  LogSession: { sessionId?: string } | undefined;
+  // V2 — Study (Study pillar)
+  StudyTrainer: { mode: 'spot' | 'decision' };
+  // Web-first flagship — solver workspace (solver flag)
+  SolverWorkspace: undefined;
+  // V2.2 — Content platform (Lessons; content flag)
+  LessonModules: undefined;
+  LessonReader: { moduleId: string; moduleName?: string };
+  QuizRunner: { quizId?: string; collectionId?: string } | undefined;
+  PackCatalog: undefined;
+  PackDetail: { packId: string };
+  // V2 — AI Coach (Improve pillar)
+  CoachInput: { method: CoachInputKind };
+  CoachResult: { id: string };
+  CoachGrounding: undefined;
+  // V2 — Monetization
+  Paywall: { trigger?: string } | undefined;
+  // V2.1 — Track hub (5-tab IA)
+  Track: { segment?: TrackSegment } | undefined;
+  // V2.1 STEP 3 — retention
+  Achievements: undefined;
+  NotificationPreferences: undefined;
+  CurrencyPicker: undefined;
   // Kept for TypeScript compat on existing screens that navigate to these by name
   Home: undefined;
   AllSessions: undefined;
@@ -83,6 +137,10 @@ export type RootStackParamList = {
 export type TabParamList = {
   Home: undefined;
   AllSessions: undefined;
+  Bankroll: undefined;
+  Track: { segment?: TrackSegment } | undefined;
+  Study: undefined;
+  Coach: undefined;
   GroupsList: undefined;
   Stats: undefined;
 };
@@ -99,15 +157,19 @@ const linking: LinkingOptions<RootStackParamList> = {
   prefixes: ['https://poker-home-games-three.vercel.app', 'tpoker://'],
   config: {
     screens: {
+      // Site root → Landing for logged-out web visitors. The /join/* paths below are
+      // more specific and always win for deep links, so they bypass Landing correctly.
+      Landing: '',
       JoinGroup: 'join/group/:inviteToken',
       JoinSession: 'join/session/:inviteToken',
+      // Web-first flagship deep link (resolves only when the `solver` flag registers the screen).
+      SolverWorkspace: 'solver',
     },
   },
 };
 
-const stackScreenOptions = {
+const stackScreenOptionsBase = {
   contentStyle: { backgroundColor: colors.background },
-  animation: 'slide_from_right' as const,
   headerStyle: { backgroundColor: colors.background },
   headerTintColor: colors.text,
   headerTitleStyle: { fontWeight: '700' as const },
@@ -143,6 +205,7 @@ function LiveGameBar() {
       : null;
 
   const hasEntry = entry != null;
+  const reducedMotion = useReducedMotion();
   const translateY = useSharedValue(80);
   const pulse = useSharedValue(1);
 
@@ -151,6 +214,8 @@ function LiveGameBar() {
   }, [hasEntry, translateY]);
 
   React.useEffect(() => {
+    // Respect OS Reduce Motion — hold the live dot steady instead of the infinite pulse.
+    if (reducedMotion) { pulse.value = 1; return; }
     pulse.value = withRepeat(
       withSequence(
         withTiming(0.2, { duration: 900 }),
@@ -158,7 +223,7 @@ function LiveGameBar() {
       ),
       -1,
     );
-  }, [pulse]);
+  }, [pulse, reducedMotion]);
 
   const barStyle = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }));
   const dotStyle = useAnimatedStyle(() => ({ opacity: pulse.value }));
@@ -225,6 +290,10 @@ function makeTabScreenOptions(bottomInset: number) {
   const icons: Record<string, { active: IoniconsName; inactive: IoniconsName }> = {
     Home:        { active: 'home',      inactive: 'home-outline' },
     AllSessions: { active: 'card',      inactive: 'card-outline' },
+    Track:       { active: 'wallet',    inactive: 'wallet-outline' },
+    Bankroll:    { active: 'wallet',    inactive: 'wallet-outline' },
+    Study:       { active: 'school',    inactive: 'school-outline' },
+    Coach:       { active: 'sparkles',  inactive: 'sparkles-outline' },
     GroupsList:  { active: 'people',    inactive: 'people-outline' },
     Stats:       { active: 'bar-chart', inactive: 'bar-chart-outline' },
   };
@@ -263,6 +332,7 @@ function makeTabScreenOptions(bottomInset: number) {
 
 function TabNavigator() {
   const insets = useSafeAreaInsets();
+  const nav5 = isFeatureEnabled('nav5');
   return (
     <View style={{ flex: 1 }}>
       <Tab.Navigator screenOptions={makeTabScreenOptions(insets.bottom)}>
@@ -271,21 +341,52 @@ function TabNavigator() {
           component={HomeScreen}
           options={{ title: 'Home', headerShown: false }}
         />
-        <Tab.Screen
-          name="AllSessions"
-          component={AllSessionsScreen}
-          options={{ title: 'Sessions', headerShown: false }}
-        />
+        {nav5 ? (
+          <Tab.Screen
+            name="Track"
+            component={TrackScreen}
+            options={{ title: 'Track', headerShown: false }}
+          />
+        ) : (
+          <Tab.Screen
+            name="AllSessions"
+            component={AllSessionsScreen}
+            options={{ title: 'Sessions', headerShown: false }}
+          />
+        )}
+        {!nav5 && isFeatureEnabled('bankroll') && (
+          <Tab.Screen
+            name="Bankroll"
+            component={BankrollScreen}
+            options={{ title: 'Bankroll', headerShown: false }}
+          />
+        )}
+        {isFeatureEnabled('study') && (
+          <Tab.Screen
+            name="Study"
+            component={StudyScreen}
+            options={{ title: 'Study', headerShown: false }}
+          />
+        )}
+        {isFeatureEnabled('coach') && (
+          <Tab.Screen
+            name="Coach"
+            component={CoachScreen}
+            options={{ title: 'Coach', headerShown: false }}
+          />
+        )}
         <Tab.Screen
           name="GroupsList"
           component={GroupsListScreen}
           options={{ title: 'Groups', headerShown: false }}
         />
-        <Tab.Screen
-          name="Stats"
-          component={StatsScreen}
-          options={{ title: 'Stats', headerShown: false }}
-        />
+        {!nav5 && (
+          <Tab.Screen
+            name="Stats"
+            component={StatsScreen}
+            options={{ title: 'Stats', headerShown: false }}
+          />
+        )}
       </Tab.Navigator>
       <LiveGameBar />
     </View>
@@ -295,6 +396,7 @@ function TabNavigator() {
 /** Tabs for guests (no account): local games + auth-gated Groups, local Stats. */
 function GuestTabNavigator() {
   const insets = useSafeAreaInsets();
+  const nav5 = isFeatureEnabled('nav5');
   return (
     <View style={{ flex: 1 }}>
       <Tab.Navigator screenOptions={makeTabScreenOptions(insets.bottom)}>
@@ -303,21 +405,52 @@ function GuestTabNavigator() {
           component={GuestHomeScreen}
           options={{ title: 'Home', headerShown: false }}
         />
-        <Tab.Screen
-          name="AllSessions"
-          component={LocalSessionsScreen}
-          options={{ title: 'Sessions', headerShown: false }}
-        />
+        {nav5 ? (
+          <Tab.Screen
+            name="Track"
+            component={TrackScreen}
+            options={{ title: 'Track', headerShown: false }}
+          />
+        ) : (
+          <Tab.Screen
+            name="AllSessions"
+            component={LocalSessionsScreen}
+            options={{ title: 'Sessions', headerShown: false }}
+          />
+        )}
+        {!nav5 && isFeatureEnabled('bankroll') && (
+          <Tab.Screen
+            name="Bankroll"
+            component={BankrollScreen}
+            options={{ title: 'Bankroll', headerShown: false }}
+          />
+        )}
+        {isFeatureEnabled('study') && (
+          <Tab.Screen
+            name="Study"
+            component={StudyScreen}
+            options={{ title: 'Study', headerShown: false }}
+          />
+        )}
+        {isFeatureEnabled('coach') && (
+          <Tab.Screen
+            name="Coach"
+            component={CoachScreen}
+            options={{ title: 'Coach', headerShown: false }}
+          />
+        )}
         <Tab.Screen
           name="GroupsList"
           component={GroupsAuthGateScreen}
           options={{ title: 'Groups', headerShown: false }}
         />
-        <Tab.Screen
-          name="Stats"
-          component={GuestStatsScreen}
-          options={{ title: 'Stats', headerShown: false }}
-        />
+        {!nav5 && (
+          <Tab.Screen
+            name="Stats"
+            component={GuestStatsScreen}
+            options={{ title: 'Stats', headerShown: false }}
+          />
+        )}
       </Tab.Navigator>
       <LiveGameBar />
     </View>
@@ -331,6 +464,12 @@ type AppNavigatorProps = {
 export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
   const { user, isLoading } = useAuth();
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | undefined>(undefined);
+  const reducedMotion = useReducedMotion();
+  const stackScreenOptions = {
+    ...stackScreenOptionsBase,
+    animation: reducedMotion ? ('none' as const) : ('slide_from_right' as const),
+    animationDuration: reducedMotion ? 0 : 350,
+  };
 
   useEffect(() => {
     storage.getItemAsync('hasSeenOnboarding').then((val) => {
@@ -362,7 +501,34 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
       // Give the authed tree a beat to mount after the swap.
       setTimeout(navigate, 300);
     });
+
+    // Resume a pending checkout intent (from LandingScreen pricing CTA → Register flow).
+    // Route to Paywall so the freshly-authed user can complete their purchase there.
+    consumePendingCheckout().then(plan => {
+      if (!plan) return;
+      const go = () => {
+        const nav = navigationRef?.current;
+        if (nav?.isReady()) {
+          nav.navigate('Paywall', { trigger: `landing_${plan}` });
+        } else {
+          setTimeout(go, 150);
+        }
+      };
+      setTimeout(go, 300);
+    });
   }, [user, navigationRef]);
+
+  // Decide whether to show the web landing page (logged-out web visitors at root only).
+  // Gated behind the `paywall` flag so the premium launch (paywall + this pricing landing) lights up
+  // as ONE flag flip — until then, logged-out web keeps the current guest experience (no surprise on merge).
+  const showLanding = isFeatureEnabled('paywall') && resolveWebLanding({
+    platform: Platform.OS as 'web' | 'ios' | 'android',
+    isAuthed: user !== null,
+    path:
+      Platform.OS === 'web' && typeof window !== 'undefined'
+        ? window.location.pathname
+        : '/',
+  });
 
   if (isLoading || hasSeenOnboarding === undefined) {
     return (
@@ -375,19 +541,48 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
   return (
     <NavigationContainer ref={navigationRef} linking={linking}>
       <Toast />
+      <OfflineBanner />
       <PushListeners />
       <Stack.Navigator screenOptions={stackScreenOptions}>
         {user === null ? (
           // Guest tree — the app is fully usable without an account: local games
           // run on-device; Groups/Stats upsell sign-in; Login is a modal, not a wall.
           <>
+            {showLanding && (
+              <Stack.Screen
+                name="Landing"
+                component={LandingScreen}
+                options={{ headerShown: false }}
+              />
+            )}
             {!hasSeenOnboarding && (
-              <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false, gestureEnabled: false }} />
+              <Stack.Screen
+                name="Onboarding"
+                component={isFeatureEnabled('onboardingV2') ? OnboardingV2Screen : OnboardingScreen}
+                options={{ headerShown: false, gestureEnabled: false }}
+              />
             )}
             <Stack.Screen name="MainTabs" component={GuestTabNavigator} options={{ headerShown: false }} />
             <Stack.Screen name="LocalNewGame"        component={LocalNewGameScreen}        options={{ headerShown: false }} />
             <Stack.Screen name="LocalSession"        component={LocalSessionScreen}        options={{ headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="LocalSessionSummary" component={LocalSessionSummaryScreen} options={{ headerShown: false, gestureEnabled: false }} />
+            <Stack.Screen name="LogSession" component={LogSessionScreen} options={{ headerShown: false, presentation: 'modal' }} />
+            <Stack.Screen name="StudyTrainer" component={SpotTrainerScreen} options={{ headerShown: false }} />
+            {isFeatureEnabled('solver') && (
+              <Stack.Screen name="SolverWorkspace" component={SolverWorkspaceScreen} options={{ headerShown: false }} />
+            )}
+            <Stack.Screen name="LessonModules" component={LessonModulesScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="LessonReader" component={LessonReaderScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="QuizRunner" component={QuizRunnerScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="PackCatalog" component={PackCatalogScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="PackDetail" component={PackDetailScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="CoachInput"  component={CoachInputScreen}  options={{ headerShown: false }} />
+            <Stack.Screen name="CoachResult" component={CoachResultScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="CoachGrounding" component={CoachGroundingScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="Paywall"     component={PaywallScreen}     options={{ headerShown: false, presentation: 'modal' }} />
+            <Stack.Screen name="Achievements" component={AchievementsScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="CurrencyPicker" component={CurrencyPickerScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Login"    component={LoginScreen}    options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="JoinSession" component={JoinSessionScreen} options={{ headerShown: false }} />
@@ -412,6 +607,23 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
             <Stack.Screen name="LocalNewGame"        component={LocalNewGameScreen}        options={{ headerShown: false }} />
             <Stack.Screen name="LocalSession"        component={LocalSessionScreen}        options={{ headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="LocalSessionSummary" component={LocalSessionSummaryScreen} options={{ headerShown: false, gestureEnabled: false }} />
+            <Stack.Screen name="LogSession" component={LogSessionScreen} options={{ headerShown: false, presentation: 'modal' }} />
+            <Stack.Screen name="StudyTrainer" component={SpotTrainerScreen} options={{ headerShown: false }} />
+            {isFeatureEnabled('solver') && (
+              <Stack.Screen name="SolverWorkspace" component={SolverWorkspaceScreen} options={{ headerShown: false }} />
+            )}
+            <Stack.Screen name="LessonModules" component={LessonModulesScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="LessonReader" component={LessonReaderScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="QuizRunner" component={QuizRunnerScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="PackCatalog" component={PackCatalogScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="PackDetail" component={PackDetailScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="CoachInput"  component={CoachInputScreen}  options={{ headerShown: false }} />
+            <Stack.Screen name="CoachResult" component={CoachResultScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="CoachGrounding" component={CoachGroundingScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="Paywall"     component={PaywallScreen}     options={{ headerShown: false, presentation: 'modal' }} />
+            <Stack.Screen name="Achievements" component={AchievementsScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="CurrencyPicker" component={CurrencyPickerScreen} options={{ headerShown: false }} />
           </>
         )}
       </Stack.Navigator>

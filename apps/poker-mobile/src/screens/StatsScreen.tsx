@@ -17,8 +17,12 @@ import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { shadows } from '../theme/shadows';
 import { fadeIn, slideUp, pulse } from '../theme/motion';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import { getMyStats, MyStatsDto, RecentSessionDto } from '../api/statsApi';
 import { getMyAchievements, AchievementDto, MyAchievementsDto } from '../api/achievementsApi';
+import { isFeatureEnabled } from '../config/features';
+import ErrorState from '../components/ErrorState';
+import { track } from '../utils/analytics';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import SessionListItem from '../components/SessionListItem';
 import SkeletonCard from '../components/SkeletonCard';
@@ -41,7 +45,7 @@ const PERIODS: { key: Period; label: string }[] = [
   { key: 'all',   label: 'All Time' },
 ];
 
-export default function StatsScreen() {
+export default function StatsScreen({ embedded = false }: { embedded?: boolean } = {}) {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -56,17 +60,19 @@ export default function StatsScreen() {
   const [error, setError] = useState<string | null>(null);
 
   // Entrance animation
+  const reducedMotion = useReducedMotion();
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(20)).current;
 
   const runEntrance = useCallback(() => {
+    if (reducedMotion) { opacity.setValue(1); translateY.setValue(0); return; }
     opacity.setValue(0);
     translateY.setValue(20);
     Animated.parallel([
       fadeIn(opacity, { duration: 350 }),
       slideUp(translateY, { duration: 350, from: 20 }),
     ]).start();
-  }, []);
+  }, [reducedMotion]);
 
   const load = useCallback(async (isRefresh = false, p: Period = 'all') => {
     if (!isRefresh) setLoading(true);
@@ -91,7 +97,10 @@ export default function StatsScreen() {
             }
             const seen = new Set<string>(JSON.parse(raw));
             const fresh = ach.earned.filter((a) => !seen.has(a.key));
-            if (fresh.length > 0) setUnlockQueue(fresh);
+            if (fresh.length > 0) {
+              setUnlockQueue(fresh);
+              fresh.forEach(a => track('achievement_unlocked', { key: a.key, rarity: a.rarity, source: 'server' }));
+            }
           } catch { /* storage unavailable — skip celebration */ }
         });
       }
@@ -124,7 +133,7 @@ export default function StatsScreen() {
     });
   }, []);
 
-  const customHeader = (
+  const customHeader = embedded ? null : (
     <View style={[statsHeaderStyles.header, { paddingTop: insets.top + 12 }]}>
       <Text style={statsHeaderStyles.title}>Stats</Text>
     </View>
@@ -163,13 +172,7 @@ export default function StatsScreen() {
     return (
       <Screen>
         {customHeader}
-        <View style={styles.center}>
-          <Ionicons name="alert-circle-outline" size={40} color={colors.textDim} />
-          <Text style={styles.errorText}>{error ?? 'Something went wrong.'}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
-            <Text style={styles.retryText}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
+        <ErrorState message={error ?? undefined} onRetry={() => load()} />
       </Screen>
     );
   }
@@ -400,7 +403,11 @@ export default function StatsScreen() {
           <View style={[styles.section, styles.lastSection]}>
             <View style={achStyles.headerRow}>
               <Text style={styles.sectionTitle}>Achievements</Text>
-              {achievements.earned.length > 0 && (
+              {isFeatureEnabled('retention') ? (
+                <TouchableOpacity onPress={() => navigation.navigate('Achievements')} accessibilityRole="button" accessibilityLabel="See all achievements">
+                  <Text style={achStyles.earnedCount}>See all ›</Text>
+                </TouchableOpacity>
+              ) : achievements.earned.length > 0 && (
                 <Text style={achStyles.earnedCount}>{achievements.earned.length} earned</Text>
               )}
             </View>

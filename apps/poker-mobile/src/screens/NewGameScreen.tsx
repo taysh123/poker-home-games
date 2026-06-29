@@ -30,6 +30,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import DealInOverlay from '../components/DealInOverlay';
 import { getRecentGuests, recordGuestName } from '../utils/guestHistory';
 import { showToast } from '../utils/toast';
+import { currencySymbol } from '../utils/currency';
 import { useActiveSession } from '../context/ActiveSessionContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'NewGame'>;
@@ -41,6 +42,7 @@ type AddedPlayer =
 export default function NewGameScreen({ route, navigation }: Props) {
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
+  const sym = currencySymbol();
   const { refresh: refreshActiveSession } = useActiveSession();
 
   // Step: 1 = Details, 2 = Players, 3 = Review
@@ -323,7 +325,7 @@ export default function NewGameScreen({ route, navigation }: Props) {
                   onChangeText={setChipRatio}
                   placeholder="e.g. 100"
                   keyboardType="decimal-pad"
-                  hint="chips per ₪"
+                  hint={`chips per ${sym}`}
                 />
               </View>
               <View style={styles.halfField}>
@@ -333,7 +335,7 @@ export default function NewGameScreen({ route, navigation }: Props) {
                   onChangeText={setDefaultBuyIn}
                   placeholder="0"
                   keyboardType="decimal-pad"
-                  prefix="₪"
+                  prefix={sym}
                 />
               </View>
             </View>
@@ -429,8 +431,8 @@ export default function NewGameScreen({ route, navigation }: Props) {
                   {allSelectedPlayers.length} player{allSelectedPlayers.length !== 1 ? 's' : ''} at the table
                 </Text>
                 <View style={styles.reviewMetaRow}>
-                  {defaultBuyIn ? <Text style={styles.reviewChip}>₪{defaultBuyIn} buy-in</Text> : null}
-                  {chipRatio ? <Text style={styles.reviewChip}>{chipRatio} chips/₪</Text> : null}
+                  {defaultBuyIn ? <Text style={styles.reviewChip}>{sym}{defaultBuyIn} buy-in</Text> : null}
+                  {chipRatio ? <Text style={styles.reviewChip}>{chipRatio} chips/{sym}</Text> : null}
                 </View>
               </View>
             </Animated.View>
