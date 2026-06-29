@@ -30,7 +30,7 @@ import type { LocalPlayer } from '../local/types';
 import { formatCents, formatCentsSigned, parseAmountToCents } from '../utils/money';
 import { currencySymbol } from '../utils/currency';
 import { timeAgo } from '../utils/formatters';
-import { lightTap, successNotification } from '../utils/haptics';
+import { lightTap, mediumTap, successNotification } from '../utils/haptics';
 import { showToast } from '../utils/toast';
 import { confirmDialog, infoDialog } from '../utils/confirm';
 import { clockView } from '../local/blinds';
@@ -208,7 +208,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
       await addCashOut(game.id, amountModal.player.id, cents);
       showToast(`${amountModal.player.name} cashed out ${formatCents(cents)}`, 'success');
     }
-    lightTap();
+    successNotification();
     setAmountModal(null);
   }
 
@@ -219,6 +219,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
       const last = eliminations[eliminations.length - 1];
       const playerName = game!.players.find(p => p.id === last.playerId)?.name ?? 'player';
       await undoElimination(game!.id);
+      lightTap();
       showToast(`Undid bust-out for ${playerName}`, 'info');
       return;
     }
@@ -226,6 +227,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
     const last = game!.txns[game!.txns.length - 1];
     const playerName = game!.players.find(p => p.id === last.playerId)?.name ?? 'player';
     await undoLastTxn(game!.id);
+    lightTap();
     showToast(`Undid ${last.kind === 'buyin' ? 'buy-in' : 'cash-out'} for ${playerName}`, 'info');
   }
 
@@ -234,7 +236,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
     const isFinalBust = remaining.length === 2; // busting now crowns a winner
     const doBust = async () => {
       await eliminatePlayer(game!.id, player.id);
-      successNotification();
+      mediumTap();
       // Auto-finish navigates via the Finished-status effect.
       if (!isFinalBust) showToast(`${player.name} busted out`, 'info');
     };
@@ -648,7 +650,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
                       onPress: () => {
                         const p = sheetPlayer!;
                         addBuyIn(game.id, p.id, defaultBuyInCents, 'rebuy').then(() => {
-                          lightTap();
+                          successNotification();
                           showToast(`${p.name} rebought for ${formatCents(defaultBuyInCents)}`, 'success');
                         });
                       },
@@ -661,7 +663,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
                         const p = sheetPlayer!;
                         const amt = game.tournament!.addOnAmountCents!;
                         addBuyIn(game.id, p.id, amt, 'addon').then(() => {
-                          lightTap();
+                          successNotification();
                           showToast(`${p.name} added on ${formatCents(amt)}`, 'success');
                         });
                       },
@@ -677,7 +679,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
                       onPress: () => {
                         const p = sheetPlayer!;
                         addBuyIn(game.id, p.id, defaultBuyInCents).then(() => {
-                          lightTap();
+                          successNotification();
                           showToast(`${p.name} bought in for ${formatCents(defaultBuyInCents)}`, 'success');
                         });
                       },

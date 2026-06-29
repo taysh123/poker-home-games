@@ -606,7 +606,7 @@ export default function SessionScreen({ route, navigation }: Props) {
       if (!token) return;
       await markSettlementPaid(token, settlementId);
       setSettlements(s => s.map(x => x.id === settlementId ? { ...x, status: 'Confirmed' } : x));
-      lightTap();
+      successNotification();
       showToast('Payment confirmed', 'success');
     } catch {
       showToast('Failed to mark as paid.', 'error');
