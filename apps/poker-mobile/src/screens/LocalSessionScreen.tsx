@@ -3,7 +3,6 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   StyleSheet,
   Platform,
   Modal,
@@ -16,6 +15,9 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
+import { spacing } from '../theme/spacing';
+import { radii } from '../theme/radii';
+import { iconSize } from '../theme/iconSize';
 import { LinearGradient } from 'expo-linear-gradient';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import ActionSheet from '../components/ActionSheet';
@@ -35,7 +37,10 @@ import { clockView } from '../local/blinds';
 import { prizePoolCents, remainingPlayerIds, payoutAmountsCents } from '../local/tournament';
 import { isLateRegOpen } from '../local/localGamesStore';
 import Screen from '../components/Screen';
+import Chip from '../components/Chip';
 import AnimatedNumber from '../components/motion/AnimatedNumber';
+import { PressableScale, MotiView, slideUpSequence, staggerIn } from '../components/motion';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import Avatar from '../components/Avatar';
 import ContentContainer from '../components/ContentContainer';
 import TableScene from '../components/table/TableScene';
@@ -51,6 +56,14 @@ type AmountModalState =
   | { kind: 'addPlayer' }
   | null;
 
+/**
+ * Spread-ready entrance props for MotiView. The DS motion recipe's transition
+ * union is looser than MotiView's discriminated transition prop, so we cast at
+ * the boundary (type-only — identical runtime) and keep the DS recipes untouched.
+ */
+const entrance = (opts?: Parameters<typeof slideUpSequence>[0]) =>
+  slideUpSequence(opts) as unknown as React.ComponentProps<typeof MotiView>;
+
 /** Live local (on-device) game — buy-ins, cash-outs, standings, end flow. */
 export default function LocalSessionScreen({ route, navigation }: Props) {
   const { gameId } = route.params;
@@ -61,6 +74,10 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
 
   const game = games.find(g => g.id === gameId);
   const isTournament = game?.mode === 'tournament';
+  const reduced = useReducedMotion();
+  // Entrances are suppressed while the tournament clock is actively ticking (1s
+  // re-renders) so the live dashboard never re-animates — cash games still get them.
+  const liveReduced = reduced || isTournament;
   // Immersive cash table (felt + seats) is the beta/dev presentation of the live cash screen; prod keeps
   // the proven flat list until `immersive` is flipped on. Tournaments keep the dashboard + list.
   const immersive = isFeatureEnabled('immersive');
@@ -147,14 +164,14 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
 
   if (!game) {
     return (
-      <View style={[styles.flex, { paddingTop: insets.top }]}>
+      <Screen style={{ paddingTop: insets.top }}>
         <EmptyState
           ionicon="alert-circle-outline"
           title="Game not found"
           subtitle="This local game may have been deleted."
           action={{ label: 'Go Back', onPress: () => navigation.goBack() }}
         />
-      </View>
+      </Screen>
     );
   }
 
@@ -308,10 +325,10 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
   return (
     <Screen>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={12} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel="Back">
-          <Ionicons name="chevron-back" size={20} color={colors.text} />
-        </TouchableOpacity>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
+        <PressableScale style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={12} haptic="light" accessibilityRole="button" accessibilityLabel="Back">
+          <Ionicons name="chevron-back" size={iconSize.sm} color={colors.text} />
+        </PressableScale>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle} numberOfLines={1}>{game.name}</Text>
           <View style={styles.liveRow}>
@@ -319,15 +336,15 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
             <Text style={styles.liveText}>LIVE · started {timeAgo(game.createdAt)}</Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.backBtn} onPress={handleUndo} hitSlop={12} activeOpacity={0.75} disabled={game.txns.length === 0} accessibilityRole="button" accessibilityLabel="Undo last action" accessibilityState={{ disabled: game.txns.length === 0 }}>
-          <Ionicons name="arrow-undo-outline" size={18} color={game.txns.length === 0 ? colors.textDim : colors.text} />
-        </TouchableOpacity>
+        <PressableScale style={styles.backBtn} onPress={handleUndo} hitSlop={12} haptic="light" disabled={game.txns.length === 0} accessibilityRole="button" accessibilityLabel="Undo last action" accessibilityState={{ disabled: game.txns.length === 0 }}>
+          <Ionicons name="arrow-undo-outline" size={iconSize.sm} color={game.txns.length === 0 ? colors.textDim : colors.text} />
+        </PressableScale>
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <ContentContainer style={styles.contentInner}>
         {/* Pot summary */}
-        <View style={styles.potCard}>
+        <MotiView {...entrance({ reduced: liveReduced })} style={styles.potCard}>
           <LinearGradient
             colors={[colors.goldFaint, 'transparent']}
             start={{ x: 0.5, y: 0 }}
@@ -347,7 +364,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
           <Text style={styles.potMeta}>
             {game.players.length} players · {game.txns.filter(t => t.kind === 'buyin').length} buy-ins
           </Text>
-        </View>
+        </MotiView>
 
         {/* Tournament dashboard: blind clock + controls + live stats */}
         {isTournament && game.tournament && (() => {
@@ -391,7 +408,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
 
               {/* Clock controls */}
               <View style={styles.dashControls}>
-                <TouchableOpacity
+                <PressableScale
                   style={styles.dashCtrlBtn}
                   onPress={() => { lightTap(); gotoLevel(game.id, -1); }}
                   disabled={view.levelNumber <= 1}
@@ -400,13 +417,13 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
                   accessibilityLabel="Previous blind level"
                   accessibilityState={{ disabled: view.levelNumber <= 1 }}
                 >
-                  <Ionicons name="play-skip-back" size={16} color={view.levelNumber <= 1 ? colors.textDim : colors.text} />
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.dashCtrlBtn, styles.dashCtrlPrimary]} onPress={toggleClockPause} hitSlop={8} accessibilityRole="button" accessibilityLabel={view.paused ? 'Resume the clock' : 'Pause the clock'}>
-                  <Ionicons name={view.paused ? 'play' : 'pause'} size={18} color={colors.background} />
+                  <Ionicons name="play-skip-back" size={iconSize.xs} color={view.levelNumber <= 1 ? colors.textDim : colors.text} />
+                </PressableScale>
+                <PressableScale style={[styles.dashCtrlBtn, styles.dashCtrlPrimary]} onPress={toggleClockPause} hitSlop={8} accessibilityRole="button" accessibilityLabel={view.paused ? 'Resume the clock' : 'Pause the clock'}>
+                  <Ionicons name={view.paused ? 'play' : 'pause'} size={iconSize.sm} color={colors.background} />
                   <Text style={styles.dashCtrlPrimaryText}>{view.paused ? 'Resume' : 'Pause'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
+                </PressableScale>
+                <PressableScale
                   style={styles.dashCtrlBtn}
                   onPress={() => { lightTap(); gotoLevel(game.id, 1); }}
                   disabled={atLastLevel}
@@ -415,8 +432,8 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
                   accessibilityLabel="Next blind level"
                   accessibilityState={{ disabled: atLastLevel }}
                 >
-                  <Ionicons name="play-skip-forward" size={16} color={atLastLevel ? colors.textDim : colors.text} />
-                </TouchableOpacity>
+                  <Ionicons name="play-skip-forward" size={iconSize.xs} color={atLastLevel ? colors.textDim : colors.text} />
+                </PressableScale>
               </View>
 
               {/* Live stats */}
@@ -444,14 +461,15 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{isTournament ? 'IN THE GAME' : 'AT THE TABLE'}</Text>
           {(!isTournament || isLateRegOpen(game)) && (
-            <TouchableOpacity
+            <PressableScale
               onPress={() => openAmountModal({ kind: 'addPlayer' })}
               hitSlop={8}
+              haptic="light"
               accessibilityRole="button"
               accessibilityLabel={isTournament ? 'Register a late entry' : 'Add a player'}
             >
               <Text style={styles.sectionAction}>+ {isTournament ? 'Late Reg' : 'Add Player'}</Text>
-            </TouchableOpacity>
+            </PressableScale>
           )}
         </View>
 
@@ -482,35 +500,36 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
               {visible.map(({ player, buyInCents, cashOutCents, netCents }, index) => {
                 const isLeader = !isTournament && index === 0 && netCents > 0;
                 return (
-                  <TouchableOpacity
-                    key={player.id}
-                    style={[styles.playerRow, isLeader && styles.playerRowLeader]}
-                    onPress={() => setSheetPlayer(player)}
-                    activeOpacity={0.75}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${player.name}. Tap for actions.`}
-                  >
-                    <Avatar name={player.name} size={40} />
-                    <View style={styles.playerInfo}>
-                      <View style={styles.playerNameRow}>
-                        <Text style={[styles.playerName, { writingDirection: nameWritingDirection(player.name) }]} numberOfLines={1}>{player.name}</Text>
-                        {isLeader && (
-                          <Ionicons name="trophy" size={13} color={colors.goldLight} style={styles.leaderCrown} accessibilityLabel="Chip leader" />
-                        )}
+                  <MotiView key={player.id} {...entrance({ reduced: liveReduced, delay: staggerIn(index) })}>
+                    <PressableScale
+                      style={[styles.playerRow, isLeader && styles.playerRowLeader]}
+                      onPress={() => setSheetPlayer(player)}
+                      haptic="light"
+                      accessibilityRole="button"
+                      accessibilityLabel={`${player.name}. Tap for actions.`}
+                    >
+                      <Avatar name={player.name} size={40} />
+                      <View style={styles.playerInfo}>
+                        <View style={styles.playerNameRow}>
+                          <Text style={[styles.playerName, { writingDirection: nameWritingDirection(player.name) }]} numberOfLines={1}>{player.name}</Text>
+                          {isLeader && (
+                            <Ionicons name="trophy" size={iconSize.xs} color={colors.goldLight} style={styles.leaderCrown} accessibilityLabel="Chip leader" />
+                          )}
+                        </View>
+                        <Text style={styles.playerMeta}>
+                          in {formatCents(buyInCents)}{!isTournament && cashOutCents > 0 ? ` · out ${formatCents(cashOutCents)}` : ''}
+                        </Text>
                       </View>
-                      <Text style={styles.playerMeta}>
-                        in {formatCents(buyInCents)}{!isTournament && cashOutCents > 0 ? ` · out ${formatCents(cashOutCents)}` : ''}
-                      </Text>
-                    </View>
-                    {!isTournament && (
-                      <Text style={[
-                        styles.playerNet,
-                        netCents > 0 ? styles.netPositive : netCents < 0 ? styles.netNegative : styles.netEven,
-                      ]}>
-                        {formatCentsSigned(netCents)}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
+                      {!isTournament && (
+                        <Text style={[
+                          styles.playerNet,
+                          netCents > 0 ? styles.netPositive : netCents < 0 ? styles.netNegative : styles.netEven,
+                        ]}>
+                          {formatCentsSigned(netCents)}
+                        </Text>
+                      )}
+                    </PressableScale>
+                  </MotiView>
                 );
               })}
 
@@ -526,9 +545,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
                         <Text style={[styles.playerName, styles.playerNameBusted, { writingDirection: nameWritingDirection(player.name) }]} numberOfLines={1}>{player.name}</Text>
                         <Text style={styles.playerMeta}>in {formatCents(buyInCents)}</Text>
                       </View>
-                      <View style={styles.positionBadge}>
-                        <Text style={styles.positionBadgeText}>#{bustedPositions.get(player.id)}</Text>
-                      </View>
+                      <Chip label={`#${bustedPositions.get(player.id)}`} tone="neutral" size="md" style={{ alignSelf: 'center' }} />
                     </View>
                   ))}
                 </>
@@ -576,7 +593,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
           <View style={[styles.modalCard, styles.endModalCard]}>
             <View style={styles.finalCountHeader}>
               <View style={styles.finalCountIcon}>
-                <Ionicons name="podium-outline" size={17} color={colors.gold} />
+                <Ionicons name="podium-outline" size={iconSize.xs} color={colors.gold} />
               </View>
               <Text style={styles.finalCountTitle} maxFontSizeMultiplier={1.3}>Final Ranking</Text>
             </View>
@@ -593,12 +610,12 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
                     <Avatar name={p?.name ?? '?'} size={34} />
                     <Text style={[styles.rankName, { writingDirection: nameWritingDirection(p?.name) }]} numberOfLines={1}>{p?.name}</Text>
                     <View style={styles.rankArrows}>
-                      <TouchableOpacity style={styles.rankArrow} onPress={() => moveRank(i, -1)} disabled={i === 0} hitSlop={6}>
-                        <Ionicons name="chevron-up" size={18} color={i === 0 ? colors.textDim : colors.gold} />
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.rankArrow} onPress={() => moveRank(i, 1)} disabled={i === (rankOrder?.length ?? 0) - 1} hitSlop={6}>
-                        <Ionicons name="chevron-down" size={18} color={i === (rankOrder?.length ?? 0) - 1 ? colors.textDim : colors.gold} />
-                      </TouchableOpacity>
+                      <PressableScale style={styles.rankArrow} onPress={() => moveRank(i, -1)} disabled={i === 0} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Move ${p?.name ?? 'player'} up`} accessibilityState={{ disabled: i === 0 }}>
+                        <Ionicons name="chevron-up" size={iconSize.sm} color={i === 0 ? colors.textDim : colors.gold} />
+                      </PressableScale>
+                      <PressableScale style={styles.rankArrow} onPress={() => moveRank(i, 1)} disabled={i === (rankOrder?.length ?? 0) - 1} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Move ${p?.name ?? 'player'} down`} accessibilityState={{ disabled: i === (rankOrder?.length ?? 0) - 1 }}>
+                        <Ionicons name="chevron-down" size={iconSize.sm} color={i === (rankOrder?.length ?? 0) - 1 ? colors.textDim : colors.gold} />
+                      </PressableScale>
                     </View>
                   </View>
                 );
@@ -715,7 +732,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
           <View style={[styles.modalCard, styles.endModalCard]}>
             <View style={styles.finalCountHeader}>
               <View style={styles.finalCountIcon}>
-                <Ionicons name="flag-outline" size={17} color={colors.gold} />
+                <Ionicons name="flag-outline" size={iconSize.xs} color={colors.gold} />
               </View>
               <Text style={styles.finalCountTitle} maxFontSizeMultiplier={1.3}>The Final Count</Text>
             </View>
@@ -766,7 +783,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
                   </>
                 ) : (
                   <View style={styles.countOkRow}>
-                    <Ionicons name="checkmark-circle" size={15} color={colors.success} />
+                    <Ionicons name="checkmark-circle" size={iconSize.xs} color={colors.success} />
                     <Text style={styles.countOkText}>Totals match — every shekel is accounted for.</Text>
                   </View>
                 )}
@@ -774,21 +791,25 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
 
               {/* Inline override — replaces the old post-hoc confirm dialog */}
               {stacksMismatch && (
-                <TouchableOpacity
+                <PressableScale
                   style={[styles.overrideRow, overrideArmed && styles.overrideRowArmed]}
                   onPress={() => setOverrideArmed(v => !v)}
-                  activeOpacity={0.8}
+                  haptic="light"
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: overrideArmed }}
+                  accessibilityLabel="End anyway with an unbalanced count"
+                  accessibilityHint={`Results will be off by ${formatCents(mismatchCents)}`}
                 >
                   <Ionicons
                     name={overrideArmed ? 'checkbox' : 'square-outline'}
-                    size={22}
+                    size={iconSize.md}
                     color={overrideArmed ? colors.error : colors.textMuted}
                   />
                   <View style={styles.overrideTextWrap}>
                     <Text style={styles.overrideLabel}>End anyway with an unbalanced count</Text>
                     <Text style={styles.overrideCaption}>Results will be off by {formatCents(mismatchCents)}.</Text>
                   </View>
-                </TouchableOpacity>
+                </PressableScale>
               )}
 
               <Text style={styles.finalityFooter}>
@@ -815,22 +836,20 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.background },
-
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 14,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    gap: 12,
+    gap: spacing.md,
   },
   backBtn: {
     width: 36,
     height: 36,
-    borderRadius: 10,
+    borderRadius: radii.sm,
     backgroundColor: colors.surfaceHigh,
     borderWidth: 1,
     borderColor: colors.border,
@@ -839,25 +858,25 @@ const styles = StyleSheet.create({
   },
   headerCenter: { flex: 1, alignItems: 'center', gap: 3 },
   headerTitle: { ...typography.h3, color: colors.text },
-  liveRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  liveRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.gold },
   liveText: { fontSize: 11, fontWeight: '700', color: colors.goldLight, letterSpacing: 0.5 },
 
   scroll: { flex: 1 },
-  content: { padding: 20 },
-  contentInner: { gap: 12 },
-  tableSceneWrapper: { alignSelf: 'center', marginVertical: 4 },
+  content: { padding: spacing.xl },
+  contentInner: { gap: spacing.md },
+  tableSceneWrapper: { alignSelf: 'center', marginVertical: spacing.xs },
   tableScene: { alignSelf: 'center' },
 
   potCard: {
     alignItems: 'center',
-    paddingVertical: 22,
-    borderRadius: 16,
+    paddingVertical: spacing.xxl,
+    borderRadius: radii.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.goldMuted,
-    gap: 4,
-    marginBottom: 8,
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
     overflow: 'hidden',
   },
   potGlow: { position: 'absolute', top: 0, left: 0, right: 0, height: 110 },
@@ -865,15 +884,15 @@ const styles = StyleSheet.create({
 
   // Tournament dashboard
   dashCard: {
-    borderRadius: 16,
+    borderRadius: radii.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.goldMuted,
-    padding: 16,
-    gap: 14,
-    marginBottom: 8,
+    padding: spacing.lg,
+    gap: spacing.lg,
+    marginBottom: spacing.sm,
   },
-  dashClockRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  dashClockRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   dashLevelWrap: { flex: 1, gap: 3 },
   dashLevelLabel: { fontSize: 10, fontWeight: '800', color: colors.goldLight, letterSpacing: 1.4 },
   dashBlinds: { ...typography.amount, color: colors.text, fontVariant: ['tabular-nums'] },
@@ -881,19 +900,19 @@ const styles = StyleSheet.create({
   dashCountdown: { ...typography.amountHero, fontSize: 40, color: colors.gold, fontVariant: ['tabular-nums'] },
   dashCountdownPaused: { color: colors.textMuted },
 
-  dashControls: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  dashControls: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   dashCtrlBtn: {
     height: 44,
     minWidth: 44,
-    paddingHorizontal: 12,
-    borderRadius: 12,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.md,
     backgroundColor: colors.surfaceHigh,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.sm,
   },
   dashCtrlPrimary: { flex: 1, backgroundColor: colors.gold, borderColor: colors.gold },
   dashCtrlPrimaryText: { fontSize: 15, fontWeight: '800', color: colors.background },
@@ -903,17 +922,17 @@ const styles = StyleSheet.create({
   dashStatValue: { fontSize: 18, fontWeight: '800', color: colors.text, fontVariant: ['tabular-nums'] },
   dashStatSub: { fontSize: 13, fontWeight: '700', color: colors.textMuted },
   dashStatLabel: { fontSize: 9.5, fontWeight: '700', color: colors.textMuted, letterSpacing: 0.6 },
-  dashStatDivider: { width: 1, height: 32, backgroundColor: colors.border },
+  dashStatDivider: { width: 1, height: spacing.xxxl, backgroundColor: colors.border },
 
   // Finish-early ranking
-  rankRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
+  rankRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
   rankMedal: { width: 30, fontSize: 16, textAlign: 'center', fontWeight: '700', color: colors.textMuted },
   rankName: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.text },
-  rankArrows: { flexDirection: 'row', gap: 4 },
+  rankArrows: { flexDirection: 'row', gap: spacing.xs },
   rankArrow: {
     width: 36,
     height: 36,
-    borderRadius: 9,
+    borderRadius: radii.sm,
     backgroundColor: colors.surfaceHigh,
     borderWidth: 1,
     borderColor: colors.border,
@@ -924,15 +943,6 @@ const styles = StyleSheet.create({
   // Tournament busted rows
   playerRowBusted: { opacity: 0.55 },
   playerNameBusted: { textDecorationLine: 'line-through' },
-  positionBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    backgroundColor: colors.surfaceHigh,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  positionBadgeText: { fontSize: 12, fontWeight: '800', color: colors.textMuted },
   potValue: { ...typography.amountHero, fontSize: 38, color: colors.goldLight },
   potMeta: { fontSize: 13, color: colors.textMuted },
 
@@ -940,7 +950,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
   sectionTitle: { fontSize: 12, fontWeight: '700', color: colors.textMuted, letterSpacing: 1 },
   sectionAction: { fontSize: 13, fontWeight: '700', color: colors.gold },
@@ -948,17 +958,17 @@ const styles = StyleSheet.create({
   playerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 14,
-    borderRadius: 14,
+    padding: spacing.lg,
+    borderRadius: radii.md,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    gap: 12,
+    gap: spacing.md,
   },
   playerRowLeader: { borderColor: colors.goldMuted, backgroundColor: colors.goldFaint },
   playerInfo: { flex: 1, gap: 2 },
   playerName: { fontSize: 16, fontWeight: '600', color: colors.text },
-  playerNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  playerNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   leaderCrown: { marginTop: 1 },
   playerMeta: { fontSize: 12, color: colors.textMuted },
   playerNet: { fontSize: 16, fontWeight: '800', fontVariant: ['tabular-nums'] },
@@ -971,8 +981,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    paddingHorizontal: 20,
-    paddingTop: 14,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
     backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderTopColor: colors.border,
@@ -984,40 +994,40 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgOverlay,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
+    padding: spacing.xxl,
   },
   modalCard: {
     width: '100%',
     maxWidth: 420,
     backgroundColor: colors.surfaceHigh,
-    borderRadius: 18,
+    borderRadius: radii.xl,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 20,
-    gap: 14,
+    padding: spacing.xl,
+    gap: spacing.lg,
   },
   endModalCard: { maxHeight: '94%' },
   modalTitle: { ...typography.h3, color: colors.text },
   modalSubtitle: { fontSize: 13, color: colors.textMuted, lineHeight: 18 },
-  modalActions: { flexDirection: 'row', gap: 10 },
+  modalActions: { flexDirection: 'row', gap: spacing.md },
   modalBtn: { flex: 1 },
   modalBtnPrimary: { flex: 2 },
 
   endScroll: { flexShrink: 1 },
-  endScrollContent: { gap: 14 },
-  stacksBlock: { gap: 6 },
-  stackRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  endScrollContent: { gap: spacing.lg },
+  stacksBlock: { gap: spacing.sm },
+  stackRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   stackNameWrap: { flex: 1, gap: 2 },
   stackName: { fontSize: 15, fontWeight: '600', color: colors.text, textAlign: 'left' },
   bustedHint: { fontSize: 12, fontWeight: '500', color: colors.textMuted },
   stackInputWrap: { width: 140 },
 
   // The Final Count
-  finalCountHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  finalCountHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   finalCountIcon: {
     width: 34,
     height: 34,
-    borderRadius: 10,
+    borderRadius: radii.sm,
     backgroundColor: colors.goldFaint,
     borderWidth: 1,
     borderColor: colors.goldMuted,
@@ -1027,16 +1037,16 @@ const styles = StyleSheet.create({
   finalCountTitle: { ...typography.displaySerif, fontSize: 26, color: colors.text },
 
   countCard: {
-    padding: 14,
-    borderRadius: 12,
+    padding: spacing.lg,
+    borderRadius: radii.md,
     borderWidth: 1,
-    gap: 5,
+    gap: spacing.xs,
   },
   countCardOk: { backgroundColor: colors.successFaint, borderColor: colors.success },
   countCardWarn: { backgroundColor: colors.errorFaint, borderColor: colors.errorMuted },
   countHeadline: { fontSize: 14, fontWeight: '700', color: colors.text },
   countHeadlineWarn: { color: colors.text },
-  countOkRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  countOkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   countOkText: { fontSize: 12.5, color: colors.success, fontWeight: '600', flex: 1 },
   countDetailWarn: { fontSize: 13, fontWeight: '700', color: colors.error },
   countWhy: { fontSize: 12, color: colors.textMuted, lineHeight: 17 },
@@ -1044,10 +1054,10 @@ const styles = StyleSheet.create({
   overrideRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    padding: 12,
+    gap: spacing.md,
+    padding: spacing.md,
     minHeight: 48,
-    borderRadius: 12,
+    borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
