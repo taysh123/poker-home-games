@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TextInputProps, StyleSheet } from 'react-native';
 import { colors } from '../theme/colors';
+import { radii } from '../theme/radii';
 
 type Props = TextInputProps & {
   label: string;
@@ -54,7 +55,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1.5,
     borderColor: colors.border,
-    borderRadius: 12,
+    borderRadius: radii.control,
     paddingHorizontal: 16,
   },
   inputWrapperError: { borderColor: colors.error },

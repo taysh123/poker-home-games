@@ -10,6 +10,9 @@
  *   3 — flexible tournaments: custom payouts[], editable blindLevels[], a stored
  *       TournamentClock (pause/resume/manual level), starting stack, rebuy/add-on
  *       toggles, late-registration window. All additive — cash games migrate no-op.
+ *   4 — cloud-sync sync metadata: `updatedAt` (bumped on EVERY mutation) and a
+ *       `deletedAt` tombstone (deleteGame keeps the record so deletions propagate
+ *       on the next sync). Both additive; v3 files backfill updatedAt on migration.
  */
 
 export interface LocalPlayer {
@@ -91,7 +94,7 @@ export interface LocalTournamentConfig {
 
 export interface LocalGame {
   id: string;
-  schemaVersion: 3;
+  schemaVersion: 4;
   name: string;
   /** Local games skip Draft — they are Active from creation. */
   status: LocalGameStatus;
@@ -101,6 +104,17 @@ export interface LocalGame {
   tournament?: LocalTournamentConfig;
   createdAt: string;
   endedAt?: string;
+  /**
+   * ISO 8601 — bumped on EVERY mutation (cloud-sync last-writer-wins key).
+   * v3 files backfill this to `endedAt ?? createdAt` on migration.
+   */
+  updatedAt: string;
+  /**
+   * ISO 8601 tombstone. `deleteGame` sets this instead of splicing the record
+   * out, so the deletion can propagate to other devices on the next sync.
+   * Selectors that expose games filter these out (`!g.deletedAt`).
+   */
+  deletedAt?: string;
   chipRatio?: number;
   defaultBuyInCents?: number;
   players: LocalPlayer[];
@@ -110,6 +124,6 @@ export interface LocalGame {
 }
 
 export interface LocalGamesFile {
-  schemaVersion: 3;
+  schemaVersion: 4;
   games: LocalGame[];
 }

@@ -310,6 +310,42 @@ namespace PokerApp.Infrastructure.Persistence.Migrations
                     b.ToTable("CashOuts", (string)null);
                 });
 
+            modelBuilder.Entity("PokerApp.Domain.Entities.CloudBackup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Namespace")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Namespace")
+                        .IsUnique()
+                        .HasDatabaseName("IX_CloudBackups_UserId_Namespace");
+
+                    b.ToTable("CloudBackups", (string)null);
+                });
+
             modelBuilder.Entity("PokerApp.Domain.Entities.CreditBalance", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1208,6 +1244,15 @@ namespace PokerApp.Infrastructure.Persistence.Migrations
                     b.Navigation("SessionPlayer");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("PokerApp.Domain.Entities.CloudBackup", b =>
+                {
+                    b.HasOne("PokerApp.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("PokerApp.Domain.Entities.CreditBalance", b =>

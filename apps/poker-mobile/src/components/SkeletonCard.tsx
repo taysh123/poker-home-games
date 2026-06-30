@@ -1,32 +1,18 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, ViewStyle } from 'react-native';
-import { colors } from '../theme/colors';
-import Shimmer from './motion/Shimmer';
+import React from 'react';
+import { StyleProp, ViewStyle } from 'react-native';
+import Skeleton from './Skeleton';
 
 type Props = {
   height?: number;
   borderRadius?: number;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 };
 
-/** Loading placeholder with a sweeping shimmer (opacity pulse on web). */
+/**
+ * Loading placeholder with a sweeping shimmer (opacity pulse on web, static
+ * under reduce motion). Thin wrapper over the generic `Skeleton` primitive —
+ * kept for its established call sites (defaults: full-width, 80px tall).
+ */
 export default function SkeletonCard({ height = 80, borderRadius = 14, style }: Props) {
-  const [width, setWidth] = useState(0);
-
-  return (
-    <View
-      style={[styles.skeleton, { height, borderRadius }, style]}
-      onLayout={e => setWidth(e.nativeEvent.layout.width)}
-    >
-      {width > 0 && <Shimmer width={width} />}
-    </View>
-  );
+  return <Skeleton height={height} radius={borderRadius} style={style} />;
 }
-
-const styles = StyleSheet.create({
-  skeleton: {
-    backgroundColor: colors.surfaceHigh,
-    width: '100%',
-    overflow: 'hidden',
-  },
-});

@@ -1,14 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   TextInput,
   ScrollView,
-  TouchableOpacity,
   StyleSheet,
   Platform,
   KeyboardAvoidingView,
-  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -16,14 +14,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { shadows } from '../theme/shadows';
 import { typography } from '../theme/typography';
+import { spacing } from '../theme/spacing';
+import { radii } from '../theme/radii';
+import { iconSize } from '../theme/iconSize';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import AppTextInput from '../components/AppTextInput';
 import PrimaryButton from '../components/PrimaryButton';
 import StepIndicator from '../components/StepIndicator';
 import GuestNameInput from '../components/GuestNameInput';
 import Screen from '../components/Screen';
+import Chip from '../components/Chip';
 import DealInOverlay from '../components/DealInOverlay';
 import ScreenHeader from '../components/ScreenHeader';
+import { PressableScale, MotiView, slideUpSequence, staggerIn } from '../components/motion';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import { getRecentGuests, recordGuestName } from '../utils/guestHistory';
 import { parseAmountToCents, formatCents } from '../utils/money';
 import { currencySymbol } from '../utils/currency';
@@ -49,6 +53,14 @@ const DEFAULT_PAYOUTS: Record<number, number[]> = {
 };
 
 /**
+ * Spread-ready entrance props for MotiView. The DS motion recipe's transition
+ * union is looser than MotiView's discriminated transition prop, so we cast at
+ * the boundary (type-only — identical runtime) and keep the DS recipes untouched.
+ */
+const entrance = (opts?: Parameters<typeof slideUpSequence>[0]) =>
+  slideUpSequence(opts) as unknown as React.ComponentProps<typeof MotiView>;
+
+/**
  * Local-only New Game wizard — no account, no network. Mirrors the NewGame
  * wizard UX but every player is a named local player stored on-device.
  */
@@ -59,7 +71,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
 
   const [step, setStep] = useState(1);
   const STEP_LABELS = ['Details', 'Players', 'Review'];
-  const reviewAnim = useRef(new Animated.Value(0)).current;
+  const reduced = useReducedMotion();
   const [starting, setStarting] = useState(false);
   const [dealtGameId, setDealtGameId] = useState<string | null>(null);
 
@@ -137,10 +149,6 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
 
   function goToStep(n: number) {
     setStep(n);
-    if (n === 3) {
-      reviewAnim.setValue(0);
-      Animated.timing(reviewAnim, { toValue: 1, duration: 320, useNativeDriver: Platform.OS !== 'web' }).start();
-    }
   }
 
   function addPlayerName() {
@@ -255,7 +263,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
           <View style={styles.stepContent}>
             <Text style={styles.stepTitle}>Set the Table</Text>
             <View style={styles.localBadge}>
-              <Ionicons name="phone-portrait-outline" size={13} color={colors.goldLight} />
+              <Ionicons name="phone-portrait-outline" size={iconSize.xs} color={colors.goldLight} />
               <Text style={styles.localBadgeText}>Stored on this device — no account needed</Text>
             </View>
 
@@ -287,14 +295,18 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
               ]).map(option => {
                 const selected = mode === option.value;
                 return (
-                  <TouchableOpacity
+                  <PressableScale
                     key={option.value}
                     style={[styles.modeCard, selected && styles.modeCardActive]}
                     onPress={() => setMode(option.value)}
-                    activeOpacity={0.8}
+                    haptic="light"
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: selected }}
+                    aria-checked={selected}
+                    accessibilityLabel={`${option.title}. ${option.blurb}`}
                   >
                     <View style={[styles.modeIconWrap, selected && styles.modeIconWrapActive]}>
-                      <Ionicons name={option.icon} size={20} color={selected ? colors.gold : colors.textMuted} />
+                      <Ionicons name={option.icon} size={iconSize.sm} color={selected ? colors.gold : colors.textMuted} />
                     </View>
                     <View style={styles.modeCardText}>
                       <Text style={[styles.modeCardTitle, selected && styles.modeCardTitleActive]}>
@@ -304,10 +316,10 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                     </View>
                     <Ionicons
                       name={selected ? 'radio-button-on' : 'radio-button-off'}
-                      size={20}
+                      size={iconSize.sm}
                       color={selected ? colors.gold : colors.textDim}
                     />
-                  </TouchableOpacity>
+                  </PressableScale>
                 );
               })}
             </View>
@@ -330,20 +342,20 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                   <View style={styles.setupCardHead}>
                     <Text style={styles.fieldLabel}>Payouts</Text>
                     <View style={styles.stepper}>
-                      <TouchableOpacity style={styles.stepperBtn} onPress={() => setWinnerCount(winners - 1)} disabled={winners <= 1}>
-                        <Ionicons name="remove" size={16} color={winners <= 1 ? colors.textDim : colors.gold} />
-                      </TouchableOpacity>
+                      <PressableScale style={styles.stepperBtn} onPress={() => setWinnerCount(winners - 1)} disabled={winners <= 1} hitSlop={8} accessibilityRole="button" accessibilityLabel="Fewer paid places" accessibilityState={{ disabled: winners <= 1 }}>
+                        <Ionicons name="remove" size={iconSize.xs} color={winners <= 1 ? colors.textDim : colors.gold} />
+                      </PressableScale>
                       <Text style={styles.stepperValue}>{winners} {winners === 1 ? 'place' : 'places'}</Text>
-                      <TouchableOpacity style={styles.stepperBtn} onPress={() => setWinnerCount(winners + 1)} disabled={winners >= WINNERS_MAX}>
-                        <Ionicons name="add" size={16} color={winners >= WINNERS_MAX ? colors.textDim : colors.gold} />
-                      </TouchableOpacity>
+                      <PressableScale style={styles.stepperBtn} onPress={() => setWinnerCount(winners + 1)} disabled={winners >= WINNERS_MAX} hitSlop={8} accessibilityRole="button" accessibilityLabel="More paid places" accessibilityState={{ disabled: winners >= WINNERS_MAX }}>
+                        <Ionicons name="add" size={iconSize.xs} color={winners >= WINNERS_MAX ? colors.textDim : colors.gold} />
+                      </PressableScale>
                     </View>
                   </View>
                   <View style={styles.chipRow}>
                     {(Object.keys(PAYOUT_PRESET_LABELS) as PayoutPreset[]).map(p => (
-                      <TouchableOpacity key={p} style={styles.miniChip} onPress={() => applyPayoutPreset(p)}>
+                      <PressableScale key={p} style={styles.miniChip} onPress={() => applyPayoutPreset(p)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Apply ${PAYOUT_PRESET_LABELS[p]} payout preset`}>
                         <Text style={styles.miniChipText}>{PAYOUT_PRESET_LABELS[p]}</Text>
-                      </TouchableOpacity>
+                      </PressableScale>
                     ))}
                   </View>
                   {payoutPcts.map((pct, i) => (
@@ -363,8 +375,8 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                       <Text style={styles.payoutPct}>%</Text>
                     </View>
                   ))}
-                  <View style={[styles.sumPill, payoutValid ? styles.sumPillOk : styles.sumPillWarn]}>
-                    <Ionicons name={payoutValid ? 'checkmark-circle' : 'alert-circle'} size={14} color={payoutValid ? colors.success : colors.warning} />
+                  <View style={[styles.sumPill, payoutValid ? styles.sumPillOk : styles.sumPillWarn]} accessibilityLiveRegion="polite">
+                    <Ionicons name={payoutValid ? 'checkmark-circle' : 'alert-circle'} size={iconSize.xs} color={payoutValid ? colors.success : colors.warning} />
                     <Text style={[styles.sumText, { color: payoutValid ? colors.success : colors.warning }]}>
                       {payoutValid ? 'Payouts total 100%' : `Payouts total ${payoutSum}% — must be 100%`}
                     </Text>
@@ -375,24 +387,39 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                 <View style={styles.setupCard}>
                   <Text style={styles.fieldLabel}>Blind Structure</Text>
                   <View style={styles.chipRow}>
-                    {(Object.keys(BLIND_PRESET_LABELS) as BlindPreset[]).map(b => (
-                      <TouchableOpacity
-                        key={b}
-                        style={[styles.presetChip, !customBlinds && blindPreset === b && styles.presetChipSelected]}
-                        onPress={() => pickBlindPreset(b)}
-                      >
-                        <Text style={[styles.presetChipText, !customBlinds && blindPreset === b && styles.presetChipTextSelected]}>
-                          {BLIND_PRESET_LABELS[b]}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                    {(Object.keys(BLIND_PRESET_LABELS) as BlindPreset[]).map(b => {
+                      const blindSelected = !customBlinds && blindPreset === b;
+                      return (
+                        <PressableScale
+                          key={b}
+                          style={[styles.presetChip, blindSelected && styles.presetChipSelected]}
+                          onPress={() => pickBlindPreset(b)}
+                          hitSlop={8}
+                          accessibilityRole="radio"
+                          accessibilityState={{ checked: blindSelected }}
+                          aria-checked={blindSelected}
+                          accessibilityLabel={`${BLIND_PRESET_LABELS[b]} blind structure`}
+                        >
+                          <Text style={[styles.presetChipText, blindSelected && styles.presetChipTextSelected]}>
+                            {BLIND_PRESET_LABELS[b]}
+                          </Text>
+                        </PressableScale>
+                      );
+                    })}
                   </View>
-                  <TouchableOpacity style={styles.disclosureRow} onPress={() => setCustomBlinds(v => !v)}>
-                    <Ionicons name={customBlinds ? 'chevron-down' : 'chevron-forward'} size={16} color={colors.gold} />
+                  <PressableScale
+                    style={styles.disclosureRow}
+                    onPress={() => setCustomBlinds(v => !v)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: customBlinds }}
+                    accessibilityLabel={customBlinds ? 'Hide custom blind levels' : 'Customize blind levels'}
+                  >
+                    <Ionicons name={customBlinds ? 'chevron-down' : 'chevron-forward'} size={iconSize.xs} color={colors.gold} />
                     <Text style={styles.disclosureText}>
                       {customBlinds ? 'Custom structure' : `Customize levels (${blindLevels.length} levels)`}
                     </Text>
-                  </TouchableOpacity>
+                  </PressableScale>
                   {customBlinds && (
                     <View style={styles.levelEditor}>
                       <View style={styles.levelHeadRow}>
@@ -411,12 +438,14 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                             value={String(lv.smallBlind)}
                             onChangeText={v => editLevel(i, { smallBlind: parseInt(v.replace(/[^0-9]/g, ''), 10) || 0 })}
                             keyboardType="number-pad"
+                            accessibilityLabel={`Small blind, level ${i + 1}`}
                           />
                           <TextInput
                             style={styles.levelCell}
                             value={String(lv.bigBlind)}
                             onChangeText={v => editLevel(i, { bigBlind: parseInt(v.replace(/[^0-9]/g, ''), 10) || 0 })}
                             keyboardType="number-pad"
+                            accessibilityLabel={`Big blind, level ${i + 1}`}
                           />
                           <TextInput
                             style={styles.levelCell}
@@ -425,22 +454,24 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                             placeholderTextColor={colors.textDim}
                             onChangeText={v => editLevel(i, { ante: parseInt(v.replace(/[^0-9]/g, ''), 10) || undefined })}
                             keyboardType="number-pad"
+                            accessibilityLabel={`Ante, level ${i + 1}`}
                           />
                           <TextInput
                             style={styles.levelCell}
                             value={String(Math.round(lv.durationSeconds / 60))}
                             onChangeText={v => editLevel(i, { durationSeconds: (parseInt(v.replace(/[^0-9]/g, ''), 10) || 0) * 60 })}
                             keyboardType="number-pad"
+                            accessibilityLabel={`Minutes, level ${i + 1}`}
                           />
-                          <TouchableOpacity style={styles.levelRemove} onPress={() => removeLevel(i)} hitSlop={6}>
-                            <Ionicons name="close-circle" size={18} color={colors.textMuted} />
-                          </TouchableOpacity>
+                          <PressableScale style={styles.levelRemove} onPress={() => removeLevel(i)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Remove level ${i + 1}`}>
+                            <Ionicons name="close-circle" size={iconSize.xs} color={colors.textMuted} />
+                          </PressableScale>
                         </View>
                       ))}
-                      <TouchableOpacity style={styles.addLevelBtn} onPress={addLevel}>
-                        <Ionicons name="add" size={16} color={colors.gold} />
+                      <PressableScale style={styles.addLevelBtn} onPress={addLevel} accessibilityRole="button" accessibilityLabel="Add blind level">
+                        <Ionicons name="add" size={iconSize.xs} color={colors.gold} />
                         <Text style={styles.addLevelText}>Add level</Text>
-                      </TouchableOpacity>
+                      </PressableScale>
                     </View>
                   )}
                 </View>
@@ -460,32 +491,32 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                   <View style={styles.halfField}>
                     <Text style={styles.fieldLabel}>Late Reg</Text>
                     <View style={styles.stepper}>
-                      <TouchableOpacity style={styles.stepperBtn} onPress={() => setLateRegLevels(n => Math.max(0, n - 1))} disabled={lateRegLevels <= 0}>
-                        <Ionicons name="remove" size={16} color={lateRegLevels <= 0 ? colors.textDim : colors.gold} />
-                      </TouchableOpacity>
+                      <PressableScale style={styles.stepperBtn} onPress={() => setLateRegLevels(n => Math.max(0, n - 1))} disabled={lateRegLevels <= 0} hitSlop={8} accessibilityRole="button" accessibilityLabel="Fewer late registration levels" accessibilityState={{ disabled: lateRegLevels <= 0 }}>
+                        <Ionicons name="remove" size={iconSize.xs} color={lateRegLevels <= 0 ? colors.textDim : colors.gold} />
+                      </PressableScale>
                       <Text style={styles.stepperValue}>{lateRegLevels === 0 ? 'Off' : `Lv ${lateRegLevels}`}</Text>
-                      <TouchableOpacity style={styles.stepperBtn} onPress={() => setLateRegLevels(n => Math.min(blindLevels.length, n + 1))}>
-                        <Ionicons name="add" size={16} color={colors.gold} />
-                      </TouchableOpacity>
+                      <PressableScale style={styles.stepperBtn} onPress={() => setLateRegLevels(n => Math.min(blindLevels.length, n + 1))} hitSlop={8} accessibilityRole="button" accessibilityLabel="More late registration levels">
+                        <Ionicons name="add" size={iconSize.xs} color={colors.gold} />
+                      </PressableScale>
                     </View>
                   </View>
                 </View>
 
-                <TouchableOpacity style={styles.toggleRow} onPress={() => setRebuysAllowed(v => !v)} activeOpacity={0.8}>
+                <PressableScale style={styles.toggleRow} onPress={() => setRebuysAllowed(v => !v)} haptic="light" accessibilityRole="switch" accessibilityState={{ checked: rebuysAllowed }} accessibilityLabel="Rebuys. Players can buy back in while they have chips.">
                   <View style={styles.toggleText}>
                     <Text style={styles.toggleTitle}>Rebuys</Text>
                     <Text style={styles.toggleBlurb}>Players can buy back in while they have chips.</Text>
                   </View>
-                  <Ionicons name={rebuysAllowed ? 'toggle' : 'toggle-outline'} size={34} color={rebuysAllowed ? colors.gold : colors.textDim} />
-                </TouchableOpacity>
+                  <Ionicons name={rebuysAllowed ? 'toggle' : 'toggle-outline'} size={iconSize.lg} color={rebuysAllowed ? colors.gold : colors.textDim} />
+                </PressableScale>
 
-                <TouchableOpacity style={styles.toggleRow} onPress={() => setAddOnsAllowed(v => !v)} activeOpacity={0.8}>
+                <PressableScale style={styles.toggleRow} onPress={() => setAddOnsAllowed(v => !v)} haptic="light" accessibilityRole="switch" accessibilityState={{ checked: addOnsAllowed }} accessibilityLabel="Add-ons. One-time top-up, usually at the break.">
                   <View style={styles.toggleText}>
                     <Text style={styles.toggleTitle}>Add-ons</Text>
                     <Text style={styles.toggleBlurb}>One-time top-up, usually at the break.</Text>
                   </View>
-                  <Ionicons name={addOnsAllowed ? 'toggle' : 'toggle-outline'} size={34} color={addOnsAllowed ? colors.gold : colors.textDim} />
-                </TouchableOpacity>
+                  <Ionicons name={addOnsAllowed ? 'toggle' : 'toggle-outline'} size={iconSize.lg} color={addOnsAllowed ? colors.gold : colors.textDim} />
+                </PressableScale>
                 {addOnsAllowed && (
                   <AppTextInput
                     label="Add-on Amount"
@@ -550,11 +581,13 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
               <View style={styles.field}>
                 <Text style={styles.fieldLabel}>At the Table ({playerNames.length})</Text>
                 <View style={styles.chipRow}>
-                  {playerNames.map(name => (
-                    <TouchableOpacity key={name} style={styles.playerChip} onPress={() => removePlayerName(name)}>
-                      <Text style={styles.playerChipText}>{name}</Text>
-                      <Ionicons name="close" size={12} color={colors.textMuted} style={{ marginLeft: 4 }} />
-                    </TouchableOpacity>
+                  {playerNames.map((name, i) => (
+                    <MotiView key={name} {...entrance({ reduced, delay: staggerIn(i), distance: 8 })}>
+                      <PressableScale style={styles.playerChip} onPress={() => removePlayerName(name)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Remove ${name}`}>
+                        <Text style={styles.playerChipText}>{name}</Text>
+                        <Ionicons name="close" size={iconSize.xs} color={colors.textMuted} style={{ marginLeft: spacing.xs }} />
+                      </PressableScale>
+                    </MotiView>
                   ))}
                 </View>
               </View>
@@ -572,10 +605,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
           <View style={styles.stepContent}>
             <Text style={styles.stepTitle}>Ready to Play?</Text>
 
-            <Animated.View style={[styles.reviewCard, {
-              opacity: reviewAnim,
-              transform: [{ translateY: reviewAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }],
-            }]}>
+            <MotiView {...entrance({ reduced })} style={styles.reviewCard}>
               <View style={styles.reviewAccent} />
               <View style={styles.reviewCardBody}>
                 <Text style={styles.reviewName}>{gameName}</Text>
@@ -589,33 +619,33 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                   {isTournament ? (
                     <>
                       {parseAmountToCents(entryFee) !== null && (
-                        <Text style={styles.reviewChip}>{formatCents(parseAmountToCents(entryFee)!)} entry</Text>
+                        <Chip tone="gold" label={`${formatCents(parseAmountToCents(entryFee)!)} entry`} />
                       )}
-                      <Text style={styles.reviewChip}>{winners}-place payout</Text>
-                      <Text style={styles.reviewChip}>{customBlinds ? `${blindLevels.length} custom levels` : `${blindPreset} blinds`}</Text>
-                      {rebuysAllowed && <Text style={styles.reviewChip}>rebuys</Text>}
-                      {addOnsAllowed && <Text style={styles.reviewChip}>add-ons</Text>}
-                      {lateRegLevels > 0 && <Text style={styles.reviewChip}>late reg · Lv {lateRegLevels}</Text>}
+                      <Chip tone="gold" label={`${winners}-place payout`} />
+                      <Chip tone="gold" label={customBlinds ? `${blindLevels.length} custom levels` : `${blindPreset} blinds`} />
+                      {rebuysAllowed && <Chip tone="gold" label="rebuys" />}
+                      {addOnsAllowed && <Chip tone="gold" label="add-ons" />}
+                      {lateRegLevels > 0 && <Chip tone="gold" label={`late reg · Lv ${lateRegLevels}`} />}
                     </>
                   ) : (
                     <>
                       {defaultBuyIn && parseAmountToCents(defaultBuyIn) !== null
-                        ? <Text style={styles.reviewChip}>{formatCents(parseAmountToCents(defaultBuyIn)!)} buy-in</Text>
+                        ? <Chip tone="gold" label={`${formatCents(parseAmountToCents(defaultBuyIn)!)} buy-in`} />
                         : null}
-                      {chipRatio ? <Text style={styles.reviewChip}>{chipRatio} chips/{sym}</Text> : null}
+                      {chipRatio ? <Chip tone="gold" label={`${chipRatio} chips/${sym}`} /> : null}
                     </>
                   )}
                 </View>
               </View>
-            </Animated.View>
+            </MotiView>
 
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>Players</Text>
               <View style={styles.chipRow}>
-                {playerNames.map(name => (
-                  <View key={name} style={styles.reviewPlayerChip}>
+                {playerNames.map((name, i) => (
+                  <MotiView key={name} {...entrance({ reduced, delay: staggerIn(i), distance: 8 })} style={styles.reviewPlayerChip}>
                     <Text style={styles.reviewPlayerName}>{name}</Text>
-                  </View>
+                  </MotiView>
                 ))}
               </View>
             </View>
@@ -647,26 +677,26 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
 
   scroll: { flex: 1 },
-  content: { padding: 20 },
-  stepContent: { gap: 24 },
-  stepTitle: { fontSize: 22, fontWeight: '700', color: colors.text },
+  content: { padding: spacing.xl },
+  stepContent: { gap: spacing.xxl },
+  stepTitle: { ...typography.h2, color: colors.text },
 
   localBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.sm,
     alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 10,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.sm,
     backgroundColor: colors.goldFaint,
     borderWidth: 1,
     borderColor: colors.goldMuted,
-    marginTop: -12,
+    marginTop: -spacing.md,
   },
   localBadgeText: { fontSize: 12, fontWeight: '600', color: colors.goldLight },
 
-  field: { gap: 10 },
+  field: { gap: spacing.md },
   fieldLabel: {
     fontSize: 12,
     fontWeight: '600',
@@ -676,27 +706,27 @@ const styles = StyleSheet.create({
   },
   fieldError: { fontSize: 12, color: colors.error, marginTop: 2 },
 
-  row: { flexDirection: 'row', gap: 12 },
+  row: { flexDirection: 'row', gap: spacing.md },
   halfField: { flex: 1 },
 
   // Cash / Tournament mode cards + preset chips
   modeCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: 14,
+    gap: spacing.md,
+    padding: spacing.lg,
     minHeight: 64,
-    borderRadius: 14,
+    borderRadius: radii.md,
     borderWidth: 1.5,
     borderColor: colors.border,
     backgroundColor: colors.surface,
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   modeCardActive: { borderColor: colors.gold, backgroundColor: colors.goldFaint },
   modeIconWrap: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: radii.sm,
     backgroundColor: colors.surfaceHigh,
     borderWidth: 1,
     borderColor: colors.border,
@@ -709,9 +739,9 @@ const styles = StyleSheet.create({
   modeCardTitleActive: { color: colors.goldLight },
   modeCardBlurb: { fontSize: 12, color: colors.textMuted, lineHeight: 16 },
   presetChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: radii.sm,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
@@ -722,9 +752,9 @@ const styles = StyleSheet.create({
 
   // Tournament setup cards
   setupCard: {
-    gap: 12,
-    padding: 14,
-    borderRadius: 14,
+    gap: spacing.md,
+    padding: spacing.lg,
+    borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
@@ -733,52 +763,52 @@ const styles = StyleSheet.create({
   stepper: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    paddingVertical: 4,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
     backgroundColor: colors.surfaceHigh,
   },
   stepperBtn: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
   stepperValue: { fontSize: 13, fontWeight: '700', color: colors.text, minWidth: 56, textAlign: 'center' },
   miniChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.sm,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surfaceHigh,
   },
   miniChipText: { fontSize: 12, fontWeight: '600', color: colors.textMuted },
-  payoutRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  payoutRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   payoutRank: { width: 34, fontSize: 16, textAlign: 'center' },
   payoutInputWrap: { flex: 1 },
   payoutInput: {
     backgroundColor: colors.surfaceHigh,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
     fontSize: 15,
     color: colors.text,
   },
   payoutPct: { fontSize: 15, fontWeight: '700', color: colors.textMuted, width: 18 },
-  sumPill: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
+  sumPill: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, alignSelf: 'flex-start' },
   sumPillOk: {},
   sumPillWarn: {},
   sumText: { fontSize: 12.5, fontWeight: '600' },
 
-  disclosureRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 },
+  disclosureRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs, minHeight: 44 },
   disclosureText: { fontSize: 13, fontWeight: '600', color: colors.gold },
-  levelEditor: { gap: 6 },
-  levelHeadRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  levelEditor: { gap: spacing.sm },
+  levelHeadRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   hLv: { width: 22, fontSize: 9, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.3, textAlign: 'center' },
   hCell: { flex: 1, fontSize: 9, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.3, textAlign: 'center' },
   hRemove: { width: 24 },
-  levelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  levelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   levelNum: { width: 22, fontSize: 13, fontWeight: '700', color: colors.textMuted, textAlign: 'center' },
   levelCell: {
     flex: 1,
@@ -786,24 +816,24 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceHigh,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 4,
-    paddingVertical: 8,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.sm,
     fontSize: 13,
     color: colors.text,
     textAlign: 'center',
   },
   levelRemove: { width: 24, alignItems: 'center', justifyContent: 'center' },
-  addLevelBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, marginTop: 2 },
+  addLevelBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.md, marginTop: 2, minHeight: 44 },
   addLevelText: { fontSize: 13, fontWeight: '700', color: colors.gold },
 
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
-    padding: 14,
-    borderRadius: 14,
+    gap: spacing.md,
+    padding: spacing.lg,
+    borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
@@ -812,21 +842,21 @@ const styles = StyleSheet.create({
   toggleTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
   toggleBlurb: { fontSize: 12, color: colors.textMuted, lineHeight: 16 },
 
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   playerChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.sm,
     borderWidth: 1,
     borderColor: colors.goldMuted,
     backgroundColor: colors.goldSubtle,
   },
   playerChipText: { fontSize: 13, fontWeight: '600', color: colors.gold },
 
-  actionRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  actionButton: { marginTop: 8 },
+  actionRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm },
+  actionButton: { marginTop: spacing.sm },
   stepBackBtn: { flex: 1 },
   nextBtn: { flex: 2 },
 
@@ -834,7 +864,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.goldMuted,
-    borderRadius: 16,
+    borderRadius: radii.lg,
     overflow: 'hidden',
     flexDirection: 'row',
     ...shadows.goldSm,
@@ -842,33 +872,22 @@ const styles = StyleSheet.create({
   reviewAccent: {
     width: 4,
     backgroundColor: colors.gold,
-    borderTopLeftRadius: 16,
-    borderBottomLeftRadius: 16,
+    borderTopLeftRadius: radii.lg,
+    borderBottomLeftRadius: radii.lg,
   },
   reviewCardBody: {
     flex: 1,
-    padding: 20,
-    gap: 6,
+    padding: spacing.xl,
+    gap: spacing.sm,
   },
   reviewName: { ...typography.h2, color: colors.text },
   reviewMeta: { fontSize: 14, color: colors.textMuted },
   reviewPlayerCount: { fontSize: 13, color: colors.goldLight, fontWeight: '600' },
-  reviewMetaRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
-  reviewChip: {
-    fontSize: 13,
-    color: colors.gold,
-    fontWeight: '600',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    backgroundColor: colors.goldSubtle,
-    borderWidth: 1,
-    borderColor: colors.goldMuted,
-  },
+  reviewMetaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xs },
   reviewPlayerChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 10,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.sm,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surfaceHigh,

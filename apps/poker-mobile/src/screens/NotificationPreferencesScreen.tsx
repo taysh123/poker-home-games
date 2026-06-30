@@ -6,7 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import Screen from '../components/Screen';
 import BrandHeader from '../components/BrandHeader';
 import Card from '../components/Card';
-import PressableScale from '../components/motion/PressableScale';
+import { PressableScale, MotiView, slideUpSequence, staggerIn } from '../components/motion';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { spacing } from '../theme/spacing';
@@ -34,6 +35,7 @@ export default function NotificationPreferencesScreen() {
   const { isPremium } = useEntitlements();
   const { creditsRemaining, policyKind } = useCoach();
   const [prefs, setPrefs] = useState<ReminderPrefs>(DEFAULT_REMINDER_PREFS);
+  const reduced = useReducedMotion();
 
   useEffect(() => { loadReminderPrefs().then(setPrefs); }, []);
 
@@ -54,41 +56,49 @@ export default function NotificationPreferencesScreen() {
     <Screen>
       <BrandHeader variant="screen" title="Reminders" subtitle="On-device only · never spammy" onBack={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <ToggleRow
-          icon="school-outline"
-          title="Daily study reminder"
-          sub={prefs.dailyStudy.enabled ? `Every day at ${fmtHour(prefs.dailyStudy.hour)}` : 'A gentle nudge to drill a spot'}
-          value={prefs.dailyStudy.enabled}
-          onChange={v => apply({ ...prefs, dailyStudy: { ...prefs.dailyStudy, enabled: v } }, v)}
-        />
+        <MotiView {...slideUpSequence({ reduced, delay: staggerIn(0) })}>
+          <ToggleRow
+            icon="school-outline"
+            title="Daily study reminder"
+            sub={prefs.dailyStudy.enabled ? `Every day at ${fmtHour(prefs.dailyStudy.hour)}` : 'A gentle nudge to drill a spot'}
+            value={prefs.dailyStudy.enabled}
+            onChange={v => apply({ ...prefs, dailyStudy: { ...prefs.dailyStudy, enabled: v } }, v)}
+          />
+        </MotiView>
         {prefs.dailyStudy.enabled && (
-          <View style={styles.hourRow}>
-            <Text style={styles.hourLabel}>Reminder time</Text>
-            <View style={styles.stepper}>
-              <PressableScale style={styles.stepBtn} onPress={() => apply({ ...prefs, dailyStudy: { ...prefs.dailyStudy, hour: (prefs.dailyStudy.hour + 23) % 24 } }, false)} accessibilityRole="button" accessibilityLabel="Earlier reminder time">
-                <Ionicons name="remove" size={16} color={colors.gold} />
-              </PressableScale>
-              <Text style={styles.hourVal}>{fmtHour(prefs.dailyStudy.hour)}</Text>
-              <PressableScale style={styles.stepBtn} onPress={() => apply({ ...prefs, dailyStudy: { ...prefs.dailyStudy, hour: (prefs.dailyStudy.hour + 1) % 24 } }, false)} accessibilityRole="button" accessibilityLabel="Later reminder time">
-                <Ionicons name="add" size={16} color={colors.gold} />
-              </PressableScale>
+          <MotiView {...slideUpSequence({ reduced, delay: staggerIn(1) })}>
+            <View style={styles.hourRow}>
+              <Text style={styles.hourLabel}>Reminder time</Text>
+              <View style={styles.stepper}>
+                <PressableScale style={styles.stepBtn} hitSlop={10} onPress={() => apply({ ...prefs, dailyStudy: { ...prefs.dailyStudy, hour: (prefs.dailyStudy.hour + 23) % 24 } }, false)} haptic="light" accessibilityRole="button" accessibilityLabel="Earlier reminder time">
+                  <Ionicons name="remove" size={16} color={colors.gold} />
+                </PressableScale>
+                <Text style={styles.hourVal}>{fmtHour(prefs.dailyStudy.hour)}</Text>
+                <PressableScale style={styles.stepBtn} hitSlop={10} onPress={() => apply({ ...prefs, dailyStudy: { ...prefs.dailyStudy, hour: (prefs.dailyStudy.hour + 1) % 24 } }, false)} haptic="light" accessibilityRole="button" accessibilityLabel="Later reminder time">
+                  <Ionicons name="add" size={16} color={colors.gold} />
+                </PressableScale>
+              </View>
             </View>
-          </View>
+          </MotiView>
         )}
-        <ToggleRow
-          icon="flame-outline"
-          title="Streak at risk"
-          sub="Evening nudge if your streak is alive but today's goal isn't met"
-          value={prefs.streakRisk}
-          onChange={v => apply({ ...prefs, streakRisk: v }, v)}
-        />
-        <ToggleRow
-          icon="sparkles-outline"
-          title="Unused free analysis"
-          sub="Remind me to use my free AI Coach analysis"
-          value={prefs.freeAi}
-          onChange={v => apply({ ...prefs, freeAi: v }, v)}
-        />
+        <MotiView {...slideUpSequence({ reduced, delay: staggerIn(2) })}>
+          <ToggleRow
+            icon="flame-outline"
+            title="Streak at risk"
+            sub="Evening nudge if your streak is alive but today's goal isn't met"
+            value={prefs.streakRisk}
+            onChange={v => apply({ ...prefs, streakRisk: v }, v)}
+          />
+        </MotiView>
+        <MotiView {...slideUpSequence({ reduced, delay: staggerIn(3) })}>
+          <ToggleRow
+            icon="sparkles-outline"
+            title="Unused free analysis"
+            sub="Remind me to use my free AI Coach analysis"
+            value={prefs.freeAi}
+            onChange={v => apply({ ...prefs, freeAi: v }, v)}
+          />
+        </MotiView>
         <Text style={styles.note}>Reminders are scheduled on your device. No data leaves the app.</Text>
       </ScrollView>
     </Screen>

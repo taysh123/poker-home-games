@@ -18,6 +18,8 @@ import EmptyState from '../../../components/EmptyState';
 import StateView from '../../../components/StateView';
 import ListRow from '../../../components/ListRow';
 import Chip from '../../../components/Chip';
+import { MotiView, slideUpSequence, staggerIn } from '../../../components/motion';
+import { useReducedMotion } from '../../../hooks/useReducedMotion';
 import { spacing } from '../../../theme/spacing';
 import { colors } from '../../../theme/colors';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
@@ -33,6 +35,7 @@ export default function LessonModulesScreen() {
   const navigation = useNavigation<Nav>();
   const { enabled, isLoaded, query } = useContent();
   const { isPremium } = useEntitlements();
+  const reduced = useReducedMotion();
   const [modules, setModules] = useState<LessonModule[] | null>(null);
   const [packs, setPacks] = useState<Pack[]>([]);
   const [modulePackIds, setModulePackIds] = useState<Record<string, string>>({});
@@ -81,13 +84,13 @@ export default function LessonModulesScreen() {
           empty={<EmptyState ionicon="book-outline" title="No lessons yet" subtitle="Lessons arrive with the next content update." action={{ label: 'Try the Spot Trainer', onPress: () => navigation.navigate('StudyTrainer', { mode: 'spot' }) }} />}
           onRetry={() => setReloadKey(k => k + 1)}
         >
-          {(modules ?? []).map(m => {
+          {(modules ?? []).map((m, i) => {
             const availability = availabilityForModule(m.moduleId);
             const locked = availability === 'locked';
             const comingSoon = availability === 'coming_soon';
             return (
+              <MotiView key={m.moduleId} {...slideUpSequence({ reduced, delay: staggerIn(i) })}>
               <ListRow
-                key={m.moduleId}
                 icon="book-outline"
                 title={m.moduleName || m.moduleId}
                 titleLines={2}
@@ -108,6 +111,7 @@ export default function LessonModulesScreen() {
                       : <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
                 }
               />
+              </MotiView>
             );
           })}
         </StateView>

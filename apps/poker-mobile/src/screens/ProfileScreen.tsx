@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
   ScrollView,
   ActivityIndicator,
   StyleSheet,
@@ -26,6 +24,11 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import Screen from '../components/Screen';
 import ScreenHeader from '../components/ScreenHeader';
 import RankBadge from '../components/RankBadge';
+import CloudSyncCard from '../components/CloudSyncCard';
+import AppTextInput from '../components/AppTextInput';
+import PrimaryButton from '../components/PrimaryButton';
+import { PressableScale, MotiView, slideUpSequence, staggerIn } from '../components/motion';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useCurrency } from '../context/CurrencyContext';
 import Avatar from '../components/Avatar';
 import { AVATAR_COLORS } from '../utils/avatarColor';
@@ -44,6 +47,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Profile'>;
 export default function ProfileScreen({ navigation }: Props) {
   const { user, updateUser, logout } = useAuth();
   const { code: currencyCode } = useCurrency();
+  const reduced = useReducedMotion();
 
   // Profile edit state
   const [editingProfile, setEditingProfile] = useState(false);
@@ -185,7 +189,7 @@ export default function ProfileScreen({ navigation }: Props) {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
         {/* Identity hero */}
-        <View style={styles.avatarWrap}>
+        <MotiView style={styles.avatarWrap} {...slideUpSequence({ reduced })}>
           <LinearGradient
             colors={[colors.goldFaint, 'transparent']}
             start={{ x: 0.5, y: 0 }}
@@ -202,12 +206,13 @@ export default function ProfileScreen({ navigation }: Props) {
           />
           <Text style={styles.avatarUsername} numberOfLines={1}>{user?.username}</Text>
           <Text style={styles.avatarEmail} numberOfLines={1}>{user?.email}</Text>
-        </View>
+        </MotiView>
 
         {/* Rank / XP — tap for all achievements (retention only; renders null when off) */}
         <RankBadge onPress={() => navigation.navigate('Achievements')} />
 
         {/* ── Identity section ────────────────────────────────────────── */}
+        <MotiView {...slideUpSequence({ reduced, delay: staggerIn(1) })}>
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleRow}>
@@ -220,27 +225,35 @@ export default function ProfileScreen({ navigation }: Props) {
 
           <Text style={styles.fieldLabel}>EMOJI</Text>
           <View style={styles.identityGrid}>
-            <TouchableOpacity
+            <PressableScale
               style={[styles.emojiCell, !pendingEmoji && styles.identityCellSelected]}
               onPress={() => setPendingEmoji('')}
+              haptic="light"
+              accessibilityRole="button"
+              accessibilityLabel="Use your initial as your avatar"
+              accessibilityState={{ selected: !pendingEmoji }}
             >
               <Text style={styles.emojiInitial}>{(user?.username?.[0] ?? '?').toUpperCase()}</Text>
-            </TouchableOpacity>
+            </PressableScale>
             {IDENTITY_EMOJIS.map(e => (
-              <TouchableOpacity
+              <PressableScale
                 key={e}
                 style={[styles.emojiCell, pendingEmoji === e && styles.identityCellSelected]}
                 onPress={() => setPendingEmoji(e)}
+                haptic="light"
+                accessibilityRole="button"
+                accessibilityLabel={`Avatar emoji ${e}`}
+                accessibilityState={{ selected: pendingEmoji === e }}
               >
                 <Text style={styles.emojiText} allowFontScaling={false}>{e}</Text>
-              </TouchableOpacity>
+              </PressableScale>
             ))}
           </View>
 
           <Text style={styles.fieldLabel}>COLOR</Text>
           <View style={styles.identityGrid}>
-            {AVATAR_COLORS.map(c => (
-              <TouchableOpacity
+            {AVATAR_COLORS.map((c, i) => (
+              <PressableScale
                 key={c}
                 style={[
                   styles.colorCell,
@@ -248,24 +261,28 @@ export default function ProfileScreen({ navigation }: Props) {
                   pendingColor === c && styles.colorCellSelected,
                 ]}
                 onPress={() => setPendingColor(c)}
+                haptic="light"
+                hitSlop={6}
+                accessibilityRole="button"
+                accessibilityLabel={`Avatar color ${i + 1}`}
+                accessibilityState={{ selected: pendingColor === c }}
               />
             ))}
           </View>
 
           {identityDirty && (
-            <TouchableOpacity
-              style={[styles.saveBtn, savingIdentity && { opacity: 0.6 }]}
+            <PrimaryButton
+              label="Save Identity"
               onPress={handleSaveIdentity}
-              disabled={savingIdentity}
-            >
-              {savingIdentity
-                ? <ActivityIndicator size="small" color={colors.background} />
-                : <Text style={styles.saveBtnText}>Save Identity</Text>}
-            </TouchableOpacity>
+              loading={savingIdentity}
+              style={styles.identitySaveBtn}
+            />
           )}
         </View>
+        </MotiView>
 
         {/* ── Profile section ─────────────────────────────────────────── */}
+        <MotiView {...slideUpSequence({ reduced, delay: staggerIn(2) })}>
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleRow}>
@@ -275,52 +292,62 @@ export default function ProfileScreen({ navigation }: Props) {
               <Text style={styles.sectionTitle}>Profile</Text>
             </View>
             {!editingProfile && (
-              <TouchableOpacity style={styles.editIconBtn} onPress={() => setEditingProfile(true)} hitSlop={8}>
+              <PressableScale
+                style={styles.editIconBtn}
+                onPress={() => setEditingProfile(true)}
+                hitSlop={8}
+                haptic="light"
+                accessibilityRole="button"
+                accessibilityLabel="Edit profile"
+              >
                 <Ionicons name="create-outline" size={16} color={colors.gold} />
-              </TouchableOpacity>
+              </PressableScale>
             )}
           </View>
 
           {editingProfile ? (
-            <>
-              <Text style={styles.fieldLabel}>USERNAME</Text>
-              <TextInput
-                style={styles.input}
+            <View style={styles.inputGroup}>
+              <AppTextInput
+                label="Username"
                 value={username}
                 onChangeText={setUsername}
                 autoCapitalize="none"
                 autoCorrect={false}
+                autoComplete="username"
+                textContentType="username"
+                returnKeyType="next"
                 editable={!savingProfile}
               />
-              <Text style={styles.fieldLabel}>EMAIL</Text>
-              <TextInput
-                style={styles.input}
+              <AppTextInput
+                label="Email"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
+                autoComplete="email"
+                textContentType="emailAddress"
+                returnKeyType="done"
                 editable={!savingProfile}
               />
               <View style={styles.editBtns}>
-                <TouchableOpacity
-                  style={[styles.btn, styles.btnSecondary]}
+                <PrimaryButton
+                  variant="outline"
+                  label="Cancel"
+                  fullWidth={false}
+                  style={styles.flexBtn}
                   onPress={handleCancelEdit}
                   disabled={savingProfile}
-                >
-                  <Text style={styles.btnSecondaryText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.btn, styles.btnPrimary, savingProfile && { opacity: 0.6 }]}
+                />
+                <PrimaryButton
+                  label="Save"
+                  fullWidth={false}
+                  style={styles.flexBtn}
                   onPress={handleSaveProfile}
-                  disabled={savingProfile}
-                >
-                  {savingProfile
-                    ? <ActivityIndicator size="small" color={colors.background} />
-                    : <Text style={styles.btnPrimaryText}>Save</Text>}
-                </TouchableOpacity>
+                  loading={savingProfile}
+                />
               </View>
-            </>
+            </View>
           ) : (
             <>
               <View style={styles.fieldRow}>
@@ -334,8 +361,10 @@ export default function ProfileScreen({ navigation }: Props) {
             </>
           )}
         </View>
+        </MotiView>
 
         {/* ── Change Password section ──────────────────────────────────── */}
+        <MotiView {...slideUpSequence({ reduced, delay: staggerIn(3) })}>
         <View style={styles.section}>
           <View style={[styles.sectionHeader, { marginBottom: 14 }]}>
             <View style={styles.sectionTitleRow}>
@@ -345,49 +374,54 @@ export default function ProfileScreen({ navigation }: Props) {
               <Text style={styles.sectionTitle}>Change Password</Text>
             </View>
           </View>
-          <Text style={styles.fieldLabel}>CURRENT PASSWORD</Text>
-          <TextInput
-            style={styles.input}
-            value={currentPassword}
-            onChangeText={setCurrentPassword}
-            secureTextEntry
-            placeholder="••••••••"
-            placeholderTextColor={colors.textDim}
-            editable={!savingPassword}
-          />
-          <Text style={styles.fieldLabel}>NEW PASSWORD</Text>
-          <TextInput
-            style={styles.input}
-            value={newPassword}
-            onChangeText={setNewPassword}
-            secureTextEntry
-            placeholder="••••••••"
-            placeholderTextColor={colors.textDim}
-            editable={!savingPassword}
-          />
-          <Text style={styles.fieldLabel}>CONFIRM NEW PASSWORD</Text>
-          <TextInput
-            style={styles.input}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-            placeholder="••••••••"
-            placeholderTextColor={colors.textDim}
-            editable={!savingPassword}
-          />
-          <TouchableOpacity
-            style={[styles.btn, styles.btnPrimary, styles.btnFull, savingPassword && { opacity: 0.6 }]}
-            onPress={handleChangePassword}
-            disabled={savingPassword}
-          >
-            {savingPassword
-              ? <ActivityIndicator size="small" color={colors.background} />
-              : <Text style={styles.btnPrimaryText}>Change Password</Text>}
-          </TouchableOpacity>
+          <View style={styles.inputGroup}>
+            <AppTextInput
+              label="Current Password"
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+              secureTextEntry
+              placeholder="••••••••"
+              autoComplete="current-password"
+              textContentType="password"
+              editable={!savingPassword}
+            />
+            <AppTextInput
+              label="New Password"
+              value={newPassword}
+              onChangeText={setNewPassword}
+              secureTextEntry
+              placeholder="••••••••"
+              autoComplete="new-password"
+              textContentType="newPassword"
+              editable={!savingPassword}
+            />
+            <AppTextInput
+              label="Confirm New Password"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+              placeholder="••••••••"
+              autoComplete="new-password"
+              textContentType="newPassword"
+              editable={!savingPassword}
+            />
+            <PrimaryButton
+              label="Change Password"
+              onPress={handleChangePassword}
+              loading={savingPassword}
+            />
+          </View>
         </View>
+        </MotiView>
+
+        {/* ── Cloud Sync (honest Coming-soon until cloud_sync is live) ──── */}
+        <MotiView {...slideUpSequence({ reduced, delay: staggerIn(4) })}>
+          <CloudSyncCard onGoPremium={() => navigation.navigate('Paywall', { trigger: 'profile' })} />
+        </MotiView>
 
         {/* ── Subscription & usage (flag-gated) ─────────────────────────── */}
         {isFeatureEnabled('paywall') && (
+          <MotiView {...slideUpSequence({ reduced, delay: staggerIn(4) })}>
           <View style={styles.section}>
             <View style={[styles.sectionHeader, { marginBottom: 12 }]}>
               <View style={styles.sectionTitleRow}>
@@ -397,15 +431,23 @@ export default function ProfileScreen({ navigation }: Props) {
                 <Text style={styles.sectionTitle}>Subscription & usage</Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.aboutRow} onPress={() => navigation.navigate('Paywall', { trigger: 'profile' })} activeOpacity={0.7}>
+            <PressableScale
+              style={styles.aboutRow}
+              onPress={() => navigation.navigate('Paywall', { trigger: 'profile' })}
+              haptic="light"
+              accessibilityRole="button"
+              accessibilityLabel="T Poker Premium"
+            >
               <Ionicons name="star-outline" size={16} color={colors.textMuted} />
               <Text style={styles.aboutRowText}>T Poker Premium</Text>
               <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
-            </TouchableOpacity>
+            </PressableScale>
           </View>
+          </MotiView>
         )}
 
         {isFeatureEnabled('reminders') && (
+          <MotiView {...slideUpSequence({ reduced, delay: staggerIn(4) })}>
           <View style={styles.section}>
             <View style={[styles.sectionHeader, { marginBottom: 12 }]}>
               <View style={styles.sectionTitleRow}>
@@ -415,15 +457,17 @@ export default function ProfileScreen({ navigation }: Props) {
                 <Text style={styles.sectionTitle}>Reminders</Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.aboutRow} onPress={() => navigation.navigate('NotificationPreferences')} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Reminder preferences">
+            <PressableScale style={styles.aboutRow} onPress={() => navigation.navigate('NotificationPreferences')} haptic="light" accessibilityRole="button" accessibilityLabel="Reminder preferences">
               <Ionicons name="alarm-outline" size={16} color={colors.textMuted} />
               <Text style={styles.aboutRowText}>Reminder preferences</Text>
               <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
-            </TouchableOpacity>
+            </PressableScale>
           </View>
+          </MotiView>
         )}
 
         {isFeatureEnabled('currencyPrefs') && (
+          <MotiView {...slideUpSequence({ reduced, delay: staggerIn(4) })}>
           <View style={styles.section}>
             <View style={[styles.sectionHeader, { marginBottom: 12 }]}>
               <View style={styles.sectionTitleRow}>
@@ -433,16 +477,18 @@ export default function ProfileScreen({ navigation }: Props) {
                 <Text style={styles.sectionTitle}>Display</Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.aboutRow} onPress={() => navigation.navigate('CurrencyPicker')} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={`Preferred currency, currently ${currencyCode}`}>
+            <PressableScale style={styles.aboutRow} onPress={() => navigation.navigate('CurrencyPicker')} haptic="light" accessibilityRole="button" accessibilityLabel={`Preferred currency, currently ${currencyCode}`}>
               <Ionicons name="globe-outline" size={16} color={colors.textMuted} />
               <Text style={styles.aboutRowText}>Currency</Text>
               <Text style={styles.aboutRowValue}>{currencyCode}</Text>
               <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
-            </TouchableOpacity>
+            </PressableScale>
           </View>
+          </MotiView>
         )}
 
         {/* ── About & Support ─────────────────────────────────────────── */}
+        <MotiView {...slideUpSequence({ reduced, delay: staggerIn(5) })}>
         <View style={styles.section}>
           <View style={[styles.sectionHeader, { marginBottom: 12 }]}>
             <View style={styles.sectionTitleRow}>
@@ -453,35 +499,41 @@ export default function ProfileScreen({ navigation }: Props) {
             </View>
           </View>
 
-          <TouchableOpacity
+          <PressableScale
             style={styles.aboutRow}
             onPress={() => Linking.openURL('mailto:truestorylabs@gmail.com?subject=T%20Poker%20support')}
-            activeOpacity={0.7}
+            haptic="light"
+            accessibilityRole="button"
+            accessibilityLabel="Email support at truestorylabs@gmail.com"
           >
             <Ionicons name="mail-outline" size={16} color={colors.textMuted} />
             <Text style={styles.aboutRowText}>truestorylabs@gmail.com</Text>
             <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
-          </TouchableOpacity>
+          </PressableScale>
 
-          <TouchableOpacity
+          <PressableScale
             style={styles.aboutRow}
             onPress={() => Linking.openURL('https://poker-home-games-three.vercel.app/privacy.html')}
-            activeOpacity={0.7}
+            haptic="light"
+            accessibilityRole="button"
+            accessibilityLabel="Open privacy policy"
           >
             <Ionicons name="shield-checkmark-outline" size={16} color={colors.textMuted} />
             <Text style={styles.aboutRowText}>Privacy Policy</Text>
             <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
-          </TouchableOpacity>
+          </PressableScale>
 
-          <TouchableOpacity
+          <PressableScale
             style={styles.aboutRow}
             onPress={() => Linking.openURL('https://poker-home-games-three.vercel.app/terms.html')}
-            activeOpacity={0.7}
+            haptic="light"
+            accessibilityRole="button"
+            accessibilityLabel="Open terms of service"
           >
             <Ionicons name="document-text-outline" size={16} color={colors.textMuted} />
             <Text style={styles.aboutRowText}>Terms of Service</Text>
             <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
-          </TouchableOpacity>
+          </PressableScale>
 
           <Text style={styles.aboutResponsible}>
             T Poker is a private home-game scorekeeping app for adults (18+). It is not
@@ -491,8 +543,10 @@ export default function ProfileScreen({ navigation }: Props) {
             v{Constants.expoConfig?.version ?? '1.1.0'} · © True Story Labs
           </Text>
         </View>
+        </MotiView>
 
         {/* ── Danger Zone ─────────────────────────────────────────────── */}
+        <MotiView {...slideUpSequence({ reduced, delay: staggerIn(6) })}>
         <View style={[styles.section, styles.dangerSection]}>
           <View style={[styles.sectionHeader, { marginBottom: 10 }]}>
             <View style={styles.sectionTitleRow}>
@@ -505,11 +559,14 @@ export default function ProfileScreen({ navigation }: Props) {
           <Text style={styles.dangerDesc}>
             Permanently delete your account and all your data. This action cannot be undone.
           </Text>
-          <TouchableOpacity
-            style={[styles.btn, styles.btnDanger, deletingAccount && { opacity: 0.6 }]}
+          <PressableScale
+            style={[styles.btnDanger, deletingAccount && styles.dimmed]}
             onPress={handleDeleteAccount}
             disabled={deletingAccount}
-            activeOpacity={0.75}
+            haptic="medium"
+            accessibilityRole="button"
+            accessibilityLabel="Delete account"
+            accessibilityState={{ disabled: deletingAccount, busy: deletingAccount }}
           >
             {deletingAccount
               ? <ActivityIndicator size="small" color={colors.error} />
@@ -519,8 +576,9 @@ export default function ProfileScreen({ navigation }: Props) {
                   <Text style={styles.btnDangerText}>Delete Account</Text>
                 </>
               )}
-          </TouchableOpacity>
+          </PressableScale>
         </View>
+        </MotiView>
 
       </ScrollView>
     </KeyboardAvoidingView>
@@ -557,38 +615,8 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   colorCellSelected: { borderColor: colors.text },
-  saveBtn: {
-    marginTop: 4,
-    backgroundColor: colors.gold,
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  saveBtnText: { fontSize: 14, fontWeight: '700', color: colors.background },
+  identitySaveBtn: { marginTop: 4 },
 
-  avatarOuter: {
-    width: 86,
-    height: 86,
-    borderRadius: 24,
-    backgroundColor: colors.goldFaint,
-    borderWidth: 1.5,
-    borderColor: colors.goldMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-    ...shadows.goldSm,
-  },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 20,
-    backgroundColor: colors.surfaceHigh,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { fontSize: 30, fontWeight: '800', color: colors.gold },
   avatarUsername: { ...typography.displaySerif, fontSize: 24, color: colors.text, marginTop: 4 },
   avatarEmail: { ...typography.bodySmall, color: colors.textMuted },
 
@@ -645,30 +673,17 @@ const styles = StyleSheet.create({
   },
   fieldValue: { fontSize: 15, color: colors.text, fontWeight: '500' },
 
-  input: {
-    backgroundColor: colors.surfaceHigh,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 15,
-    color: colors.text,
-    marginBottom: 14,
-  },
-
+  inputGroup: { gap: 14 },
   editBtns: { flexDirection: 'row', gap: 10, marginTop: 4 },
-  btn: { borderRadius: 10, paddingVertical: 11, alignItems: 'center', justifyContent: 'center' },
-  btnFull: { marginTop: 4 },
-  btnPrimary: { flex: 1, backgroundColor: colors.gold },
-  btnPrimaryText: { fontSize: 14, fontWeight: '700', color: colors.background },
-  btnSecondary: { flex: 1, borderWidth: 1, borderColor: colors.border },
-  btnSecondaryText: { fontSize: 14, fontWeight: '600', color: colors.textMuted },
+  flexBtn: { flex: 1 },
+  dimmed: { opacity: 0.6 },
 
   aboutRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     paddingVertical: 12,
+    minHeight: 44,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
@@ -698,6 +713,7 @@ const styles = StyleSheet.create({
     borderColor: colors.errorMuted,
     backgroundColor: colors.errorFaint,
     paddingVertical: 13,
+    minHeight: 48,
     borderRadius: 12,
   },
   btnDangerText: { fontSize: 14, fontWeight: '700', color: colors.error },

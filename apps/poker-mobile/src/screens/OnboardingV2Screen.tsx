@@ -19,6 +19,7 @@ import { spacing } from '../theme/spacing';
 import { radii } from '../theme/radii';
 import Screen from '../components/Screen';
 import PressableScale from '../components/motion/PressableScale';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import * as storage from '../utils/storage';
 import { track, markSignupIntent } from '../utils/analytics';
 import { isFeatureEnabled } from '../config/features';
@@ -39,10 +40,10 @@ const PILLARS: { icon: IoniconsName; title: string; subtitle: string }[] = [
 
 type ActionKey = 'play' | 'track' | 'study' | 'improve';
 
-function Dot({ active }: { active: boolean }) {
+function Dot({ active, reduced }: { active: boolean; reduced: boolean }) {
   const style = useAnimatedStyle(() => ({
-    width: withSpring(active ? 24 : 8, { damping: 18, stiffness: 220 }),
-    opacity: withTiming(active ? 1 : 0.7, { duration: 200 }),
+    width: reduced ? (active ? 24 : 8) : withSpring(active ? 24 : 8, { damping: 18, stiffness: 220 }),
+    opacity: reduced ? (active ? 1 : 0.7) : withTiming(active ? 1 : 0.7, { duration: 200 }),
   }));
   return <Animated.View style={[styles.dot, active && styles.dotActive, style]} />;
 }
@@ -56,6 +57,7 @@ export default function OnboardingV2Screen({ navigation }: Props) {
   const scrollRef = useRef<ScrollView>(null);
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<'slides' | 'router'>('slides');
+  const reduced = useReducedMotion();
 
   useEffect(() => {
     track('onboarding_started');
@@ -68,7 +70,7 @@ export default function OnboardingV2Screen({ navigation }: Props) {
   function goNext() {
     if (index < PILLARS.length - 1) {
       const next = index + 1;
-      scrollRef.current?.scrollTo({ x: next * width, animated: true });
+      scrollRef.current?.scrollTo({ x: next * width, animated: !reduced });
       setIndex(next);
     } else {
       setPhase('router');
@@ -167,7 +169,7 @@ export default function OnboardingV2Screen({ navigation }: Props) {
 
           <View style={styles.footer}>
             <View style={styles.dots}>
-              {PILLARS.map((p, i) => <Dot key={p.title} active={i === index} />)}
+              {PILLARS.map((p, i) => <Dot key={p.title} active={i === index} reduced={reduced} />)}
             </View>
             <PressableScale
               style={styles.primaryBtn}

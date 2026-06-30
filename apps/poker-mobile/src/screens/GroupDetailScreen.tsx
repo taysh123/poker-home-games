@@ -4,12 +4,12 @@ import {
   Text,
   FlatList,
   ActivityIndicator,
-  TouchableOpacity,
   StyleSheet,
   TextInput,
   Share,
   Platform,
   Animated,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { USE_NATIVE_DRIVER } from '../theme/motion';
@@ -24,6 +24,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
 import { shadows } from '../theme/shadows';
+import { spacing } from '../theme/spacing';
+import { radii } from '../theme/radii';
+import { iconSize } from '../theme/iconSize';
 import {
   getGroupById,
   getGroupMembers,
@@ -48,6 +51,18 @@ import SkeletonRow from '../components/SkeletonRow';
 import Screen from '../components/Screen';
 import BrandHeader from '../components/BrandHeader';
 import Avatar from '../components/Avatar';
+import Chip from '../components/Chip';
+import Segmented from '../components/Segmented';
+import ErrorState from '../components/ErrorState';
+import { MotiView, slideUpSequence, staggerIn } from '../components/motion';
+import { useReducedMotion } from '../hooks/useReducedMotion';
+
+const LB_PERIODS = ['week', 'month', 'all'] as const;
+const LB_PERIOD_LABELS = ['Week', 'Month', 'All Time'];
+// Podium accents — gold maps to the DS token; silver/bronze have no DS token
+// (mirrors the local RANK_COLORS in SessionScreen, the polished reference).
+const RANK_SILVER = '#8DA9C4';
+const RANK_BRONZE = '#B87333';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupDetail'>;
 
@@ -69,6 +84,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   const [searchLoading, setSearchLoading] = useState(false);
   const [rivals, setRivals] = useState<GroupRivalryDto[]>([]);
   const [shareLoading, setShareLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [lbPeriod, setLbPeriod] = useState<'week' | 'month' | 'all'>('all');
   const [lbLoading, setLbLoading] = useState(false);
   const [activityHasMore, setActivityHasMore] = useState(false);
@@ -78,10 +94,12 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   const isAdminOrOwner = group?.myRole === 'Admin' || group?.myRole === 'Owner';
   const isOwner = group?.myRole === 'Owner';
 
+  const reduced = useReducedMotion();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (isRefresh = false) => {
+    if (!isRefresh) setLoading(true);
     setError(null);
     try {
       const token = await SecureStore.getItemAsync('accessToken');
@@ -105,6 +123,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
       setError('Failed to load group details.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [groupId]);
 
@@ -141,17 +160,19 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
 
   useFocusEffect(
     useCallback(() => {
-      fadeAnim.setValue(0);
-      slideAnim.setValue(20);
-      setLoading(true);
+      fadeAnim.setValue(reduced ? 1 : 0);
+      slideAnim.setValue(reduced ? 0 : 20);
       load().then(() => {
+        if (reduced) { fadeAnim.setValue(1); slideAnim.setValue(0); return; }
         Animated.parallel([
           Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: USE_NATIVE_DRIVER }),
           Animated.spring(slideAnim, { toValue: 0, friction: 10, tension: 100, useNativeDriver: USE_NATIVE_DRIVER }),
         ]).start();
       });
-    }, [load]),
+    }, [load, reduced]),
   );
+
+  const onRefresh = useCallback(() => { setRefreshing(true); void load(true); }, [load]);
 
   React.useEffect(() => {
     if (!showInviteOnLoad || hasAutoInvited.current || loading || !group) return;
@@ -174,7 +195,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
       onBack={() => navigation.goBack()}
       right={
         isAdminOrOwner ? (
-          <TouchableOpacity
+          <PressableScale
             style={styles.headerEditBtn}
             onPress={() =>
               navigation.navigate('EditGroup', {
@@ -183,10 +204,12 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                 description: group?.description,
               })
             }
-            hitSlop={8}
+            haptic="light"
+            accessibilityRole="button"
+            accessibilityLabel="Group settings"
           >
-            <Ionicons name="settings-outline" size={20} color={colors.gold} />
-          </TouchableOpacity>
+            <Ionicons name="settings-outline" size={iconSize.sm} color={colors.gold} />
+          </PressableScale>
         ) : undefined
       }
     />
@@ -358,12 +381,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
     return (
       <Screen>
         {header}
-        <View style={styles.center}>
-          <Text style={styles.errorText}>{error ?? 'Group not found.'}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={load}>
-            <Text style={styles.retryText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
+        <ErrorState message={error ?? 'Group not found.'} onRetry={load} />
       </Screen>
     );
   }
@@ -379,6 +397,15 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
       contentContainerStyle={styles.listContent}
       data={members}
       keyExtractor={(item) => item.userId}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={colors.gold}
+          colors={[colors.gold]}
+          progressBackgroundColor={colors.surface}
+        />
+      }
       ListHeaderComponent={
         <View style={styles.headerSection}>
           {/* Group info */}
@@ -496,21 +523,25 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                     returnKeyType="send"
                     onSubmitEditing={() => handleInvite()}
                     editable={!inviteLoading}
+                    accessibilityLabel="Invite by username"
                   />
-                  <TouchableOpacity
+                  <PressableScale
                     style={[
                       styles.inviteButton,
                       (!inviteUsername.trim() || inviteLoading) && styles.inviteButtonDisabled,
                     ]}
                     onPress={() => handleInvite()}
                     disabled={!inviteUsername.trim() || inviteLoading}
+                    haptic="medium"
+                    accessibilityRole="button"
+                    accessibilityLabel="Send invitation"
                   >
                     {inviteLoading ? (
                       <ActivityIndicator size="small" color={colors.background} />
                     ) : (
                       <Text style={styles.inviteButtonText}>Send</Text>
                     )}
-                  </TouchableOpacity>
+                  </PressableScale>
                 </View>
                 {/* Search results dropdown */}
                 {(searchLoading || searchResults.length > 0) && (
@@ -521,20 +552,18 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                       </View>
                     ) : (
                       searchResults.map(r => (
-                        <TouchableOpacity
+                        <PressableScale
                           key={r.userId}
                           style={styles.searchDropdownItem}
                           onPress={() => handleInvite(r.username)}
-                          activeOpacity={0.7}
+                          haptic="light"
+                          accessibilityRole="button"
+                          accessibilityLabel={`Invite ${r.username}`}
                         >
-                          <View style={styles.searchDropdownAvatar}>
-                            <Text style={styles.searchDropdownAvatarText}>
-                              {r.username[0]?.toUpperCase() ?? '?'}
-                            </Text>
-                          </View>
+                          <Avatar name={r.username} size={30} />
                           <Text style={styles.searchDropdownName}>{r.username}</Text>
                           <Text style={styles.searchDropdownInvite}>Invite →</Text>
-                        </TouchableOpacity>
+                        </PressableScale>
                       ))
                     )}
                   </View>
@@ -549,10 +578,10 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
               <Text style={styles.sectionTitle}>Rivalries</Text>
               <View style={styles.activityCard}>
                 {rivals.map((r, i) => (
-                  <React.Fragment key={`${r.player1Id}-${r.player2Id}`}>
+                  <MotiView key={`${r.player1Id}-${r.player2Id}`} {...slideUpSequence({ reduced, delay: staggerIn(i) })}>
                     {i > 0 && <View style={styles.activityDivider} />}
                     <RivalryRow rivalry={r} />
-                  </React.Fragment>
+                  </MotiView>
                 ))}
               </View>
             </View>
@@ -564,35 +593,31 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
               <Text style={styles.sectionTitle}>Leaderboard</Text>
               {lbLoading && <ActivityIndicator size="small" color={colors.gold} />}
             </View>
-            <View style={styles.lbPeriodRow}>
-              {(['week', 'month', 'all'] as const).map(p => (
-                <TouchableOpacity
-                  key={p}
-                  style={[styles.lbPeriodTab, lbPeriod === p && styles.lbPeriodTabActive]}
-                  onPress={() => {
-                    setLbPeriod(p);
-                    loadLeaderboard(p);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.lbPeriodText, lbPeriod === p && styles.lbPeriodTextActive]}>
-                    {p === 'week' ? 'Week' : p === 'month' ? 'Month' : 'All Time'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <Segmented
+              style={styles.lbPeriod}
+              options={LB_PERIOD_LABELS}
+              selectedIndex={LB_PERIODS.indexOf(lbPeriod)}
+              onChange={(i) => {
+                const p = LB_PERIODS[i];
+                setLbPeriod(p);
+                loadLeaderboard(p);
+              }}
+              accessibilityLabel="Leaderboard period"
+            />
             {leaderboard.length > 0 ? (
               <View style={styles.leaderboardCard}>
                 {leaderboard.map((entry, index) => (
-                  <React.Fragment key={entry.userId}>
+                  <MotiView key={entry.userId} {...slideUpSequence({ reduced, delay: staggerIn(index) })}>
                     {index > 0 && <View style={styles.separator} />}
-                    <TouchableOpacity
+                    <PressableScale
+                      haptic="light"
                       onPress={() => navigation.navigate('PlayerProfile', { userId: entry.userId, username: entry.username })}
-                      activeOpacity={0.75}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${entry.username}, rank ${index + 1}, view profile`}
                     >
                       <LeaderboardRow entry={entry} rank={index + 1} />
-                    </TouchableOpacity>
-                  </React.Fragment>
+                    </PressableScale>
+                  </MotiView>
                 ))}
               </View>
             ) : (
@@ -601,13 +626,15 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                   {lbPeriod === 'all' ? 'No sessions recorded yet' : 'No sessions in this period'}
                 </Text>
                 {lbPeriod === 'all' && (
-                  <TouchableOpacity
+                  <PressableScale
                     style={styles.lbEmptyCta}
                     onPress={() => navigation.navigate('NewGame', { groupId, groupName })}
-                    activeOpacity={0.8}
+                    haptic="medium"
+                    accessibilityRole="button"
+                    accessibilityLabel="Start a game"
                   >
                     <Text style={styles.lbEmptyCtaText}>Start a Game →</Text>
-                  </TouchableOpacity>
+                  </PressableScale>
                 )}
               </View>
             )}
@@ -616,18 +643,20 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
           <Text style={styles.sectionTitle}>Members</Text>
         </View>
       }
-      renderItem={({ item }) => {
+      renderItem={({ item, index }) => {
         const isMemberOwner = item.userId === ownerId;
         const isCurrentUser = item.userId === user?.userId;
         const canRemove = isAdminOrOwner && !isMemberOwner && !isCurrentUser;
         return (
-          <MemberRow
-            member={item}
-            canRemove={canRemove}
-            isRemoving={actionLoading === item.userId}
-            onRemove={() => handleRemoveMember(item)}
-            onPress={() => navigation.navigate('PlayerProfile', { userId: item.userId, username: item.username ?? '' })}
-          />
+          <MotiView {...slideUpSequence({ reduced, delay: staggerIn(index) })}>
+            <MemberRow
+              member={item}
+              canRemove={canRemove}
+              isRemoving={actionLoading === item.userId}
+              onRemove={() => handleRemoveMember(item)}
+              onPress={() => navigation.navigate('PlayerProfile', { userId: item.userId, username: item.username ?? '' })}
+            />
+          </MotiView>
         );
       }}
       ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -642,13 +671,18 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
             <View style={styles.activitySection}>
               <View style={styles.activityHeader}>
                 <Text style={styles.sectionTitle}>Recent Activity</Text>
-                <TouchableOpacity onPress={() => navigation.navigate('SessionsList', { groupId, groupName, userRole: group?.myRole ?? 'Member' })} hitSlop={8}>
+                <PressableScale
+                  onPress={() => navigation.navigate('SessionsList', { groupId, groupName, userRole: group?.myRole ?? 'Member' })}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="See all sessions"
+                >
                   <Text style={styles.seeAllLink}>See all →</Text>
-                </TouchableOpacity>
+                </PressableScale>
               </View>
               <View style={styles.activityCard}>
                 {activity.map((item, i) => (
-                  <React.Fragment key={item.id}>
+                  <MotiView key={item.id} {...slideUpSequence({ reduced, delay: staggerIn(i) })}>
                     {i > 0 && <View style={styles.activityDivider} />}
                     <ActivityRow
                       item={item}
@@ -656,23 +690,25 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                         ? () => navigation.navigate('Session', { sessionId: item.relatedSessionId!, groupId })
                         : undefined}
                     />
-                  </React.Fragment>
+                  </MotiView>
                 ))}
                 {activityHasMore && (
                   <>
                     <View style={styles.activityDivider} />
-                    <TouchableOpacity
+                    <PressableScale
                       style={styles.activityLoadMoreRow}
                       onPress={loadMoreActivity}
                       disabled={activityLoadingMore}
-                      activeOpacity={0.7}
+                      haptic="light"
+                      accessibilityRole="button"
+                      accessibilityLabel="Load more activity"
                     >
                       {activityLoadingMore ? (
                         <ActivityIndicator size="small" color={colors.gold} />
                       ) : (
                         <Text style={styles.activityLoadMoreText}>Load more</Text>
                       )}
-                    </TouchableOpacity>
+                    </PressableScale>
                   </>
                 )}
               </View>
@@ -706,7 +742,13 @@ type MemberRowProps = {
 
 function MemberRow({ member, canRemove, isRemoving, onRemove, onPress }: MemberRowProps) {
   return (
-    <TouchableOpacity style={styles.memberRow} onPress={onPress} activeOpacity={0.7}>
+    <PressableScale
+      style={styles.memberRow}
+      onPress={onPress}
+      haptic="light"
+      accessibilityRole="button"
+      accessibilityLabel={`${member.username}, view profile`}
+    >
       <Avatar name={member.username ?? '?'} size={40} />
       <View style={styles.memberInfo}>
         <Text style={styles.memberName}>{member.username}</Text>
@@ -714,29 +756,31 @@ function MemberRow({ member, canRemove, isRemoving, onRemove, onPress }: MemberR
       </View>
       <RoleBadge role={member.role} />
       {canRemove && (
-        <TouchableOpacity
+        <PressableScale
           style={styles.removeButton}
           onPress={onRemove}
           disabled={isRemoving}
           hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={`Remove ${member.username}`}
         >
           {isRemoving ? (
             <ActivityIndicator size="small" color={colors.error} />
           ) : (
             <View style={styles.removeIconWrap}>
-              <Ionicons name="person-remove-outline" size={15} color={colors.error} />
+              <Ionicons name="person-remove-outline" size={iconSize.xs} color={colors.error} />
             </View>
           )}
-        </TouchableOpacity>
+        </PressableScale>
       )}
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 
 const RANK_COLORS: Record<number, string> = {
-  1: '#C9A84C',
-  2: '#8DA9C4',
-  3: '#B87333',
+  1: colors.gold,
+  2: RANK_SILVER,
+  3: RANK_BRONZE,
 };
 
 function LeaderboardRow({ entry, rank }: { entry: PlayerLeaderboardEntryDto; rank: number }) {
@@ -815,7 +859,7 @@ function ActivityRow({ item, onPress }: { item: ActivityLogDto; onPress?: () => 
   const inner = (
     <>
       <View style={[styles.activityIconWrap, { backgroundColor: iconColor + '18' }]}>
-        <Ionicons name={iconName} size={15} color={iconColor} />
+        <Ionicons name={iconName} size={iconSize.xs} color={iconColor} />
       </View>
       <Text style={styles.activityDesc} numberOfLines={2}>{item.description}</Text>
       <Text style={styles.activityTime}>{ago}</Text>
@@ -827,10 +871,16 @@ function ActivityRow({ item, onPress }: { item: ActivityLogDto; onPress?: () => 
   }
 
   return (
-    <TouchableOpacity style={styles.activityRow} onPress={onPress} activeOpacity={0.7}>
+    <PressableScale
+      style={styles.activityRow}
+      onPress={onPress}
+      haptic="light"
+      accessibilityRole="button"
+      accessibilityLabel={item.description}
+    >
       {inner}
-      <Ionicons name="chevron-forward" size={13} color={colors.textDim} />
-    </TouchableOpacity>
+      <Ionicons name="chevron-forward" size={iconSize.xs} color={colors.textDim} />
+    </PressableScale>
   );
 }
 
@@ -848,7 +898,7 @@ function RivalryRow({ rivalry }: { rivalry: GroupRivalryDto }) {
   return (
     <View style={styles.rivalryRow}>
       <View style={styles.rivalryIconWrap}>
-        <Ionicons name="swap-horizontal" size={15} color={colors.gold} />
+        <Ionicons name="swap-horizontal" size={iconSize.xs} color={colors.gold} />
       </View>
       <View style={styles.rivalryContent}>
         <Text style={styles.rivalrySession}>{rivalry.sessionsTogether} sessions together</Text>
@@ -868,41 +918,19 @@ function RivalryRow({ rivalry }: { rivalry: GroupRivalryDto }) {
 
 function RoleBadge({ role }: { role: string }) {
   if (!role) return null; // no empty pill when role is missing
-  const r = role.toLowerCase();
-  const isOwner = r === 'owner';
-  const isAdmin = r === 'admin';
-  return (
-    <View
-      style={[
-        styles.badge,
-        isOwner ? styles.badgeOwner : isAdmin ? styles.badgeAdmin : styles.badgeMember,
-      ]}
-    >
-      <Text
-        style={[styles.badgeText, isOwner ? styles.badgeTextOwner : styles.badgeTextMuted]}
-      >
-        {role}
-      </Text>
-    </View>
-  );
+  const tone = role.toLowerCase() === 'owner' ? 'gold' : 'neutral';
+  return <Chip label={role} tone={tone} />;
 }
 
 const styles = StyleSheet.create({
   listWrap: { flex: 1 },
   list: { flex: 1 },
-  listContent: { padding: 16, paddingBottom: 60 },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-    gap: 12,
-  },
-  headerSection: { marginBottom: 4 },
+  listContent: { padding: spacing.lg, paddingBottom: 60 },
+  headerSection: { marginBottom: spacing.xs },
   headerEditBtn: {
     width: 34,
     height: 34,
-    borderRadius: 10,
+    borderRadius: radii.sm,
     backgroundColor: colors.surfaceHigh,
     borderWidth: 1,
     borderColor: colors.border,
@@ -914,18 +942,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.goldMuted,
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 12,
-    gap: 8,
+    borderRadius: radii.lg,
+    padding: spacing.xl,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
     overflow: 'hidden',
     ...shadows.md,
   },
   groupCardGlow: { position: 'absolute', top: 0, left: 0, right: 0, height: 120 },
   groupName: { ...typography.displaySerif, fontSize: 27, color: colors.text },
-  groupDesc: { fontSize: 14, color: colors.textMuted, lineHeight: 20 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
-  metaText: { fontSize: 13, color: colors.textMuted },
+  groupDesc: { ...typography.body, color: colors.textMuted },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: spacing.xs },
+  metaText: { ...typography.bodySmall, color: colors.textMuted },
   dot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: colors.textDim },
 
   groupStatsRow: {
@@ -934,17 +962,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 0,
     backgroundColor: colors.surfaceHigh,
-    borderRadius: 10,
+    borderRadius: radii.sm,
     paddingVertical: 9,
-    marginBottom: 12,
+    marginBottom: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  groupStatChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 16 },
-  groupStatText: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
+  groupStatChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: spacing.lg },
+  groupStatText: { ...typography.labelSmall, color: colors.textMuted },
   groupStatDivider: { width: 1, height: 14, backgroundColor: colors.border },
 
-  navRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
+  navRow: { flexDirection: 'row', gap: 10, marginBottom: spacing.lg },
   navButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -952,7 +980,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 14,
+    borderRadius: radii.md,
     paddingHorizontal: 14,
     paddingVertical: 14,
     ...shadows.sm,
@@ -967,17 +995,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   navIconWrapGold: { backgroundColor: colors.goldFaint },
-  navButtonText: { fontSize: 15, fontWeight: '600', color: colors.text },
+  navButtonText: { ...typography.label, color: colors.text },
   navButtonGold: { backgroundColor: colors.goldFaint, borderColor: colors.goldMuted },
-  navButtonGoldText: { fontSize: 15, fontWeight: '700', color: colors.gold },
+  navButtonGoldText: { ...typography.label, color: colors.gold },
 
   manageSection: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 20,
+    borderRadius: radii.md,
+    padding: spacing.lg,
+    marginBottom: spacing.xl,
     gap: 14,
     ...shadows.sm,
   },
@@ -985,7 +1013,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: spacing.sm,
     paddingVertical: 13,
     borderRadius: 11,
     borderWidth: 1.5,
@@ -993,39 +1021,39 @@ const styles = StyleSheet.create({
     backgroundColor: colors.goldFaint,
     minHeight: 48,
   },
-  shareInviteText: { fontSize: 14, fontWeight: '700', color: colors.gold },
+  shareInviteText: { ...typography.labelSmall, color: colors.gold },
 
-  inviteSection: { gap: 8 },
-  inviteLabel: { fontSize: 11, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.8 },
+  inviteSection: { gap: spacing.sm },
+  inviteLabel: { ...typography.caps, color: colors.textMuted },
   inviteRow: { flexDirection: 'row', gap: 10 },
   inviteInput: {
     flex: 1,
     backgroundColor: colors.surfaceHigh,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 10,
+    borderRadius: radii.sm,
     paddingHorizontal: 14,
     paddingVertical: 11,
-    fontSize: 15,
+    ...typography.body,
     color: colors.text,
   },
   inviteButton: {
     backgroundColor: colors.gold,
-    borderRadius: 10,
+    borderRadius: radii.sm,
     paddingHorizontal: 18,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 46,
   },
   inviteButtonDisabled: { opacity: 0.4 },
-  inviteButtonText: { color: colors.background, fontSize: 14, fontWeight: '700' },
+  inviteButtonText: { ...typography.labelSmall, color: colors.background },
 
   searchDropdown: {
-    marginTop: 6,
+    marginTop: spacing.xs,
     backgroundColor: colors.surfaceHigh,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 10,
+    borderRadius: radii.sm,
     overflow: 'hidden',
   },
   searchDropdownItem: {
@@ -1033,31 +1061,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 14,
     paddingVertical: 11,
-    gap: 12,
+    gap: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  searchDropdownAvatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 9,
-    backgroundColor: colors.goldSubtle,
-    borderWidth: 1,
-    borderColor: colors.goldMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  searchDropdownAvatarText: { fontSize: 13, fontWeight: '700', color: colors.gold },
-  searchDropdownName: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.text },
-  searchDropdownInvite: { fontSize: 12, color: colors.gold, fontWeight: '700' },
+  searchDropdownName: { flex: 1, ...typography.label, color: colors.text },
+  searchDropdownInvite: { ...typography.caption, fontWeight: '700', color: colors.gold },
 
   sectionTitle: {
-    fontSize: 11,
-    fontWeight: '700',
+    ...typography.caps,
     color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 10,
+    marginBottom: spacing.sm,
   },
 
   memberRow: {
@@ -1066,16 +1080,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 14,
+    borderRadius: radii.md,
     paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 12,
+    paddingVertical: spacing.md,
+    gap: spacing.md,
     ...shadows.sm,
   },
   memberInfo: { flex: 1, gap: 2 },
-  memberName: { fontSize: 15, fontWeight: '700', color: colors.text },
-  memberEmail: { fontSize: 12, color: colors.textMuted },
-  removeButton: { marginLeft: 4 },
+  memberName: { ...typography.label, color: colors.text },
+  memberEmail: { ...typography.caption, color: colors.textMuted },
+  removeButton: { marginLeft: spacing.xs },
   removeIconWrap: {
     width: 30,
     height: 30,
@@ -1087,99 +1101,55 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  separator: { height: 8 },
+  separator: { height: spacing.sm },
 
   leaveButton: {
-    marginTop: 24,
+    marginTop: spacing.xxl,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: spacing.sm,
     borderWidth: 1,
     borderColor: colors.errorMuted,
-    borderRadius: 14,
+    borderRadius: radii.md,
     paddingVertical: 14,
   },
-  leaveButtonText: { fontSize: 15, fontWeight: '600', color: colors.error },
+  leaveButtonText: { ...typography.label, color: colors.error },
 
   deleteGroupButton: {
-    marginTop: 12,
+    marginTop: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: spacing.sm,
     borderWidth: 1,
     borderColor: colors.errorMuted,
-    borderRadius: 14,
+    borderRadius: radii.md,
     paddingVertical: 14,
     backgroundColor: colors.errorFaint,
   },
-  deleteGroupButtonText: { fontSize: 15, fontWeight: '700', color: colors.error },
+  deleteGroupButtonText: { ...typography.label, color: colors.error },
 
-  badge: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 7 },
-  badgeOwner: {
-    backgroundColor: colors.goldSubtle,
-    borderWidth: 1,
-    borderColor: colors.goldMuted,
-  },
-  badgeAdmin: {
-    backgroundColor: colors.goldFaint,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  badgeMember: {
-    backgroundColor: colors.surfaceHigh,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  badgeText: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
-  badgeTextOwner: { color: colors.goldLight },
-  badgeTextMuted: { color: colors.textMuted },
-
-  errorText: { fontSize: 15, color: colors.error, textAlign: 'center' },
-  retryButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  retryText: { color: colors.textMuted, fontSize: 14, fontWeight: '600' },
-
-  leaderboardSection: { marginBottom: 16 },
-  lbHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-  lbPeriodRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  lbPeriodTab: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  lbPeriodTabActive: {
-    backgroundColor: colors.goldFaint,
-    borderColor: colors.goldMuted,
-  },
-  lbPeriodText: { fontSize: 12, fontWeight: '600', color: colors.textMuted },
-  lbPeriodTextActive: { color: colors.gold },
-  lbEmpty: { paddingVertical: 20, alignItems: 'center', gap: 8 },
-  lbEmptyText: { fontSize: 13, color: colors.textMuted },
+  leaderboardSection: { marginBottom: spacing.lg },
+  lbHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
+  lbPeriod: { marginBottom: spacing.md },
+  lbEmpty: { paddingVertical: spacing.xl, alignItems: 'center', gap: spacing.sm },
+  lbEmptyText: { ...typography.bodySmall, color: colors.textMuted },
   lbEmptyCta: {
-    marginTop: 4,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 10,
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.sm,
     backgroundColor: colors.goldFaint,
     borderWidth: 1,
     borderColor: colors.goldMuted,
   },
-  lbEmptyCtaText: { fontSize: 13, fontWeight: '700', color: colors.gold },
+  lbEmptyCtaText: { ...typography.labelSmall, color: colors.gold },
   leaderboardCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 14,
+    borderRadius: radii.md,
     overflow: 'hidden',
     ...shadows.sm,
   },
@@ -1187,12 +1157,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: spacing.md,
     gap: 10,
   },
   leaderboardRowFirst: { backgroundColor: colors.goldFaint, borderLeftWidth: 3, borderLeftColor: colors.gold, paddingLeft: 11 },
-  leaderboardRowSecond: { backgroundColor: 'rgba(141,169,196,0.08)', borderLeftWidth: 3, borderLeftColor: '#8DA9C4', paddingLeft: 11 },
-  leaderboardRowThird: { backgroundColor: 'rgba(184,115,51,0.08)', borderLeftWidth: 3, borderLeftColor: '#B87333', paddingLeft: 11 },
+  leaderboardRowSecond: { backgroundColor: RANK_SILVER + '14', borderLeftWidth: 3, borderLeftColor: RANK_SILVER, paddingLeft: 11 },
+  leaderboardRowThird: { backgroundColor: RANK_BRONZE + '14', borderLeftWidth: 3, borderLeftColor: RANK_BRONZE, paddingLeft: 11 },
   rankBadge: {
     width: 28,
     height: 28,
@@ -1201,44 +1171,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  lbRank: { fontSize: 12, fontWeight: '800' },
+  lbRank: { ...typography.caption, fontWeight: '800' },
   lbInfo: { flex: 1, gap: 3 },
-  lbUsername: { fontSize: 14, fontWeight: '700', color: colors.text },
-  lbSessions: { fontSize: 11, color: colors.textMuted },
+  lbUsername: { ...typography.label, color: colors.text },
+  lbSessions: { ...typography.caption, color: colors.textMuted },
   lbRight: { alignItems: 'flex-end', gap: 3 },
-  lbPL: { fontSize: 15, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  lbAvg: { fontSize: 11, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  lbPL: { ...typography.label, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  lbAvg: { ...typography.caption, fontVariant: ['tabular-nums'] },
 
   emptyMembers: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 14,
+    borderRadius: radii.md,
     padding: 28,
     alignItems: 'center',
   },
-  emptyMembersText: { fontSize: 14, color: colors.textMuted },
+  emptyMembersText: { ...typography.body, color: colors.textMuted },
 
-  activitySection: { marginBottom: 16 },
-  activityHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-  seeAllLink: { fontSize: 12, fontWeight: '600', color: colors.gold },
-  rivalryEmpty: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 14,
-    paddingVertical: 24,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    gap: 6,
-  },
-  rivalryEmptyTitle: { fontSize: 14, fontWeight: '700', color: colors.textMuted, marginTop: 4 },
-  rivalryEmptySub: { fontSize: 12, color: colors.textDim, textAlign: 'center', lineHeight: 17 },
+  activitySection: { marginBottom: spacing.lg },
+  activityHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
+  seeAllLink: { ...typography.labelSmall, color: colors.gold },
   activityCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 14,
+    borderRadius: radii.md,
     overflow: 'hidden',
     ...shadows.sm,
   },
@@ -1258,20 +1216,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
-  activityDesc: { flex: 1, fontSize: 13, color: colors.text, lineHeight: 18 },
-  activityTime: { fontSize: 11, color: colors.textMuted, flexShrink: 0 },
+  activityDesc: { flex: 1, ...typography.bodySmall, color: colors.text },
+  activityTime: { ...typography.caption, color: colors.textMuted, flexShrink: 0 },
   activityLoadMoreRow: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
+    paddingVertical: spacing.md,
   },
-  activityLoadMoreText: { fontSize: 12, fontWeight: '600', color: colors.gold },
+  activityLoadMoreText: { ...typography.labelSmall, color: colors.gold },
   rivalryRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: spacing.md,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: spacing.md,
   },
   rivalryIconWrap: {
     width: 30,
@@ -1286,8 +1244,8 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   rivalryContent: { flex: 1, gap: 3 },
-  rivalrySession: { fontSize: 11, color: colors.textMuted, fontWeight: '500' },
+  rivalrySession: { ...typography.caption, color: colors.textMuted },
   rivalryPlayers: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  rivalryPlayer: { fontSize: 13, fontWeight: '600', flex: 1 },
-  rivalryVs: { fontSize: 11, color: colors.textDim, fontWeight: '500' },
+  rivalryPlayer: { ...typography.labelSmall, flex: 1 },
+  rivalryVs: { ...typography.caption, color: colors.textDim },
 });

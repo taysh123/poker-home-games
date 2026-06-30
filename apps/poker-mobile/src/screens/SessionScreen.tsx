@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   TextInput,
   ActivityIndicator,
   Modal,
@@ -23,9 +22,14 @@ import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { shadows } from '../theme/shadows';
+import { spacing } from '../theme/spacing';
+import { radii } from '../theme/radii';
+import { iconSize } from '../theme/iconSize';
 import { springScale, USE_NATIVE_DRIVER } from '../theme/motion';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import Celebration from '../components/motion/Celebration';
+import AnimatedNumber from '../components/motion/AnimatedNumber';
+import { PressableScale, MotiView, slideUpSequence, staggerIn } from '../components/motion';
 import PrimaryButton from '../components/PrimaryButton';
 import Screen from '../components/Screen';
 import Avatar from '../components/Avatar';
@@ -602,7 +606,7 @@ export default function SessionScreen({ route, navigation }: Props) {
       if (!token) return;
       await markSettlementPaid(token, settlementId);
       setSettlements(s => s.map(x => x.id === settlementId ? { ...x, status: 'Confirmed' } : x));
-      lightTap();
+      successNotification();
       showToast('Payment confirmed', 'success');
     } catch {
       showToast('Failed to mark as paid.', 'error');
@@ -791,9 +795,9 @@ export default function SessionScreen({ route, navigation }: Props) {
     return (
       <View style={styles.center}>
         <Text style={styles.errorText}>{error ?? 'Session not found.'}</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
+        <PressableScale style={styles.retryBtn} onPress={() => load()} haptic="light" accessibilityRole="button" accessibilityLabel="Retry loading session">
           <Text style={styles.retryText}>Retry</Text>
-        </TouchableOpacity>
+        </PressableScale>
       </View>
     );
   }
@@ -810,10 +814,10 @@ export default function SessionScreen({ route, navigation }: Props) {
         }
       >
         {/* ── Header ── */}
-        <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={12}>
-            <Ionicons name="chevron-back" size={20} color={colors.text} />
-          </TouchableOpacity>
+        <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
+          <PressableScale onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={12} haptic="light" accessibilityRole="button" accessibilityLabel="Back">
+            <Ionicons name="chevron-back" size={iconSize.sm} color={colors.text} />
+          </PressableScale>
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle} numberOfLines={1}>{session.name}</Text>
             <View style={styles.headerMeta}>
@@ -827,30 +831,30 @@ export default function SessionScreen({ route, navigation }: Props) {
             </View>
           </View>
           {isFinished && (
-            <TouchableOpacity onPress={handleExport} style={styles.exportBtn} disabled={exporting}>
+            <PressableScale onPress={handleExport} style={styles.exportBtn} disabled={exporting} hitSlop={8} haptic="light" accessibilityRole="button" accessibilityLabel="Export session as CSV">
               {exporting ? <ActivityIndicator color={colors.gold} size="small" /> : <Text style={styles.exportText}>CSV</Text>}
-            </TouchableOpacity>
+            </PressableScale>
           )}
           {isFinished && balances.length > 0 && (
-            <TouchableOpacity onPress={handleShareCard} style={styles.exportBtn} disabled={sharing}>
+            <PressableScale onPress={handleShareCard} style={styles.exportBtn} disabled={sharing} hitSlop={8} haptic="light" accessibilityRole="button" accessibilityLabel="Share result card">
               {sharing
                 ? <ActivityIndicator color={colors.gold} size="small" />
-                : <Ionicons name="share-outline" size={16} color={colors.gold} />}
-            </TouchableOpacity>
+                : <Ionicons name="share-outline" size={iconSize.xs} color={colors.gold} />}
+            </PressableScale>
           )}
           {isAdminOrOwner && (isActive || isDraft) && (
-            <TouchableOpacity onPress={handleShareInvite} style={styles.exportBtn} disabled={sharingInvite} hitSlop={8}>
+            <PressableScale onPress={handleShareInvite} style={styles.exportBtn} disabled={sharingInvite} hitSlop={8} haptic="light" accessibilityRole="button" accessibilityLabel="Share invite link">
               {sharingInvite
                 ? <ActivityIndicator color={colors.gold} size="small" />
-                : <Ionicons name="person-add-outline" size={16} color={colors.gold} />}
-            </TouchableOpacity>
+                : <Ionicons name="person-add-outline" size={iconSize.xs} color={colors.gold} />}
+            </PressableScale>
           )}
           {isAdminOrOwner && !isActive && (
-            <TouchableOpacity onPress={handleDeleteSession} style={styles.deleteBtn} disabled={deleteLoading} hitSlop={8}>
+            <PressableScale onPress={handleDeleteSession} style={styles.deleteBtn} disabled={deleteLoading} hitSlop={8} haptic="medium" accessibilityRole="button" accessibilityLabel="Delete session">
               {deleteLoading
                 ? <ActivityIndicator color={colors.error} size="small" />
-                : <Ionicons name="trash-outline" size={16} color={colors.error} />}
-            </TouchableOpacity>
+                : <Ionicons name="trash-outline" size={iconSize.xs} color={colors.error} />}
+            </PressableScale>
           )}
         </View>
 
@@ -874,24 +878,35 @@ export default function SessionScreen({ route, navigation }: Props) {
         {session.chipRatio ? (
           <View style={styles.chipPillRow}>
             <Text style={styles.chipPillLabel}>Display:</Text>
-            <TouchableOpacity
+            <PressableScale
               style={[styles.chipPill, !useChips && styles.chipPillActive]}
               onPress={() => setUseChips(false)}
+              haptic="light"
+              accessibilityRole="button"
+              accessibilityLabel="Show amounts in money"
+              accessibilityState={{ selected: !useChips }}
             >
               <Text style={[styles.chipPillText, !useChips && styles.chipPillTextActive]}>{sym} Money</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableScale>
+            <PressableScale
               style={[styles.chipPill, useChips && styles.chipPillActive]}
               onPress={() => setUseChips(true)}
+              haptic="light"
+              accessibilityRole="button"
+              accessibilityLabel="Show amounts in chips"
+              accessibilityState={{ selected: useChips }}
             >
-              <Text style={[styles.chipPillText, useChips && styles.chipPillTextActive]}>🪙 Chips</Text>
-            </TouchableOpacity>
+              <View style={styles.chipPillInner}>
+                <Ionicons name="disc-outline" size={14} color={useChips ? colors.background : colors.textMuted} />
+                <Text style={[styles.chipPillText, useChips && styles.chipPillTextActive]}>Chips</Text>
+              </View>
+            </PressableScale>
           </View>
         ) : null}
 
         {/* ── Current Standings (Active, 2+ players with balance data) ── */}
         {isActive && balances.length >= 2 && (
-          <View style={styles.standingsRow}>
+          <MotiView {...slideUpSequence({ reduced: reducedMotion })} style={styles.standingsRow}>
             <Text style={styles.standingsLabel}>STANDINGS</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.standingsScroll}>
               {[...balances]
@@ -905,9 +920,16 @@ export default function SessionScreen({ route, navigation }: Props) {
                       isLeader && styles.standingChipLeader,
                       isTrailing && !isLeader && styles.standingChipTrailing,
                     ]}>
-                      <Text style={[styles.standingName, isLeader && styles.standingNameLeader]} numberOfLines={1}>
-                        {isLeader ? '▲ ' : isTrailing ? '▼ ' : ''}{b.username}
-                      </Text>
+                      <View style={styles.standingNameRow}>
+                        {isLeader ? (
+                          <Ionicons name="caret-up" size={11} color={colors.goldLight} />
+                        ) : isTrailing ? (
+                          <Ionicons name="caret-down" size={11} color={colors.error} />
+                        ) : null}
+                        <Text style={[styles.standingName, isLeader && styles.standingNameLeader]} numberOfLines={1}>
+                          {b.username}
+                        </Text>
+                      </View>
                       <Text style={[
                         styles.standingPL,
                         b.profitLoss > 0 ? styles.standingPos : b.profitLoss < 0 ? styles.standingNeg : styles.standingZero,
@@ -918,7 +940,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                   );
                 })}
             </ScrollView>
-          </View>
+          </MotiView>
         )}
 
         {/* ── Players ── */}
@@ -928,12 +950,15 @@ export default function SessionScreen({ route, navigation }: Props) {
               {isFinished ? 'Results' : 'Players'}
             </Text>
             {!isFinished && (
-              <TouchableOpacity
+              <PressableScale
                 style={styles.addPlayerBtn}
                 onPress={() => { setAddPlayerModal(true); setPlayerSearch(''); setGuestName(''); }}
+                haptic="light"
+                accessibilityRole="button"
+                accessibilityLabel="Add player"
               >
                 <Text style={styles.addPlayerBtnText}>+ Add Player</Text>
-              </TouchableOpacity>
+              </PressableScale>
             )}
           </View>
 
@@ -942,7 +967,7 @@ export default function SessionScreen({ route, navigation }: Props) {
               <Text style={styles.emptyPlayersText}>No players yet. Add players to start.</Text>
             </View>
           ) : (
-            <View style={styles.playerList}>
+            <MotiView {...slideUpSequence({ reduced: reducedMotion })} style={styles.playerList}>
               {sortedPlayers.map((player, index) => {
                 const bal = getBalance(player);
                 const pl = bal?.profitLoss ?? 0;
@@ -966,15 +991,17 @@ export default function SessionScreen({ route, navigation }: Props) {
                     <Avatar name={player.username} size={42} ring={isFirst ? 'gold' : undefined} />
                     <View style={styles.playerInfo}>
                       <View style={styles.playerNameRow}>
-                        <TouchableOpacity
+                        <PressableScale
                           onPress={() => player.userId && navigation.navigate('PlayerProfile', { userId: player.userId, username: player.username })}
                           disabled={!player.userId}
-                          activeOpacity={player.userId ? 0.6 : 1}
+                          hitSlop={6}
+                          accessibilityRole={player.userId ? 'link' : 'text'}
+                          accessibilityLabel={player.userId ? `View ${player.username}'s profile` : player.username}
                         >
                           <Text style={[styles.playerName, isFirst && styles.playerNameFirst]}>
                             {player.username}
                           </Text>
-                        </TouchableOpacity>
+                        </PressableScale>
                         {player.isGuest && <GuestBadge />}
                         {isFinished && rank > 0 && (
                           <Text style={styles.rankLabel}>{rankLabel(rank)}</Text>
@@ -1000,18 +1027,21 @@ export default function SessionScreen({ route, navigation }: Props) {
                         </Text>
                       </View>
                     ) : isDraft ? (
-                      <TouchableOpacity
+                      <PressableScale
                         onPress={() => handleRemovePlayer(player)}
                         style={styles.removeBtn}
                         hitSlop={8}
+                        haptic="light"
+                        accessibilityRole="button"
+                        accessibilityLabel={`Remove ${player.username}`}
                       >
                         <Ionicons name="close" size={14} color={colors.error} />
-                      </TouchableOpacity>
+                      </PressableScale>
                     ) : null}
                   </View>
                 );
               })}
-            </View>
+            </MotiView>
           )}
         </View>
 
@@ -1034,19 +1064,19 @@ export default function SessionScreen({ route, navigation }: Props) {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Settlements</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
                 {settlements.length > 0 && (
-                  <TouchableOpacity onPress={handleShareSettlements} disabled={sharingSummary} hitSlop={8}>
+                  <PressableScale onPress={handleShareSettlements} disabled={sharingSummary} hitSlop={8} haptic="light" accessibilityRole="button" accessibilityLabel="Share settlements">
                     {sharingSummary
                       ? <ActivityIndicator color={colors.gold} size="small" />
-                      : <Ionicons name="share-outline" size={17} color={colors.gold} />}
-                  </TouchableOpacity>
+                      : <Ionicons name="share-outline" size={iconSize.xs} color={colors.gold} />}
+                  </PressableScale>
                 )}
-                <TouchableOpacity onPress={handleCalculateSettlements} disabled={calcLoading}>
+                <PressableScale onPress={handleCalculateSettlements} disabled={calcLoading} hitSlop={8} haptic="light" accessibilityRole="button" accessibilityLabel="Recalculate settlements">
                   {calcLoading
                     ? <ActivityIndicator color={colors.gold} size="small" />
                     : <Text style={styles.seeAll}>Recalculate</Text>}
-                </TouchableOpacity>
+                </PressableScale>
               </View>
             </View>
 
@@ -1054,7 +1084,7 @@ export default function SessionScreen({ route, navigation }: Props) {
               <View style={styles.evenCard}>
                 <Ionicons
                   name="checkmark-circle"
-                  size={36}
+                  size={iconSize.lg}
                   color={guestBalances.length > 0 ? colors.textMuted : colors.success}
                 />
                 <Text style={styles.evenTitle}>
@@ -1065,22 +1095,22 @@ export default function SessionScreen({ route, navigation }: Props) {
                     ? 'Registered players are square — guests settle in cash below.'
                     : 'No transfers needed — the math works out perfectly.'}
                 </Text>
-                <TouchableOpacity onPress={handleCalculateSettlements} disabled={calcLoading}>
+                <PressableScale onPress={handleCalculateSettlements} disabled={calcLoading} hitSlop={8} haptic="light" accessibilityRole="button" accessibilityLabel="Recalculate settlements">
                   {calcLoading
                     ? <ActivityIndicator color={colors.gold} size="small" />
                     : <Text style={styles.recalcLink}>Recalculate</Text>}
-                </TouchableOpacity>
+                </PressableScale>
               </View>
             ) : settlements.every(s => s.status === 'Confirmed') ? (
               <View style={styles.evenCard}>
-                <Ionicons name="checkmark-circle" size={36} color={colors.success} />
-                <Text style={styles.evenTitle}>All settled up! 🎉</Text>
+                <Ionicons name="checkmark-circle" size={iconSize.lg} color={colors.success} />
+                <Text style={styles.evenTitle}>All settled up!</Text>
                 <Text style={styles.evenSub}>Everyone's even. See you next game.</Text>
-                <TouchableOpacity onPress={handleCalculateSettlements} disabled={calcLoading}>
+                <PressableScale onPress={handleCalculateSettlements} disabled={calcLoading} hitSlop={8} haptic="light" accessibilityRole="button" accessibilityLabel="Recalculate settlements">
                   {calcLoading
                     ? <ActivityIndicator color={colors.gold} size="small" />
                     : <Text style={styles.recalcLink}>Recalculate</Text>}
-                </TouchableOpacity>
+                </PressableScale>
               </View>
             ) : (
               <View style={styles.settlementList}>
@@ -1093,11 +1123,11 @@ export default function SessionScreen({ route, navigation }: Props) {
                     </Text>
                   ) : null;
                 })()}
-                {settlements.map(s => {
+                {settlements.map((s, si) => {
                   const isInvolved = s.payerUserId === user?.userId || s.receiverUserId === user?.userId;
                   const isPaid = s.status === 'Confirmed';
                   return (
-                    <View key={s.id} style={[
+                    <MotiView key={s.id} {...slideUpSequence({ reduced: reducedMotion, delay: staggerIn(si) })} style={[
                       styles.settlementCard,
                       isPaid && styles.settlementCardPaid,
                       isInvolved && !isPaid && styles.settlementCardInvolved,
@@ -1127,20 +1157,24 @@ export default function SessionScreen({ route, navigation }: Props) {
                               <Text style={styles.settlementBadgeText}>PAID</Text>
                             </View>
                           ) : isInvolved ? (
-                            <TouchableOpacity
+                            <PressableScale
                               style={styles.markPaidBtn}
                               onPress={() => confirmMarkPaid(s.id, s.payerName, s.receiverName, s.amount)}
                               disabled={markingPaidId === s.id}
+                              haptic="medium"
+                              accessibilityRole="button"
+                              accessibilityLabel={`Mark ${s.payerName} to ${s.receiverName} ${formatMoney(s.amount)} as paid`}
+                              accessibilityState={{ disabled: markingPaidId === s.id }}
                             >
                               {markingPaidId === s.id
                                 ? <ActivityIndicator color={colors.background} size="small" />
                                 : (
-                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
                                     <Ionicons name="checkmark" size={14} color={colors.background} />
                                     <Text style={styles.markPaidText}>Mark Paid</Text>
                                   </View>
                                 )}
-                            </TouchableOpacity>
+                            </PressableScale>
                           ) : (
                             <View style={styles.badgePendingRow}>
                               <Text style={styles.settlementBadgeText}>PENDING</Text>
@@ -1148,7 +1182,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                           )}
                         </View>
                       </View>
-                    </View>
+                    </MotiView>
                   );
                 })}
               </View>
@@ -1169,10 +1203,10 @@ export default function SessionScreen({ route, navigation }: Props) {
             <Text style={styles.cashSettleSubtitle}>
               Guests can't receive digital transfers — settle these directly in cash.
             </Text>
-            <View style={[styles.settlementList, { marginTop: 10 }]}>
+            <View style={[styles.settlementList, { marginTop: spacing.sm }]}>
               {cashTransfers.map((ct, i) => {
                 return (
-                  <View key={i} style={[styles.settlementCard, styles.settlementCardCash]}>
+                  <MotiView key={i} {...slideUpSequence({ reduced: reducedMotion, delay: staggerIn(i) })} style={[styles.settlementCard, styles.settlementCardCash]}>
                     <View style={[styles.settlementAccent, styles.settlementAccentCash]} />
                     <View style={styles.settlementCardInner}>
                       <View style={styles.settlementFlow}>
@@ -1196,7 +1230,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                         </View>
                       </View>
                     </View>
-                  </View>
+                  </MotiView>
                 );
               })}
             </View>
@@ -1208,9 +1242,9 @@ export default function SessionScreen({ route, navigation }: Props) {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Notes</Text>
             {!isFinished && !editingNotes && (
-              <TouchableOpacity onPress={() => setEditingNotes(true)}>
+              <PressableScale onPress={() => setEditingNotes(true)} hitSlop={8} haptic="light" accessibilityRole="button" accessibilityLabel="Edit notes">
                 <Text style={styles.seeAll}>Edit</Text>
-              </TouchableOpacity>
+              </PressableScale>
             )}
           </View>
           {editingNotes ? (
@@ -1226,14 +1260,14 @@ export default function SessionScreen({ route, navigation }: Props) {
                 autoFocus
               />
               <View style={styles.notesActions}>
-                <TouchableOpacity onPress={() => { setNotesText(session.notes ?? ''); setEditingNotes(false); }}>
+                <PressableScale onPress={() => { setNotesText(session.notes ?? ''); setEditingNotes(false); }} hitSlop={8} haptic="light" accessibilityRole="button" accessibilityLabel="Cancel editing notes">
                   <Text style={styles.notesCancelText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.notesSaveBtn} onPress={handleSaveNotes} disabled={savingNotes}>
+                </PressableScale>
+                <PressableScale style={styles.notesSaveBtn} onPress={handleSaveNotes} disabled={savingNotes} haptic="light" accessibilityRole="button" accessibilityLabel="Save notes">
                   {savingNotes
                     ? <ActivityIndicator color={colors.background} size="small" />
                     : <Text style={styles.notesSaveBtnText}>Save</Text>}
-                </TouchableOpacity>
+                </PressableScale>
               </View>
             </View>
           ) : notesText ? (
@@ -1261,9 +1295,9 @@ export default function SessionScreen({ route, navigation }: Props) {
                       {h.note && <Text style={styles.handNote}>{h.note}</Text>}
                     </View>
                     {h.createdByUserId === user?.userId && isActive && (
-                      <TouchableOpacity onPress={() => handleDeleteHand(h.id)} hitSlop={8}>
+                      <PressableScale onPress={() => handleDeleteHand(h.id)} hitSlop={8} haptic="light" accessibilityRole="button" accessibilityLabel="Delete hand record">
                         <View style={styles.handDeleteWrap}><Ionicons name="trash-outline" size={13} color={colors.error} /></View>
-                      </TouchableOpacity>
+                      </PressableScale>
                     )}
                   </View>
                 ))}
@@ -1278,65 +1312,73 @@ export default function SessionScreen({ route, navigation }: Props) {
       {/* ── START GAME bar (Draft, Admin/Owner) ── */}
       {isDraft && isAdminOrOwner && (
         <View style={styles.startGameBar}>
-          <TouchableOpacity
+          <PressableScale
             style={styles.startGameBtn}
             onPress={handleStartSession}
             disabled={startLoading}
-            activeOpacity={0.85}
+            haptic="medium"
+            accessibilityRole="button"
+            accessibilityLabel="Start game"
+            accessibilityState={{ disabled: startLoading }}
           >
             {startLoading
               ? <ActivityIndicator color={colors.background} size="small" />
               : (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Ionicons name="play-circle-outline" size={18} color={colors.background} />
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                  <Ionicons name="play-circle-outline" size={iconSize.sm} color={colors.background} />
                   <Text style={styles.startGameBtnText}>START GAME</Text>
                 </View>
               )}
-          </TouchableOpacity>
+          </PressableScale>
         </View>
       )}
 
       {/* ── Floating Log Hand button (Active) ── */}
       {isActive && (
-        <TouchableOpacity
+        <PressableScale
           style={[styles.fab, isAdminOrOwner && { bottom: Platform.OS === 'ios' ? 158 : 140 }]}
           onPress={() => { setHandPot(''); setHandWinner(''); setHandNote(''); setHandModal(true); }}
+          haptic="light"
+          accessibilityRole="button"
+          accessibilityLabel="Log a hand"
         >
           <Text style={styles.fabText}>+ Hand</Text>
-        </TouchableOpacity>
+        </PressableScale>
       )}
 
       {/* ── End Game sticky CTA (Active, Admin/Owner, above action bar) ── */}
       {isActive && isAdminOrOwner && (
-        <TouchableOpacity style={styles.endGameBar} onPress={openEndModal} activeOpacity={0.85}>
-          <Ionicons name="flag-outline" size={16} color={colors.text} />
+        <PressableScale style={styles.endGameBar} onPress={openEndModal} haptic="medium" accessibilityRole="button" accessibilityLabel="End game">
+          <Ionicons name="flag-outline" size={iconSize.xs} color={colors.text} />
           <Text style={styles.endGameBarText}>End Game</Text>
-        </TouchableOpacity>
+        </PressableScale>
       )}
 
       {/* ── Bottom Action Bar (Active sessions only) ── */}
       {isActive && (
         <View style={styles.actionBar}>
-          <TouchableOpacity style={styles.actionBarBtn} onPress={() => openActionBar('buyin')} activeOpacity={0.8}>
-            <Text style={styles.actionBarBtnIcon}>+</Text>
+          <PressableScale style={styles.actionBarBtn} onPress={() => openActionBar('buyin')} haptic="light" accessibilityRole="button" accessibilityLabel="Buy in">
+            <Ionicons name="add" size={iconSize.sm} color={colors.gold} />
             <Text style={styles.actionBarBtnText}>Buy In</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBarBtn} onPress={() => openActionBar('buyin')} activeOpacity={0.8}>
-            <Text style={styles.actionBarBtnIcon}>↺</Text>
+          </PressableScale>
+          <PressableScale style={styles.actionBarBtn} onPress={() => openActionBar('buyin')} haptic="light" accessibilityRole="button" accessibilityLabel="Rebuy">
+            <Ionicons name="refresh" size={iconSize.sm} color={colors.gold} />
             <Text style={styles.actionBarBtnText}>Rebuy</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionBarBtn, styles.actionBarBtnCash]} onPress={() => openActionBar('cashout')} activeOpacity={0.8}>
-            <Text style={[styles.actionBarBtnIcon, styles.actionBarBtnIconCash]}>$</Text>
+          </PressableScale>
+          <PressableScale style={[styles.actionBarBtn, styles.actionBarBtnCash]} onPress={() => openActionBar('cashout')} haptic="light" accessibilityRole="button" accessibilityLabel="Cash out">
+            <Ionicons name="cash-outline" size={iconSize.sm} color={colors.success} />
             <Text style={[styles.actionBarBtnText, styles.actionBarBtnTextCash]}>Cash Out</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+          </PressableScale>
+          <PressableScale
             style={[styles.actionBarBtn, styles.actionBarBtnPlayer]}
             onPress={() => { setAddPlayerModal(true); setPlayerSearch(''); setGuestName(''); }}
-            activeOpacity={0.8}
+            haptic="light"
+            accessibilityRole="button"
+            accessibilityLabel="Add player"
           >
-            <Text style={[styles.actionBarBtnIcon, styles.actionBarBtnIconPlayer]}>＋</Text>
+            <Ionicons name="person-add-outline" size={iconSize.sm} color={colors.textMuted} />
             <Text style={[styles.actionBarBtnText, styles.actionBarBtnTextPlayer]}>Player</Text>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
       )}
 
@@ -1352,9 +1394,9 @@ export default function SessionScreen({ route, navigation }: Props) {
                 </Text>
                 {txModal.player && <Text style={styles.sheetSubtitle}>{txModal.player.username}</Text>}
               </View>
-              <TouchableOpacity onPress={() => setTxModal({ visible: false, type: 'buyin', player: null, needsPlayerSelect: false })} hitSlop={8}>
+              <PressableScale onPress={() => setTxModal({ visible: false, type: 'buyin', player: null, needsPlayerSelect: false })} hitSlop={8} haptic="light" accessibilityRole="button" accessibilityLabel="Close">
                 <View style={styles.closeBtnWrap}><Ionicons name="close" size={16} color={colors.textMuted} /></View>
-              </TouchableOpacity>
+              </PressableScale>
             </View>
 
             {/* Player selector phase (opened from bottom bar) */}
@@ -1363,15 +1405,19 @@ export default function SessionScreen({ route, navigation }: Props) {
                 <Text style={styles.subLabel}>Select Player</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.playerSelectScroll}>
                   {(session?.players ?? []).map(p => (
-                    <TouchableOpacity
+                    <PressableScale
                       key={p.sessionPlayerId}
                       style={[styles.winnerChip, txModal.player?.sessionPlayerId === p.sessionPlayerId && styles.winnerChipSelected]}
                       onPress={() => setTxModal(prev => ({ ...prev, player: p, needsPlayerSelect: false }))}
+                      haptic="light"
+                      accessibilityRole="button"
+                      accessibilityLabel={`Select ${p.username}`}
+                      accessibilityState={{ selected: txModal.player?.sessionPlayerId === p.sessionPlayerId }}
                     >
                       <Text style={[styles.winnerChipText, txModal.player?.sessionPlayerId === p.sessionPlayerId && styles.winnerChipTextSelected]}>
                         {p.username}
                       </Text>
-                    </TouchableOpacity>
+                    </PressableScale>
                   ))}
                 </ScrollView>
               </>
@@ -1382,18 +1428,29 @@ export default function SessionScreen({ route, navigation }: Props) {
               <>
                 {session.chipRatio && (
                   <View style={styles.toggleRow}>
-                    <TouchableOpacity
+                    <PressableScale
                       style={[styles.toggleBtn, !useChips && styles.toggleBtnActive]}
                       onPress={() => setUseChips(false)}
+                      haptic="light"
+                      accessibilityRole="button"
+                      accessibilityLabel="Enter amount in money"
+                      accessibilityState={{ selected: !useChips }}
                     >
                       <Text style={[styles.toggleBtnText, !useChips && styles.toggleBtnTextActive]}>{sym} Money</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
+                    </PressableScale>
+                    <PressableScale
                       style={[styles.toggleBtn, useChips && styles.toggleBtnActive]}
                       onPress={() => setUseChips(true)}
+                      haptic="light"
+                      accessibilityRole="button"
+                      accessibilityLabel="Enter amount in chips"
+                      accessibilityState={{ selected: useChips }}
                     >
-                      <Text style={[styles.toggleBtnText, useChips && styles.toggleBtnTextActive]}>🪙 Chips</Text>
-                    </TouchableOpacity>
+                      <View style={styles.toggleBtnInner}>
+                        <Ionicons name="disc-outline" size={13} color={useChips ? colors.background : colors.textMuted} />
+                        <Text style={[styles.toggleBtnText, useChips && styles.toggleBtnTextActive]}>Chips</Text>
+                      </View>
+                    </PressableScale>
                   </View>
                 )}
 
@@ -1414,15 +1471,19 @@ export default function SessionScreen({ route, navigation }: Props) {
                   return (
                     <View style={styles.presetRow}>
                       {presets.map(p => (
-                        <TouchableOpacity
+                        <PressableScale
                           key={p}
                           style={[styles.presetChip, txAmount === String(p) && styles.presetChipActive]}
                           onPress={() => setTxAmount(String(p))}
+                          haptic="light"
+                          accessibilityRole="button"
+                          accessibilityLabel={`Set amount ${sym}${p.toLocaleString()}`}
+                          accessibilityState={{ selected: txAmount === String(p) }}
                         >
                           <Text style={[styles.presetChipText, txAmount === String(p) && styles.presetChipTextActive]}>
                             {sym}{p.toLocaleString()}
                           </Text>
-                        </TouchableOpacity>
+                        </PressableScale>
                       ))}
                     </View>
                   );
@@ -1437,16 +1498,23 @@ export default function SessionScreen({ route, navigation }: Props) {
                 )}
 
                 <View style={styles.sheetActions}>
-                  <TouchableOpacity
+                  <PressableScale
                     style={styles.cancelBtn}
                     onPress={() => setTxModal({ visible: false, type: 'buyin', player: null, needsPlayerSelect: false })}
+                    haptic="light"
+                    accessibilityRole="button"
+                    accessibilityLabel="Cancel"
                   >
                     <Text style={styles.cancelBtnText}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
+                  </PressableScale>
+                  <PressableScale
                     style={[styles.confirmBtn, txModal.type === 'cashout' && styles.confirmBtnCash]}
                     onPress={handleTransaction}
                     disabled={txLoading}
+                    haptic="medium"
+                    accessibilityRole="button"
+                    accessibilityLabel={txModal.type === 'buyin' ? 'Confirm buy-in' : 'Confirm cash-out'}
+                    accessibilityState={{ disabled: txLoading }}
                   >
                     {txLoading ? (
                       <ActivityIndicator color={colors.background} size="small" />
@@ -1458,7 +1526,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                           : ''}
                       </Text>
                     )}
-                  </TouchableOpacity>
+                  </PressableScale>
                 </View>
               </>
             )}
@@ -1473,9 +1541,9 @@ export default function SessionScreen({ route, navigation }: Props) {
             <View style={styles.sheetHandle} />
             <View style={styles.sheetTitleRow}>
               <Text style={styles.sheetTitle}>Add Player</Text>
-              <TouchableOpacity onPress={() => setAddPlayerModal(false)} hitSlop={8}>
+              <PressableScale onPress={() => setAddPlayerModal(false)} hitSlop={8} haptic="light" accessibilityRole="button" accessibilityLabel="Close">
                 <View style={styles.closeBtnWrap}><Ionicons name="close" size={16} color={colors.textMuted} /></View>
-              </TouchableOpacity>
+              </PressableScale>
             </View>
 
             {filteredMembers.length > 0 && (
@@ -1483,16 +1551,20 @@ export default function SessionScreen({ route, navigation }: Props) {
                 <Text style={styles.subLabel}>Group Members</Text>
                 <View style={styles.memberGrid}>
                   {filteredMembers.map(m => (
-                    <TouchableOpacity
+                    <PressableScale
                       key={m.userId}
                       style={styles.memberChip}
                       onPress={() => handleAddMember(m)}
                       disabled={addingPlayerId === m.userId}
+                      haptic="light"
+                      accessibilityRole="button"
+                      accessibilityLabel={`Add ${m.username}`}
+                      accessibilityState={{ disabled: addingPlayerId === m.userId }}
                     >
                       {addingPlayerId === m.userId
                         ? <ActivityIndicator color={colors.background} size="small" />
                         : <Text style={styles.memberChipText}>{m.username}</Text>}
-                    </TouchableOpacity>
+                    </PressableScale>
                   ))}
                 </View>
               </>
@@ -1509,15 +1581,19 @@ export default function SessionScreen({ route, navigation }: Props) {
                 placeholder="Guest name"
                 placeholderTextColor={colors.textDim}
               />
-              <TouchableOpacity
+              <PressableScale
                 style={[styles.addGuestBtn, (!guestName.trim() || addingGuest) && styles.addGuestBtnDisabled]}
                 onPress={handleAddGuest}
                 disabled={!guestName.trim() || addingGuest}
+                haptic="light"
+                accessibilityRole="button"
+                accessibilityLabel="Add guest"
+                accessibilityState={{ disabled: !guestName.trim() || addingGuest }}
               >
                 {addingGuest
                   ? <ActivityIndicator color={colors.background} size="small" />
                   : <Text style={styles.addGuestBtnText}>Add</Text>}
-              </TouchableOpacity>
+              </PressableScale>
             </View>
           </View>
         </View>
@@ -1547,38 +1623,41 @@ export default function SessionScreen({ route, navigation }: Props) {
               )}
             </View>
 
-            <TouchableOpacity style={styles.endOptionBtn} onPress={() => setEndStep(2)} activeOpacity={0.8}>
-              <View style={styles.endOptionIconWrap}><Ionicons name="list-outline" size={18} color={colors.gold} /></View>
+            <PressableScale style={styles.endOptionBtn} onPress={() => setEndStep(2)} haptic="light" accessibilityRole="button" accessibilityLabel="Count the chips and settle">
+              <View style={styles.endOptionIconWrap}><Ionicons name="list-outline" size={iconSize.xs} color={colors.gold} /></View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.endOptionTitle}>Count the Chips & Settle</Text>
                 <Text style={styles.endOptionSub}>Recommended — count what's on the table for exact results.</Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.gold} />
-            </TouchableOpacity>
+              <Ionicons name="chevron-forward" size={iconSize.xs} color={colors.gold} />
+            </PressableScale>
 
-            <TouchableOpacity
+            <PressableScale
               style={[styles.endOptionBtn, styles.endOptionBtnSecondary]}
               onPress={() => handleEndSession()}
               disabled={endLoading}
-              activeOpacity={0.8}
+              haptic="medium"
+              accessibilityRole="button"
+              accessibilityLabel="Quick end using recorded transactions"
+              accessibilityState={{ disabled: endLoading }}
             >
               {endLoading ? (
                 <ActivityIndicator color={colors.textMuted} size="small" style={{ flex: 1 }} />
               ) : (
                 <>
-                  <View style={styles.endOptionIconWrap}><Ionicons name="flash-outline" size={18} color={colors.textMuted} /></View>
+                  <View style={styles.endOptionIconWrap}><Ionicons name="flash-outline" size={iconSize.xs} color={colors.textMuted} /></View>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.endOptionTitle, { color: colors.textMuted }]}>Quick End — use recorded transactions</Text>
                     <Text style={styles.endOptionSub}>Settle from buy-ins and cash-outs already recorded. No count needed.</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color={colors.gold} />
+                  <Ionicons name="chevron-forward" size={iconSize.xs} color={colors.gold} />
                 </>
               )}
-            </TouchableOpacity>
+            </PressableScale>
 
-            <TouchableOpacity style={styles.endCancelRow} onPress={() => setEndStep(0)}>
+            <PressableScale style={styles.endCancelRow} onPress={() => setEndStep(0)} haptic="light" accessibilityRole="button" accessibilityLabel="Cancel">
               <Text style={styles.endCancelText}>Cancel</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </View>
         </View>
       </Modal>
@@ -1595,22 +1674,22 @@ export default function SessionScreen({ route, navigation }: Props) {
                   Last step — count each player's remaining {session.chipRatio && useChips ? 'chips' : 'cash'}. We'll settle the rest.
                 </Text>
               </View>
-              <TouchableOpacity onPress={() => setEndStep(1)} hitSlop={8}>
+              <PressableScale onPress={() => setEndStep(1)} hitSlop={8} haptic="light" accessibilityRole="button" accessibilityLabel="Back">
                 <View style={styles.closeBtnWrap}><Ionicons name="close" size={16} color={colors.textMuted} /></View>
-              </TouchableOpacity>
+              </PressableScale>
             </View>
 
             {session.chipRatio && (
               <View style={styles.toggleRow}>
-                <TouchableOpacity style={[styles.toggleBtn, !useChips && styles.toggleBtnActive]} onPress={() => setUseChips(false)}>
+                <PressableScale style={[styles.toggleBtn, !useChips && styles.toggleBtnActive]} onPress={() => setUseChips(false)} haptic="light" accessibilityRole="button" accessibilityLabel="Count in money" accessibilityState={{ selected: !useChips }}>
                   <Text style={[styles.toggleBtnText, !useChips && styles.toggleBtnTextActive]}>{sym} Money</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.toggleBtn, useChips && styles.toggleBtnActive]} onPress={() => setUseChips(true)}>
+                </PressableScale>
+                <PressableScale style={[styles.toggleBtn, useChips && styles.toggleBtnActive]} onPress={() => setUseChips(true)} haptic="light" accessibilityRole="button" accessibilityLabel="Count in chips" accessibilityState={{ selected: useChips }}>
                   <View style={styles.toggleBtnInner}>
                     <Ionicons name="disc-outline" size={13} color={useChips ? colors.background : colors.textMuted} />
                     <Text style={[styles.toggleBtnText, useChips && styles.toggleBtnTextActive]}>Chips</Text>
                   </View>
-                </TouchableOpacity>
+                </PressableScale>
               </View>
             )}
 
@@ -1691,14 +1770,18 @@ export default function SessionScreen({ route, navigation }: Props) {
                   )}
 
                   {!isBalanced && (
-                    <TouchableOpacity
+                    <PressableScale
                       style={[styles.overrideRow, overrideBalance && styles.overrideRowArmed]}
                       onPress={() => setOverrideBalance(v => !v)}
-                      activeOpacity={0.7}
+                      haptic="light"
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: overrideBalance }}
+                      accessibilityLabel="End anyway with an unbalanced count"
+                      accessibilityHint={`Results will be off by ${fmt(Math.abs(diff))} ${unitLabel}`}
                     >
                       <Ionicons
                         name={overrideBalance ? 'checkbox' : 'square-outline'}
-                        size={22}
+                        size={iconSize.md}
                         color={overrideBalance ? colors.error : colors.textMuted}
                       />
                       <View style={styles.overrideTextWrap}>
@@ -1707,7 +1790,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                           Results will be off by {fmt(Math.abs(diff))} {unitLabel}.
                         </Text>
                       </View>
-                    </TouchableOpacity>
+                    </PressableScale>
                   )}
 
                   <Text style={styles.finalityFooter}>
@@ -1760,7 +1843,11 @@ export default function SessionScreen({ route, navigation }: Props) {
                 </View>
               )}
               <View style={styles.summaryStat}>
-                <Text style={[styles.summaryStatValue, { color: colors.gold }]}>{formatMoney(totalPot)}</Text>
+                <AnimatedNumber
+                  value={Math.round(totalPot * 100)}
+                  format={(c) => formatMoney(c / 100)}
+                  style={[styles.summaryStatValue, { color: colors.gold }]}
+                />
                 <Text style={styles.summaryStatLabel}>Pot</Text>
               </View>
               <View style={styles.summaryStat}>
@@ -1848,15 +1935,19 @@ export default function SessionScreen({ route, navigation }: Props) {
                           <Text style={styles.summarySettlementAmount}>{formatMoney(s.amount)}</Text>
                         </View>
                         {!isPaid ? (
-                          <TouchableOpacity
+                          <PressableScale
                             style={styles.summaryMarkPaidBtn}
                             onPress={() => handleMarkPaid(s.id)}
                             disabled={markingPaidId === s.id}
+                            haptic="medium"
+                            accessibilityRole="button"
+                            accessibilityLabel={`Mark ${s.payerName} to ${s.receiverName} ${formatMoney(s.amount)} as paid`}
+                            accessibilityState={{ disabled: markingPaidId === s.id }}
                           >
                             {markingPaidId === s.id
                               ? <ActivityIndicator size="small" color={colors.background} />
                               : <Text style={styles.summaryMarkPaidText}>Mark Paid</Text>}
-                          </TouchableOpacity>
+                          </PressableScale>
                         ) : (
                           <View style={styles.summaryPaidBadge}>
                             <Text style={styles.summaryPaidBadgeText}>PAID</Text>
@@ -1871,18 +1962,20 @@ export default function SessionScreen({ route, navigation }: Props) {
 
             <View style={styles.finishRow}>
               {canShareImages && endSummary && (
-                <TouchableOpacity
+                <PressableScale
                   style={styles.shareImageBtn}
                   onPress={() => shareCardImage(gameOverShareRef).catch(() => {})}
-                  activeOpacity={0.85}
+                  haptic="light"
+                  accessibilityRole="button"
+                  accessibilityLabel="Share result card"
                 >
-                  <Ionicons name="share-outline" size={18} color={colors.gold} />
-                </TouchableOpacity>
+                  <Ionicons name="share-outline" size={iconSize.xs} color={colors.gold} />
+                </PressableScale>
               )}
-              <TouchableOpacity style={[styles.finishGameBtn, { flex: 1 }]} onPress={finishGame} activeOpacity={0.85}>
-                <Ionicons name="checkmark-circle-outline" size={18} color={colors.background} />
+              <PressableScale style={[styles.finishGameBtn, { flex: 1 }]} onPress={finishGame} haptic="medium" accessibilityRole="button" accessibilityLabel="Save results">
+                <Ionicons name="checkmark-circle-outline" size={iconSize.xs} color={colors.background} />
                 <Text style={styles.finishGameBtnText}>Save Results →</Text>
-              </TouchableOpacity>
+              </PressableScale>
             </View>
 
             {canShareImages && endSummary && (
@@ -1916,9 +2009,9 @@ export default function SessionScreen({ route, navigation }: Props) {
             <View style={styles.sheetHandle} />
             <View style={styles.sheetTitleRow}>
               <Text style={styles.sheetTitle}>Log Hand</Text>
-              <TouchableOpacity onPress={() => setHandModal(false)} hitSlop={8}>
+              <PressableScale onPress={() => setHandModal(false)} hitSlop={8} haptic="light" accessibilityRole="button" accessibilityLabel="Close">
                 <View style={styles.closeBtnWrap}><Ionicons name="close" size={16} color={colors.textMuted} /></View>
-              </TouchableOpacity>
+              </PressableScale>
             </View>
 
             <Text style={styles.subLabel}>Pot Amount</Text>
@@ -1934,15 +2027,19 @@ export default function SessionScreen({ route, navigation }: Props) {
             <Text style={[styles.subLabel, { marginTop: 12 }]}>Winner</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.winnerScroll}>
               {session.players.map(p => (
-                <TouchableOpacity
+                <PressableScale
                   key={p.sessionPlayerId}
                   style={[styles.winnerChip, handWinner === p.username && styles.winnerChipSelected]}
                   onPress={() => setHandWinner(p.username)}
+                  haptic="light"
+                  accessibilityRole="button"
+                  accessibilityLabel={`Winner ${p.username}`}
+                  accessibilityState={{ selected: handWinner === p.username }}
                 >
                   <Text style={[styles.winnerChipText, handWinner === p.username && styles.winnerChipTextSelected]}>
                     {p.username}
                   </Text>
-                </TouchableOpacity>
+                </PressableScale>
               ))}
             </ScrollView>
 
@@ -1955,15 +2052,19 @@ export default function SessionScreen({ route, navigation }: Props) {
               placeholderTextColor={colors.textDim}
             />
 
-            <TouchableOpacity
-              style={[styles.confirmBtn, { marginTop: 16 }]}
+            <PressableScale
+              style={[styles.confirmBtn, { marginTop: spacing.lg }]}
               onPress={handleAddHand}
               disabled={handLoading}
+              haptic="medium"
+              accessibilityRole="button"
+              accessibilityLabel="Log hand"
+              accessibilityState={{ disabled: handLoading }}
             >
               {handLoading
                 ? <ActivityIndicator color={colors.background} size="small" />
                 : <Text style={styles.confirmBtnText}>Log Hand</Text>}
-            </TouchableOpacity>
+            </PressableScale>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -2000,10 +2101,9 @@ function MetaChip({ label, gold }: { label: string; gold?: boolean }) {
   );
 }
 
+// Tokenized rank label — "#1", "#2", … (no emoji glyphs). Top-3 are tinted gold/
+// silver/bronze via RANK_COLORS at the call sites.
 function rankLabel(rank: number): string {
-  if (rank === 1) return '🥇';
-  if (rank === 2) return '🥈';
-  if (rank === 3) return '🥉';
   return `#${rank}`;
 }
 
@@ -2135,7 +2235,7 @@ const styles = StyleSheet.create({
   playerName: { ...typography.label, color: colors.text },
   playerNameFirst: { color: colors.gold },
   playerMeta: { ...typography.caption, color: colors.textMuted },
-  rankLabel: { fontSize: 14 },
+  rankLabel: { fontSize: 14, fontWeight: '700', color: colors.goldLight },
   playerRight: { alignItems: 'flex-end', gap: 8 },
   plValue: { ...typography.amount, letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
   plValueFirst: { fontSize: 22, fontWeight: '800' },
@@ -2174,7 +2274,8 @@ const styles = StyleSheet.create({
   standingChipTrailing: {
     borderColor: 'rgba(231,76,60,0.25)',
   },
-  standingName: { fontSize: 11, fontWeight: '600', color: colors.textMuted, marginBottom: 2 },
+  standingNameRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 2 },
+  standingName: { fontSize: 11, fontWeight: '600', color: colors.textMuted },
   standingNameLeader: { color: colors.goldLight },
   standingPL: { fontSize: 12, fontWeight: '800', fontVariant: ['tabular-nums'] as const },
   standingPos: { color: colors.success },
@@ -2247,6 +2348,7 @@ const styles = StyleSheet.create({
   chipPillActive: { backgroundColor: colors.gold, borderColor: colors.gold },
   chipPillText: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
   chipPillTextActive: { color: colors.background },
+  chipPillInner: { flexDirection: 'row', alignItems: 'center', gap: 5 },
 
   // "Everyone is even" empty state
   evenCard: {
@@ -2486,9 +2588,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceHigh,
     borderColor: colors.border,
   },
-  actionBarBtnIcon: { fontSize: 14, fontWeight: '800', color: colors.gold, lineHeight: 16 },
-  actionBarBtnIconCash: { color: colors.success },
-  actionBarBtnIconPlayer: { color: colors.textMuted },
   actionBarBtnText: { fontSize: 11, fontWeight: '700', color: colors.gold },
   actionBarBtnTextCash: { color: colors.success },
   actionBarBtnTextPlayer: { color: colors.textMuted },
@@ -2744,7 +2843,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     borderRadius: 6,
   },
-  summaryRank: { fontSize: 18, width: 30, textAlign: 'center' },
+  summaryRank: { fontSize: 18, width: 30, textAlign: 'center', fontWeight: '700', color: colors.goldLight },
   summaryPlayerName: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.text },
   summaryPL: { fontSize: 16, fontWeight: '800' },
   summarySettlementRow: { paddingVertical: 6 },

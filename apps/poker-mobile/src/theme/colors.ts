@@ -13,7 +13,7 @@ export const colors = {
   goldMuted: 'rgba(201,168,76,0.40)',
   text: '#FFFFFF',
   textHigh: '#E8EDF2',
-  textMuted: '#7A8A99',
+  textMuted: '#8E9BAA',
   textDim: '#3A4A5A',
   error: '#E74C3C',
   errorFaint: 'rgba(231,76,60,0.08)',

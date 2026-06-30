@@ -116,6 +116,9 @@ export default function RegisterScreen({ navigation }: Props) {
               placeholder="johndoe"
               autoCapitalize="none"
               autoCorrect={false}
+              autoComplete="username"
+              textContentType="username"
+              returnKeyType="next"
             />
             <AppTextInput
               label="Email"
@@ -125,6 +128,9 @@ export default function RegisterScreen({ navigation }: Props) {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
+              autoComplete="email"
+              textContentType="emailAddress"
+              returnKeyType="next"
             />
             <AppTextInput
               label="Password"
@@ -132,6 +138,10 @@ export default function RegisterScreen({ navigation }: Props) {
               onChangeText={setPassword}
               placeholder="••••••••"
               secureTextEntry
+              autoComplete="new-password"
+              textContentType="newPassword"
+              returnKeyType="done"
+              onSubmitEditing={handleRegister}
               error={error || undefined}
             />
 
@@ -157,7 +167,12 @@ export default function RegisterScreen({ navigation }: Props) {
 
         <Animated.View style={[styles.footer, { opacity: formOpacity }]}>
           <Text style={styles.footerText}>Already have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={8}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Sign in to your account"
+          >
             <Text style={styles.link}>Sign In</Text>
           </TouchableOpacity>
         </Animated.View>

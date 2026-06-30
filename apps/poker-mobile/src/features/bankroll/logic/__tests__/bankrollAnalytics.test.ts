@@ -7,6 +7,10 @@ import {
   filterSessions,
   summarize,
   bankrollOverTime,
+  advancedStats,
+  maxDrawdownCents,
+  sessionNetHistogram,
+  type BankrollPoint,
 } from '../bankrollAnalytics';
 import type { BankrollSession } from '../../types';
 
@@ -151,5 +155,100 @@ describe('bankrollOverTime', () => {
     const pts = bankrollOverTime(sessions, 100000);
     expect(pts.map(p => p.cumulativeCents)).toEqual([97000, 101000]); // sorted by date: -3000 then +4000
     expect(pts[0].at).toBe('2026-06-01T20:00:00.000Z');
+  });
+});
+
+describe('advancedStats — variance / std-dev / best / worst', () => {
+  it('returns nulls for an empty list (no sessions)', () => {
+    const a = advancedStats([]);
+    expect(a.count).toBe(0);
+    expect(a.meanNetCents).toBeNull();
+    expect(a.varianceCents2).toBeNull();
+    expect(a.stdDevCents).toBeNull();
+    expect(a.bestNetCents).toBeNull();
+    expect(a.worstNetCents).toBeNull();
+    expect(a.maxDrawdownCents).toBe(0);
+  });
+
+  it('needs >=2 sessions for variance/std-dev (sample, n-1) but reports best/worst/mean for one', () => {
+    const a = advancedStats([cash(1000, 4000)]); // single net +3000
+    expect(a.count).toBe(1);
+    expect(a.meanNetCents).toBe(3000);
+    expect(a.bestNetCents).toBe(3000);
+    expect(a.worstNetCents).toBe(3000);
+    expect(a.varianceCents2).toBeNull(); // n < 2 → undefined variance
+    expect(a.stdDevCents).toBeNull();
+    expect(a.maxDrawdownCents).toBe(0); // single point: no peak-to-trough
+  });
+
+  it('computes sample variance (n-1) and std-dev of session net', () => {
+    // nets: -1000, 0, +1000 → mean 0, SS = 2,000,000, sample var = 2e6/2 = 1e6, std = 1000
+    const a = advancedStats([cash(2000, 1000), cash(1000, 1000), cash(1000, 2000)]);
+    expect(a.meanNetCents).toBe(0);
+    expect(a.varianceCents2).toBe(1_000_000);
+    expect(a.stdDevCents).toBe(1000);
+    expect(a.bestNetCents).toBe(1000);
+    expect(a.worstNetCents).toBe(-1000);
+  });
+
+  it('uses the sample estimator (n-1), not population (n)', () => {
+    // nets: +4000, -11000, +22000 → mean 5000, SS = 546,000,000
+    // sample var = 546e6 / 2 = 273,000,000 (population would be /3 = 182,000,000)
+    const a = advancedStats([
+      cash(1000, 5000),                                                // +4000
+      mtt({ buyInCents: 10000, feeCents: 1000, payoutCents: 0 }),      // -11000
+      mtt({ buyInCents: 10000, feeCents: 1000, payoutCents: 33000 }),  // +22000
+    ]);
+    expect(a.meanNetCents).toBe(5000);
+    expect(a.varianceCents2).toBe(273_000_000);
+    expect(a.stdDevCents).toBe(16523); // round(sqrt(273,000,000))
+  });
+});
+
+describe('maxDrawdownCents — peak-to-trough on the cumulative series', () => {
+  const pt = (cumulativeCents: number): BankrollPoint => ({ at: '', netCents: 0, cumulativeCents });
+
+  it('is 0 for empty / single-point / monotonic series', () => {
+    expect(maxDrawdownCents([])).toBe(0);
+    expect(maxDrawdownCents([pt(-1000)])).toBe(0);
+    expect(maxDrawdownCents([pt(0), pt(1000), pt(3000)])).toBe(0);
+  });
+
+  it('measures the largest peak-to-trough drop', () => {
+    // peak 1000 (pt1) → trough -2500 (pt4) = 3500
+    expect(maxDrawdownCents([pt(1000), pt(-2000), pt(-1500), pt(-2500), pt(1500)])).toBe(3500);
+    expect(maxDrawdownCents([pt(-1000), pt(-3000)])).toBe(2000);
+  });
+
+  it('is shift-invariant: the starting bankroll does not change drawdown', () => {
+    const sessions = [
+      cash(0, 1000, { startedAt: '2026-06-01T20:00:00.000Z' }),                                          // +1000
+      mtt({ buyInCents: 3000, feeCents: 0, payoutCents: 0 }, { startedAt: '2026-06-02T20:00:00.000Z' }), // -3000
+      cash(0, 500, { startedAt: '2026-06-03T20:00:00.000Z' }),                                           // +500
+      mtt({ buyInCents: 1000, feeCents: 0, payoutCents: 0 }, { startedAt: '2026-06-04T20:00:00.000Z' }), // -1000
+      cash(0, 4000, { startedAt: '2026-06-05T20:00:00.000Z' }),                                          // +4000
+    ];
+    expect(maxDrawdownCents(bankrollOverTime(sessions, 0))).toBe(3500);
+    expect(maxDrawdownCents(bankrollOverTime(sessions, 100000))).toBe(3500);
+  });
+});
+
+describe('sessionNetHistogram — distribution buckets', () => {
+  it('returns no bins for an empty list', () => {
+    expect(sessionNetHistogram([])).toEqual([]);
+  });
+
+  it('collapses to a single bin when every session nets the same', () => {
+    const bins = sessionNetHistogram([cash(1000, 1000), cash(2000, 2000)]); // nets 0, 0
+    expect(bins).toEqual([{ fromCents: 0, toCents: 0, count: 2 }]);
+  });
+
+  it('buckets nets across the [min,max] range; counts always sum to n', () => {
+    const sessions = [cash(2000, 1000), cash(1000, 1000), cash(1000, 2000)]; // -1000, 0, +1000
+    const bins = sessionNetHistogram(sessions, 2);
+    expect(bins).toHaveLength(2);
+    expect(bins[0]).toEqual({ fromCents: -1000, toCents: 0, count: 1 });
+    expect(bins[1]).toEqual({ fromCents: 0, toCents: 1000, count: 2 });
+    expect(bins.reduce((s, b) => s + b.count, 0)).toBe(3);
   });
 });

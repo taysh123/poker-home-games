@@ -19,10 +19,14 @@ import StateView from '../../../components/StateView';
 import Chip from '../../../components/Chip';
 import PrimaryButton from '../../../components/PrimaryButton';
 import PressableScale from '../../../components/motion/PressableScale';
+import ProgressBar from '../../../components/ProgressBar';
+import AnimatedNumber from '../../../components/motion/AnimatedNumber';
+import { MotiView, slideUpSequence, staggerIn, successPop } from '../../../components/motion';
 import { colors } from '../../../theme/colors';
 import { typography } from '../../../theme/typography';
 import { spacing } from '../../../theme/spacing';
 import { radii } from '../../../theme/radii';
+import { iconSize } from '../../../theme/iconSize';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
 import { useContent } from '../../../context/ContentContext';
 import { useReducedMotion } from '../../../hooks/useReducedMotion';
@@ -192,6 +196,7 @@ function PickView({ total, categories, limit, onStartAll, onStartCategory }: {
   total: number; categories: string[]; limit: { allowed: boolean; remaining: number };
   onStartAll: () => void; onStartCategory: (c: string) => void;
 }) {
+  const reduced = useReducedMotion();
   const blocked = !limit.allowed;
   const remainingLabel = limit.remaining === Infinity ? 'Unlimited quizzes' : `${limit.remaining} free quiz${limit.remaining === 1 ? '' : 'zes'} left today`;
   return (
@@ -223,14 +228,16 @@ function PickView({ total, categories, limit, onStartAll, onStartCategory }: {
       {!blocked && categories.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>BY CATEGORY</Text>
-          {categories.map(c => (
-            <PressableScale key={c} haptic="light" accessibilityRole="button" accessibilityLabel={`Start ${c} quiz`} onPress={() => onStartCategory(c)}>
-              <Card style={styles.row}>
-                <View style={styles.icon}><Ionicons name="albums-outline" size={20} color={colors.gold} /></View>
-                <Text style={styles.rowName}>{c}</Text>
-                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-              </Card>
-            </PressableScale>
+          {categories.map((c, i) => (
+            <MotiView key={c} {...slideUpSequence({ reduced, delay: staggerIn(i) })}>
+              <PressableScale haptic="light" accessibilityRole="button" accessibilityLabel={`Start ${c} quiz`} onPress={() => onStartCategory(c)}>
+                <Card style={styles.row}>
+                  <View style={styles.icon}><Ionicons name="albums-outline" size={iconSize.sm} color={colors.gold} /></View>
+                  <Text style={styles.rowName}>{c}</Text>
+                  <Ionicons name="chevron-forward" size={iconSize.xs} color={colors.textMuted} />
+                </Card>
+              </PressableScale>
+            </MotiView>
           ))}
         </View>
       )}
@@ -245,9 +252,11 @@ function RunView({ question, index, count, chosen, onAnswer, onNext, isLast }: {
   const answered = chosen !== null;
   return (
     <>
-      <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: `${(((index + 1) / Math.max(count, 1)) * 100)}%` }]} />
-      </View>
+      <ProgressBar
+        value={(index + 1) / Math.max(count, 1)}
+        height={6}
+        accessibilityLabel={`Question ${index + 1} of ${count}`}
+      />
       <View style={styles.progressRow}>
         <Text style={styles.progressText}>Question {index + 1} of {count}</Text>
         {!!question.difficulty && <Chip label={question.difficulty} tone="gold" />}
@@ -315,7 +324,13 @@ function Feedback({ correct, correctKey, explanation }: { correct: boolean; corr
     <Animated.View style={{ opacity: anim, transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }] }}>
       <Card style={styles.feedback}>
         <View style={styles.feedbackHead}>
-          <Ionicons name={correct ? 'checkmark-circle' : 'close-circle'} size={18} color={correct ? colors.success : colors.error} />
+          {correct ? (
+            <MotiView {...successPop({ reduced })}>
+              <Ionicons name="checkmark-circle" size={iconSize.sm} color={colors.success} />
+            </MotiView>
+          ) : (
+            <Ionicons name="close-circle" size={iconSize.sm} color={colors.error} />
+          )}
           <Text style={styles.feedbackTitle}>{correct ? 'Correct' : `Correct answer: ${correctKey}`}</Text>
         </View>
         {!!explanation && <Text style={styles.feedbackBody}>{explanation}</Text>}
@@ -329,6 +344,7 @@ function ResultsView({ run, outcomes, masteryEnabled, masteryFor, onRestart, onD
   masteryEnabled: boolean; masteryFor: (key: string) => ObjectiveMastery | null;
   onRestart: () => void; onDone: () => void;
 }) {
+  const reduced = useReducedMotion();
   const score = scoreQuiz(outcomes);
   const breakdown = runBreakdown(run, outcomes);
   // Honest mastery readout — ONLY from real recorded attempts (mastery flag on); distinct keys touched this run.
@@ -339,20 +355,22 @@ function ResultsView({ run, outcomes, masteryEnabled, masteryFor, onRestart, onD
     : [];
   return (
     <>
-      <Card variant="hero">
-        <Text style={styles.heroLabel}>YOUR SCORE</Text>
-        <Text style={styles.heroNum}>{score.pct}%</Text>
-        <Text style={styles.heroSub}>{score.correct} of {score.total} correct</Text>
-      </Card>
+      <MotiView {...successPop({ reduced })}>
+        <Card variant="hero">
+          <Text style={styles.heroLabel}>YOUR SCORE</Text>
+          <AnimatedNumber value={score.pct} format={(n) => `${n}%`} style={styles.heroNum} />
+          <Text style={styles.heroSub}>{score.correct} of {score.total} correct</Text>
+        </Card>
+      </MotiView>
 
       {breakdown.length > 1 && (
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>THIS RUN BY CATEGORY</Text>
-          {breakdown.map(b => (
-            <View key={b.category} style={styles.breakdownRow}>
+          {breakdown.map((b, i) => (
+            <MotiView key={b.category} {...slideUpSequence({ reduced, delay: staggerIn(i) })} style={styles.breakdownRow}>
               <Text style={styles.breakdownCat} numberOfLines={1}>{b.category}</Text>
               <Text style={styles.breakdownVal}>{b.correct}/{b.total}</Text>
-            </View>
+            </MotiView>
           ))}
         </View>
       )}
@@ -406,8 +424,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   icon: { width: 40, height: 40, borderRadius: radii.sm, backgroundColor: colors.goldFaint, alignItems: 'center', justifyContent: 'center' },
   rowName: { ...typography.h4, color: colors.text, flex: 1 },
-  progressTrack: { height: 6, borderRadius: radii.pill, backgroundColor: colors.surfaceHigh, overflow: 'hidden' },
-  progressFill: { height: '100%', borderRadius: radii.pill, backgroundColor: colors.gold },
   progressRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   progressText: { ...typography.bodySmall, color: colors.textMuted },
   questionCard: { paddingVertical: spacing.lg },

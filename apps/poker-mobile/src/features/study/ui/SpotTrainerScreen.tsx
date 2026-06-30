@@ -3,16 +3,22 @@ import { View, Text, StyleSheet, ScrollView, useWindowDimensions } from 'react-n
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import Screen from '../../../components/Screen';
 import BrandHeader from '../../../components/BrandHeader';
 import Card from '../../../components/Card';
 import PrimaryButton from '../../../components/PrimaryButton';
+import ProgressBar from '../../../components/ProgressBar';
 import PressableScale from '../../../components/motion/PressableScale';
+import AnimatedNumber from '../../../components/motion/AnimatedNumber';
 import Celebration from '../../../components/motion/Celebration';
+import { MotiView, successPop } from '../../../components/motion';
+import { useReducedMotion } from '../../../hooks/useReducedMotion';
 import { colors } from '../../../theme/colors';
 import { typography } from '../../../theme/typography';
 import { spacing } from '../../../theme/spacing';
 import { radii } from '../../../theme/radii';
+import { iconSize } from '../../../theme/iconSize';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
 import CrossPillarCTA from '../../../components/CrossPillarCTA';
 import { isFeatureEnabled } from '../../../config/features';
@@ -48,6 +54,7 @@ export default function SpotTrainerScreen() {
   const isQuiz = mode === 'spot';
   const { dataset, recordAnswer, limitFor, consumeLimit } = useStudy();
   const { isPremium } = useEntitlements();
+  const reduced = useReducedMotion();
   const sessionLimit = limitFor('trainerSession');
   const [blocked] = useState(!sessionLimit.allowed);
 
@@ -162,13 +169,15 @@ export default function SpotTrainerScreen() {
         {acc >= 70 ? <Celebration /> : null}
         <BrandHeader variant="screen" title={isQuiz ? 'Quiz complete' : 'Session complete'} onBack={() => navigation.goBack()} />
         <View style={styles.center}>
-          <Card variant="hero" style={styles.resultCard}>
-            <Text style={styles.resultScore}>{correctCount}/{answered}</Text>
-            <Text style={styles.resultAcc}>{acc}% correct</Text>
-            <Text style={styles.resultSub}>
-              {acc >= 80 ? 'Sharp reads. Keep the streak alive.' : 'Good reps — run it back to improve.'}
-            </Text>
-          </Card>
+          <MotiView {...successPop({ reduced })}>
+            <Card variant="hero" style={styles.resultCard}>
+              <Text style={styles.resultScore}>{correctCount}/{answered}</Text>
+              <AnimatedNumber value={acc} format={(n) => `${n}% correct`} style={styles.resultAcc} />
+              <Text style={styles.resultSub}>
+                {acc >= 80 ? 'Sharp reads. Keep the streak alive.' : 'Good reps — run it back to improve.'}
+              </Text>
+            </Card>
+          </MotiView>
           <View style={styles.doneBtns}>
             <PrimaryButton label="Train again" variant="gradient" onPress={() => {
               setAnswered(0); setCorrectCount(0); setResult(null); setDone(false);
@@ -211,6 +220,13 @@ export default function SpotTrainerScreen() {
             icon="time-outline"
           />
         </View>
+        {isQuiz && (
+          <ProgressBar
+            value={Math.min(answered + (result ? 0 : 1), QUIZ_LENGTH) / QUIZ_LENGTH}
+            height={6}
+            accessibilityLabel={`Spot ${Math.min(answered + (result ? 0 : 1), QUIZ_LENGTH)} of ${QUIZ_LENGTH}`}
+          />
+        )}
         {!isQuiz && (
           <View style={styles.statsStrip}>
             <Text style={styles.statItem}>Answered <Text style={styles.statVal}>{answered}</Text></Text>
@@ -259,9 +275,18 @@ export default function SpotTrainerScreen() {
 
         {result ? (
           <Card style={[styles.feedback, result.correct ? styles.feedbackOk : styles.feedbackBad]}>
-            <Text style={[styles.feedbackTitle, { color: result.correct ? colors.success : colors.error }]}>
-              {result.correct ? 'Correct' : 'Not quite'}
-            </Text>
+            <View style={styles.feedbackHead}>
+              {result.correct ? (
+                <MotiView {...successPop({ reduced })}>
+                  <Ionicons name="checkmark-circle" size={iconSize.sm} color={colors.success} />
+                </MotiView>
+              ) : (
+                <Ionicons name="close-circle" size={iconSize.sm} color={colors.error} />
+              )}
+              <Text style={[styles.feedbackTitle, { color: result.correct ? colors.success : colors.error }]}>
+                {result.correct ? 'Correct' : 'Not quite'}
+              </Text>
+            </View>
             <Text style={styles.feedbackBody}>
               GTO play: {result.strategy.map(s => `${ACTION_LABEL[s.action]} ${Math.round(s.freq * 100)}%`).join(' · ')}
             </Text>
@@ -282,11 +307,21 @@ export default function SpotTrainerScreen() {
             />
           ) : (
             <View style={styles.actions}>
-              {spot.options.map(opt => (
-                <PressableScale key={opt} onPress={() => choose(opt)} haptic="medium" style={styles.actionBtn}>
-                  <Text style={styles.actionText}>{opt === 'raise' ? raiseLabel : ACTION_LABEL[opt]}</Text>
-                </PressableScale>
-              ))}
+              {spot.options.map(opt => {
+                const label = opt === 'raise' ? raiseLabel : ACTION_LABEL[opt];
+                return (
+                  <PressableScale
+                    key={opt}
+                    onPress={() => choose(opt)}
+                    haptic="medium"
+                    style={styles.actionBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel={label}
+                  >
+                    <Text style={styles.actionText}>{label}</Text>
+                  </PressableScale>
+                );
+              })}
             </View>
           )}
         </ContentContainer>
@@ -349,6 +384,7 @@ const styles = StyleSheet.create({
   feedback: { gap: spacing.xs, borderWidth: 1 },
   feedbackOk: { borderColor: 'rgba(39,174,96,0.4)' },
   feedbackBad: { borderColor: colors.errorMuted },
+  feedbackHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   feedbackTitle: { ...typography.h4 },
   feedbackBody: { ...typography.body, color: colors.textHigh },
   resultCard: { alignItems: 'center', gap: spacing.xs },
