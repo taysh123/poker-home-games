@@ -60,12 +60,19 @@ export function Showcase() {
         <div className="mt-14 -mx-5 sm:-mx-8 lg:mx-0">
           {/* Scroll container — visible on mobile, becomes grid on lg */}
           <div
+            // The horizontal-scroll strip (mobile) is a keyboard-focusable region so it can be
+            // scrolled with the arrow keys; on lg+ it becomes a static grid (no scroll).
+            role="group"
+            aria-label="App screenshots — scroll horizontally to explore"
+            tabIndex={0}
             className={[
               // Mobile: horizontal scroll
               'flex gap-4 overflow-x-auto scroll-smooth',
               'snap-x snap-mandatory',
               'px-5 sm:px-8 lg:px-0',
               'pb-4 lg:pb-0',
+              // Keep the focus ring on-brand and only where it scrolls
+              'rounded-lg outline-none focus-visible:ring-1 focus-visible:ring-gold/40 lg:focus-visible:ring-0',
               // Desktop: 5-col grid (override flex)
               'lg:grid lg:grid-cols-5 lg:overflow-visible',
             ].join(' ')}
@@ -108,7 +115,7 @@ export function Showcase() {
         </div>
 
         {/* Mobile scroll hint */}
-        <p className="mt-5 text-center text-xs text-textMuted/60 lg:hidden">
+        <p className="mt-5 text-center text-xs text-textMuted lg:hidden">
           Swipe to explore &rarr;
         </p>
       </Container>
