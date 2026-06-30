@@ -2,6 +2,7 @@ import { Header } from '@/components/blocks/Header';
 import { Hero } from '@/components/blocks/Hero';
 import { SocialProof } from '@/components/blocks/SocialProof';
 import { Benefits } from '@/components/blocks/Benefits';
+import { Showcase } from '@/components/blocks/Showcase';
 import { HowItWorks } from '@/components/blocks/HowItWorks';
 import { Pricing } from '@/components/blocks/Pricing';
 import { Faq } from '@/components/blocks/Faq';
@@ -16,6 +17,7 @@ export default function Home() {
         <Hero />
         <SocialProof />
         <Benefits />
+        <Showcase />
         <HowItWorks />
         <Pricing />
         <Faq />
