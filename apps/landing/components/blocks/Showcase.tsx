@@ -23,7 +23,7 @@ const SCREENS = [
   },
   {
     src: '/screenshots/05-stats.png',
-    alt: 'T Poker stats screen — lifetime earnings, win rate, and games played',
+    alt: 'T Poker bankroll and stats tracking — games played, biggest win, and recent results',
   },
 ] as const;
 
