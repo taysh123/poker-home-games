@@ -167,7 +167,7 @@ export default function CoachScreen() {
         <View style={styles.section}>
           <SectionTitle>RECENT</SectionTitle>
           {history.length === 0 ? (
-            <EmptyState ionicon="sparkles-outline" title="No analyses yet" subtitle="Analyze your first hand to get coaching feedback." />
+            <EmptyState animated ionicon="sparkles-outline" title="No analyses yet" subtitle="Analyze your first hand to get coaching feedback." />
           ) : (
             <View style={{ gap: spacing.sm }}>
               {history.map((a, i) => (
