@@ -52,6 +52,11 @@ export function EngagementProvider({ children }: { children: React.ReactNode }) 
   const [unlockQueue, setUnlockQueue] = useState<AchievementDto[]>([]);
   const [celebrate, setCelebrate] = useState(false);
 
+  // Tracks previous celebration-trigger signal values so we can detect when a
+  // game or quiz JUST finished — and delay the rank-up burst accordingly so it
+  // never plays simultaneously with a screen-level Celebration.
+  const prevCelebrationTriggerRef = React.useRef({ localGamesFinished: 0, quizzesCompleted: 0 });
+
   useEffect(() => {
     let cancelled = false;
     store.loadState().then(s => { if (!cancelled) { setState(s); setStateLoaded(true); } });
@@ -88,6 +93,14 @@ export function EngagementProvider({ children }: { children: React.ReactNode }) 
     if (!enabled || !stateLoaded || !pillarsLoaded) return;
     const now = new Date().toISOString();
 
+    // Snapshot prev trigger values BEFORE any early return so every run updates
+    // the ref — including the seeding run — giving accurate diffs on the next run.
+    const prevTrigger = prevCelebrationTriggerRef.current;
+    prevCelebrationTriggerRef.current = {
+      localGamesFinished: signals.localGamesFinished,
+      quizzesCompleted: signals.quizzesCompleted,
+    };
+
     // First run: seed existing progress silently (no celebration flood).
     if (!state.seeded) {
       const seen: Record<string, string> = {};
@@ -108,9 +121,17 @@ export function EngagementProvider({ children }: { children: React.ReactNode }) 
       newly.forEach(k => track('achievement_unlocked', { key: k, rarity: findAchievement(k)?.rarity, source: 'local' }));
     }
     if (rankForXp(xpTotal).index > rankForXp(state.lastXp).index) {
-      setCelebrate(true);
-      setTimeout(() => setCelebrate(false), 2600);
+      // Track immediately; delay the visual burst so it never plays simultaneously
+      // with a screen-level Celebration (game-end = 5.04 s; study success = 1.5 s).
       track('rank_up', { rank: rankForXp(xpTotal).rank.name });
+      const screenBurstMs =
+        signals.localGamesFinished > prevTrigger.localGamesFinished ? 5500 :
+        signals.quizzesCompleted > prevTrigger.quizzesCompleted ? 2000 :
+        0;
+      setTimeout(() => {
+        setCelebrate(true);
+        setTimeout(() => setCelebrate(false), 2600);
+      }, screenBurstMs);
     }
     if (next.lastXp !== xpTotal) next = { ...next, lastXp: xpTotal };
     if (next !== state) { setState(next); store.saveState(next).catch(() => {}); }
@@ -134,7 +155,11 @@ export function EngagementProvider({ children }: { children: React.ReactNode }) 
       {enabled && unlockQueue.length > 0 && (
         <AchievementUnlock achievements={unlockQueue} onDone={() => setUnlockQueue([])} />
       )}
-      {enabled && celebrate && <Celebration />}
+      {/* Gate: suppress rank-up burst while AchievementUnlock (which fires its own
+          Celebration) is visible — never let two Celebrations play at once. */}
+      {enabled && celebrate && unlockQueue.length === 0 && (
+        <Celebration variant="success" />
+      )}
     </EngagementContext.Provider>
   );
 }

@@ -167,7 +167,7 @@ export default function SpotTrainerScreen() {
     const acc = answered > 0 ? Math.round((correctCount / answered) * 100) : 0;
     return (
       <Screen>
-        {acc >= 70 ? <Celebration /> : null}
+        {acc >= 70 ? <Celebration variant="success" /> : null}
         <BrandHeader variant="screen" title={isQuiz ? 'Quiz complete' : 'Session complete'} onBack={() => navigation.goBack()} />
         <View style={styles.center}>
           <MotiView {...successPop({ reduced })}>

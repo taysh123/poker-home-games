@@ -1,122 +1,89 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Dimensions, Platform, StyleSheet, View } from 'react-native';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withTiming,
-} from 'react-native-reanimated';
+import React, { useEffect } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { successNotification } from '../../utils/haptics';
-import { useReducedMotion } from '../../hooks/useReducedMotion';
+import LottieHost from './LottieHost';
 
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-const PALETTE = ['#C9A84C', '#E8C97A', '#9C7E33', '#2ECC71', '#E8EDF2'];
-const PARTICLES = Platform.OS === 'web' ? 24 : 44;
-const DURATION = 2200;
+export type CelebrationVariant = 'celebration' | 'achievement' | 'success';
 
-type ParticleSpec = {
-  startX: number;
-  driftX: number;
-  fall: number;
-  delay: number;
-  size: number;
-  color: string;
-  spin: number;
-};
+// ── Pure variant → source map (exported for unit tests) ───────────────────────
 
-function Particle({ spec }: { spec: ParticleSpec }) {
-  const progress = useSharedValue(0);
-
-  useEffect(() => {
-    progress.value = withDelay(
-      spec.delay,
-      withTiming(1, { duration: DURATION - spec.delay, easing: Easing.out(Easing.quad) }),
-    );
-  }, [progress, spec.delay]);
-
-  const style = useAnimatedStyle(() => ({
-    opacity: progress.value < 0.75 ? 1 : 1 - (progress.value - 0.75) * 4,
-    transform: [
-      { translateX: spec.startX + progress.value * spec.driftX },
-      { translateY: -40 + progress.value * spec.fall },
-      { rotate: `${progress.value * spec.spin}deg` },
-    ],
-  }));
-
-  return (
-    <Animated.View
-      style={[
-        styles.particle,
-        { width: spec.size, height: spec.size * 1.6, backgroundColor: spec.color },
-        style,
-      ]}
-    />
-  );
+/**
+ * Maps a CelebrationVariant to its Lottie JSON asset.
+ * Pure function: no React or RN dependencies — safe to unit-test in Node.
+ */
+export function sourceForVariant(variant: CelebrationVariant = 'celebration') {
+  switch (variant) {
+    case 'achievement':
+      return require('../../../assets/lottie/achievement.json');
+    case 'success':
+      return require('../../../assets/lottie/success.json');
+    case 'celebration':
+    default:
+      return require('../../../assets/lottie/celebration.json');
+  }
 }
 
+// ── Component ─────────────────────────────────────────────────────────────────
+
 type Props = {
-  /** Fire haptic success feedback when the burst starts (default true). */
+  /**
+   * Which Lottie burst to play:
+   * - 'celebration' (default) — game end / winner reveal (5 s)
+   * - 'achievement'           — achievement unlock modal (2 s)
+   * - 'success'               — study success / retention rank-up (1.5 s)
+   */
+  variant?: CelebrationVariant;
+  /**
+   * Fire haptic success feedback on mount (default true).
+   * Haptic is NOT motion — fires even under OS Reduce Motion, like PressableScale.
+   */
   haptic?: boolean;
 };
 
 /**
- * Confetti burst for winner reveals and session completion. Renders once on
- * mount, auto-removes itself after the burst. Absolutely positioned overlay —
- * mount it last inside a flex:1 container.
+ * Lottie-backed celebration burst overlay.
+ *
+ * Characteristics:
+ * - Full-screen, decorative: absoluteFill, pointerEvents none, a11y-hidden.
+ * - One-shot: autoPlay, loop=false. Parent controls lifetime (mount/unmount).
+ * - On web OR OS Reduce Motion: poster=null → renders an invisible sized View;
+ *   the moment's own UI + haptic carry it. No burst is fine — it's decorative.
+ * - Haptic fires unconditionally on mount (not motion).
+ *
+ * Never bypass LottieHost — it enforces the web/reduced-motion fallback.
  */
-export default function Celebration({ haptic = true }: Props) {
-  const [done, setDone] = useState(false);
-  const reducedMotion = useReducedMotion();
-
-  // Skip the (44-particle) spec generation entirely under reduce motion — the
-  // burst never renders, so there is nothing to compute.
-  const particles = useMemo<ParticleSpec[]>(
-    () =>
-      reducedMotion
-        ? []
-        : Array.from({ length: PARTICLES }, () => ({
-            startX: Math.random() * SCREEN_W,
-            driftX: (Math.random() - 0.5) * 140,
-            fall: SCREEN_H * (0.55 + Math.random() * 0.45),
-            delay: Math.random() * 350,
-            size: 6 + Math.random() * 6,
-            color: PALETTE[Math.floor(Math.random() * PALETTE.length)],
-            spin: (Math.random() - 0.5) * 720,
-          })),
-    [reducedMotion],
-  );
-
+export default function Celebration({ variant = 'celebration', haptic = true }: Props) {
   useEffect(() => {
-    // Success haptic fires on BOTH paths — it IS the "success state" and is not
-    // motion, so a Reduce-Motion user still gets the confirmation instantly.
+    // Haptic mirrors the original Celebration behaviour: fire on mount,
+    // even under Reduce Motion, because it signals state change not animation.
     if (haptic) successNotification();
-    // Reduce Motion: no confetti, so no auto-unmount timer is needed.
-    if (reducedMotion) return;
-    const timer = setTimeout(() => setDone(true), DURATION + 400);
-    return () => clearTimeout(timer);
-  }, [haptic, reducedMotion]);
-
-  // Respect the OS "reduce motion" setting UNCONDITIONALLY — accessibility is not feature-flagged.
-  // (Prod-visible: a prod user with Reduce Motion ON no longer sees end-game confetti. Logged in the ledger.)
-  if (done || reducedMotion) return null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // mount-only; haptic prop changes mid-life are irrelevant for a burst
 
   return (
-    // overflow hidden: drifting particles must never widen the page (web)
-    <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]} pointerEvents="none">
-      {particles.map((spec, i) => (
-        <Particle key={i} spec={spec} />
-      ))}
+    // Outer View carries the a11y + interaction attributes.
+    // overflow:hidden stops drifting assets from widening the page on web.
+    <View
+      style={[StyleSheet.absoluteFill, styles.container]}
+      pointerEvents="none"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <LottieHost
+        source={sourceForVariant(variant)}
+        autoPlay
+        loop={false}
+        poster={null}
+        style={StyleSheet.absoluteFill}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  particle: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    borderRadius: 2,
+  container: {
+    overflow: 'hidden',
   },
 });
