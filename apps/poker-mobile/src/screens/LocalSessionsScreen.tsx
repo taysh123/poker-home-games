@@ -42,6 +42,7 @@ export default function LocalSessionsScreen({ embedded = false }: { embedded?: b
       <Screen style={{ paddingTop: embedded ? 0 : insets.top }}>
         {!embedded && <Text style={styles.titleStandalone}>Sessions</Text>}
         <EmptyState
+          animated
           ionicon="card-outline"
           title="No games yet"
           subtitle="Games you play on this device show up here. Start your first one — no account needed."
