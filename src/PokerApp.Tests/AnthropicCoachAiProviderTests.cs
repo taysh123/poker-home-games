@@ -133,4 +133,44 @@ public class AnthropicCoachAiProviderTests
         // Board must appear with its label.
         Assert.Contains("Board: Ah 7d 2c", body);
     }
+
+    /// <summary>
+    /// C2 — proves the system prompt frames the request as after-the-fact review (not live advice),
+    /// is format-aware (cash game + tournament/ICM), reasons street by street, calibrates confidence
+    /// to available info, and never claims solver/GTO-optimal lines. System prompt is captured via
+    /// the outbound request body — it is serialised into the "system" JSON field at send time.
+    /// </summary>
+    [Fact]
+    public async Task SystemPrompt_frames_after_the_fact_review_cash_and_tournament()
+    {
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, AnthropicEnvelope(ValidInner()));
+        var p = new AnthropicCoachAiProvider(
+            new CoachAiSettings { Provider = "anthropic", ApiKey = "test-key" },
+            new HttpClient(handler));
+
+        await p.AnalyzeAsync(Input());
+
+        var body = handler.LastRequestBody!;
+        // 1. Framing: after-the-fact review, not live advice.
+        Assert.Contains("already played", body, StringComparison.OrdinalIgnoreCase);
+        // 2. Tournament awareness.
+        Assert.Contains("tournament", body, StringComparison.OrdinalIgnoreCase);
+        // 3. ICM reasoning for tournament format.
+        Assert.Contains("ICM", body, StringComparison.Ordinal);
+        // 4. Cash-game awareness.
+        Assert.Contains("cash", body, StringComparison.OrdinalIgnoreCase);
+        // 5. Street-by-street reasoning.
+        Assert.Contains("flop", body, StringComparison.OrdinalIgnoreCase);
+        // 6. Confidence calibration hook (missing info lowers confidence).
+        Assert.Contains("confidence", body, StringComparison.OrdinalIgnoreCase);
+        // 7. Anti-solver / anti-GTO-optimal wording.
+        Assert.Contains("never", body, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("GTO", body, StringComparison.Ordinal);
+        // 8. JSON output contract keys still instructed.
+        Assert.Contains("summary", body, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("mistakes", body, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("goodDecisions", body, StringComparison.Ordinal);
+        Assert.Contains("alternativeLines", body, StringComparison.Ordinal);
+        Assert.Contains("tips", body, StringComparison.OrdinalIgnoreCase);
+    }
 }
