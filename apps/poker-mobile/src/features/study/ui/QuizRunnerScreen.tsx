@@ -307,12 +307,10 @@ function RunView({ question, index, count, chosen, onAnswer, onNext, isLast, ass
         <Feedback
           correct={chosen === question.correct}
           correctKey={question.correct}
+          correctOptionText={question.options.find(o => o.key === question.correct)?.text ?? ''}
           explanation={question.explanation}
+          calibratedAssertions={calibratedRefs}
         />
-      )}
-
-      {answered && calibratedRefs.length > 0 && (
-        <CalibrationReference assertions={calibratedRefs} />
       )}
 
       {answered && (
@@ -345,8 +343,13 @@ function CalibrationReference({ assertions }: { assertions: string[] }) {
   );
 }
 
-/** Answer feedback with a subtle entrance (fade + rise). Respects reduced motion (renders instantly). */
-function Feedback({ correct, correctKey, explanation }: { correct: boolean; correctKey: QuizChoice; explanation: string }) {
+/** Answer feedback structured as a coaching read: Verdict → THE PLAY (claim) → WHY (reasoning) →
+ *  CALIBRATED REFERENCE (evidence). All four steps share the same fade+rise entrance so they arrive
+ *  as one coaching unit. Reduced-motion renders instantly. S1 honesty gate is unchanged. */
+function Feedback({ correct, correctKey, correctOptionText, explanation, calibratedAssertions }: {
+  correct: boolean; correctKey: QuizChoice; correctOptionText: string;
+  explanation: string; calibratedAssertions: string[];
+}) {
   const reduced = useReducedMotion();
   const anim = useRef(new Animated.Value(reduced ? 1 : 0)).current;
   useEffect(() => {
@@ -355,7 +358,9 @@ function Feedback({ correct, correctKey, explanation }: { correct: boolean; corr
   }, [reduced, anim]);
   return (
     <Animated.View style={{ opacity: anim, transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }] }}>
+      {/* ── Coaching card: Verdict → THE PLAY → WHY ── */}
       <Card style={styles.feedback}>
+        {/* 1. Verdict */}
         <View style={styles.feedbackHead}>
           {correct ? (
             <MotiView {...successPop({ reduced })}>
@@ -366,8 +371,30 @@ function Feedback({ correct, correctKey, explanation }: { correct: boolean; corr
           )}
           <Text style={styles.feedbackTitle}>{correct ? 'Correct' : `Correct answer: ${correctKey}`}</Text>
         </View>
-        {!!explanation && <Text style={styles.feedbackBody}>{explanation}</Text>}
+
+        <View style={styles.coachDivider} />
+
+        {/* 2. THE PLAY — the recommended action as text, not just a letter (claim) */}
+        {!!correctOptionText && (
+          <View>
+            <Text style={styles.calibLabel}>THE PLAY</Text>
+            <Text style={styles.coachPlayText}>{correctOptionText}</Text>
+          </View>
+        )}
+
+        {/* 3. WHY — reasoning / explanation */}
+        {!!explanation && (
+          <View>
+            <Text style={styles.calibLabel}>WHY</Text>
+            <Text style={styles.feedbackBody}>{explanation}</Text>
+          </View>
+        )}
       </Card>
+
+      {/* 4. CALIBRATED REFERENCE — evidence step (S1: verbatim assertions, caveats intact) */}
+      {calibratedAssertions.length > 0 && (
+        <CalibrationReference assertions={calibratedAssertions} />
+      )}
     </Animated.View>
   );
 }
@@ -474,10 +501,12 @@ const styles = StyleSheet.create({
   optionKeyText: { ...typography.label, color: colors.textHigh },
   optionText: { ...typography.body, color: colors.textHigh, flex: 1 },
   optionTextActive: { color: colors.text },
-  feedback: { marginTop: spacing.sm, gap: spacing.xs },
+  feedback: { marginTop: spacing.sm, gap: spacing.sm },
   feedbackHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   feedbackTitle: { ...typography.h4, color: colors.text },
   feedbackBody: { ...typography.bodySmall, color: colors.textMuted, lineHeight: 20 },
+  coachDivider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
+  coachPlayText: { ...typography.h4, color: colors.textHigh, marginTop: spacing.xs },
   breakdownRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.xs },
   breakdownCat: { ...typography.body, color: colors.textHigh, flex: 1 },
   breakdownVal: { ...typography.label, color: colors.gold },
