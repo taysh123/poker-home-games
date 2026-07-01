@@ -36,6 +36,8 @@ import { useEntitlements } from '../../../context/EntitlementsContext';
 import { useStudy } from '../state/StudyContext';
 import { track } from '../../../utils/analytics';
 import LockNudge from './LockNudge';
+import { useCoachGrounding } from '../../coach/data/useCoachGrounding';
+import { groundingForQuestion } from '../logic/quizGrounding';
 import {
   normalizeQuestions,
   selectQuestions,
@@ -74,6 +76,7 @@ export default function QuizRunnerScreen() {
   const { isPremium } = useEntitlements();
   const { limitFor, consumeLimit, recordQuizCompleted } = useStudy();
   const quizLimit = limitFor('quiz');
+  const grounding = useCoachGrounding();
 
   const [all, setAll] = useState<QuizQuestion[] | null>(null);
   const [error, setError] = useState(false);
@@ -169,6 +172,7 @@ export default function QuizRunnerScreen() {
               onAnswer={answer}
               onNext={next}
               isLast={idx + 1 >= run.length}
+              assertionsForConcept={grounding ? grounding.assertionsForConcept : null}
             />
           ) : (
             <ResultsView
@@ -245,11 +249,15 @@ function PickView({ total, categories, limit, onStartAll, onStartCategory }: {
   );
 }
 
-function RunView({ question, index, count, chosen, onAnswer, onNext, isLast }: {
+function RunView({ question, index, count, chosen, onAnswer, onNext, isLast, assertionsForConcept }: {
   question: QuizQuestion; index: number; count: number; chosen: QuizChoice | null;
   onAnswer: (c: QuizChoice) => void; onNext: () => void; isLast: boolean;
+  assertionsForConcept: ((conceptId: string) => string[]) | null;
 }) {
   const answered = chosen !== null;
+  const calibratedRefs = answered && assertionsForConcept
+    ? groundingForQuestion(question, assertionsForConcept)
+    : [];
   return (
     <>
       <ProgressBar
@@ -303,12 +311,37 @@ function RunView({ question, index, count, chosen, onAnswer, onNext, isLast }: {
         />
       )}
 
+      {answered && calibratedRefs.length > 0 && (
+        <CalibrationReference assertions={calibratedRefs} />
+      )}
+
       {answered && (
         <View style={{ marginTop: spacing.md }}>
           <PrimaryButton label={isLast ? 'See results' : 'Next question'} onPress={onNext} />
         </View>
       )}
     </>
+  );
+}
+
+/**
+ * Calibrated reference section — surfaces the caveat-bearing assertion(s) from the grounded
+ * dataset that correspond to this question's linked concept. Assertions are verbatim from
+ * assertionsForConcept (safe_to_assert only; caveats intact). Expert-Calibrated, not GTO/solver-verified.
+ */
+function CalibrationReference({ assertions }: { assertions: string[] }) {
+  return (
+    <View style={styles.calibRef}>
+      <Text
+        style={styles.calibLabel}
+        accessibilityLabel="Calibrated reference — expert-calibrated, not solver-verified"
+      >
+        CALIBRATED REFERENCE
+      </Text>
+      {assertions.map((text, i) => (
+        <Text key={i} style={styles.calibBody}>{text}</Text>
+      ))}
+    </View>
   );
 }
 
@@ -449,4 +482,17 @@ const styles = StyleSheet.create({
   breakdownCat: { ...typography.body, color: colors.textHigh, flex: 1 },
   breakdownVal: { ...typography.label, color: colors.gold },
   limitChipRow: { marginTop: spacing.sm, flexDirection: 'row' },
+  // ── Calibrated reference section (grounding S1) ──
+  calibRef: {
+    backgroundColor: colors.goldFaint,
+    borderLeftWidth: 2,
+    borderLeftColor: colors.gold,
+    borderRadius: radii.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  calibLabel: { ...typography.caps, color: colors.gold },
+  calibBody: { ...typography.bodySmall, color: colors.textHigh, lineHeight: 20 },
 });
