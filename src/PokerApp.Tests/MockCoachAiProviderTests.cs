@@ -14,7 +14,7 @@ namespace PokerApp.Tests;
 /// </summary>
 public class MockCoachAiProviderTests
 {
-    private static MockCoachAiProvider Provider() => new();
+    private static MockCoachAiProvider Provider() => new(StubCoachGroundingProvider.Empty);
 
     [Fact]
     public async Task Echoes_the_hand_and_position_in_the_summary()
@@ -191,5 +191,22 @@ public class MockCoachAiProviderTests
                 Assert.DoesNotContain("solver",      text, StringComparison.OrdinalIgnoreCase);
             }
         }
+    }
+
+    /// <summary>
+    /// C4 — the mock surfaces the FIRST selected grounded assertion (verbatim, caveat intact) as an extra tip,
+    /// so the flags-off demo shows a real, calibrated number. Uses a fixed stub grounding provider.
+    /// </summary>
+    [Fact]
+    public async Task Injects_the_first_grounded_assertion_as_a_tip()
+    {
+        const string assertion =
+            "UTG opens ~13.4% (RFI) at 100bb 6-max (Calibrated; source: Derived from calibrated ranges). Not solver-exact.";
+        var provider = new MockCoachAiProvider(new StubCoachGroundingProvider(new[] { assertion }));
+        var input = new CoachAnalysisInput("hand", null, "AKs", "UTG", null, Format: "cash");
+
+        var result = await provider.AnalyzeAsync(input);
+
+        Assert.Contains(assertion, result.Tips);
     }
 }

@@ -19,6 +19,13 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Verbatim copy of the workbook-0.8.1 client artifact
+         (apps/poker-mobile/assets/content/0.8.1/coach_grounding.json) — same source export;
+         the two MUST stay in lockstep. Embedded so CoachGroundingProvider can read it once at startup. -->
+    <EmbeddedResource Include="Grounding\coach_grounding.json" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

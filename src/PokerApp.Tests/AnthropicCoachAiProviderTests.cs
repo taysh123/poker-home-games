@@ -51,14 +51,15 @@ public class AnthropicCoachAiProviderTests
     });
 
     private static AnthropicCoachAiProvider Provider(HttpStatusCode status, string body, string? apiKey = "test-key")
-        => new(new CoachAiSettings { Provider = "anthropic", ApiKey = apiKey }, new HttpClient(new StubHandler(status, body)));
+        => new(new CoachAiSettings { Provider = "anthropic", ApiKey = apiKey }, new HttpClient(new StubHandler(status, body)), StubCoachGroundingProvider.Empty);
 
     [Fact]
     public async Task Throws_when_no_api_key()
     {
         var p = new AnthropicCoachAiProvider(
             new CoachAiSettings { Provider = "anthropic" }, // no ApiKey
-            new HttpClient(new StubHandler(HttpStatusCode.OK, AnthropicEnvelope(ValidInner()))));
+            new HttpClient(new StubHandler(HttpStatusCode.OK, AnthropicEnvelope(ValidInner()))),
+            StubCoachGroundingProvider.Empty);
         await Assert.ThrowsAsync<InvalidOperationException>(() => p.AnalyzeAsync(Input()));
     }
 
@@ -66,7 +67,7 @@ public class AnthropicCoachAiProviderTests
     public async Task Parses_a_valid_response_into_an_educational_result()
     {
         var handler = new StubHandler(HttpStatusCode.OK, AnthropicEnvelope(ValidInner()));
-        var p = new AnthropicCoachAiProvider(new CoachAiSettings { Provider = "anthropic", ApiKey = "test-key" }, new HttpClient(handler));
+        var p = new AnthropicCoachAiProvider(new CoachAiSettings { Provider = "anthropic", ApiKey = "test-key" }, new HttpClient(handler), StubCoachGroundingProvider.Empty);
 
         var result = await p.AnalyzeAsync(Input());
 
@@ -107,7 +108,8 @@ public class AnthropicCoachAiProviderTests
         var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, AnthropicEnvelope(ValidInner()));
         var p = new AnthropicCoachAiProvider(
             new CoachAiSettings { Provider = "anthropic", ApiKey = "test-key" },
-            new HttpClient(handler));
+            new HttpClient(handler),
+            StubCoachGroundingProvider.Empty);
 
         var input = new CoachAnalysisInput(
             Kind:            "manual",
@@ -146,7 +148,8 @@ public class AnthropicCoachAiProviderTests
         var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, AnthropicEnvelope(ValidInner()));
         var p = new AnthropicCoachAiProvider(
             new CoachAiSettings { Provider = "anthropic", ApiKey = "test-key" },
-            new HttpClient(handler));
+            new HttpClient(handler),
+            StubCoachGroundingProvider.Empty);
 
         await p.AnalyzeAsync(Input());
 
@@ -172,5 +175,28 @@ public class AnthropicCoachAiProviderTests
         Assert.Contains("goodDecisions", body, StringComparison.Ordinal);
         Assert.Contains("alternativeLines", body, StringComparison.Ordinal);
         Assert.Contains("tips", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// C4 — when the grounding provider returns assertions, a labelled "Grounded reference facts" block carrying
+    /// the verbatim, caveat-bearing assertion is appended to the outbound user content. Uses a fixed stub — no
+    /// dependency on the real embedded dataset.
+    /// </summary>
+    [Fact]
+    public async Task Injects_grounded_reference_facts_block_when_grounding_returns_assertions()
+    {
+        const string assertion =
+            "UTG opens ~13.4% (RFI) at 100bb 6-max (Calibrated; source: Derived from calibrated ranges). Not solver-exact.";
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, AnthropicEnvelope(ValidInner()));
+        var p = new AnthropicCoachAiProvider(
+            new CoachAiSettings { Provider = "anthropic", ApiKey = "test-key" },
+            new HttpClient(handler),
+            new StubCoachGroundingProvider(new[] { assertion }));
+
+        await p.AnalyzeAsync(Input());
+
+        var body = handler.LastRequestBody!;
+        Assert.Contains("Grounded reference facts", body);  // the labelled block
+        Assert.Contains(assertion, body);                   // the verbatim caveat-bearing assertion
     }
 }

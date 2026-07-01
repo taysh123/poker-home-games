@@ -10,7 +10,7 @@ namespace PokerApp.Infrastructure.Services;
 /// confidence from input completeness. Same input always produces identical output.
 /// Never claims solver/GTO-optimal. Heuristic only; not real AI analysis.
 /// </summary>
-public sealed class MockCoachAiProvider : ICoachAiProvider
+public sealed class MockCoachAiProvider(ICoachGroundingProvider grounding) : ICoachAiProvider
 {
     public string Id => "mock-server";
 
@@ -139,6 +139,10 @@ public sealed class MockCoachAiProvider : ICoachAiProvider
             tips.Add("Account for rake when evaluating marginal calling spots: thin calls " +
                      "lose more than they appear once rake is factored in.");
         }
+
+        // C4 — surface ONE grounded, caveated calibrated fact (verbatim) so the flags-off demo shows real data.
+        var grounded = grounding.SelectAssertions(input);
+        if (grounded.Count > 0) tips.Add(grounded[0]);
 
         // ── Confidence (field-count heuristic, fully deterministic) ───────────
         var confidence = ComputeConfidence(input);

@@ -12,7 +12,7 @@ namespace PokerApp.Infrastructure.Services;
 /// response THROWS — never fabricates — and <c>AnalyzeHandCommand</c> refunds the reserved credit. Output is
 /// strictly EDUCATIONAL (the system prompt forbids solver/optimal claims; the disclaimer is always attached).
 /// </summary>
-public sealed class AnthropicCoachAiProvider(CoachAiSettings settings, HttpClient httpClient) : ICoachAiProvider
+public sealed class AnthropicCoachAiProvider(CoachAiSettings settings, HttpClient httpClient, ICoachGroundingProvider grounding) : ICoachAiProvider
 {
     public string Id => "anthropic";
 
@@ -63,11 +63,25 @@ public sealed class AnthropicCoachAiProvider(CoachAiSettings settings, HttpClien
                 "AI Coach (Anthropic) is selected but not configured: set CoachAiSettings:ApiKey (server-side " +
                 "env CoachAiSettings__ApiKey) — never on the client. See docs/commercial/ai-architecture.md.");
 
+        var userContent = BuildUserContent(input);
+
+        // C4 — anchor the model to OUR calibrated numbers: append the relevant safe_to_assert assertion_templates
+        // (verbatim, caveats intact) so it cites our facts instead of inventing frequencies. C2 owns the system
+        // prompt and the JSON contract — this only augments the user content.
+        var groundedFacts = grounding.SelectAssertions(input);
+        if (groundedFacts.Count > 0)
+        {
+            userContent = userContent
+                + "\n\nGrounded reference facts (calibrated, not solver-exact — you MAY cite these verbatim; "
+                + "do NOT invent other exact numbers):\n"
+                + string.Join("\n", groundedFacts.Select(f => "- " + f));
+        }
+
         var requestBody = new AnthropicRequest(
             Model: string.IsNullOrWhiteSpace(settings.Model) ? DefaultModel : settings.Model!,
             MaxTokens: 1536, // raised from 1024 — street-by-street analysis needs more room (no cost while mock-only)
             System: SystemPrompt,
-            Messages: new[] { new AnthropicMessage("user", BuildUserContent(input)) });
+            Messages: new[] { new AnthropicMessage("user", userContent) });
 
         using var request = new HttpRequestMessage(HttpMethod.Post, $"{settings.ApiBase.TrimEnd('/')}/v1/messages")
         {

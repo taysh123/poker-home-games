@@ -59,6 +59,11 @@ public static class DependencyInjection
         // server key), "vendor" a generic stub. Mirrors the billing provider config switch below.
         var coachAiSettings = configuration.GetSection("CoachAiSettings").Get<CoachAiSettings>() ?? new CoachAiSettings();
         services.AddSingleton(coachAiSettings);
+
+        // C4 — grounding provider anchors the coach to the app's calibrated data. Reads the embedded
+        // dataset once, so it's a singleton; the mock + Anthropic providers receive it via the factory.
+        services.AddSingleton<ICoachGroundingProvider, CoachGroundingProvider>();
+
         services.AddScoped<ICoachAiProvider>(sp =>
         {
             // Bound the outbound AI call: default HttpClient has a 100s timeout and unbounded
@@ -66,7 +71,7 @@ public static class DependencyInjection
             var http = sp.GetRequiredService<IHttpClientFactory>().CreateClient();
             http.Timeout = TimeSpan.FromSeconds(30);
             http.MaxResponseContentBufferSize = 2 * 1024 * 1024; // 2 MB
-            return CoachAiProviderFactory.Create(coachAiSettings, http);
+            return CoachAiProviderFactory.Create(coachAiSettings, http, sp.GetRequiredService<ICoachGroundingProvider>());
         });
 
         // B3 — real store verification (provider-selected; mock retained for dev/tests).
