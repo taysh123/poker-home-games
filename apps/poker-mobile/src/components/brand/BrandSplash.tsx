@@ -9,6 +9,7 @@ import Reanimated, {
 } from 'react-native-reanimated';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
+import LottieHost from '../motion/LottieHost';
 
 /**
  * Dual-brand launch splash: True Story Labs → T Poker, then `onDone`.
@@ -22,6 +23,7 @@ import { typography } from '../../theme/typography';
 let TSL_LOGO: number | null = null;
 try { TSL_LOGO = require('../../../assets/true-story-labs-logo.png'); } catch { TSL_LOGO = null; }
 const TPOKER_LOGO = require('../../../assets/logo.png');
+const ACE_SPADE = require('../../../assets/lottie/ace-spade.json');
 
 const AImage = Reanimated.createAnimatedComponent(Image);
 
@@ -66,6 +68,11 @@ export default function BrandSplash({ onDone }: Props) {
     transform: [{ scale: tpScale.value }],
   }));
 
+  // Ace-spade accent: fades in with the T Poker reveal at a whisper-level opacity (max 0.25).
+  const aceStyle = useAnimatedStyle(() => ({
+    opacity: tpOpacity.value * 0.25,
+  }));
+
   // STEP 4.6: under `polish`, the splash is interruptible (tap to skip); otherwise pass-through as before.
   const skippable = isFeatureEnabled('polish');
   return (
@@ -84,6 +91,22 @@ export default function BrandSplash({ onDone }: Props) {
             <Text style={styles.wordmark}>TRUE STORY LABS</Text>
           </View>
         )}
+      </Reanimated.View>
+
+      {/* Ace-spade brand flourish — native-only, decorative, behind the logo. */}
+      <Reanimated.View
+        style={[styles.aceAccent, aceStyle]}
+        pointerEvents="none"
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      >
+        <LottieHost
+          source={ACE_SPADE}
+          autoPlay
+          loop={false}
+          poster={null}
+          style={styles.aceLottie}
+        />
       </Reanimated.View>
 
       <Reanimated.View style={[styles.tpFrame, tpStyle]}>
@@ -106,6 +129,8 @@ const styles = StyleSheet.create({
   frame: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   tslLogo: { width: 240, height: 132 },
   tpFrame: { position: 'absolute', alignItems: 'center' },
+  aceAccent: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
+  aceLottie: { width: 260, height: 192 }, // 1080:796 ≈ 1.36 aspect, sized to sit behind the 168px logo
   tpLogo: { width: 168, height: 168 },
   tagline: { ...typography.caps, color: colors.goldMuted, letterSpacing: 2.5, marginTop: 4 },
   wordmarkWrap: { alignItems: 'center' },
