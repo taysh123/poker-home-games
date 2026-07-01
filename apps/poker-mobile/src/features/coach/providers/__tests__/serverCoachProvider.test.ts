@@ -23,6 +23,18 @@ const mockAnalyze = analyzeHand as jest.Mock;
 
 const manual: CoachInput = { kind: 'manual', format: 'cash', heroHand: 'AKs', heroPosition: 'BTN', question: 'thin?' };
 
+const fullManual: CoachInput = {
+  kind: 'manual',
+  format: 'mtt',
+  stackBb: 25,
+  heroPosition: 'BTN',
+  villainPosition: 'BB',
+  heroHand: 'AKs',
+  board: 'Ah 7d 2c',
+  actions: 'raised BTN, BB called, cbet flop',
+  question: 'Is this a shove?',
+};
+
 const serverResult = {
   summary: 'Coaching read',
   mistakes: [{ title: 'Sizing', detail: 'be consistent', street: 'flop' }],
@@ -64,6 +76,26 @@ describe('serverCoachProvider', () => {
     const sent = mockAnalyze.mock.calls[0][0];
     expect(sent.kind).toBe('manual');
     expect(sent.heroHand).toBe('AKs');
+    expect(sent.idempotencyKey).toBeTruthy();
+  });
+
+  it('carries board, villainPosition, stackBb, and format for manual spots (C1)', async () => {
+    mockGetToken.mockResolvedValue('tok');
+    mockAnalyze.mockResolvedValue(serverResult);
+
+    await serverCoachProvider.analyze({ input: fullManual });
+
+    const sent = mockAnalyze.mock.calls[0][0];
+    // All four previously-dropped fields must now reach the server request:
+    expect(sent.board).toBe('Ah 7d 2c');
+    expect(sent.villainPosition).toBe('BB');
+    expect(sent.stackBb).toBe(25);
+    expect(sent.format).toBe('mtt');
+    // Existing fields must still be present:
+    expect(sent.heroHand).toBe('AKs');
+    expect(sent.heroPosition).toBe('BTN');
+    expect(sent.text).toBe('raised BTN, BB called, cbet flop');
+    expect(sent.question).toBe('Is this a shove?');
     expect(sent.idempotencyKey).toBeTruthy();
   });
 
