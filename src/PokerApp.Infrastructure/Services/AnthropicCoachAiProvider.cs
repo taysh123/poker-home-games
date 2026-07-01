@@ -73,10 +73,20 @@ public sealed class AnthropicCoachAiProvider(CoachAiSettings settings, HttpClien
     private static string BuildUserContent(CoachAnalysisInput input)
     {
         var parts = new List<string> { $"Kind: {input.Kind}" };
-        if (!string.IsNullOrWhiteSpace(input.HeroHand)) parts.Add($"Hero hand: {input.HeroHand}");
-        if (!string.IsNullOrWhiteSpace(input.HeroPosition)) parts.Add($"Hero position: {input.HeroPosition}");
-        if (!string.IsNullOrWhiteSpace(input.Text)) parts.Add($"Details: {input.Text}");
-        if (!string.IsNullOrWhiteSpace(input.Question)) parts.Add($"Question: {input.Question}");
+        if (!string.IsNullOrWhiteSpace(input.Format))
+        {
+            var fmtLabel = input.Format.Equals("mtt",  StringComparison.OrdinalIgnoreCase) ? "Tournament"
+                         : input.Format.Equals("cash", StringComparison.OrdinalIgnoreCase) ? "Cash"
+                         : input.Format;
+            parts.Add($"Format: {fmtLabel}");
+        }
+        if (!string.IsNullOrWhiteSpace(input.HeroHand))      parts.Add($"Hero hand: {input.HeroHand}");
+        if (!string.IsNullOrWhiteSpace(input.HeroPosition))   parts.Add($"Hero position: {input.HeroPosition}");
+        if (!string.IsNullOrWhiteSpace(input.VillainPosition)) parts.Add($"Villain position: {input.VillainPosition}");
+        if (input.StackBb.HasValue)                            parts.Add($"Effective stack: {input.StackBb}bb");
+        if (!string.IsNullOrWhiteSpace(input.Board))           parts.Add($"Board: {input.Board}");
+        if (!string.IsNullOrWhiteSpace(input.Text))            parts.Add($"Details: {input.Text}");
+        if (!string.IsNullOrWhiteSpace(input.Question))        parts.Add($"Question: {input.Question}");
         return string.Join("\n", parts);
     }
 

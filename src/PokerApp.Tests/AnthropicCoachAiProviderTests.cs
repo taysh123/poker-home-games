@@ -95,4 +95,42 @@ public class AnthropicCoachAiProviderTests
         var p = Provider(HttpStatusCode.OK, "{ not json");
         await Assert.ThrowsAsync<InvalidOperationException>(() => p.AnalyzeAsync(Input()));
     }
+
+    /// <summary>
+    /// C1 — proves BuildUserContent renders board / villain position / effective stack / format
+    /// label into the outbound Anthropic request body. Uses FakeHttpMessageHandler (captures body
+    /// at send time) — no real network call.
+    /// </summary>
+    [Fact]
+    public async Task BuildUserContent_renders_board_villain_stack_format_in_prompt()
+    {
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, AnthropicEnvelope(ValidInner()));
+        var p = new AnthropicCoachAiProvider(
+            new CoachAiSettings { Provider = "anthropic", ApiKey = "test-key" },
+            new HttpClient(handler));
+
+        var input = new CoachAnalysisInput(
+            Kind:            "manual",
+            Text:            "raised BTN, BB 3-bet, I called",
+            HeroHand:        "AKs",
+            HeroPosition:    "BTN",
+            Question:        "Is this a shove?",
+            Board:           "Ah 7d 2c",
+            VillainPosition: "BB",
+            StackBb:         25,
+            Format:          "mtt");
+
+        await p.AnalyzeAsync(input);
+
+        var body = handler.LastRequestBody!;
+        Assert.False(string.IsNullOrEmpty(body));
+        // "mtt" must be mapped to the human-readable label "Tournament".
+        Assert.Contains("Tournament", body);
+        // Villain position line must appear verbatim in the JSON-serialised content.
+        Assert.Contains("Villain position: BB", body);
+        // Effective stack label + depth must appear.
+        Assert.Contains("25bb", body);
+        // Board must appear with its label.
+        Assert.Contains("Board: Ah 7d 2c", body);
+    }
 }

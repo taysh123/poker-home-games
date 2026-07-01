@@ -32,6 +32,10 @@ export interface AnalyzeRequest {
   heroPosition?: string;
   question?: string;
   idempotencyKey: string;
+  board?: string;
+  villainPosition?: string;
+  stackBb?: number;
+  format?: string;
 }
 
 /** Structured coaching result (mirrors backend `CoachAnalysisResult`, camelCased). */
