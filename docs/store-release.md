@@ -50,7 +50,7 @@ pipeline with store packaging.
 - **Push delivery credentials** (needed for push notifications in store builds):
   - Android: Firebase console → add project → link app `com.tpoker.app` → Project settings → Cloud Messaging → ensure FCM v1 → Service accounts → generate key → upload via `eas credentials` → Android → Google Service Account Key (FCM).
   - iOS: `eas credentials` → iOS → Push Notifications → let EAS create the APNs key.
-- **Google sign-in clients for store builds:** follow [google-oauth-fix.md](google-oauth-fix.md) §4 (create iOS + Android OAuth clients; the Android one needs the release SHA-1, which you get from `eas credentials` → Android → Keystore). Add both IDs to the backend ClientIds and the EAS env (`EXPO_PUBLIC_GOOGLE_*`).
+- **Google sign-in — REQUIRED for native builds (web already works):** Google sign-in is **verified working on web**; the **native app needs its own OAuth setup**. Follow [google-oauth-fix.md](google-oauth-fix.md) **§4** (a ready-to-apply 5-part step): (1) create **iOS + Android OAuth clients** for `com.tpoker.app` (Android needs the **release SHA-1** from `eas credentials` → Android → Keystore); (2) set `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` / `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` in the EAS env; (3) append both IDs to the backend `GoogleSettings:ClientIds`; (4) **add the reversed-client-ID `CFBundleURLTypes` scheme to `app.json` → `ios.infoPlist`** — currently MISSING; iOS Google sign-in won't resolve the redirect without it (don't commit it until this build); (5) build with EAS (not Expo Go). ⚠️ Expo Go can never do Google sign-in (SDK-54 limitation) — not a blocker.
 
 ## Step 4 — Production builds
 
@@ -135,7 +135,10 @@ TestFlight (test it!) → add the build to the version page → Submit for Revie
 - [ ] Manual pass on a real device from the latest preview build: guest cash game
       end-to-end · tournament end-to-end · sign-in (email + Google after the
       OAuth external steps) · push permission prompt
-- [ ] Google sign-in external steps done (google-oauth-fix.md) and verified on web
+- [ ] **Google sign-in — web** ✅ verified working. **Native (this build):** iOS + Android OAuth clients
+      created for `com.tpoker.app`; `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` + `_ANDROID_CLIENT_ID` set; both IDs
+      added to the backend list; **`app.json` iOS `CFBundleURLTypes` reversed-client-ID scheme applied**
+      (google-oauth-fix.md §4); then Google sign-in tested on the installed **native** build (NOT Expo Go)
 - [ ] Push credentials uploaded (Step 3) if you want push live at launch
       (optional — app degrades gracefully to in-app inbox)
 - [ ] Production backend healthy (Railway `/health`), Vercel privacy.html live
