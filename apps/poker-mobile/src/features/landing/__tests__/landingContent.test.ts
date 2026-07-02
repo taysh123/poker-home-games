@@ -60,10 +60,12 @@ describe('landing content — honesty + correctness', () => {
     });
   });
 
-  it('footer links to privacy + terms and shows the 18+/not-gambling disclaimer', () => {
+  it('footer links to pricing + all three policies and shows the 18+/not-gambling disclaimer', () => {
     const hrefs = LANDING_LEGAL_LINKS.map(l => l.href);
-    expect(hrefs).toContain('/privacy.html');
+    expect(hrefs).toContain('/pricing.html');
     expect(hrefs).toContain('/terms.html');
+    expect(hrefs).toContain('/privacy.html');
+    expect(hrefs).toContain('/refund.html');
     expect(LANDING_DISCLAIMER).toMatch(/18\+/);
     expect(LANDING_DISCLAIMER.toLowerCase()).toMatch(/not a gambling product/);
   });
