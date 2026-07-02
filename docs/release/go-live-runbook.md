@@ -242,6 +242,38 @@ BillingSettings__AcceptSandbox=false      ← MUST be false in production
 `AcceptSandbox=false` is what guarantees a stray sandbox transaction can never grant a real entitlement.
 Double-check it. Save → Railway redeploys.
 
+### Step 3b — Confirm the reverse-proxy / rate-limiting config (security-hardening branch) ⚠️ DO NOT SKIP
+The `security-hardening` branch (PR #11) adds **per-IP rate limiting** that reads the real client IP from
+Railway's `X-Forwarded-For` header via `app.UseForwardedHeaders`. This needs **NO new variable** — but it
+depends on one existing variable being exactly right, and a wrong value **locks users out**.
+
+**DO THIS:** In Railway → your backend service → **Variables**, confirm this exact key/value is present:
+
+```
+ASPNETCORE_ENVIRONMENT=Production
+```
+
+That is the setting that enables the forwarded-headers de-proxy block (it runs only when the environment is
+**not** Development). It is already a required variable — just confirm it and do not change it.
+
+| Variable | Correct value on Railway | Why it matters |
+|----------|--------------------------|----------------|
+| `ASPNETCORE_ENVIRONMENT` | **`Production`** (exact) | Enables `UseForwardedHeaders`, so per-IP rate limits use the **real** client IP. |
+| *(any forwarded-headers / proxy-hop var)* | **— set NOTHING —** | The proxy hop count is `ForwardLimit = 1` **in code** (one hop = Railway's edge). Do **NOT** add a `ForwardedHeaders__*` variable and do **NOT** set `KnownProxies` — either would break it. |
+
+**If `ASPNETCORE_ENVIRONMENT` is missing or set to `Development`:** the de-proxy block is skipped → the server
+reads **Railway's proxy IP** as *every* caller's IP → all users share **one** rate-limit bucket → legitimate
+users get **429 on login/refresh under load = accidental lockout.** *Symptom:* everyone is throttled together
+and Railway logs show a single client IP for all requests. *Fix:* set `ASPNETCORE_ENVIRONMENT=Production`, redeploy.
+
+**Verify after deploy:** send >10 `POST /api/auth/login` in a minute from one machine → you get **429**; from a
+**second** machine on a different network/IP, login **still works**. If the second machine is *also* throttled,
+forwarded headers aren't applying — re-check `ASPNETCORE_ENVIRONMENT`.
+
+**Security note:** this trusts Railway's single edge proxy to set `X-Forwarded-For`; do **not** run this backend
+internet-exposed without a trusted proxy (a client could spoof the header). Full detail:
+`docs/release/security-hardening-deploy.md`.
+
 ### Step 4 — Update Vercel (frontend) for live
 ```
 EXPO_PUBLIC_PADDLE_CLIENT_TOKEN=<live_…>
@@ -368,6 +400,7 @@ rollback, see `docs/release/rollback-recovery.md`.
 
 | Variable | Sandbox value | Live value | Secret? |
 |----------|---------------|-----------|---------|
+| `ASPNETCORE_ENVIRONMENT` | `Production` | `Production` | no — but **required**; gates `UseForwardedHeaders` / per-IP rate limiting (see Part 4 Step 3b). No forwarded-headers/proxy var exists — hop count is `ForwardLimit=1` in code. |
 | `Paddle__ApiBaseUrl` | `https://sandbox-api.paddle.com` | `https://api.paddle.com` | no |
 | `Paddle__ApiKey` | `pdl_sdbx_apikey_…` | `pdl_live_apikey_…` | **yes** |
 | `Paddle__WebhookSigningSecret` | `pdl_ntfset_…` (sandbox dest) | `pdl_ntfset_…` (live dest) | **yes** |
