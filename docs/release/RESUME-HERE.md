@@ -11,30 +11,33 @@ is safe: every new feature is behind an OFF switch.
 
 ---
 
-## ⚠️ Open TODOs (added 2026-07-02) — do before / around launch
+## 📌 Security & Paddle status (updated 2026-07-02)
 
-**1. Auth-pipeline security fixes (HELD — separate careful pass).**
-A pre-store security audit (2026-07-02) fixed the billing HIGHs on branch **`security-hardening`** (H2 Paddle
-verify-session caller-binding, H3 AI-idempotency content-binding, H4 sandbox-entitlement exclusion) + input
-validators (L2/L7/L8) — all TDD'd, **173 tests green, UNMERGED and not pushed**. Still owed as **"option 4"**,
-to be done carefully in a dedicated pass:
-- **H1 + M2** — the auth/coach rate limiters are single **GLOBAL** buckets (`Program.cs` `AddFixedWindowLimiter`),
-  so one client doing >10 logins/min returns 429 to **every** user. Fix = per-IP/per-user `RateLimitPartition`
-  plus `app.UseForwardedHeaders()` for Railway's proxy.
-- **M1** — password login against a social-only account (empty `PasswordHash`) throws inside BCrypt → **500 +
-  user-enumeration oracle** (`LoginCommandHandler`). Fix = treat an empty hash as a normal auth failure.
-- Also flagged (owner decision): **M3** 30-day refresh token in web `localStorage` (XSS-exposed), **L1** Google
-  link without `email_verified`, **L3** AddPlayer stat-pollution, **L4/L6** config, npm audit-fix (can break Expo).
-- Full detail: memory `security-audit`. The `security-hardening` branch is parked; open its PR later.
+**1. Security hardening — ✅ DONE on branch `security-hardening` (TDD, all gates green) · ⏸ UNPUSHED / no PR yet.**
+The pre-store security audit (2026-07-02) is fully remediated on **`security-hardening`** (5 commits):
+- **H2** Paddle verify-session bound to the caller · **H3** AI-idempotency content-binding · **H4** sandbox-entitlement
+  exclusion · **L2/L7/L8** input validators.
+- **Option 4 (auth pipeline) — done:** **H1 + M2** rate limiters now partitioned per-IP (auth) / per-user (coach)
+  + `app.UseForwardedHeaders()` for Railway; **M1** social-login empty-hash guard → 401 (not a 500 / enumeration oracle).
+- Verified: **dotnet build 0-err · dotnet test 181 · tsc 0 · jest 528** — all green.
+- **Parked:** branch is local-only (not pushed, no PR) pending your OK to push + PR. See the **Railway note** below.
+- **Recommendations only (NOT changed):** **M3** refresh-token in web `localStorage`, **L1** Google `email_verified`,
+  **L3** AddPlayer consent, **L4/L6** config, npm audit-fix (can break Expo). Full detail: memory `security-audit`.
 
-**2. Landing page for Paddle (BLOCKER — Paddle rejected the app domain as "Gambling").**
-Paddle **REJECTED** `poker-home-games-three.vercel.app` — they reviewed the **raw web app** and classified it as
-gambling. Fix: **deploy the marketing landing site (`apps/landing`)**, which frames T Poker correctly as a **free
-home-game management + poker-STUDY tool — NOT a gambling product, no real-money wagering, 18+** — to its **own
-Vercel project + public domain**, then **resubmit that domain** to Paddle for account approval. This **supersedes
-§2's "approval simply pending"** framing: approval is now gated on presenting the non-gambling landing site.
-Deploy detail: `docs/release/landing-deploy.md`. (Positioning-copy changes to make the non-gambling framing
-unmistakable are being drafted separately.)
+**2. Landing page for Paddle — ✅ DONE, DEPLOYED & RESUBMITTED.**
+Paddle **rejected** `poker-home-games-three.vercel.app` as "Gambling" (they reviewed the raw web app). Fixed: the
+marketing landing (`apps/landing`) now makes the non-gambling / educational / 18+ framing unmistakable — trust
+banner, meta description, footer disclaimer, 18+ FAQ, softened hero. **PR #10 merged to `main`**, **deployed at
+https://tpoker-landing-xi.vercel.app**, and **resubmitted to Paddle** (review can take up to ~3 days). This replaces
+§2's "approval simply pending": approval is now gated on Paddle re-reviewing the landing domain.
+
+**⚠️ Railway config for the rate-limit fix (at launch, when `security-hardening` deploys):** `app.UseForwardedHeaders`
+(prod only) trusts Railway's single edge proxy to set `X-Forwarded-For`. **No new env var is required** — it works
+automatically behind Railway's proxy. It clears KnownProxies/KnownNetworks and trusts exactly one hop, which is
+correct on Railway (external traffic can only reach the app via its edge). Do **NOT** run this app internet-exposed
+without a trusted proxy, or a client could spoof `X-Forwarded-For` to dodge the rate limiter. Symptom of a bad setup:
+if per-IP limiting behaves like one global bucket (everyone shares the limit), the forwarded header isn't being
+applied — confirm the deploy is actually behind Railway's proxy.
 
 ---
 
