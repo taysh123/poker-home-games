@@ -19,8 +19,11 @@ public sealed class LoginCommandHandler(
         var user = await context.Users
             .FirstOrDefaultAsync(u => u.Email == request.Email, cancellationToken);
 
-        // Deliberately vague error — never reveal whether the email exists
-        if (user is null || !passwordHasher.Verify(request.Password, user.PasswordHash))
+        // Deliberately vague error — never reveal whether the email exists (or that it's a social-only account).
+        // An empty PasswordHash means a Google/Apple-only account: short-circuit to the SAME 401 instead of
+        // letting BCrypt.Verify throw on the empty hash (which would 500 and leak that the email is registered).
+        if (user is null || string.IsNullOrEmpty(user.PasswordHash)
+            || !passwordHasher.Verify(request.Password, user.PasswordHash))
             throw new UnauthorizedException("Invalid email or password.");
 
         var accessToken = jwtService.GenerateAccessToken(user);
