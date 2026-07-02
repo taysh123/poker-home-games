@@ -13,14 +13,14 @@ is safe: every new feature is behind an OFF switch.
 
 ## 📌 Security & Paddle status (updated 2026-07-02)
 
-**1. Security hardening — ✅ DONE on branch `security-hardening` (TDD, all gates green) · ⏸ UNPUSHED / no PR yet.**
-The pre-store security audit (2026-07-02) is fully remediated on **`security-hardening`** (5 commits):
+**1. Security hardening — ✅ DONE · 🧊 PR #11 open against `main`, FROZEN for launch (do NOT merge).**
+The pre-store security audit (2026-07-02) is fully remediated on **`security-hardening`** (6 commits, **PR #11**, gitleaks-clean):
 - **H2** Paddle verify-session bound to the caller · **H3** AI-idempotency content-binding · **H4** sandbox-entitlement
   exclusion · **L2/L7/L8** input validators.
 - **Option 4 (auth pipeline) — done:** **H1 + M2** rate limiters now partitioned per-IP (auth) / per-user (coach)
   + `app.UseForwardedHeaders()` for Railway; **M1** social-login empty-hash guard → 401 (not a 500 / enumeration oracle).
 - Verified: **dotnet build 0-err · dotnet test 181 · tsc 0 · jest 528** — all green.
-- **Parked:** branch is local-only (not pushed, no PR) pending your OK to push + PR. See the **Railway note** below.
+- **Frozen:** **PR #11** (base `main`) is open + MERGEABLE but must NOT merge until launch — it rides with #4/#5/#6. Read the **Railway note** below before deploying.
 - **Recommendations only (NOT changed):** **M3** refresh-token in web `localStorage`, **L1** Google `email_verified`,
   **L3** AddPlayer consent, **L4/L6** config, npm audit-fix (can break Expo). Full detail: memory `security-audit`.
 
@@ -31,13 +31,18 @@ banner, meta description, footer disclaimer, 18+ FAQ, softened hero. **PR #10 me
 https://tpoker-landing-xi.vercel.app**, and **resubmitted to Paddle** (review can take up to ~3 days). This replaces
 §2's "approval simply pending": approval is now gated on Paddle re-reviewing the landing domain.
 
-**⚠️ Railway config for the rate-limit fix (at launch, when `security-hardening` deploys):** `app.UseForwardedHeaders`
-(prod only) trusts Railway's single edge proxy to set `X-Forwarded-For`. **No new env var is required** — it works
-automatically behind Railway's proxy. It clears KnownProxies/KnownNetworks and trusts exactly one hop, which is
-correct on Railway (external traffic can only reach the app via its edge). Do **NOT** run this app internet-exposed
-without a trusted proxy, or a client could spoof `X-Forwarded-For` to dodge the rate limiter. Symptom of a bad setup:
-if per-IP limiting behaves like one global bucket (everyone shares the limit), the forwarded header isn't being
-applied — confirm the deploy is actually behind Railway's proxy.
+**⚠️ Railway config for the rate-limit fix (H1) — read before deploying `security-hardening` / PR #11.**
+Full detail: **`docs/release/security-hardening-deploy.md`** (in PR #11). The short version:
+- **You do NOT add any new env var.** There is no `ForwardedHeaders__*` / proxy / hop-count variable — the hop count
+  is `ForwardLimit = 1` (one hop = Railway's edge), hardcoded in `Program.cs`. Do **not** set `KnownProxies`.
+- **The one setting that must be correct is `ASPNETCORE_ENVIRONMENT=Production`** on Railway (**already set**). It
+  gates the `UseForwardedHeaders` de-proxy block (which runs only when NOT Development). Don't remove or change it.
+- **If it's wrong** (missing / `Development`): the de-proxy is skipped → the app sees Railway's proxy IP for *every*
+  caller → all users share **one** rate-limit bucket → **accidental lockout under load** (legit users get 429 on
+  login). *Symptom:* everyone throttled together; logs show one IP. *Fix:* confirm `ASPNETCORE_ENVIRONMENT=Production`.
+- **Security:** trusts Railway's single edge; do **NOT** run this app internet-exposed without a trusted proxy (a
+  client could spoof `X-Forwarded-For`). **Verify after deploy:** rapid logins from one IP get 429 while a second IP
+  still logs in.
 
 ---
 
