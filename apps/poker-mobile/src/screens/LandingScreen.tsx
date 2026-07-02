@@ -375,6 +375,7 @@ const styles = StyleSheet.create({
   },
   legalRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.lg,
   },
   legalLink: {

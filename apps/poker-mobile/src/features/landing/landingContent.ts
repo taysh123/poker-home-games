@@ -132,8 +132,10 @@ export const LANDING_FAQ: LandingFaq[] = [
 ];
 
 export const LANDING_LEGAL_LINKS: LandingLegalLink[] = [
-  { label: 'Privacy', href: '/privacy.html' },
+  { label: 'Pricing', href: '/pricing.html' },
   { label: 'Terms', href: '/terms.html' },
+  { label: 'Privacy', href: '/privacy.html' },
+  { label: 'Refunds', href: '/refund.html' },
 ];
 
 export const LANDING_DISCLAIMER = '18+ · not a gambling product';
