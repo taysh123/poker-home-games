@@ -1,3 +1,4 @@
+import { TrustBanner } from '@/components/blocks/TrustBanner';
 import { Header } from '@/components/blocks/Header';
 import { Hero } from '@/components/blocks/Hero';
 import { SocialProof } from '@/components/blocks/SocialProof';
@@ -11,6 +12,7 @@ import { Footer } from '@/components/blocks/Footer';
 export default function Home() {
   return (
     <>
+      <TrustBanner />
       <Header />
       <main>
         <Hero />

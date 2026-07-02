@@ -7,7 +7,7 @@ export const HERO = {
   eyebrow: 'Home-game manager + built-in coach',
   title: 'Run your home poker game — no mess, no arguments.',
   subhead:
-    "Track cash games and tournaments, settle up automatically, and see who's really winning — all free. Want to get better between sessions? A personal coach is built in.",
+    'Track cash games and tournaments, settle up automatically, and keep score across every session — all free. Want to sharpen your game between sessions? A personal coach is built in.',
   primaryCta: 'Start Free',
   primaryNote: 'Free to start — no credit card.',
   storeNote: 'Mobile apps coming soon',
@@ -113,6 +113,10 @@ export const FAQ_ITEMS = [
   {
     q: 'Is this real-money gambling?',
     a: "No. T Poker is a management and scorekeeping tool for home games you run yourself. You don't wager, deposit, or win money inside the app — it just tracks cash you and your friends exchange in person.",
+  },
+  {
+    q: 'Do I need to be 18?',
+    a: 'Yes. T Poker is intended for adults 18 and older. It is a management and study tool for private home games — not a gambling product — and it never handles real-money wagers, deposits, or payouts.',
   },
   {
     q: 'Is the free version really free?',
