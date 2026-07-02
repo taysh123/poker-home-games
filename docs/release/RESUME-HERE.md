@@ -11,6 +11,33 @@ is safe: every new feature is behind an OFF switch.
 
 ---
 
+## ⚠️ Open TODOs (added 2026-07-02) — do before / around launch
+
+**1. Auth-pipeline security fixes (HELD — separate careful pass).**
+A pre-store security audit (2026-07-02) fixed the billing HIGHs on branch **`security-hardening`** (H2 Paddle
+verify-session caller-binding, H3 AI-idempotency content-binding, H4 sandbox-entitlement exclusion) + input
+validators (L2/L7/L8) — all TDD'd, **173 tests green, UNMERGED and not pushed**. Still owed as **"option 4"**,
+to be done carefully in a dedicated pass:
+- **H1 + M2** — the auth/coach rate limiters are single **GLOBAL** buckets (`Program.cs` `AddFixedWindowLimiter`),
+  so one client doing >10 logins/min returns 429 to **every** user. Fix = per-IP/per-user `RateLimitPartition`
+  plus `app.UseForwardedHeaders()` for Railway's proxy.
+- **M1** — password login against a social-only account (empty `PasswordHash`) throws inside BCrypt → **500 +
+  user-enumeration oracle** (`LoginCommandHandler`). Fix = treat an empty hash as a normal auth failure.
+- Also flagged (owner decision): **M3** 30-day refresh token in web `localStorage` (XSS-exposed), **L1** Google
+  link without `email_verified`, **L3** AddPlayer stat-pollution, **L4/L6** config, npm audit-fix (can break Expo).
+- Full detail: memory `security-audit`. The `security-hardening` branch is parked; open its PR later.
+
+**2. Landing page for Paddle (BLOCKER — Paddle rejected the app domain as "Gambling").**
+Paddle **REJECTED** `poker-home-games-three.vercel.app` — they reviewed the **raw web app** and classified it as
+gambling. Fix: **deploy the marketing landing site (`apps/landing`)**, which frames T Poker correctly as a **free
+home-game management + poker-STUDY tool — NOT a gambling product, no real-money wagering, 18+** — to its **own
+Vercel project + public domain**, then **resubmit that domain** to Paddle for account approval. This **supersedes
+§2's "approval simply pending"** framing: approval is now gated on presenting the non-gambling landing site.
+Deploy detail: `docs/release/landing-deploy.md`. (Positioning-copy changes to make the non-gambling framing
+unmistakable are being drafted separately.)
+
+---
+
 ## 1. Where we are — everything is built and frozen
 
 Four pull requests capture all the work. **Three are frozen (do NOT merge until launch); one is already merged.**
