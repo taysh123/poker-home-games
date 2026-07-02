@@ -1,135 +1,125 @@
 # ▶️ RESUME HERE — T Poker launch status
 
-> **Read this first when you come back.** Everything is built, verified, and safely parked. You are
-> **one external approval away from launch.** Nothing is broken; production is stable and unchanged.
-> Take your time — this doc has the whole picture and the exact steps.
-
-**TL;DR:** All the code + docs are done and sitting in reviewed pull requests. The **only** thing blocking
-launch is **Paddle account approval** (payment processor). When Paddle approves, follow **§4 — The launch
-sequence** and reference `docs/release/go-live-runbook.md` for the detailed clicks. Until then, production
-is safe: every new feature is behind an OFF switch.
+> **Read this first when you come back.** Everything is built, verified, and safely parked in GitHub PRs.
+> Nothing is running locally; production is stable and unchanged. This doc has the whole picture + exact steps.
+> _Last updated: 2026-07-02._
 
 ---
 
-## 📌 Security & Paddle status (updated 2026-07-02)
+## ⏭️ WHEN I COME BACK — do this first
 
-**1. Security hardening — ✅ DONE · 🧊 PR #11 open against `main`, FROZEN for launch (do NOT merge).**
-The pre-store security audit (2026-07-02) is fully remediated on **`security-hardening`** (6 commits, **PR #11**, gitleaks-clean):
-- **H2** Paddle verify-session bound to the caller · **H3** AI-idempotency content-binding · **H4** sandbox-entitlement
-  exclusion · **L2/L7/L8** input validators.
-- **Option 4 (auth pipeline) — done:** **H1 + M2** rate limiters now partitioned per-IP (auth) / per-user (coach)
-  + `app.UseForwardedHeaders()` for Railway; **M1** social-login empty-hash guard → 401 (not a 500 / enumeration oracle).
-- Verified: **dotnet build 0-err · dotnet test 181 · tsc 0 · jest 528** — all green.
-- **Frozen:** **PR #11** (base `main`) is open + MERGEABLE but must NOT merge until launch — it rides with #4/#5/#6. Read the **Railway note** below before deploying.
-- **Recommendations only (NOT changed):** **M3** refresh-token in web `localStorage`, **L1** Google `email_verified`,
-  **L3** AddPlayer consent, **L4/L6** config, npm audit-fix (can break Expo). Full detail: memory `security-audit`.
+**Check Paddle's decision on the resubmitted landing domain → `https://tpoker-landing-xi.vercel.app`.**
 
-**2. Landing page for Paddle — ✅ DONE, DEPLOYED & RESUBMITTED.**
-Paddle **rejected** `poker-home-games-three.vercel.app` as "Gambling" (they reviewed the raw web app). Fixed: the
-marketing landing (`apps/landing`) now makes the non-gambling / educational / 18+ framing unmistakable — trust
-banner, meta description, footer disclaimer, 18+ FAQ, softened hero. **PR #10 merged to `main`**, **deployed at
-https://tpoker-landing-xi.vercel.app**, and **resubmitted to Paddle** (review can take up to ~3 days). This replaces
-§2's "approval simply pending": approval is now gated on Paddle re-reviewing the landing domain.
+- ✅ **If Paddle APPROVED** → you're cleared to launch. Go to **§4 (launch sequence)** and follow
+  **`docs/release/go-live-runbook.md`** click-by-click: Paddle live keys → one **test purchase + refund** →
+  **honesty flip** → **merge PRs #4 → #5 → #6 → #11** → **deploy + set the Railway config
+  (`ASPNETCORE_ENVIRONMENT=Production` — see §4 step 5 / runbook Part 4 Step 3b)** → **activate the AI Coach with
+  the Haiku model** → live. 🎉
+- ❌ **If Paddle REJECTED again** → don't fight it. Consider an **alternative Merchant-of-Record processor**
+  (e.g. **Lemon Squeezy**) and **ping the strategist** to decide the switch. Billing sits behind a vendor-agnostic
+  seam (`IBillingVerifier` / `ICheckoutService`), so swapping processors is contained — not a rewrite.
+- ⏳ **While waiting (either outcome), you can progress:** talk to the **accountant** (tax/business setup for taking
+  payments) and do the **native iOS/Android Google OAuth** setup for store builds (see §5).
 
-**⚠️ Railway config for the rate-limit fix (H1) — read before deploying `security-hardening` / PR #11.**
-Full detail: **`docs/release/security-hardening-deploy.md`** (in PR #11). The short version:
-- **You do NOT add any new env var.** There is no `ForwardedHeaders__*` / proxy / hop-count variable — the hop count
-  is `ForwardLimit = 1` (one hop = Railway's edge), hardcoded in `Program.cs`. Do **not** set `KnownProxies`.
-- **The one setting that must be correct is `ASPNETCORE_ENVIRONMENT=Production`** on Railway (**already set**). It
-  gates the `UseForwardedHeaders` de-proxy block (which runs only when NOT Development). Don't remove or change it.
-- **If it's wrong** (missing / `Development`): the de-proxy is skipped → the app sees Railway's proxy IP for *every*
-  caller → all users share **one** rate-limit bucket → **accidental lockout under load** (legit users get 429 on
-  login). *Symptom:* everyone throttled together; logs show one IP. *Fix:* confirm `ASPNETCORE_ENVIRONMENT=Production`.
-- **Security:** trusts Railway's single edge; do **NOT** run this app internet-exposed without a trusted proxy (a
-  client could spoof `X-Forwarded-For`). **Verify after deploy:** rapid logins from one IP get 429 while a second IP
-  still logs in.
+**TL;DR:** All code is DONE and frozen in PRs. The only launch blocker is **Paddle**, currently **re-reviewing the
+resubmitted landing domain** (up to ~3 working days). Production is safe — every new feature is behind an OFF switch.
 
 ---
 
-## 1. Where we are — everything is built and frozen
+## 1. Where we are — all code built, frozen in PRs
 
-Four pull requests capture all the work. **Three are frozen (do NOT merge until launch); one is already merged.**
+**Four launch PRs are frozen (do NOT merge until launch). They merge in order → #4 → #5 → #6 → #11.**
 
 | PR | What it is | Base | Status |
 |----|-----------|------|--------|
-| **#4** | **Launch buildout** — full redesign + 4 premium features (all flag-gated OFF) | `main` | 🧊 **open, frozen** |
-| **#5** | **Coach + Study quality** — hand-aware/format-aware AI Coach, grounded in our data; Study upgrades | `feature/launch-buildout` | 🧊 **open, frozen** |
-| **#6** | **Lottie polish** — 6 animations wired (celebration/achievement/success/loading/empty/splash) | `feature/coach-study-quality` | 🧊 **open, frozen** |
-| **#7** | **Docs/OAuth** — Google-login diagnosis + native store OAuth prep | `main` | ✅ **MERGED to main** |
+| **#4** | **Launch buildout** — full redesign + 4 premium features (all flag-gated OFF) | `main` | 🧊 **open, FROZEN** |
+| **#5** | **Coach + Study quality** — hand/format-aware AI Coach (mock/flags-off); Study upgrades | `feature/launch-buildout` | 🧊 **open, FROZEN** |
+| **#6** | **Lottie polish** — 6 animations wired (celebration/achievement/success/loading/empty/splash) | `feature/coach-study-quality` | 🧊 **open, FROZEN** |
+| **#11** | **Security hardening** — all 7 audit fixes: **H2/H3/H4** billing + **H1/M2/M1** auth-pipeline + **L2/L7/L8** validators (TDD; dotnet 181 · jest 528 · tsc 0; gitleaks-clean) | `main` | 🧊 **open, FROZEN** |
 
-- The 3 feature PRs are **stacked** and merge **in order → #4, then #5, then #6** at launch (GitHub retargets
-  each as its base lands).
-- **Safety posture (why production is stable right now):** every new surface ships behind an **OFF feature
-  flag**, the **AI Coach uses the mock provider** (no real Anthropic calls), the **honesty flip is HELD** (nothing
-  is advertised as available before it's real — store/benefit badges stay "Coming soon"), and **no real-money
-  billing is wired**. Production behaves exactly as it did before this work. Merging the PRs later doesn't
-  change that until you deliberately flip flags in the launch sequence.
+**Already merged to `main`:** **#7** docs/OAuth · **#9** legal + pricing pages (Paddle policies) · **#10** landing
+anti-gambling (deployed) · **#12** these RESUME/docs updates.
 
-## 2. The one blocker — Paddle approval
+- **Merge order at launch: #4 → #5 → #6 → #11.** The feature stack retargets as each lands; **#11** (security) is
+  independent of the stack and merges last so its fixes deploy with everything. Each merge: gitleaks + all gates green.
+- **Safety posture (why production is stable right now):** every new surface is behind an **OFF flag**, the **AI Coach
+  uses the mock provider** (no Anthropic calls), the **honesty flip is HELD** (store/benefit badges stay "Coming
+  soon"), and **no real-money billing is wired**. Production behaves exactly as before until you flip flags in §4.
 
-**Paddle (the payment processor / Merchant of Record) account approval is pending.** That's it. Nothing
-else blocks launch.
+## 2. The blocker — Paddle (re-reviewing the landing)
 
-- **Going live is technically impossible until Paddle approves** — there are **no live Paddle keys** until
-  then (no live API key, client token, or webhook secret exist to configure). So there is nothing to rush;
-  the whole paid path simply can't be turned on yet.
-- Email/password + Google sign-in, guest mode, and all the free features work today independently of Paddle.
+**Paddle first REJECTED `poker-home-games-three.vercel.app` as "Gambling"** (they reviewed the raw web app). Fixed:
+the marketing **landing site** (`apps/landing`) now frames T Poker unmistakably as **home-game management + poker
+study — NOT a gambling product, no real-money wagering, 18+** (trust banner, meta description, footer disclaimer,
+18+ FAQ, softened hero). It is **deployed at `https://tpoker-landing-xi.vercel.app`** and **RESUBMITTED to Paddle**.
+
+- **Status: under review — up to ~3 working days.** Nothing else blocks launch.
+- Going live is technically impossible until Paddle approves (no live Paddle keys exist yet). Email/password +
+  Google sign-in, guest mode, and all free features work today, independently of Paddle.
 
 ## 3. What you've already done (external prep) ✅
 
 - ✅ **GitHub 2FA** enabled.
 - ✅ **Google + Apple developer accounts** owned.
-- ✅ **Anthropic API key** obtained + a **spend limit set** — key stored securely, **NOT in Railway yet**
-  (you'll add it during AI-Coach activation in the launch sequence).
-- ✅ **Google Login verified working on web** (`poker-home-games-three.vercel.app` → signs in to Home). The
-  whole chain — app code, Google Console, backend — is confirmed. *(Expo Go can't do Google sign-in — that's
-  an SDK-54 limitation, not a bug; see `google-oauth-fix.md`.)*
+- ✅ **Anthropic API key** obtained + a **spend limit set** — stored securely, **NOT in Railway yet** (you add it
+  during AI-Coach activation in the launch sequence).
+- ✅ **Google Login verified working on web** (`poker-home-games-three.vercel.app` → signs in to Home). The whole
+  chain — app code, Google Console, backend — is confirmed. *(Expo Go can't do Google sign-in — SDK-54 limitation,
+  not a bug; see `google-oauth-fix.md`.)*
 
 ## 4. The exact launch sequence (when Paddle approves)
 
 Follow **`docs/release/go-live-runbook.md`** for every dashboard click + exact env-var name. The **order**:
 
 1. **Paddle approves** → in the Paddle dashboard, go **sandbox → live**: create the live product + 2 prices
-   ($8.99/mo, $79.99/yr), the live API key, client token, and webhook signing secret. Set the `Paddle__*`
-   vars on Railway + the `EXPO_PUBLIC_PADDLE_*` vars on Vercel.
-2. **One real test purchase** (small, refundable) end-to-end → confirm the webhook verifies (HTTP 200) and
-   the entitlement grants; then **refund** it and confirm it revokes. *(Proves live billing works.)*
-3. **Honesty flip (S9, currently HELD)** → flip the "Coming soon" benefits to live **only once they're real
-   and billing is wired**. This is the point where the paywall may present them.
-4. **Merge the feature PRs → #4, then #5, then #6** to `main` — each with a **full secret-scan (gitleaks) +
-   all gates green** (tsc · jest · expo export · dotnet build/test · landing build). *(Merging is your action.)*
-5. **Deploy the landing site to its own Vercel project** (see `landing-deploy.md`).
+   ($8.99/mo, $79.99/yr), the live API key, client token, and webhook signing secret. Set the `Paddle__*` vars on
+   Railway + the `EXPO_PUBLIC_PADDLE_*` vars on Vercel.
+2. **One real test purchase** (small, refundable) end-to-end → confirm the webhook verifies (HTTP 200) and the
+   entitlement grants; then **refund** it and confirm it revokes. *(Proves live billing works.)*
+3. **Honesty flip (HELD)** → flip the "Coming soon" benefits to live **only once they're real and billing is wired**.
+4. **Merge the PRs → #4 → #5 → #6 → #11** to `main` — each with a **full gitleaks scan + all gates green**
+   (tsc · jest · expo export · dotnet build/test · landing build). *(Merging is your action.)*
+5. **Deploy + set the Railway rate-limit config.** Railway auto-deploys `main`. ⚠️ **Confirm
+   `ASPNETCORE_ENVIRONMENT=Production` is set on Railway** — it is the **one** setting that enables
+   `app.UseForwardedHeaders`, so the new **per-IP rate limiting** (from PR #11) reads the **real** client IP.
+   **Add NO forwarded-headers/proxy variable** — the proxy hop count is `ForwardLimit = 1` **in code** (one hop =
+   Railway's edge); do **not** set `KnownProxies`. **If `ASPNETCORE_ENVIRONMENT` is missing/`Development`:** the
+   app sees Railway's proxy IP for everyone → all users share **one** rate-limit bucket → **login lockout under
+   load.** Detail: runbook **Part 4 Step 3b** + **`docs/release/security-hardening-deploy.md`**. *(The landing is
+   already deployed at `tpoker-landing-xi.vercel.app` — no separate landing deploy is needed at launch.)*
 6. **Activate the AI Coach** → put the **Anthropic key on Railway** (`CoachAiSettings__ApiKey`), set
    **`CoachAiSettings__Provider=anthropic`**, and **set the model to Haiku** (`claude-haiku-4-5-20251001`) —
-   **NOT Sonnet.** ⚠️ The shipped default is Sonnet, which costs multiples more; the 100/month economics
-   assume Haiku. Then flip the `coach` flag.
+   **NOT Sonnet.** ⚠️ The shipped default is Sonnet, which costs multiples more; the 100/month economics assume
+   Haiku. Then flip the `coach` flag.
 7. **Live.** 🎉
 
-> Everything above is **documented, not executed** — `go-live-runbook.md` has the beginner-friendly detail
-> (every Paddle action, every env var, the live-HMAC verification, and the test-purchase + refund procedure).
+> Everything above is **documented, not executed** — `go-live-runbook.md` has the beginner-friendly detail (every
+> Paddle action, every env var, the live-HMAC verification, the test-purchase + refund procedure, and the Railway
+> forwarded-headers step).
 
 ## 5. Still-pending external prep you can do meanwhile
 
 None of these block launch, but they move it forward:
 
-- **Chase Paddle** — the critical path; approval is the blocker.
+- **Chase Paddle** — the critical path; the landing re-review is the blocker.
 - **Accountant consultation** — tax/business setup for taking payments.
-- **Store submission prep** — accounts are owned; the remaining steps (listings, credentials, and the
-  **native iOS/Android Google OAuth setup**) are documented. The native OAuth is a **required pre-store
-  step** now: create iOS + Android OAuth clients for `com.tpoker.app`, set the env vars, and add the iOS
-  reversed-client-ID URL scheme to `app.json` (a ready-to-apply snippet — **not yet applied**). See
-  `google-oauth-fix.md` §4 and `store-release.md` (Steps 3 + 8).
+- **Store submission prep** — accounts are owned; the remaining steps (listings, credentials, and the **native
+  iOS/Android Google OAuth setup**) are documented. The native OAuth is a **required pre-store step**: create iOS +
+  Android OAuth clients for `com.tpoker.app`, set the env vars, and add the iOS reversed-client-ID URL scheme to
+  `app.json` (a ready-to-apply snippet — **not yet applied**). See `google-oauth-fix.md` §4 and `store-release.md`
+  (Steps 3 + 8).
 
 ## 6. Post-launch backlog (NOT blockers — deliberately deferred)
 
-- **Hebrew / RTL localization** — English launches first; Hebrew is a post-launch update. ~5–8 weeks of
-  engineering, **RTL-dominated**. Full blueprint in `localization-plan.md`.
-- **"Single active session" / device-login management** — a new post-launch auth feature (warn or
-  force-logout on a second device). Captured in `backlog-tickets.md`.
-- **Cloud Sync `xmin` concurrency hardening** — low priority; it self-heals today. `backlog-tickets.md`.
+- **Hebrew / RTL localization** — English launches first; Hebrew is a post-launch update. ~5–8 weeks, RTL-dominated.
+  Full blueprint in `localization-plan.md`.
+- **"Single active session" / device-login management** — post-launch auth feature. `backlog-tickets.md`.
+- **Cloud Sync `xmin` concurrency hardening** — low priority; self-heals today. `backlog-tickets.md`.
 - **Cloud Sync tombstone compaction** — only matters at scale. `backlog-tickets.md`.
-- **Study content authoring** — grow the question pool + richer explanations against the standard in
-  `study-content-spec.md` (a content/workbook task, not code).
+- **Study content authoring** — grow the question pool + richer explanations (`study-content-spec.md`).
+- **Security recommendations (deferred; NOT in PR #11)** — considered and consciously left as recommendations:
+  **M3** refresh-token in web `localStorage` (→ HttpOnly cookie), **L1** Google `email_verified`, **L3** AddPlayer
+  consent, **L4/L6** config, npm audit-fix (can break Expo). Full detail: memory `security-audit`.
 
 ## 7. Key pointers — where the important docs live
 
@@ -137,15 +127,17 @@ None of these block launch, but they move it forward:
 
 | Doc | Path | Where | What it's for |
 |-----|------|-------|---------------|
-| **Go-live runbook** | `docs/release/go-live-runbook.md` | in **PR #4** | The step-by-step for Paddle live + AI Coach activation (§4 detail) |
+| **Go-live runbook** | `docs/release/go-live-runbook.md` | in **PR #4** | Step-by-step for Paddle live + AI Coach + the Railway rate-limit step (§4 detail) |
+| **Security deploy note** | `docs/release/security-hardening-deploy.md` | in **PR #11** | The exact Railway `ASPNETCORE_ENVIRONMENT` / forwarded-headers config for the rate-limit fix |
 | **Google OAuth fix** | `docs/google-oauth-fix.md` | ✅ **on main** | Web-verified; the required native store OAuth setup |
 | **Store release guide** | `docs/store-release.md` | ✅ **on main** | Full App Store + Play submission checklist |
+| **Landing deploy** | `docs/release/landing-deploy.md` | in **PR #4** | Deploying the marketing site (already done → tpoker-landing-xi.vercel.app) |
 | **Localization plan** | `docs/release/localization-plan.md` | in **PR #5** | Hebrew/RTL blueprint + effort estimate |
 | **Backlog tickets** | `docs/release/backlog-tickets.md` | in **PR #4** | The deferred hardening/auth tickets |
 | **Study content spec** | `docs/content/study-content-spec.md` | in **PR #5** | The standard for authoring quiz content |
-| **Landing deploy** | `docs/release/landing-deploy.md` | in **PR #4** | Deploying the marketing site to Vercel |
 
 ---
 
-**You can safely close VS Code.** Nothing is running, nothing is half-done, production is stable. When you're
-back and Paddle has approved, start at **§4**. 👋
+**✅ Everything is safely backed up to GitHub — you can close VS Code.** All 4 launch PRs (#4 / #5 / #6 / #11) are
+pushed and frozen; the merged work (#7 / #9 / #10 / #12) is on `main`; nothing important lives only on your machine.
+When you're back, start at **⏭️ WHEN I COME BACK** at the top. 👋
