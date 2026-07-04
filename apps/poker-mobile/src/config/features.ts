@@ -25,7 +25,8 @@ export type FeatureFlag =
   | 'mastery'   // V2.2 — analytics → mastery engine (prod OFF)
   | 'solver'    // Web-first flagship — solver workspace + range-table hover inspector (prod OFF)
   | 'publicSpots' // Future — shared/public spot library (design-only; prod OFF everywhere)
-  | 'v2Splash'; // dual-brand (True Story Labs → T Poker) launch splash
+  | 'v2Splash'  // branded launch splash (BrandSplash overlay on cold start)
+  | 'welcome';  // entry chooser — signed-out users pick "Continue as guest" / "Sign in" (no silent guest)
 
 /** Production defaults — nav5 + onboardingV2 ON (Subsystem 1 launch); study/content/retention ON (Phase 1 free-training-taste); immersive ON (felt surfaces — launch decision). */
 export const PROD_FLAGS: Record<FeatureFlag, boolean> = {
@@ -45,7 +46,11 @@ export const PROD_FLAGS: Record<FeatureFlag, boolean> = {
   mastery: false,
   solver: false,
   publicSpots: false,
-  v2Splash: false,
+  // Launch decision (2026-07-05): splash + entry chooser ship ON. Each flag is an
+  // independent kill-switch — v2Splash:false removes the splash overlay entirely;
+  // welcome:false restores the legacy silent-guest entry (see navigation/entryRouting.ts).
+  v2Splash: true,
+  welcome: true,
 };
 
 /**
@@ -68,6 +73,7 @@ const BETA_FLAGS: Partial<Record<FeatureFlag, boolean>> = {
   mastery: true,
   solver: true,           // preview the solver workspace in beta
   v2Splash: true,
+  welcome: true,
   paywall: false,         // OFF in beta — no production paywall
   coachScreenshot: false, // OFF — partial upload not exposed
 };
@@ -75,6 +81,7 @@ const BETA_FLAGS: Partial<Record<FeatureFlag, boolean>> = {
 /** Dev-only previews. Does not affect production builds (`__DEV__ === false`). */
 const DEV_OVERRIDES: Partial<Record<FeatureFlag, boolean>> = {
   v2Splash: true,  // preview the launch splash while developing
+  welcome: true,   // preview the entry chooser while developing
   bankroll: true,  // Phase 1 — preview the bankroll tracker in dev (prod stays OFF)
   study: true,     // Phase 2 — preview the study module in dev (prod stays OFF)
   coach: true,     // Phase 3 — preview the AI coach scaffolding in dev (prod stays OFF)

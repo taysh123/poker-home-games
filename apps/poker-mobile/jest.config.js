@@ -10,6 +10,8 @@ module.exports = {
     '**/src/analytics/__tests__/**/*.test.ts',
     '**/src/components/__tests__/**/*.test.ts',
     '**/src/components/motion/__tests__/**/*.test.ts',
+    '**/src/components/brand/__tests__/**/*.test.ts',
+    '**/src/navigation/__tests__/**/*.test.ts',
     '**/src/hooks/__tests__/**/*.test.ts',
     '**/src/config/__tests__/**/*.test.ts',
     '**/src/screens/__tests__/**/*.test.tsx',

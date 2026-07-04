@@ -32,11 +32,11 @@
 **Interfaces:**
 - Produces: `initialGuestRoute(opts: { showLanding: boolean; welcomeEnabled: boolean; hasSeenOnboarding: boolean }): 'Landing' | 'Welcome' | 'Onboarding' | 'MainTabs'`; `guestContinueTarget(hasSeenOnboarding: boolean): 'Onboarding' | 'MainTabs'`.
 
-- [ ] Step 1: failing tests (`entryRouting.test.ts`): Landing wins; Welcome when enabled; legacy Onboarding/MainTabs when disabled; continue-target both arms.
-- [ ] Step 2: run jest — fails (module missing).
-- [ ] Step 3: implement `entryRouting.ts` (pure, no imports beyond types).
-- [ ] Step 4: update `features.ts`: add `'welcome'` to `FeatureFlag`, `PROD_FLAGS: { v2Splash: true, welcome: true }`, BETA/DEV entries true; update `features.test.ts` expected-ON set to `nav5, onboardingV2, study, content, retention, immersive, v2Splash, welcome` + dedicated pins with kill-switch comments.
-- [ ] Step 5: jest + tsc green — commit `feat(entry): pure entry routing + welcome/v2Splash launch flags`.
+- [x] Step 1: failing tests (`entryRouting.test.ts`): Landing wins; Welcome when enabled; legacy Onboarding/MainTabs when disabled; continue-target both arms.
+- [x] Step 2: run jest — fails (module missing).
+- [x] Step 3: implement `entryRouting.ts` (pure, no imports beyond types).
+- [x] Step 4: update `features.ts`: add `'welcome'` to `FeatureFlag`, `PROD_FLAGS: { v2Splash: true, welcome: true }`, BETA/DEV entries true; update `features.test.ts` expected-ON set to `nav5, onboardingV2, study, content, retention, immersive, v2Splash, welcome` + dedicated pins with kill-switch comments.
+- [x] Step 5: jest + tsc green — commit `feat(entry): pure entry routing + welcome/v2Splash launch flags`.
 
 ### Task 2: WelcomeScreen + navigator wiring (TDD)
 
