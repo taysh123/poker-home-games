@@ -71,6 +71,7 @@ export default function PrimaryButton({
       onPress={onPress}
       haptic="light"
       disabled={disabled || loading}
+      accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
     >
       {variant === 'gradient' && (

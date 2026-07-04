@@ -22,6 +22,7 @@ import { consumePendingInvite } from '../utils/pendingInvite';
 import { consumePendingCheckout } from '../utils/pendingCheckout';
 import LandingScreen from '../screens/LandingScreen';
 import { resolveWebLanding } from '../features/landing/landingRouting';
+import { initialGuestRoute } from './entryRouting';
 import { usePushNotificationListeners } from '../hooks/usePushNotifications';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import LoginScreen from '../screens/LoginScreen';
@@ -44,6 +45,7 @@ import JoinGroupScreen from '../screens/JoinGroupScreen';
 import PlayerProfileScreen from '../screens/PlayerProfileScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import OnboardingV2Screen from '../screens/OnboardingV2Screen';
+import WelcomeScreen from '../screens/WelcomeScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import LocalNewGameScreen from '../screens/LocalNewGameScreen';
 import LocalSessionScreen from '../screens/LocalSessionScreen';
@@ -82,6 +84,7 @@ type TrackSegment = 'bankroll' | 'sessions' | 'stats';
 
 export type RootStackParamList = {
   Landing: undefined;
+  Welcome: { firstRun: boolean } | undefined;
   Onboarding: undefined;
   Login: undefined;
   Register: undefined;
@@ -538,12 +541,23 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
     );
   }
 
+  // Signed-out entry (scope: entry choice) — the pure spec in entryRouting.ts decides
+  // where the guest tree opens: Landing (web root) → Welcome chooser → legacy fallback.
+  const guestInitialRoute = initialGuestRoute({
+    showLanding,
+    welcomeEnabled: isFeatureEnabled('welcome'),
+    hasSeenOnboarding,
+  });
+
   return (
     <NavigationContainer ref={navigationRef} linking={linking}>
       <Toast />
       <OfflineBanner />
       <PushListeners />
-      <Stack.Navigator screenOptions={stackScreenOptions}>
+      <Stack.Navigator
+        screenOptions={stackScreenOptions}
+        initialRouteName={user === null ? guestInitialRoute : 'MainTabs'}
+      >
         {user === null ? (
           // Guest tree — the app is fully usable without an account: local games
           // run on-device; Groups/Stats upsell sign-in; Login is a modal, not a wall.
@@ -553,6 +567,14 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
                 name="Landing"
                 component={LandingScreen}
                 options={{ headerShown: false }}
+              />
+            )}
+            {isFeatureEnabled('welcome') && (
+              <Stack.Screen
+                name="Welcome"
+                component={WelcomeScreen}
+                initialParams={{ firstRun: !hasSeenOnboarding }}
+                options={{ headerShown: false, gestureEnabled: false }}
               />
             )}
             {!hasSeenOnboarding && (

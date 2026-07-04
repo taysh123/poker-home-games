@@ -49,11 +49,11 @@
 - Consumes: `guestContinueTarget` (Task 1); `PrimaryButton` (`variant="gradient" | "outline"`); `slideUpSequence/staggerIn` + `MotiView` from `components/motion`; `useLocalGames()` (`games`, `activeGame`); `track`, `markSignupIntent` from `utils/analytics`.
 - Produces: route `Welcome` with `initialParams={{ firstRun: !hasSeenOnboarding }}`.
 
-- [ ] Step 1: failing render test: renders both CTAs + wordmark; guest press — `navigation.reset` to `MainTabs` (firstRun=false) / `Onboarding` (firstRun=true); **no storage writes** (mock `utils/storage`, assert `setItemAsync`/`deleteItemAsync` never called); sign-in press — `navigate('Login')` + `markSignupIntent`.
-- [ ] Step 2: jest — fails.
-- [ ] Step 3: implement screen per spec section 4 (wordmark block, CTA stack guest-primary, reassurance line when local games exist, legal + byline, 4-group stagger 0/70/140/210ms x 320ms, a11y labels).
-- [ ] Step 4: wire AppNavigator (registration + initialRouteName + params).
-- [ ] Step 5: jest + tsc green — commit `feat(entry): Welcome chooser screen — explicit guest choice, guest data untouched`.
+- [x] Step 1: failing render test: renders both CTAs + wordmark; guest press — `navigation.reset` to `MainTabs` (firstRun=false) / `Onboarding` (firstRun=true); **no storage writes** (mock `utils/storage`, assert `setItemAsync`/`deleteItemAsync` never called); sign-in press — `navigate('Login')` + `markSignupIntent`.
+- [x] Step 2: jest — fails.
+- [x] Step 3: implement screen per spec section 4 (wordmark block, CTA stack guest-primary, reassurance line when local games exist, legal + byline, 4-group stagger 0/70/140/210ms x 320ms, a11y labels).
+- [x] Step 4: wire AppNavigator (registration + initialRouteName + params).
+- [x] Step 5: jest + tsc green — commit `feat(entry): Welcome chooser screen — explicit guest choice, guest data untouched`.
 
 ### Task 3: BrandSplash 2.0 (TDD timeline)
 
