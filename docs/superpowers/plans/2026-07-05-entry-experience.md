@@ -78,10 +78,10 @@
 - Modify: `apps/poker-mobile/src/screens/GuestHomeScreen.tsx` (header + hero one-time mount stagger)
 - Modify: `apps/poker-mobile/App.tsx` or `app.json` (web body background `#0A111B` — mechanism verified against actual export output)
 
-- [ ] Step 1: Login/Register migration (structure/copy unchanged; entrance groups 0/80/160/220ms).
-- [ ] Step 2: GuestHome brand header + hero cards wrapped in `MotiView {...slideUpSequence({ reduced, delay })}` (mount-once).
-- [ ] Step 3: web shell background (document.body style at App module scope on web + check export HTML).
-- [ ] Step 4: jest + tsc + `npx expo export -p web` green — commit `feat(entry): restrained auth polish + GuestHome entrance + navy web shell`.
+- [x] Step 1: Login/Register migration (structure/copy unchanged; entrance groups 0/80/160/220ms). Login guest link TDD'd (`LoginScreen.test.tsx`: MainTabs/Onboarding arms + zero-storage-write pin).
+- [x] Step 2: GuestHome brand header + hero cards wrapped in `MotiView {...slideUpSequence({ reduced, delay })}` (mount-once; upsell joins as group 2 for a coherent cascade).
+- [x] Step 3: web shell background (document.body/documentElement at App module scope on web). Verified against real export output: `web.themeColor` IS injected as `<meta name="theme-color">`; `web.backgroundColor` does NOT style `<body>` — the JS paint is the operative fix.
+- [x] Step 4: jest + tsc + `npx expo export -p web` green — commit `feat(entry): restrained auth polish + GuestHome entrance + navy web shell`.
 
 ### Task 5: Verification + ship (frozen)
 

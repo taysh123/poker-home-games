@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,49 +8,48 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { guestContinueTarget } from '../navigation/entryRouting';
 import { colors } from '../theme/colors';
+import { typography } from '../theme/typography';
 import { shadows } from '../theme/shadows';
-import { USE_NATIVE_DRIVER } from '../theme/motion';
 import { useAuth } from '../context/AuthContext';
 import { useGoogleAuth } from '../hooks/useGoogleAuth';
 import GoogleAuthButton from '../components/GoogleAuthButton';
 import PrimaryButton from '../components/PrimaryButton';
 import Screen from '../components/Screen';
 import AppTextInput from '../components/AppTextInput';
+import PressableScale from '../components/motion/PressableScale';
+import { MotiView, slideUpSequence } from '../components/motion';
+import { useReducedMotion } from '../hooks/useReducedMotion';
+import * as storage from '../utils/storage';
 import { parseAuthError } from '../utils/parseAuthError';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
   const { login, googleLogin } = useAuth();
+  const reduced = useReducedMotion();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  const logoScale = useRef(new Animated.Value(0.7)).current;
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const formOpacity = useRef(new Animated.Value(0)).current;
-  const formSlide = useRef(new Animated.Value(24)).current;
+  // Guest escape hatch target. Defaults to "seen" (MainTabs) — the safe arm for
+  // returning users if the tap lands before the storage read resolves.
+  const [seenOnboarding, setSeenOnboarding] = useState(true);
 
   useEffect(() => {
-    Animated.sequence([
-      Animated.parallel([
-        Animated.spring(logoScale, { toValue: 1, friction: 8, tension: 80, useNativeDriver: USE_NATIVE_DRIVER }),
-        Animated.timing(logoOpacity, { toValue: 1, duration: 400, useNativeDriver: USE_NATIVE_DRIVER }),
-      ]),
-      Animated.parallel([
-        Animated.timing(formOpacity, { toValue: 1, duration: 300, useNativeDriver: USE_NATIVE_DRIVER }),
-        Animated.spring(formSlide, { toValue: 0, friction: 10, tension: 90, useNativeDriver: USE_NATIVE_DRIVER }),
-      ]),
-    ]).start();
+    let mounted = true;
+    // Read-only — this screen must never WRITE storage (guest-data preservation).
+    storage.getItemAsync('hasSeenOnboarding')
+      .then(v => { if (mounted) setSeenOnboarding(v === 'true'); })
+      .catch(() => {});
+    return () => { mounted = false; };
   }, []);
 
   const { prompt: promptGoogle, ready: googleReady } = useGoogleAuth(async (result) => {
@@ -83,26 +82,40 @@ export default function LoginScreen({ navigation }: Props) {
     }
   }
 
+  function continueAsGuest() {
+    navigation.reset({ index: 0, routes: [{ name: guestContinueTarget(seenOnboarding) }] });
+  }
+
+  // Staggered entrance: header → card → footer/guest → legal.
+  const group = (delay: number) => slideUpSequence({ reduced, delay, duration: 320 });
+
   return (
     <Screen>
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.bgDecor1} />
-      <View style={styles.bgDecor2} />
+      <View style={styles.bgDecor1} pointerEvents="none" />
+      <View style={styles.bgDecor2} pointerEvents="none" />
       {/* Dismiss — only when pushed from the guest app (never in the old gate flow) */}
       {navigation.canGoBack() && (
-        <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()} hitSlop={12} activeOpacity={0.7}>
+        <PressableScale
+          style={styles.closeBtn}
+          onPress={() => navigation.goBack()}
+          hitSlop={12}
+          haptic="light"
+          accessibilityRole="button"
+          accessibilityLabel="Close sign in"
+        >
           <Ionicons name="close" size={22} color={colors.textMuted} />
-        </TouchableOpacity>
+        </PressableScale>
       )}
       <ScrollView
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View style={[styles.header, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}>
+        <MotiView {...group(0)} style={styles.header}>
           <View style={styles.logoOuter}>
             <View style={styles.logoRing}>
               <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
@@ -112,9 +125,9 @@ export default function LoginScreen({ navigation }: Props) {
           <View style={styles.brandAccent} />
           <Text style={styles.title}>Welcome back</Text>
           <Text style={styles.subtitle}>Sign in to your account</Text>
-        </Animated.View>
+        </MotiView>
 
-        <Animated.View style={[styles.card, { opacity: formOpacity, transform: [{ translateY: formSlide }] }]}>
+        <MotiView {...group(80)} style={styles.card}>
           <View style={styles.form}>
             <AppTextInput
               label="Email"
@@ -163,22 +176,42 @@ export default function LoginScreen({ navigation }: Props) {
               <GoogleAuthButton onPress={promptGoogle} disabled={!googleReady || loading} />
             </>
           )}
-        </Animated.View>
+        </MotiView>
 
-        <Animated.View style={[styles.footer, { opacity: formOpacity }]}>
-          <Text style={styles.footerText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Register')} hitSlop={8}>
-            <Text style={styles.link}>Create one</Text>
-          </TouchableOpacity>
-        </Animated.View>
+        <MotiView {...group(160)}>
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Don't have an account? </Text>
+            <PressableScale
+              onPress={() => navigation.navigate('Register')}
+              hitSlop={8}
+              haptic="light"
+              accessibilityRole="button"
+              accessibilityLabel="Create an account"
+            >
+              <Text style={styles.link}>Create one</Text>
+            </PressableScale>
+          </View>
 
-        <Animated.View style={[styles.legal, { opacity: formOpacity }]}>
+          {/* Guest escape hatch — entering guest mode is always one tap away. */}
+          <PressableScale
+            style={styles.guestLink}
+            onPress={continueAsGuest}
+            hitSlop={8}
+            haptic="light"
+            accessibilityRole="button"
+            accessibilityLabel="Continue as guest"
+          >
+            <Text style={styles.guestLinkText}>Continue as guest</Text>
+          </PressableScale>
+        </MotiView>
+
+        <MotiView {...group(220)} style={styles.legal}>
           <Text style={styles.legalText}>
             A private home-game scorekeeping app for adults (18+). Not a gambling
             product — play responsibly.
           </Text>
           <Text style={styles.brandByline}>BY TRUE STORY LABS</Text>
-        </Animated.View>
+        </MotiView>
       </ScrollView>
     </KeyboardAvoidingView>
     </Screen>
@@ -219,7 +252,8 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 110,
-    backgroundColor: 'rgba(74,144,226,0.04)',
+    backgroundColor: colors.infoFaint,
+    opacity: 0.35,
   },
 
   header: { alignItems: 'center', marginBottom: 36 },
@@ -242,10 +276,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   logo: { width: 84, height: 84, borderRadius: 20 },
-  appName: { fontSize: 11, fontWeight: '800', color: colors.gold, letterSpacing: 3, marginBottom: 8 },
+  appName: { ...typography.caps, color: colors.gold, letterSpacing: 3, marginBottom: 8 },
   brandAccent: { width: 24, height: 2, borderRadius: 1, backgroundColor: colors.goldMuted, marginBottom: 16 },
-  title: { fontSize: 30, fontWeight: '800', color: colors.text, marginBottom: 6, letterSpacing: -0.5 },
-  subtitle: { fontSize: 15, color: colors.textMuted },
+  title: { ...typography.display, color: colors.text, marginBottom: 6 },
+  subtitle: { ...typography.body, color: colors.textMuted },
 
   card: {
     backgroundColor: colors.surface,
@@ -269,14 +303,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkboxChecked: { backgroundColor: colors.gold, borderColor: colors.gold },
-  rememberLabel: { fontSize: 14, color: colors.textMuted },
+  rememberLabel: { ...typography.bodySmall, color: colors.textMuted },
   dividerRow: { flexDirection: 'row', alignItems: 'center', marginTop: 20, marginBottom: 16, gap: 10 },
   dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
-  dividerText: { color: colors.textDim, fontSize: 12, fontWeight: '600', letterSpacing: 0.3 },
-  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 28 },
-  footerText: { color: colors.textMuted, fontSize: 15 },
-  link: { color: colors.gold, fontSize: 15, fontWeight: '700' },
-  legal: { alignItems: 'center', marginTop: 32, paddingHorizontal: 12, gap: 10 },
-  legalText: { color: colors.textDim, fontSize: 11.5, lineHeight: 17, textAlign: 'center' },
-  brandByline: { color: colors.goldMuted, fontSize: 10, fontWeight: '700', letterSpacing: 1.5 },
+  dividerText: { ...typography.caption, color: colors.textDim },
+  footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 28 },
+  footerText: { ...typography.body, color: colors.textMuted },
+  link: { ...typography.label, color: colors.gold },
+  guestLink: {
+    alignSelf: 'center',
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    marginTop: 4,
+  },
+  guestLinkText: { ...typography.labelSmall, color: colors.textMuted },
+  legal: { alignItems: 'center', marginTop: 24, paddingHorizontal: 12, gap: 10 },
+  legalText: { ...typography.caption, color: colors.textDim, lineHeight: 17, textAlign: 'center' },
+  brandByline: { ...typography.caps, fontSize: 10, color: colors.goldMuted, letterSpacing: 1.5 },
 });
