@@ -231,7 +231,8 @@ const styles = StyleSheet.create({
   buttonTop: { marginTop: 4 },
   dividerRow: { flexDirection: 'row', alignItems: 'center', marginTop: 20, marginBottom: 16, gap: 10 },
   dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
-  dividerText: { ...typography.caption, color: colors.textDim },
+  // textMuted (not textDim): 12px caption on the surface card must clear WCAG AA contrast.
+  dividerText: { ...typography.caption, color: colors.textMuted },
   footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 28 },
   footerText: { ...typography.body, color: colors.textMuted },
   link: { ...typography.label, color: colors.gold },
