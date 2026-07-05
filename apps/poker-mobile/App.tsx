@@ -55,7 +55,7 @@ function extractDeepLink(url: string): { type: 'session' | 'group'; token: strin
 
 export default function App() {
   const navRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
-  // Dual-brand launch splash (flag-gated). When off, start already "done".
+  // Branded launch splash (~1.2s, flag `v2Splash` = kill-switch). When off, start already "done".
   const [splashDone, setSplashDone] = useState(!isFeatureEnabled('v2Splash'));
   // Serif display accents (titles + hero numerals). On fontError we proceed —
   // unknown fontFamily falls back to the system font, which is cosmetic only.

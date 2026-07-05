@@ -66,10 +66,10 @@
 - Produces: `SPLASH` const (LOGO_IN 320, WORD_DELAY 120, WORD_IN 340, TAG_DELAY 280, TAG_IN 280, EXIT_AT 900, EXIT 300, TOTAL 1200, REDUCED_HOLD 600, SKIP_EXIT 180); `splashDurations(reduced: boolean): { total: number; exit: number }`.
 - BrandSplash keeps prop contract `{ onDone: () => void }` (App.tsx unchanged).
 
-- [ ] Step 1: failing tests: TOTAL = EXIT_AT + EXIT = 1200 <= 1300; reduced total 600 <= 800; EXIT <= 300 (faster than the 560ms enter block); SKIP_EXIT < EXIT; splashDurations arms.
-- [ ] Step 2: jest — fails.
-- [ ] Step 3: implement constants + rewrite component: single-brand (logo + wordmark + tagline + byline), shared-value opacity/translate/scale only, root Pressable always-skippable (`accessibilityLabel="Skip intro"`), exit fade via animated root opacity, reduced — static frame + `setTimeout(onDone, REDUCED_HOLD)`, completion guard ref (skip/timer race). Remove TSL frame + ace-spade Lottie + `polish`-flag skip gate.
-- [ ] Step 4: jest + tsc green — commit `feat(entry): BrandSplash 2.0 — 1.2s single-brand, always skippable, reduced-motion static, web parity`.
+- [x] Step 1: failing tests: TOTAL = EXIT_AT + EXIT = 1200 <= 1300; reduced total 600 <= 800; EXIT <= 300 (faster than the 560ms enter block); SKIP_EXIT < EXIT; splashDurations arms.
+- [x] Step 2: jest — fails.
+- [x] Step 3: implement constants + rewrite component: single-brand (logo + wordmark + tagline + byline), shared-value opacity/translate/scale only, root Pressable always-skippable (`accessibilityLabel="Skip intro"`), exit fade via animated root opacity, reduced — static frame + `setTimeout(onDone, REDUCED_HOLD)`, completion guard ref (skip/timer race). Remove TSL frame + ace-spade Lottie + `polish`-flag skip gate.
+- [x] Step 4: jest + tsc green — commit `feat(entry): BrandSplash 2.0 — 1.2s single-brand, always skippable, reduced-motion static, web parity`.
 
 ### Task 4: Login/Register polish + GuestHome stagger + web shell
 
