@@ -176,7 +176,7 @@ export default function LandingScreen() {
   return (
     <Screen>
       {/* Scroll-progress hairline — informational (scroll-driven, no autonomous motion). */}
-      <Reanimated.View pointerEvents="none" style={[styles.progressBar, progressStyle]} />
+      <Reanimated.View testID="landing-progress" pointerEvents="none" style={[styles.progressBar, progressStyle]} />
       <ScrollView
         ref={scrollRef}
         stickyHeaderIndices={[0]}
