@@ -12,7 +12,7 @@
 
 - ✅ **If Paddle APPROVED** → you're cleared to launch. Go to **§4 (launch sequence)** and follow
   **`docs/release/go-live-runbook.md`** click-by-click: Paddle live keys → one **test purchase + refund** →
-  **honesty flip** → **merge PRs #4 → #5 → #6 → #11** → **deploy + set the Railway config
+  **honesty flip** → **merge PRs #4 → #5 → #6 → #14 → #11** → **deploy + set the Railway config
   (`ASPNETCORE_ENVIRONMENT=Production` — see §4 step 5 / runbook Part 4 Step 3b)** → **activate the AI Coach with
   the Haiku model** → live. 🎉
 - ❌ **If Paddle REJECTED again** → don't fight it. Consider an **alternative Merchant-of-Record processor**
@@ -28,20 +28,22 @@ resubmitted landing domain** (up to ~3 working days). Production is safe — eve
 
 ## 1. Where we are — all code built, frozen in PRs
 
-**Four launch PRs are frozen (do NOT merge until launch). They merge in order → #4 → #5 → #6 → #11.**
+**Five launch PRs are frozen (do NOT merge until launch). They merge in order → #4 → #5 → #6 → #14 → #11.**
 
 | PR | What it is | Base | Status |
 |----|-----------|------|--------|
 | **#4** | **Launch buildout** — full redesign + 4 premium features (all flag-gated OFF) | `main` | 🧊 **open, FROZEN** |
 | **#5** | **Coach + Study quality** — hand/format-aware AI Coach (mock/flags-off); Study upgrades | `feature/launch-buildout` | 🧊 **open, FROZEN** |
 | **#6** | **Lottie polish** — 6 animations wired (celebration/achievement/success/loading/empty/splash) | `feature/coach-study-quality` | 🧊 **open, FROZEN** |
+| **#14** | **Entry experience** — BrandSplash 2.0 (~1.2s, skippable, reduced-motion safe) + **Welcome chooser** (explicit "Continue as guest" / "Sign in" — no more silent guest; guest data zero-write pinned) + auth polish + navy web shell. Flags `v2Splash`/`welcome` ON-at-launch, each a kill-switch. Gates: tsc 0 · jest 620 · axe 0 · Playwright 10/10 vs real web export; adversarially reviewed (fixes landed) | `feature/lottie-polish` | 🧊 **open, FROZEN** |
 | **#11** | **Security hardening** — all 7 audit fixes: **H2/H3/H4** billing + **H1/M2/M1** auth-pipeline + **L2/L7/L8** validators (TDD; dotnet 181 · jest 528 · tsc 0; gitleaks-clean) | `main` | 🧊 **open, FROZEN** |
 
 **Already merged to `main`:** **#7** docs/OAuth · **#9** legal + pricing pages (Paddle policies) · **#10** landing
 anti-gambling (deployed) · **#12** these RESUME/docs updates.
 
-- **Merge order at launch: #4 → #5 → #6 → #11.** The feature stack retargets as each lands; **#11** (security) is
-  independent of the stack and merges last so its fixes deploy with everything. Each merge: gitleaks + all gates green.
+- **Merge order at launch: #4 → #5 → #6 → #14 → #11.** The feature stack retargets as each lands (#14 stacks on
+  #6's branch); **#11** (security) is independent of the stack and merges last so its fixes deploy with everything.
+  Each merge: gitleaks + all gates green.
 - **Safety posture (why production is stable right now):** every new surface is behind an **OFF flag**, the **AI Coach
   uses the mock provider** (no Anthropic calls), the **honesty flip is HELD** (store/benefit badges stay "Coming
   soon"), and **no real-money billing is wired**. Production behaves exactly as before until you flip flags in §4.
@@ -77,7 +79,7 @@ Follow **`docs/release/go-live-runbook.md`** for every dashboard click + exact e
 2. **One real test purchase** (small, refundable) end-to-end → confirm the webhook verifies (HTTP 200) and the
    entitlement grants; then **refund** it and confirm it revokes. *(Proves live billing works.)*
 3. **Honesty flip (HELD)** → flip the "Coming soon" benefits to live **only once they're real and billing is wired**.
-4. **Merge the PRs → #4 → #5 → #6 → #11** to `main` — each with a **full gitleaks scan + all gates green**
+4. **Merge the PRs → #4 → #5 → #6 → #14 → #11** to `main` — each with a **full gitleaks scan + all gates green**
    (tsc · jest · expo export · dotnet build/test · landing build). *(Merging is your action.)*
 5. **Deploy + set the Railway rate-limit config.** Railway auto-deploys `main`. ⚠️ **Confirm
    `ASPNETCORE_ENVIRONMENT=Production` is set on Railway** — it is the **one** setting that enables
