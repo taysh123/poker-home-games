@@ -187,35 +187,49 @@ export default function LandingScreen() {
           style={styles.column}
           onLayout={e => { columnYRef.current = e.nativeEvent.layout.y; }}
         >
-          {/* ── 1. Hero — almost empty, full viewport ── */}
-          <View style={[styles.hero, { minHeight: Math.max(520, winH - 140) }]}>
-            <View pointerEvents="none" style={styles.heroGlowOuter} />
-            <View pointerEvents="none" style={styles.heroGlowInner} />
-            <MotiView {...heroGroup(0)}>
-              <Text style={styles.heroTitle} accessibilityRole="header">
-                {LANDING_HERO.headline}
-              </Text>
-            </MotiView>
-            <MotiView {...heroGroup(80)}>
-              <Text style={styles.heroSub}>{LANDING_HERO.subhead}</Text>
-            </MotiView>
-            <MotiView {...heroGroup(160)} style={styles.heroCtas}>
-              <PrimaryButton
-                variant="gradient"
-                label={LANDING_HERO.primaryCta}
-                onPress={() => navigation.navigate('LocalNewGame', { mode: 'cash' })}
-                fullWidth={false}
-              />
-              <PrimaryButton
-                variant="outline"
-                label={LANDING_HERO.secondaryCta}
-                onPress={() => navigation.navigate('Login')}
-                fullWidth={false}
-              />
-            </MotiView>
-            <MotiView {...heroGroup(220)}>
-              <Text style={styles.trustLine}>{LANDING_TRUST_LINE}</Text>
-            </MotiView>
+          {/* ── 1. Hero — minimal philosophy, richer body: breathing glow layers +
+                 (desktop) a floating device mockup of the live table. Mobile keeps
+                 the centered hero so the trust line stays above the fold. ── */}
+          <View
+            style={[
+              styles.hero,
+              { minHeight: Math.max(520, winH - 140) },
+              wide && styles.heroWide,
+            ]}
+          >
+            <HeroGlow reduced={reduced} play={splashDone} />
+            <View style={[styles.heroText, wide && styles.heroTextWide]}>
+              <MotiView {...heroGroup(0)}>
+                <Text style={[styles.heroTitle, wide && styles.heroTitleWide]} accessibilityRole="header">
+                  {LANDING_HERO.headline}
+                </Text>
+              </MotiView>
+              <MotiView {...heroGroup(80)}>
+                <Text style={[styles.heroSub, wide && styles.heroSubWide]}>{LANDING_HERO.subhead}</Text>
+              </MotiView>
+              <MotiView {...heroGroup(160)} style={[styles.heroCtas, wide && styles.heroCtasWide]}>
+                <PrimaryButton
+                  variant="gradient"
+                  label={LANDING_HERO.primaryCta}
+                  onPress={() => navigation.navigate('LocalNewGame', { mode: 'cash' })}
+                  fullWidth={false}
+                />
+                <PrimaryButton
+                  variant="outline"
+                  label={LANDING_HERO.secondaryCta}
+                  onPress={() => navigation.navigate('Login')}
+                  fullWidth={false}
+                />
+              </MotiView>
+              <MotiView {...heroGroup(220)}>
+                <Text style={[styles.trustLine, wide && styles.trustLineWide]}>{LANDING_TRUST_LINE}</Text>
+              </MotiView>
+            </View>
+            {wide && landingImages.liveCash != null && (
+              <MotiView {...heroGroup(260)} style={styles.heroDeviceCol}>
+                <FloatingDevice reduced={reduced} source={landingImages.liveCash as number} />
+              </MotiView>
+            )}
             <MotiView {...heroGroup(420)} style={styles.scrollCue} pointerEvents="none">
               <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
             </MotiView>
@@ -373,6 +387,66 @@ export default function LandingScreen() {
   );
 }
 
+/**
+ * Three layered radial glows breathing on independent slow clocks (opacity-only,
+ * transform-free — no CLS). Reduced motion: static at resting opacity.
+ */
+function HeroGlow({ reduced }: { reduced: boolean; play?: boolean }) {
+  const layers = [
+    { style: styles.glowGold, duration: 9000, from: 0.55 },
+    { style: styles.glowFelt, duration: 12000, from: 0.4 },
+    { style: styles.glowCore, duration: 7000, from: 0.6 },
+  ];
+  return (
+    <>
+      {layers.map((l, i) =>
+        reduced ? (
+          <View key={i} pointerEvents="none" style={l.style} />
+        ) : (
+          <MotiView
+            key={i}
+            pointerEvents="none"
+            style={l.style}
+            from={{ opacity: l.from }}
+            animate={{ opacity: 1 }}
+            transition={{ type: 'timing', duration: l.duration, loop: true, repeatReverse: true }}
+          />
+        ),
+      )}
+    </>
+  );
+}
+
+/** Gently floating, slightly tilted device mockup (desktop hero). Static under reduced motion. */
+function FloatingDevice({ reduced, source }: { reduced: boolean; source: number }) {
+  const frame = (
+    <View style={styles.heroDeviceFrame}>
+      <Image
+        source={source}
+        style={styles.screenshot}
+        resizeMode="cover"
+        accessibilityLabel="Live cash game screen floating in a phone frame: felt table, players, and the pot"
+      />
+    </View>
+  );
+  return (
+    <View style={styles.heroDeviceWrap}>
+      <View pointerEvents="none" style={styles.heroDeviceGlow} />
+      {reduced ? (
+        frame
+      ) : (
+        <MotiView
+          from={{ translateY: 0 }}
+          animate={{ translateY: -8 }}
+          transition={{ type: 'timing', duration: 3000, loop: true, repeatReverse: true }}
+        >
+          {frame}
+        </MotiView>
+      )}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   content: {
     paddingBottom: spacing.huge,
@@ -418,24 +492,59 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
     paddingVertical: spacing.huge,
   },
-  heroGlowOuter: {
-    position: 'absolute',
-    width: 560,
-    height: 560,
-    borderRadius: 280,
-    backgroundColor: colors.goldFaint,
-    top: '8%',
-    alignSelf: 'center',
+  heroWide: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.huge,
   },
-  heroGlowInner: {
+  heroText: { alignItems: 'center', gap: spacing.lg },
+  heroTextWide: { flex: 1, alignItems: 'flex-start', maxWidth: 560 },
+  glowGold: {
+    position: 'absolute',
+    width: 620,
+    height: 620,
+    borderRadius: 310,
+    backgroundColor: colors.goldFaint,
+    top: '6%',
+    left: '4%',
+  },
+  glowFelt: {
+    position: 'absolute',
+    width: 460,
+    height: 460,
+    borderRadius: 230,
+    backgroundColor: colors.feltFaint,
+    bottom: '4%',
+    right: '2%',
+  },
+  glowCore: {
     position: 'absolute',
     width: 260,
     height: 260,
     borderRadius: 130,
     backgroundColor: colors.goldSubtle,
     opacity: 0.35,
-    top: '22%',
-    alignSelf: 'center',
+    top: '24%',
+    left: '18%',
+  },
+  heroDeviceCol: { alignItems: 'center', justifyContent: 'center' },
+  heroDeviceWrap: { alignItems: 'center', justifyContent: 'center' },
+  heroDeviceGlow: {
+    position: 'absolute',
+    width: 420,
+    height: 420,
+    borderRadius: 210,
+    backgroundColor: colors.goldFaint,
+  },
+  heroDeviceFrame: {
+    width: 280,
+    height: Math.round(280 / IMAGE_ASPECT),
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: colors.goldMuted,
+    overflow: 'hidden',
+    backgroundColor: colors.backgroundDeep,
+    transform: [{ rotate: '4deg' }],
   },
   heroTitle: {
     ...typography.displaySerif,
@@ -445,12 +554,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: 760,
   },
+  heroTitleWide: { textAlign: 'left' },
   heroSub: {
     ...typography.bodyLarge,
     color: colors.textMuted,
     textAlign: 'center',
     maxWidth: 560,
   },
+  heroSubWide: { textAlign: 'left' },
   heroCtas: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -458,12 +569,14 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginTop: spacing.sm,
   },
+  heroCtasWide: { justifyContent: 'flex-start' },
   trustLine: {
     ...typography.caption,
     color: colors.textMuted,
     textAlign: 'center',
     letterSpacing: 0.4,
   },
+  trustLineWide: { textAlign: 'left' },
   scrollCue: {
     position: 'absolute',
     bottom: spacing.xl,

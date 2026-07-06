@@ -32,6 +32,13 @@ export const colors = {
   felt: '#15413A',
   feltDeep: '#0C2A26',
   feltRim: '#0A211D',
+  // ── Landing v3 section accents (approved 2026-07-06) — AMBIENT ONLY: eyebrow text +
+  //    media glows. Gold remains the sole CTA color; headings stay white serif. ──
+  feltGlow: 'rgba(26,75,67,0.45)',
+  feltFaint: 'rgba(26,75,67,0.18)',
+  tealGlow: 'rgba(78,170,220,0.10)',
+  aiPurple: '#C46EE8', // same hue as the Epic achievement rarity — promoted to a token
+  aiPurpleFaint: 'rgba(196,110,232,0.10)',
 };
 
 /** Felt table gradient (center → edge) for the immersive PokerTable surface. */
