@@ -98,12 +98,20 @@ describe('WelcomeScreen — brand + chooser', () => {
     expect(nav.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'Onboarding' }] });
   });
 
-  it('never writes storage — guest local data is untouched by the chooser', () => {
+  it('never writes guest data — secure storage AND AsyncStorage (local games) untouched', () => {
+    // markSignupIntent (Sign-in arm) is an analytics-only attribution marker and is
+    // mocked out above; the guarantee pinned here is about GUEST DATA: the keys the
+    // local-games store and onboarding gate live under are never written or cleared.
+    const AsyncStorage = require('@react-native-async-storage/async-storage');
     const nav = renderWelcome({ firstRun: false });
     fireEvent.press(screen.getByText('Continue as guest'));
     fireEvent.press(screen.getByText('Sign in'));
     expect(mockedStorage.setItemAsync).not.toHaveBeenCalled();
     expect(mockedStorage.deleteItemAsync).not.toHaveBeenCalled();
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+    expect(AsyncStorage.removeItem).not.toHaveBeenCalled();
+    expect(AsyncStorage.clear).not.toHaveBeenCalled();
+    expect(AsyncStorage.multiRemove).not.toHaveBeenCalled();
     expect(nav.reset).toHaveBeenCalled();
   });
 

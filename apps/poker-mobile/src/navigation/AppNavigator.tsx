@@ -22,7 +22,7 @@ import { consumePendingInvite } from '../utils/pendingInvite';
 import { consumePendingCheckout } from '../utils/pendingCheckout';
 import LandingScreen from '../screens/LandingScreen';
 import { resolveWebLanding } from '../features/landing/landingRouting';
-import { initialGuestRoute } from './entryRouting';
+import { initialGuestRoute, logoutResetRoute } from './entryRouting';
 import { usePushNotificationListeners } from '../hooks/usePushNotifications';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import LoginScreen from '../screens/LoginScreen';
@@ -532,6 +532,31 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
         ? window.location.pathname
         : '/',
   });
+
+  // Scope update B: logout lands on the explicit Welcome chooser, not silently on
+  // guest Home. Both trees register MainTabs, so it SURVIVES the authed → guest tree
+  // swap and initialRouteName never re-applies — an explicit reset is the only way.
+  const wasAuthedRef = useRef<boolean>(user !== null);
+  useEffect(() => {
+    const wasAuthed = wasAuthedRef.current;
+    wasAuthedRef.current = user !== null;
+    if (!wasAuthed || user !== null || hasSeenOnboarding === undefined) return;
+    const target = logoutResetRoute({
+      showLanding,
+      welcomeEnabled: isFeatureEnabled('welcome'),
+      hasSeenOnboarding,
+    });
+    if (!target) return;
+    const reset = () => {
+      const nav = navigationRef?.current;
+      if (nav?.isReady()) {
+        nav.reset({ index: 0, routes: [target] });
+      } else {
+        setTimeout(reset, 150);
+      }
+    };
+    reset();
+  }, [user, navigationRef, showLanding, hasSeenOnboarding]);
 
   if (isLoading || hasSeenOnboarding === undefined) {
     return (

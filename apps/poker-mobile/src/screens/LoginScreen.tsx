@@ -83,6 +83,18 @@ export default function LoginScreen({ navigation }: Props) {
   }
 
   function continueAsGuest() {
+    // A guest ALREADY inside the app (Login floats as a modal over MainTabs or an
+    // invite screen) just dismisses — their tabs, stack, and any join flow survive.
+    // Only from the entry surfaces (Welcome/Onboarding/Landing) do we reset into
+    // the guest app fresh.
+    const beneath = navigation.getState()?.routes ?? [];
+    const overApp = beneath.some(
+      r => r.name === 'MainTabs' || r.name === 'JoinSession' || r.name === 'JoinGroup',
+    );
+    if (overApp) {
+      navigation.goBack();
+      return;
+    }
     navigation.reset({ index: 0, routes: [{ name: guestContinueTarget(seenOnboarding) }] });
   }
 

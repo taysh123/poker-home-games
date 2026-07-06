@@ -5,7 +5,7 @@
  * "Continue as guest" target. Signed-in users never reach these — the authed
  * tree mounts MainTabs (Home) directly.
  */
-import { initialGuestRoute, guestContinueTarget } from '../entryRouting';
+import { initialGuestRoute, guestContinueTarget, logoutResetRoute } from '../entryRouting';
 
 describe('initialGuestRoute', () => {
   it('shows the Welcome chooser to signed-out users when the welcome flag is on', () => {
@@ -39,6 +39,32 @@ describe('initialGuestRoute', () => {
     expect(
       initialGuestRoute({ showLanding: false, welcomeEnabled: false, hasSeenOnboarding: true }),
     ).toBe('MainTabs');
+  });
+});
+
+describe('logoutResetRoute', () => {
+  it('logout lands on the Welcome chooser (explicit choice, not silent guest Home)', () => {
+    expect(
+      logoutResetRoute({ showLanding: false, welcomeEnabled: true, hasSeenOnboarding: true }),
+    ).toEqual({ name: 'Welcome', params: { firstRun: false } });
+  });
+
+  it('a user who never finished onboarding gets the first-run Welcome', () => {
+    expect(
+      logoutResetRoute({ showLanding: false, welcomeEnabled: true, hasSeenOnboarding: false }),
+    ).toEqual({ name: 'Welcome', params: { firstRun: true } });
+  });
+
+  it('kill-switch (welcome off): no reset — legacy logout-to-guest-Home stands', () => {
+    expect(
+      logoutResetRoute({ showLanding: false, welcomeEnabled: false, hasSeenOnboarding: true }),
+    ).toBeNull();
+  });
+
+  it('web marketing root (Landing): no reset — Landing is its own chooser', () => {
+    expect(
+      logoutResetRoute({ showLanding: true, welcomeEnabled: true, hasSeenOnboarding: true }),
+    ).toBeNull();
   });
 });
 

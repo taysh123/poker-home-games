@@ -10,6 +10,7 @@ import { shadows } from '../theme/shadows';
 import Screen from '../components/Screen';
 import PrimaryButton from '../components/PrimaryButton';
 import { MotiView, slideUpSequence, staggerIn } from '../components/motion';
+import { useSplashDone } from '../components/brand/SplashGate';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useLocalGames } from '../context/LocalGamesContext';
 import { track, markSignupIntent } from '../utils/analytics';
@@ -26,6 +27,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Welcome'>;
 export default function WelcomeScreen({ navigation, route }: Props) {
   const firstRun = route.params?.firstRun === true;
   const reduced = useReducedMotion();
+  const splashDone = useSplashDone();
   const { games, activeGame } = useLocalGames();
   const hasLocalGames = games.length > 0 || activeGame != null;
 
@@ -47,8 +49,10 @@ export default function WelcomeScreen({ navigation, route }: Props) {
     navigation.navigate('Login');
   }
 
-  // Staggered entrance: brand → CTAs → reassurance → legal (70ms apart).
-  const group = (i: number) => slideUpSequence({ reduced, delay: staggerIn(i, 70), duration: 320 });
+  // Staggered entrance: brand → CTAs → reassurance → legal (70ms apart), held
+  // until the splash overlay resolves so the choreography is actually visible.
+  const group = (i: number) =>
+    slideUpSequence({ reduced, delay: staggerIn(i, 70), duration: 320, play: splashDone });
 
   return (
     <Screen style={styles.container}>

@@ -51,14 +51,24 @@ export function staggerIn(index: number, step = 40, base = 0): number {
 /**
  * Fade + slide-up entrance. `distance` = px the element rises from (default 12).
  * Reduced motion → starts in place, 0ms (instant, no translate).
+ *
+ * `play` (default true): while false, the element HOLDS invisible at its start
+ * state — no motion, no reveal. Flip it true and the entrance runs with its
+ * configured delay/duration. This is how the entry screens keep their stagger
+ * from playing unseen underneath the launch splash overlay (`useSplashDone`).
  */
 export function slideUpSequence(opts?: {
   reduced?: boolean;
   delay?: number;
   distance?: number;
   duration?: number;
+  play?: boolean;
 }): MotiRecipe {
-  const { reduced = false, delay = 0, distance = 12, duration = durations.normal } = opts ?? {};
+  const { reduced = false, delay = 0, distance = 12, duration = durations.normal, play = true } = opts ?? {};
+  if (!play) {
+    const held = { opacity: 0, translateY: reduced ? 0 : distance };
+    return { from: held, animate: held, transition: { type: 'timing', duration: 0, delay: 0 } };
+  }
   if (reduced) {
     return {
       from: { opacity: 1, translateY: 0 },

@@ -42,6 +42,10 @@ export default function BrandSplash({ onDone }: Props) {
   const tagOpacity = useSharedValue(0);
 
   const doneRef = useRef(false);
+  // Set the moment the exit fade engages (scheduled exit or tap-to-skip). From then
+  // on, taps are no-ops (a tap during the fade must never EXTEND the splash) and a
+  // late reduce-motion re-arm lands the fade instead of snapping back to opacity 1.
+  const exitStartedRef = useRef(false);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   function finish() {
@@ -61,6 +65,13 @@ export default function BrandSplash({ onDone }: Props) {
     // the choreography snaps to the static frame and finishes on the short clock.
     timersRef.current.forEach(clearTimeout);
     timersRef.current = [];
+    if (doneRef.current) return;
+    if (exitStartedRef.current) {
+      // The exit fade (or a skip) is already in flight — never revert it; just
+      // land the overlay on the short clock.
+      schedule(finish, SPLASH.SKIP_EXIT);
+      return () => timersRef.current.forEach(clearTimeout);
+    }
     [rootOpacity, logoOpacity, logoScale, wordOpacity, wordRise, tagOpacity].forEach(cancelAnimation);
 
     if (reduced) {
@@ -81,6 +92,7 @@ export default function BrandSplash({ onDone }: Props) {
     tagOpacity.value = withDelay(SPLASH.TAG_DELAY, withTiming(0.9, { duration: SPLASH.TAG_IN }));
     // Exit: the overlay fades itself out, revealing the app underneath.
     rootOpacity.value = withDelay(SPLASH.EXIT_AT, withTiming(0, { duration: SPLASH.EXIT }));
+    schedule(() => { exitStartedRef.current = true; }, SPLASH.EXIT_AT);
     schedule(finish, SPLASH.TOTAL);
 
     return () => timersRef.current.forEach(clearTimeout);
@@ -88,7 +100,10 @@ export default function BrandSplash({ onDone }: Props) {
   }, [reduced]);
 
   function skip() {
-    if (doneRef.current) return;
+    // Already exiting (scheduled fade or a previous tap) — ignore; a tap during
+    // the fade must shorten nothing and extend nothing.
+    if (doneRef.current || exitStartedRef.current) return;
+    exitStartedRef.current = true;
     if (reduced) {
       finish();
       return;

@@ -10,7 +10,7 @@ module.exports = {
     '**/src/analytics/__tests__/**/*.test.ts',
     '**/src/components/__tests__/**/*.test.ts',
     '**/src/components/motion/__tests__/**/*.test.ts',
-    '**/src/components/brand/__tests__/**/*.test.ts',
+    '**/src/components/brand/__tests__/**/*.test.ts?(x)',
     '**/src/navigation/__tests__/**/*.test.ts',
     '**/src/hooks/__tests__/**/*.test.ts',
     '**/src/config/__tests__/**/*.test.ts',

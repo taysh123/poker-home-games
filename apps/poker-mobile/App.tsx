@@ -38,6 +38,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { RootStackParamList } from './src/navigation/AppNavigator';
 import { isFeatureEnabled } from './src/config/features';
 import BrandSplash from './src/components/brand/BrandSplash';
+import { SplashGateProvider } from './src/components/brand/SplashGate';
 import { colors } from './src/theme/colors';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -124,7 +125,12 @@ export default function App() {
                     <EngagementProvider>
                       <StatusBar style="light" />
                       <ReminderScheduler />
-                      <AppNavigator navigationRef={navRef} />
+                      {/* Entry screens hold their entrance until the splash resolves
+                          (SplashGate) — otherwise the choreography plays unseen under
+                          the opaque overlay and the handoff double-exposes the brand. */}
+                      <SplashGateProvider done={splashDone}>
+                        <AppNavigator navigationRef={navRef} />
+                      </SplashGateProvider>
                       {!splashDone && <BrandSplash onDone={() => setSplashDone(true)} />}
                     </EngagementProvider>
                   </CoachProvider>

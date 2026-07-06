@@ -44,8 +44,11 @@ web-shell flash if the export allows it.
 Signed-out users land on the **Welcome chooser** after the splash — guest mode is
 entered only by explicit choice. Requirements:
 - Guest local data fully preserved: "Continue as guest" resumes exactly where the user
-  left off. The chooser **never writes or clears storage** (verified by test); local
-  games live untouched in `tpoker.localGames.v1`.
+  left off. The chooser **never writes or clears guest data** — the local-games and
+  onboarding keys are pinned untouched by test across BOTH storage layers (secure
+  storage + AsyncStorage, where `tpoker.localGames.v1` lives). The Sign-in arm records
+  an analytics-only signup-intent marker (attribution for `account_created`, same as
+  the pre-existing GuestHome upsell path) — it never touches guest data.
 - Signed-in users never see Welcome.
 - One tap to guest; a chooser, not a wall.
 - Routing logic is TDD'd (signed-in → Home; signed-out → Welcome; guest choice →

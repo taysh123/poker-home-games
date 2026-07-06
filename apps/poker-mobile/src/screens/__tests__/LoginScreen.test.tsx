@@ -57,12 +57,15 @@ jest.mock('@expo/vector-icons', () => {
 import LoginScreen from '../LoginScreen';
 import * as mockedStorage from '../../utils/storage';
 
-function makeNavigation() {
+function makeNavigation({ routesBeneath = ['Welcome'] }: { routesBeneath?: string[] } = {}) {
   return {
     navigate: jest.fn(),
     reset: jest.fn(),
     goBack: jest.fn(),
     canGoBack: jest.fn().mockReturnValue(false),
+    getState: jest.fn().mockReturnValue({
+      routes: [...routesBeneath.map(name => ({ name })), { name: 'Login' }],
+    }),
   } as any;
 }
 
@@ -110,5 +113,28 @@ describe('LoginScreen — guest escape hatch', () => {
   it('a11y: the guest link exposes a button role with an accessible name', async () => {
     await renderLogin();
     expect(screen.getByRole('button', { name: /continue as guest/i })).toBeTruthy();
+  });
+
+  it('guest already inside the app (modal over MainTabs): dismisses, never resets their place', async () => {
+    const nav = await renderLogin({ navigation: makeNavigation({ routesBeneath: ['MainTabs'] }) });
+    fireEvent.press(screen.getByText('Continue as guest'));
+    expect(nav.goBack).toHaveBeenCalled();
+    expect(nav.reset).not.toHaveBeenCalled();
+  });
+
+  it('invite flow beneath (JoinSession): dismisses back to the invite, never resets', async () => {
+    const nav = await renderLogin({ navigation: makeNavigation({ routesBeneath: ['MainTabs', 'JoinSession'] }) });
+    fireEvent.press(screen.getByText('Continue as guest'));
+    expect(nav.goBack).toHaveBeenCalled();
+    expect(nav.reset).not.toHaveBeenCalled();
+  });
+
+  it('race pin: tapping guest before the storage read resolves uses the safe MainTabs arm', async () => {
+    // Never-resolving read — simulates a fast tap on a slow device.
+    (mockedStorage.getItemAsync as jest.Mock).mockImplementationOnce(() => new Promise(() => {}));
+    const navigation = makeNavigation();
+    render(<LoginScreen navigation={navigation} route={{ key: 'login', name: 'Login' } as any} />);
+    fireEvent.press(screen.getByText('Continue as guest'));
+    expect(navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'MainTabs' }] });
   });
 });

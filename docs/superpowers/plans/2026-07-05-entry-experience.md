@@ -85,10 +85,10 @@
 
 ### Task 5: Verification + ship (frozen)
 
-- [ ] axe (WCAG 2.1 AA) on Welcome/Login/Register/splash frame via harness pattern; fix violations.
-- [ ] Playwright stills: splash mid-frame, Welcome (default + reduced-motion emulation + seeded local-game resume), Login, GuestHome post-choice.
-- [ ] Full gates: tsc 0 - jest all green - expo export green.
-- [ ] Code-review pass (adversarial, multi-agent), fix findings.
+- [x] axe (WCAG 2.1 AA) on Welcome/Login/Register/GuestHome via harness pattern — 0 violations (fixed: auth-card divider caption textDim → textMuted, ratio 1.69 → ~4.9). Splash frame a11y verified manually (single Pressable, role button, "Skip intro" label; transient surface).
+- [x] Playwright stills (real web export, 390×844@2x + desktop): splash mid-frame, Welcome first-run / returning-with-seeded-game / reduced-motion, Login, Register, GuestHome post-choice with guest data byte-intact. 10/10 behavioral checks. `%TEMP%\tpoker-verify\entry\`.
+- [x] Full gates: tsc 0 - jest 76/76 suites 620/620 tests - expo export green.
+- [x] Code-review pass (adversarial, multi-agent workflow: 7 lenses → refuter panels), findings fixed: SplashGate (entrances no longer play hidden under the splash / no double-exposed handoff), logout → Welcome reset (MainTabs survives the tree swap; initialRouteName can't do it), BrandSplash skip/exit/re-arm guards (+8-test lifecycle suite), context-aware Login guest link (dismiss over app, preserve invite flows), AsyncStorage zero-write pin, race-default pin.
 - [ ] Push `feature/entry-experience`; open PR (base `feature/lottie-polish`) marked **FROZEN for launch**; update RESUME doc pointer.
 
 ## Self-Review

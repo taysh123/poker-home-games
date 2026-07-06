@@ -34,3 +34,20 @@ export function initialGuestRoute(opts: {
 export function guestContinueTarget(hasSeenOnboarding: boolean): 'Onboarding' | 'MainTabs' {
   return hasSeenOnboarding ? 'MainTabs' : 'Onboarding';
 }
+
+/**
+ * Logout target. Both trees register `MainTabs`, so React Navigation PRESERVES it
+ * across the authed → guest tree swap — `initialRouteName` never re-applies, and
+ * without an explicit reset a signed-out user silently lands on guest Home. With
+ * the `welcome` flag on, logout must land on the explicit Welcome chooser instead.
+ * Returns null when no reset is wanted (kill-switch off, or the web marketing
+ * Landing owns the root — it is its own chooser).
+ */
+export function logoutResetRoute(opts: {
+  showLanding: boolean;
+  welcomeEnabled: boolean;
+  hasSeenOnboarding: boolean;
+}): { name: 'Welcome'; params: { firstRun: boolean } } | null {
+  if (!opts.welcomeEnabled || opts.showLanding) return null;
+  return { name: 'Welcome', params: { firstRun: !opts.hasSeenOnboarding } };
+}
