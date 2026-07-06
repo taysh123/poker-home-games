@@ -1,11 +1,16 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
+  Image,
   ScrollView,
   StyleSheet,
   Platform,
   Linking,
+  useWindowDimensions,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  type LayoutChangeEvent,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -13,14 +18,19 @@ import { Ionicons } from '@expo/vector-icons';
 import Screen from '../components/Screen';
 import Card from '../components/Card';
 import Chip from '../components/Chip';
-import SectionTitle from '../components/SectionTitle';
 import PrimaryButton from '../components/PrimaryButton';
 import BrandHeader from '../components/BrandHeader';
+import Accordion from '../components/Accordion';
 import PressableScale from '../components/motion/PressableScale';
+import { MotiView, slideUpSequence } from '../components/motion';
+import { useSplashDone } from '../components/brand/SplashGate';
+import { useReducedMotion } from '../hooks/useReducedMotion';
+import { useScrollReveal } from '../hooks/useScrollReveal';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { spacing } from '../theme/spacing';
 import { radii } from '../theme/radii';
+import { iconSize } from '../theme/iconSize';
 import { usePremium } from '../features/premium/state/PremiumContext';
 import { useAuth } from '../context/AuthContext';
 import { PRICING } from '../features/premium/config';
@@ -28,7 +38,9 @@ import { savePendingCheckout, type CheckoutPlan } from '../utils/pendingCheckout
 import type { RootStackParamList } from '../navigation/AppNavigator';
 import {
   LANDING_HERO,
-  LANDING_CLUB_VALUE,
+  LANDING_TRUST_LINE,
+  LANDING_SECTIONS,
+  LANDING_PREMIUM,
   LANDING_STUDY_VALUE,
   PREMIUM_STUDY_BENEFIT,
   landingPlans,
@@ -37,25 +49,57 @@ import {
   LANDING_LEGAL_LINKS,
   LANDING_DISCLAIMER,
 } from '../features/landing/landingContent';
+import {
+  landingImages,
+  LANDING_IMAGE_WIDTH,
+  LANDING_IMAGE_HEIGHT,
+} from '../features/landing/landingImages';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
+/** Anchor-nav destinations (desktop top bar) — keys match section/block anchors. */
+const NAV_LINKS: { key: string; label: string }[] = [
+  { key: 'live', label: 'Live' },
+  { key: 'tournament', label: 'Tournament' },
+  { key: 'stats', label: 'Stats' },
+  { key: 'pricing', label: 'Pricing' },
+  { key: 'faq', label: 'FAQ' },
+];
+
+const IMAGE_ASPECT = LANDING_IMAGE_WIDTH / LANDING_IMAGE_HEIGHT;
+
 /**
- * Web-only landing/pricing page (renders null on native).
- * Two-sided hook-forward: free club tool + Premium Study upsell.
- * - Logged-out CTA: stash pending checkout → Register → resume on Paywall.
- * - Logged-in CTA: call purchase() directly via PremiumContext.
- * - Honesty gate: "Soon" benefits show a chip, never a buy affordance.
+ * Web-only landing (renders null on native) — the web entry at the app root.
+ *
+ * GTO-Wizard-style structure, Velvet Table identity:
+ *   sticky brand bar → minimal full-viewport hero (headline · sub · chooser CTAs
+ *   · always-visible trust line) → four one-idea feature sections with real
+ *   product screenshots + scroll reveals → compact premium/pricing (honesty
+ *   gates + purchase wiring byte-identical) → FAQ accordion → legal footer.
+ *
+ * Logic contracts preserved: hero primary CTA still starts the free-game wizard;
+ * plan CTAs still stash pending checkout → Register (logged out) or purchase()
+ * (logged in); "Soon" benefits never gain a buy affordance; Welcome-chooser /
+ * splash / routing untouched (resolveWebLanding decides mounting, not this file).
  */
 export default function LandingScreen() {
   if (Platform.OS !== 'web') return null;
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+  /* eslint-disable react-hooks/rules-of-hooks */
   const navigation = useNavigation<Nav>();
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { isPremium, purchasing, purchase } = usePremium();
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { user } = useAuth();
+  const reduced = useReducedMotion();
+  const splashDone = useSplashDone();
+  const { width: winW, height: winH } = useWindowDimensions();
+  const reveal = useScrollReveal({ disabled: reduced });
+  const scrollRef = useRef<ScrollView>(null);
+  const anchorsRef = useRef<Record<string, number>>({});
+  const columnYRef = useRef(0);
+  const [scrolled, setScrolled] = useState(false);
+  /* eslint-enable react-hooks/rules-of-hooks */
+
+  const wide = winW >= 900;
 
   async function onChoosePlan(plan: CheckoutPlan) {
     const productId =
@@ -69,36 +113,93 @@ export default function LandingScreen() {
     navigation.navigate('Register');
   }
 
+  function onScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
+    reveal.onScroll(e);
+    const past = e.nativeEvent.contentOffset.y > 32;
+    setScrolled(prev => (prev === past ? prev : past));
+  }
+
+  /** One onLayout feeds both the anchor map and the reveal latch. */
+  const registerBlock = (key: string) => (e: LayoutChangeEvent) => {
+    anchorsRef.current[key] = e.nativeEvent.layout.y;
+    reveal.register(key)(e);
+  };
+
+  function scrollToAnchor(key: string) {
+    const y = anchorsRef.current[key];
+    if (y == null) return;
+    // Section y is relative to the content column; add the column's own offset
+    // and pull back a little so the sticky bar never covers the heading.
+    scrollRef.current?.scrollTo({ y: Math.max(0, columnYRef.current + y - 76), animated: !reduced });
+  }
+
+  // Hero entrance: staggered once the splash resolves (same gate as Welcome).
+  const heroGroup = (delay: number) =>
+    slideUpSequence({ reduced, delay, duration: 320, play: splashDone });
+
   const plans = landingPlans();
   const benefits = landingBenefits();
 
   return (
     <Screen>
       <ScrollView
+        ref={scrollRef}
+        stickyHeaderIndices={[0]}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         contentContainerStyle={styles.content}
-        showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.maxWidth}>
-          {/* ── Top bar ── */}
-          <BrandHeader
-            variant="brand"
-            right={
-              <PressableScale
-                onPress={() => navigation.navigate('Login')}
-                accessibilityRole="button"
-                accessibilityLabel="Sign in"
-              >
-                <Text style={styles.signIn}>Sign in</Text>
-              </PressableScale>
-            }
-          />
+        {/* ── Sticky top bar (transparent → solid past the hero top) ── */}
+        <View style={[styles.topBar, scrolled && styles.topBarSolid]}>
+          <View style={styles.topBarInner}>
+            <BrandHeader
+              variant="brand"
+              right={
+                <View style={styles.topBarRight}>
+                  {wide &&
+                    NAV_LINKS.map(l => (
+                      <PressableScale
+                        key={l.key}
+                        onPress={() => scrollToAnchor(l.key)}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Go to ${l.label}`}
+                      >
+                        <Text style={styles.navLink}>{l.label}</Text>
+                      </PressableScale>
+                    ))}
+                  <PressableScale
+                    onPress={() => navigation.navigate('Login')}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Sign in"
+                  >
+                    <Text style={styles.signIn}>Sign in</Text>
+                  </PressableScale>
+                </View>
+              }
+            />
+          </View>
+        </View>
 
-          {/* ── 1. Hero ── */}
-          <View style={styles.hero}>
-            <Text style={styles.heroTitle}>{LANDING_HERO.headline}</Text>
-            <Text style={styles.heroSub}>{LANDING_HERO.subhead}</Text>
-            <View style={styles.heroCtas}>
+        <View
+          style={styles.column}
+          onLayout={e => { columnYRef.current = e.nativeEvent.layout.y; }}
+        >
+          {/* ── 1. Hero — almost empty, full viewport ── */}
+          <View style={[styles.hero, { minHeight: Math.max(520, winH - 140) }]}>
+            <View pointerEvents="none" style={styles.heroGlowOuter} />
+            <View pointerEvents="none" style={styles.heroGlowInner} />
+            <MotiView {...heroGroup(0)}>
+              <Text style={styles.heroTitle} accessibilityRole="header">
+                {LANDING_HERO.headline}
+              </Text>
+            </MotiView>
+            <MotiView {...heroGroup(80)}>
+              <Text style={styles.heroSub}>{LANDING_HERO.subhead}</Text>
+            </MotiView>
+            <MotiView {...heroGroup(160)} style={styles.heroCtas}>
               <PrimaryButton
                 variant="gradient"
                 label={LANDING_HERO.primaryCta}
@@ -108,94 +209,148 @@ export default function LandingScreen() {
               <PrimaryButton
                 variant="outline"
                 label={LANDING_HERO.secondaryCta}
-                onPress={() => {/* scroll-to-pricing; focusable anchor */}}
+                onPress={() => navigation.navigate('Login')}
                 fullWidth={false}
               />
-            </View>
+            </MotiView>
+            <MotiView {...heroGroup(220)}>
+              <Text style={styles.trustLine}>{LANDING_TRUST_LINE}</Text>
+            </MotiView>
+            <MotiView {...heroGroup(420)} style={styles.scrollCue} pointerEvents="none">
+              <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
+            </MotiView>
           </View>
 
-          {/* ── 2. Free club tool ── */}
-          <SectionTitle>FREE CLUB TOOL</SectionTitle>
-          {LANDING_CLUB_VALUE.map(v => (
-            <ValueCard key={v.title} icon={v.icon} title={v.title} body={v.body} />
-          ))}
-
-          {/* ── 3. Between sessions — Premium Study ── */}
-          <SectionTitle>BETWEEN SESSIONS</SectionTitle>
-          <Text style={styles.lead}>{PREMIUM_STUDY_BENEFIT}</Text>
-          {LANDING_STUDY_VALUE.map(v => (
-            <ValueCard key={v.title} icon={v.icon} title={v.title} body={v.body} />
-          ))}
-
-          {/* ── 4. Pricing ── */}
-          <SectionTitle>PRICING</SectionTitle>
-          <View style={styles.plans}>
-            {plans.map(p => (
-              <Card
-                key={p.key}
-                variant={p.highlighted ? 'hero' : 'flat'}
-                style={styles.planCard}
+          {/* ── 2. Feature sections — one idea each, alternating on desktop ── */}
+          {LANDING_SECTIONS.map((s, i) => {
+            const played = reveal.isRevealed(s.key);
+            return (
+              <View
+                key={s.key}
+                onLayout={registerBlock(s.key)}
+                style={[
+                  styles.section,
+                  wide && (i % 2 === 1 ? styles.sectionRowReverse : styles.sectionRow),
+                ]}
               >
-                {p.highlighted ? (
-                  <Chip label="Best value" tone="gold" style={styles.bestValueChip} />
-                ) : null}
-                <Text style={styles.price}>{p.price}</Text>
-                <Text style={styles.cadence}>{p.cadence}</Text>
-                {p.subline ? (
-                  <Text style={styles.subline}>{p.subline}</Text>
-                ) : null}
-                {isPremium ? (
-                  <Text style={styles.premiumNote}>You're Premium</Text>
-                ) : (
-                  <PrimaryButton
-                    variant={p.highlighted ? 'gradient' : 'outline'}
-                    loading={purchasing}
-                    label={`Get Premium — ${p.price}/${p.key === 'yearly' ? 'yr' : 'mo'}`}
-                    onPress={() => onChoosePlan(p.key)}
-                  />
-                )}
-              </Card>
-            ))}
-          </View>
-
-          {/* Shared benefit list — rendered ONCE, below the plan cards */}
-          <View style={styles.benefitList}>
-            {benefits.map(b => (
-              <View key={b.title} style={styles.benefitRow}>
-                {b.comingSoon ? (
-                  <>
-                    <Text style={styles.benefitSoon}>{b.title}</Text>
-                    <Chip label="Soon" tone="neutral" />
-                  </>
-                ) : (
-                  <>
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={16}
-                      color={colors.gold}
-                    />
-                    <Text style={styles.benefitLive}>{b.title}</Text>
-                  </>
-                )}
+                <View style={[styles.sectionText, wide && styles.sectionTextWide]}>
+                  <MotiView {...slideUpSequence({ reduced, delay: 0, duration: 320, play: played })}>
+                    <Text style={styles.eyebrow}>{s.eyebrow}</Text>
+                    <Text style={styles.sectionHeading} accessibilityRole="header">
+                      {s.heading}
+                    </Text>
+                  </MotiView>
+                  <MotiView {...slideUpSequence({ reduced, delay: 70, duration: 320, play: played })}>
+                    <Text style={styles.sectionBody}>{s.body}</Text>
+                  </MotiView>
+                </View>
+                <MotiView
+                  {...slideUpSequence({ reduced, delay: 140, duration: 380, distance: 16, play: played })}
+                  style={styles.sectionMediaWrap}
+                >
+                  <View pointerEvents="none" style={styles.mediaGlow} />
+                  {landingImages[s.image] != null && (
+                    <View style={styles.deviceFrame}>
+                      <Image
+                        source={landingImages[s.image] as number}
+                        style={styles.screenshot}
+                        resizeMode="cover"
+                        accessibilityLabel={s.imageAlt}
+                      />
+                    </View>
+                  )}
+                </MotiView>
               </View>
-            ))}
+            );
+          })}
+
+          {/* ── 3. Premium bridge + pricing (wiring byte-identical) ── */}
+          <View onLayout={registerBlock('pricing')} style={styles.premiumBlock}>
+            <MotiView {...slideUpSequence({ reduced, delay: 0, duration: 320, play: reveal.isRevealed('pricing') })}>
+              <Text style={styles.eyebrow}>{LANDING_PREMIUM.eyebrow}</Text>
+              <Text style={styles.sectionHeading} accessibilityRole="header">
+                {LANDING_PREMIUM.heading}
+              </Text>
+              <Text style={styles.lead}>{PREMIUM_STUDY_BENEFIT}</Text>
+            </MotiView>
+
+            <MotiView
+              {...slideUpSequence({ reduced, delay: 90, duration: 320, play: reveal.isRevealed('pricing') })}
+              style={styles.studyRow}
+            >
+              {LANDING_STUDY_VALUE.map(v => (
+                <View key={v.title} style={styles.studyItem}>
+                  <View style={styles.studyIcon}>
+                    <Ionicons name={v.icon} size={18} color={colors.gold} />
+                  </View>
+                  <Text style={styles.studyTitle}>{v.title}</Text>
+                  <Text style={styles.studyBody}>{v.body}</Text>
+                </View>
+              ))}
+            </MotiView>
+
+            <MotiView
+              {...slideUpSequence({ reduced, delay: 160, duration: 320, play: reveal.isRevealed('pricing') })}
+              style={styles.plans}
+            >
+              {plans.map(p => (
+                <Card
+                  key={p.key}
+                  variant={p.highlighted ? 'hero' : 'flat'}
+                  style={styles.planCard}
+                >
+                  {p.highlighted ? (
+                    <Chip label="Best value" tone="gold" style={styles.bestValueChip} />
+                  ) : null}
+                  <Text style={styles.price}>{p.price}</Text>
+                  <Text style={styles.cadence}>{p.cadence}</Text>
+                  {p.subline ? <Text style={styles.subline}>{p.subline}</Text> : null}
+                  {isPremium ? (
+                    <Text style={styles.premiumNote}>You're Premium</Text>
+                  ) : (
+                    <PrimaryButton
+                      variant={p.highlighted ? 'gradient' : 'outline'}
+                      loading={purchasing}
+                      label={`Get Premium — ${p.price}/${p.key === 'yearly' ? 'yr' : 'mo'}`}
+                      onPress={() => onChoosePlan(p.key)}
+                    />
+                  )}
+                </Card>
+              ))}
+            </MotiView>
+
+            {/* Shared benefit list — rendered ONCE, below the plan cards */}
+            <View style={styles.benefitList}>
+              {benefits.map(b => (
+                <View key={b.title} style={styles.benefitRow}>
+                  {b.comingSoon ? (
+                    <>
+                      <Text style={styles.benefitSoon}>{b.title}</Text>
+                      <Chip label="Soon" tone="neutral" />
+                    </>
+                  ) : (
+                    <>
+                      <Ionicons name="checkmark-circle" size={16} color={colors.gold} />
+                      <Text style={styles.benefitLive}>{b.title}</Text>
+                    </>
+                  )}
+                </View>
+              ))}
+            </View>
           </View>
 
-          {/* ── 5. FAQ ── */}
-          <SectionTitle>FAQ</SectionTitle>
-          {LANDING_FAQ.map(f => (
-            <View
-              key={f.q}
-              style={styles.faq}
-              accessible
-              accessibilityLabel={`${f.q}. ${f.a}`}
-            >
-              <Text style={styles.faqQ}>{f.q}</Text>
-              <Text style={styles.faqA}>{f.a}</Text>
-            </View>
-          ))}
+          {/* ── 4. FAQ accordion ── */}
+          <View onLayout={registerBlock('faq')} style={styles.faqBlock}>
+            <Text style={styles.eyebrow}>FAQ</Text>
+            <Text style={styles.sectionHeading} accessibilityRole="header">
+              Questions, answered.
+            </Text>
+            <Accordion
+              items={LANDING_FAQ.map(f => ({ id: f.q, title: f.q, body: f.a }))}
+            />
+          </View>
 
-          {/* ── 6. Footer ── */}
+          {/* ── 5. Footer ── */}
           <View style={styles.footer}>
             <View style={styles.legalRow}>
               {LANDING_LEGAL_LINKS.map(l => (
@@ -210,6 +365,7 @@ export default function LandingScreen() {
               ))}
             </View>
             <Text style={styles.disclaimer}>{LANDING_DISCLAIMER}</Text>
+            <Text style={styles.byline}>BY TRUE STORY LABS</Text>
           </View>
         </View>
       </ScrollView>
@@ -217,92 +373,186 @@ export default function LandingScreen() {
   );
 }
 
-function ValueCard({
-  icon,
-  title,
-  body,
-}: {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  title: string;
-  body: string;
-}) {
-  return (
-    <Card variant="flat" style={styles.valueCard}>
-      <View style={styles.valueIcon}>
-        <Ionicons name={icon} size={20} color={colors.gold} />
-      </View>
-      <View style={styles.valueText}>
-        <Text style={styles.valueTitle}>{title}</Text>
-        <Text style={styles.valueBody}>{body}</Text>
-      </View>
-    </Card>
-  );
-}
-
 const styles = StyleSheet.create({
   content: {
-    paddingHorizontal: spacing.xl,
     paddingBottom: spacing.huge,
-    alignItems: 'center',
+    alignItems: 'stretch',
   },
-  maxWidth: {
+  column: {
     width: '100%',
-    maxWidth: 920,
-    gap: spacing.lg,
+    maxWidth: 1040,
+    alignSelf: 'center',
+    paddingHorizontal: spacing.xl,
+    gap: spacing.huge,
   },
-  // Top bar
-  signIn: {
-    ...typography.label,
-    color: colors.gold,
+
+  // ── Top bar ──
+  topBar: {
+    width: '100%',
+    paddingVertical: spacing.sm,
+    backgroundColor: 'transparent',
   },
-  // Hero
+  topBarSolid: {
+    backgroundColor: colors.backgroundDeep,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  topBarInner: {
+    width: '100%',
+    maxWidth: 1040,
+    alignSelf: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  topBarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xl,
+  },
+  navLink: { ...typography.labelSmall, color: colors.textMuted },
+  signIn: { ...typography.label, color: colors.gold },
+
+  // ── Hero ──
   hero: {
-    gap: spacing.md,
-    paddingVertical: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.lg,
+    paddingVertical: spacing.huge,
+  },
+  heroGlowOuter: {
+    position: 'absolute',
+    width: 560,
+    height: 560,
+    borderRadius: 280,
+    backgroundColor: colors.goldFaint,
+    top: '8%',
+    alignSelf: 'center',
+  },
+  heroGlowInner: {
+    position: 'absolute',
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: colors.goldSubtle,
+    opacity: 0.35,
+    top: '22%',
+    alignSelf: 'center',
   },
   heroTitle: {
-    ...typography.hero,
-    color: colors.text,
+    ...typography.displaySerif,
+    fontSize: 52,
+    lineHeight: 60,
+    color: colors.goldLight,
+    textAlign: 'center',
+    maxWidth: 760,
   },
   heroSub: {
     ...typography.bodyLarge,
     color: colors.textMuted,
-    maxWidth: 640,
+    textAlign: 'center',
+    maxWidth: 560,
   },
   heroCtas: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'center',
     gap: spacing.md,
+    marginTop: spacing.sm,
   },
-  // Value cards
-  lead: {
-    ...typography.h4,
-    color: colors.goldLight,
+  trustLine: {
+    ...typography.caption,
+    color: colors.textMuted,
+    textAlign: 'center',
+    letterSpacing: 0.4,
   },
-  valueCard: {
-    flexDirection: 'row',
+  scrollCue: {
+    position: 'absolute',
+    bottom: spacing.xl,
+    alignSelf: 'center',
+    opacity: 0.7,
+  },
+
+  // ── Feature sections ──
+  section: {
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.xxl,
+    paddingVertical: spacing.xl,
   },
-  valueIcon: {
-    width: 40,
-    height: 40,
+  sectionRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  sectionRowReverse: { flexDirection: 'row-reverse', justifyContent: 'space-between' },
+  sectionText: {
+    gap: spacing.md,
+    alignItems: 'center',
+    maxWidth: 520,
+  },
+  sectionTextWide: {
+    flex: 1,
+    alignItems: 'flex-start',
+    maxWidth: 460,
+  },
+  eyebrow: {
+    ...typography.caps,
+    color: colors.gold,
+    marginBottom: spacing.sm,
+  },
+  sectionHeading: {
+    ...typography.displaySerif,
+    fontSize: 34,
+    lineHeight: 42,
+    color: colors.text,
+    marginBottom: spacing.sm,
+  },
+  sectionBody: {
+    ...typography.bodyLarge,
+    color: colors.textMuted,
+    maxWidth: 460,
+  },
+  sectionMediaWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mediaGlow: {
+    position: 'absolute',
+    width: 420,
+    height: 420,
+    borderRadius: 210,
+    backgroundColor: colors.goldFaint,
+    alignSelf: 'center',
+  },
+  deviceFrame: {
+    width: 320,
+    height: Math.round(320 / IMAGE_ASPECT),
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+    backgroundColor: colors.backgroundDeep,
+  },
+  screenshot: { width: '100%', height: '100%' },
+
+  // ── Premium + pricing ──
+  premiumBlock: { gap: spacing.xl },
+  lead: { ...typography.h4, color: colors.goldLight, marginTop: spacing.sm },
+  studyRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.lg,
+  },
+  studyItem: {
+    flexGrow: 1,
+    flexBasis: 240,
+    gap: spacing.xs,
+  },
+  studyIcon: {
+    width: 36,
+    height: 36,
     borderRadius: radii.sm,
     backgroundColor: colors.goldFaint,
     alignItems: 'center',
     justifyContent: 'center',
-    flexShrink: 0,
+    marginBottom: spacing.xs,
   },
-  valueText: { flex: 1 },
-  valueTitle: {
-    ...typography.h4,
-    color: colors.text,
-  },
-  valueBody: {
-    ...typography.bodySmall,
-    color: colors.textMuted,
-  },
-  // Pricing
+  studyTitle: { ...typography.h4, color: colors.text },
+  studyBody: { ...typography.bodySmall, color: colors.textMuted },
   plans: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -313,77 +563,41 @@ const styles = StyleSheet.create({
     flexBasis: 300,
     gap: spacing.sm,
   },
-  bestValueChip: {
-    alignSelf: 'flex-start',
-  },
-  price: {
-    ...typography.amountLarge,
-    color: colors.text,
-  },
-  cadence: {
-    ...typography.bodySmall,
-    color: colors.textMuted,
-  },
-  subline: {
-    ...typography.bodySmall,
-    color: colors.goldLight,
-  },
+  bestValueChip: { alignSelf: 'flex-start' },
+  price: { ...typography.amountLarge, color: colors.text },
+  cadence: { ...typography.bodySmall, color: colors.textMuted },
+  subline: { ...typography.bodySmall, color: colors.goldLight },
   premiumNote: {
     ...typography.label,
     color: colors.gold,
     textAlign: 'center',
     paddingVertical: spacing.sm,
   },
-  // Shared benefit list
-  benefitList: {
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-  },
-  benefitRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  benefitLive: {
-    ...typography.body,
-    color: colors.textHigh,
-    flex: 1,
-  },
-  benefitSoon: {
-    ...typography.body,
-    color: colors.textMuted,
-    flex: 1,
-  },
-  // FAQ
-  faq: {
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-  },
-  faqQ: {
-    ...typography.h4,
-    color: colors.text,
-  },
-  faqA: {
-    ...typography.body,
-    color: colors.textMuted,
-  },
-  // Footer
+  benefitList: { gap: spacing.sm, paddingVertical: spacing.sm },
+  benefitRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  benefitLive: { ...typography.body, color: colors.textHigh, flex: 1 },
+  benefitSoon: { ...typography.body, color: colors.textMuted, flex: 1 },
+
+  // ── FAQ ──
+  faqBlock: { gap: spacing.md },
+
+  // ── Footer ──
   footer: {
     alignItems: 'center',
     gap: spacing.sm,
     paddingTop: spacing.xl,
   },
-  legalRow: {
-    flexDirection: 'row',
-    gap: spacing.lg,
-  },
+  legalRow: { flexDirection: 'row', gap: spacing.lg },
   legalLink: {
     ...typography.bodySmall,
     color: colors.textMuted,
     textDecorationLine: 'underline',
   },
-  disclaimer: {
-    ...typography.caption,
-    color: colors.textDim,
+  disclaimer: { ...typography.caption, color: colors.textDim },
+  byline: {
+    ...typography.caps,
+    fontSize: 10,
+    color: colors.goldMuted,
+    letterSpacing: 1.5,
   },
 });

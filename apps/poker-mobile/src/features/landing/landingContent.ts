@@ -1,10 +1,20 @@
 import type React from 'react';
 import type { Ionicons } from '@expo/vector-icons';
 import { PRICING, PREMIUM_FEATURES } from '../premium/config';
+import type { LandingImageKey } from './landingImages';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 export type LandingValueProp = { icon: IoniconName; title: string; body: string };
+export type LandingSection = {
+  key: string;
+  eyebrow: string;
+  heading: string;
+  body: string;
+  image: LandingImageKey;
+  /** Accessible description of the screenshot for screen readers / axe alt-text. */
+  imageAlt: string;
+};
 export type LandingPlan = {
   key: 'monthly' | 'yearly';
   productId: string;
@@ -22,32 +32,64 @@ export const PREMIUM_STUDY_BENEFIT =
   'Full lesson library — every study pack · all quizzes · unlimited Spot Trainer';
 
 export const LANDING_HERO = {
-  headline: 'Run the night. Settle in one tap.',
+  headline: 'Your home game, handled.',
   subhead:
-    'T Poker is the free home-game club tool — cash games and tournaments, ' +
-    'buy-ins, a blind clock, and instant settlements. No account needed to start.',
+    "Track buy-ins, settle up instantly, and crown your crew's champion — " +
+    'free, no account needed.',
   primaryCta: 'Start a free game',
-  secondaryCta: 'See Premium',
+  secondaryCta: 'Sign in',
 };
 
-/** Free club tool — the differentiator / acquisition hook. */
-export const LANDING_CLUB_VALUE: LandingValueProp[] = [
+/**
+ * Always visible directly under the hero CTAs — truthful positioning is part of
+ * the brand (and of the Paddle/store review posture). Never bury or remove it.
+ */
+export const LANDING_TRUST_LINE = 'Free for your home game · 18+ · Not a gambling product.';
+
+/**
+ * One idea per section, GTO-Wizard rhythm: eyebrow → big heading → 1–2 lines →
+ * large real product screenshot (landingImages). Order = page order = anchor nav.
+ */
+export const LANDING_SECTIONS: LandingSection[] = [
   {
-    icon: 'play-circle',
-    title: 'Cash & tournaments',
-    body: 'Track every buy-in and cash-out, or run a tournament with a blind clock and prize pool.',
+    key: 'live',
+    eyebrow: 'LIVE GAME',
+    heading: 'Run the table in real time.',
+    body: 'Buy-ins, cash-outs, and the pot — tracked as they happen. No spreadsheets.',
+    image: 'liveCash',
+    imageAlt: 'Live cash game screen: felt table with four seated players, their stacks, and a ₪250 pot',
   },
   {
-    icon: 'people',
-    title: 'Built for your crew',
-    body: 'Groups, lifetime stats, leaderboards, and head-to-head — your regular game, organized.',
+    key: 'settle',
+    eyebrow: 'SETTLE UP',
+    heading: 'Everyone leaves square.',
+    body: 'Count the chips once — we compute exactly who pays who.',
+    image: 'settle',
+    imageAlt: 'Game-over summary: ranked results with profit and loss, and the cash settlements list of who pays who',
   },
   {
-    icon: 'flash',
-    title: 'One-tap settlements',
-    body: 'We do the debt math. Everyone knows who owes who the moment the night ends.',
+    key: 'tournament',
+    eyebrow: 'TOURNAMENT MODE',
+    heading: 'Host it like a tournament director.',
+    body: 'Blind clock, prize pool, payouts, podium — the full tournament on one phone.',
+    image: 'tournament',
+    imageAlt: 'Live tournament dashboard: prize pool, level 1 blinds 25/50, countdown clock, players left and average stack',
+  },
+  {
+    key: 'stats',
+    eyebrow: 'KNOW YOUR NUMBERS',
+    heading: 'Your poker story, in numbers.',
+    body: 'Results, streaks and stats for every game — free on this device, lifetime with a free account.',
+    image: 'stats',
+    imageAlt: 'Stats screen: games played, money on the table, biggest win, and recent results with winners',
   },
 ];
+
+/** Premium bridge section (leads into pricing). */
+export const LANDING_PREMIUM = {
+  eyebrow: 'PREMIUM',
+  heading: 'Sharpen your edge between games.',
+};
 
 /** Get better between sessions — Premium Study. */
 export const LANDING_STUDY_VALUE: LandingValueProp[] = [

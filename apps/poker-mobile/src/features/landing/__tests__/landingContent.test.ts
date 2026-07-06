@@ -2,12 +2,16 @@ import { PRICING, PREMIUM_FEATURES } from '../../premium/config';
 import {
   PREMIUM_STUDY_BENEFIT,
   LANDING_HERO,
+  LANDING_TRUST_LINE,
+  LANDING_SECTIONS,
+  LANDING_PREMIUM,
   landingPlans,
   landingBenefits,
   LANDING_FAQ,
   LANDING_LEGAL_LINKS,
   LANDING_DISCLAIMER,
 } from '../landingContent';
+import { landingImages } from '../landingImages.web';
 
 describe('landing content — honesty + correctness', () => {
   it('uses the exact Premium Study benefit copy from §7', () => {
@@ -24,6 +28,40 @@ describe('landing content — honesty + correctness', () => {
   it('exposes a hero with a non-empty headline and subhead', () => {
     expect(LANDING_HERO.headline.length).toBeGreaterThan(0);
     expect(LANDING_HERO.subhead.length).toBeGreaterThan(0);
+  });
+
+  it('hero uses the approved brand headline + explicit chooser CTAs (2026-07-06)', () => {
+    expect(LANDING_HERO.headline).toBe('Your home game, handled.');
+    expect(LANDING_HERO.primaryCta).toBe('Start a free game');
+    expect(LANDING_HERO.secondaryCta).toBe('Sign in');
+  });
+
+  it('trust line stays truthful and complete — free · 18+ · not gambling', () => {
+    expect(LANDING_TRUST_LINE).toMatch(/free/i);
+    expect(LANDING_TRUST_LINE).toMatch(/18\+/);
+    expect(LANDING_TRUST_LINE.toLowerCase()).toMatch(/not a gambling product/);
+  });
+
+  it('has exactly 4 feature sections, each complete and backed by a bundled screenshot', () => {
+    expect(LANDING_SECTIONS).toHaveLength(4);
+    for (const s of LANDING_SECTIONS) {
+      expect(s.eyebrow.length).toBeGreaterThan(0);
+      expect(s.heading.length).toBeGreaterThan(0);
+      expect(s.body.length).toBeGreaterThan(0);
+      expect(s.imageAlt.length).toBeGreaterThan(10);
+      expect(landingImages[s.image]).toBeDefined(); // web bundle actually carries the shot
+    }
+    expect(LANDING_SECTIONS.map(s => s.key)).toEqual(['live', 'settle', 'tournament', 'stats']);
+  });
+
+  it('stats section copy stays honest — never promises leaderboard imagery it does not show', () => {
+    const stats = LANDING_SECTIONS.find(s => s.key === 'stats')!;
+    expect(stats.body.toLowerCase()).not.toMatch(/leaderboard/);
+  });
+
+  it('premium bridge has an eyebrow + heading', () => {
+    expect(LANDING_PREMIUM.eyebrow).toBe('PREMIUM');
+    expect(LANDING_PREMIUM.heading.length).toBeGreaterThan(0);
   });
 
   it('derives both plans from PRICING with the yearly highlighted', () => {

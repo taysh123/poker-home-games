@@ -12,7 +12,8 @@ export const LANDING_IMAGE_HEIGHT = 1688;
 export const landingImages: Partial<Record<LandingImageKey, number>> = {
   liveCash: require('../../../assets/landing/live-cash.png'),
   settle: require('../../../assets/landing/settle.png'),
-  finalCount: require('../../../assets/landing/final-count.png'),
   tournament: require('../../../assets/landing/tournament.png'),
   stats: require('../../../assets/landing/stats.png'),
+  // final-count.png stays on disk for future sections/store refresh but is NOT
+  // required here — unreferenced requires still ship in the web bundle.
 };
