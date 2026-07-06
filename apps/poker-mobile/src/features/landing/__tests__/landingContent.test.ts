@@ -154,6 +154,13 @@ describe('landing content — honesty + correctness', () => {
     });
   });
 
+  it('store links default to null (coming-soon pills) until the listings exist', () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { STORE_LINKS } = require('../landingContent');
+    expect(STORE_LINKS.appStoreUrl).toBeNull();
+    expect(STORE_LINKS.playStoreUrl).toBeNull();
+  });
+
   it('footer links to privacy + terms and shows the 18+/not-gambling disclaimer', () => {
     const hrefs = LANDING_LEGAL_LINKS.map(l => l.href);
     expect(hrefs).toContain('/privacy.html');

@@ -109,6 +109,14 @@ describe('LandingScreen (web)', () => {
     }
   });
 
+  it('store pills: pre-launch "Coming soon" state, no links (badge licensing)', () => {
+    render(<LandingScreen />);
+    expect(screen.getByLabelText('Coming soon to the App Store')).toBeTruthy();
+    expect(screen.getByLabelText('Coming soon to Google Play')).toBeTruthy();
+    expect(screen.getAllByText('Coming soon to')).toHaveLength(2);
+    expect(screen.queryByText('Get it on')).toBeNull();
+  });
+
   it('FAQ is an accordion: questions visible, answers collapsed until tapped', () => {
     render(<LandingScreen />);
     const first = LANDING_FAQ[0];

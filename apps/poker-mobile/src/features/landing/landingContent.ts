@@ -218,6 +218,25 @@ export const LANDING_FAQ: LandingFaq[] = [
   },
 ];
 
+export type StoreLinks = { appStoreUrl: string | null; playStoreUrl: string | null };
+
+/**
+ * Store listing URLs — null until the apps are published (approved 2026-07-06).
+ * Official badge artwork is licensed ONLY for live listings/pre-orders (verified
+ * against Apple's marketing guidelines + Google's Partner Hub badge rules), so
+ * null renders our own Velvet-Table "Coming soon" pills: nominative store-name
+ * text with generic glyphs, no badge-geometry imitation.
+ * AT LAUNCH: set EXPO_PUBLIC_APPSTORE_URL / EXPO_PUBLIC_PLAYSTORE_URL, self-host
+ * the official badge assets (Apple badge generator requires the live listing;
+ * Google Partner Marketing Hub ZIP), swap the linked-pill branch in
+ * LandingScreen's StorePill for the official artwork, and add both trademark
+ * credit lines next to the footer legal links.
+ */
+export const STORE_LINKS: StoreLinks = {
+  appStoreUrl: process.env.EXPO_PUBLIC_APPSTORE_URL || null,
+  playStoreUrl: process.env.EXPO_PUBLIC_PLAYSTORE_URL || null,
+};
+
 export const LANDING_LEGAL_LINKS: LandingLegalLink[] = [
   { label: 'Privacy', href: '/privacy.html' },
   { label: 'Terms', href: '/terms.html' },

@@ -48,6 +48,7 @@ import {
   LANDING_FAQ,
   LANDING_LEGAL_LINKS,
   LANDING_DISCLAIMER,
+  STORE_LINKS,
 } from '../features/landing/landingContent';
 import {
   landingImages,
@@ -392,6 +393,10 @@ export default function LandingScreen() {
 
           {/* ── 5. Footer ── */}
           <View style={styles.footer}>
+            <View style={styles.storeRow}>
+              <StorePill icon="logo-apple" store="the App Store" url={STORE_LINKS.appStoreUrl} />
+              <StorePill icon="logo-google-playstore" store="Google Play" url={STORE_LINKS.playStoreUrl} />
+            </View>
             <View style={styles.legalRow}>
               {LANDING_LEGAL_LINKS.map(l => (
                 <PressableScale
@@ -440,6 +445,45 @@ function HeroGlow({ reduced }: { reduced: boolean; play?: boolean }) {
         ),
       )}
     </>
+  );
+}
+
+/**
+ * Store presence, config-driven (see STORE_LINKS): no URL → own-brand "Coming soon"
+ * pill (nominative store-name text — official badge artwork is NOT licensed before
+ * a live listing); URL set at launch → linked pill, to be swapped for the official
+ * self-hosted badge artwork + trademark credit lines.
+ */
+function StorePill({ icon, store, url }: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  store: string;
+  url: string | null;
+}) {
+  const body = (
+    <>
+      <Ionicons name={icon} size={iconSize.md} color={colors.textHigh} />
+      <View>
+        <Text style={styles.storePillHint}>{url ? 'Get it on' : 'Coming soon to'}</Text>
+        <Text style={styles.storePillName}>{store}</Text>
+      </View>
+    </>
+  );
+  if (url) {
+    return (
+      <PressableScale
+        style={styles.storePill}
+        onPress={() => Linking.openURL(url)}
+        accessibilityRole="link"
+        accessibilityLabel={`Get it on ${store}`}
+      >
+        {body}
+      </PressableScale>
+    );
+  }
+  return (
+    <View style={styles.storePill} accessible accessibilityLabel={`Coming soon to ${store}`}>
+      {body}
+    </View>
   );
 }
 
@@ -733,6 +777,27 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingTop: spacing.xl,
   },
+  storeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  storePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    minHeight: 52,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  storePillHint: { ...typography.caption, color: colors.textMuted },
+  storePillName: { ...typography.label, color: colors.textHigh },
   legalRow: { flexDirection: 'row', gap: spacing.lg },
   legalLink: {
     ...typography.bodySmall,
