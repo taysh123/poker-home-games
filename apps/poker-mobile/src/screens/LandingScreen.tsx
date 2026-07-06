@@ -15,6 +15,13 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import Reanimated, {
+  useSharedValue,
+  useAnimatedStyle,
+  interpolate,
+  Extrapolation,
+  type SharedValue,
+} from 'react-native-reanimated';
 import Screen from '../components/Screen';
 import Card from '../components/Card';
 import Chip from '../components/Chip';
@@ -113,6 +120,15 @@ export default function LandingScreen() {
   const anchorsRef = useRef<Record<string, number>>({});
   const columnYRef = useRef(0);
   const [scrolled, setScrolled] = useState(false);
+  // Motion pass: one shared scroll clock drives the progress bar + section parallax.
+  // This screen is WEB-ONLY, so "worklets" run on the JS thread — plain ref reads
+  // inside useAnimatedStyle are safe here (they re-evaluate on every scroll tick).
+  const scrollY = useSharedValue(0);
+  const contentH = useSharedValue(1);
+  const progressStyle = useAnimatedStyle(() => {
+    const max = Math.max(1, contentH.value - winH);
+    return { transform: [{ scaleX: Math.min(1, Math.max(0, scrollY.value / max)) }] };
+  });
   /* eslint-enable react-hooks/rules-of-hooks */
 
   const wide = winW >= 900;
@@ -131,6 +147,7 @@ export default function LandingScreen() {
 
   function onScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
     reveal.onScroll(e);
+    scrollY.value = e.nativeEvent.contentOffset.y;
     const past = e.nativeEvent.contentOffset.y > 32;
     setScrolled(prev => (prev === past ? prev : past));
   }
@@ -158,10 +175,13 @@ export default function LandingScreen() {
 
   return (
     <Screen>
+      {/* Scroll-progress hairline — informational (scroll-driven, no autonomous motion). */}
+      <Reanimated.View pointerEvents="none" style={[styles.progressBar, progressStyle]} />
       <ScrollView
         ref={scrollRef}
         stickyHeaderIndices={[0]}
         onScroll={onScroll}
+        onContentSizeChange={(_w, h) => { contentH.value = h; }}
         scrollEventThrottle={16}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -274,6 +294,16 @@ export default function LandingScreen() {
                         />
                       )}
                     </View>
+                    <MotiView
+                      from={{ scaleX: 0 }}
+                      animate={{ scaleX: played ? 1 : 0 }}
+                      transition={{ type: 'timing', duration: reduced ? 0 : 400, delay: reduced ? 0 : 60 }}
+                      style={[
+                        styles.eyebrowRule,
+                        { backgroundColor: ACCENT_TEXT[s.accent] },
+                        !wide && styles.eyebrowRuleCentered,
+                      ]}
+                    />
                     <Text style={styles.sectionHeading} accessibilityRole="header">
                       {s.heading}
                     </Text>
@@ -282,25 +312,16 @@ export default function LandingScreen() {
                     <Text style={styles.sectionBody}>{s.body}</Text>
                   </MotiView>
                 </View>
-                <MotiView
-                  {...slideUpSequence({ reduced, delay: 140, duration: 380, distance: 16, play: played })}
-                  style={styles.sectionMediaWrap}
-                >
-                  <View
-                    pointerEvents="none"
-                    style={[styles.mediaGlow, { backgroundColor: ACCENT_GLOW[s.accent] }]}
-                  />
-                  {landingImages[s.image] != null && (
-                    <View style={styles.deviceFrame}>
-                      <Image
-                        source={landingImages[s.image] as number}
-                        style={styles.screenshot}
-                        resizeMode="cover"
-                        accessibilityLabel={s.imageAlt}
-                      />
-                    </View>
-                  )}
-                </MotiView>
+                <SectionMedia
+                  played={played}
+                  reduced={reduced}
+                  glow={ACCENT_GLOW[s.accent]}
+                  image={landingImages[s.image]}
+                  alt={s.imageAlt}
+                  scrollY={scrollY}
+                  winH={winH}
+                  pageY={() => columnYRef.current + (anchorsRef.current[s.key] ?? 0)}
+                />
               </View>
             );
           })}
@@ -445,6 +466,59 @@ function HeroGlow({ reduced }: { reduced: boolean; play?: boolean }) {
         ),
       )}
     </>
+  );
+}
+
+/**
+ * Section screenshot with accent glow entrance + gentle scroll parallax (±16px,
+ * transform-only). Composes: outer parallax (Reanimated) → inner reveal (Moti).
+ * Web-only screen ⇒ the animated style runs on the JS thread, so reading the
+ * anchor refs via `pageY()` re-evaluates correctly on every scroll tick.
+ * Reduced motion: no parallax, glow + frame appear at rest.
+ */
+function SectionMedia({ played, reduced, glow, image, alt, scrollY, winH, pageY }: {
+  played: boolean;
+  reduced: boolean;
+  glow: string;
+  image: number | undefined;
+  alt: string;
+  scrollY: SharedValue<number>;
+  winH: number;
+  pageY: () => number;
+}) {
+  const parallaxStyle = useAnimatedStyle(() => {
+    if (reduced) return { transform: [{ translateY: 0 }] };
+    const base = pageY();
+    const ty = interpolate(
+      scrollY.value,
+      [base - winH, base + 800],
+      [16, -16],
+      Extrapolation.CLAMP,
+    );
+    return { transform: [{ translateY: ty }] };
+  });
+  return (
+    <Reanimated.View style={[styles.sectionMediaWrap, parallaxStyle]}>
+      <MotiView
+        pointerEvents="none"
+        from={{ opacity: 0 }}
+        animate={{ opacity: played ? 1 : 0 }}
+        transition={{ type: 'timing', duration: reduced ? 0 : 600 }}
+        style={[styles.mediaGlow, { backgroundColor: glow }]}
+      />
+      <MotiView {...slideUpSequence({ reduced, delay: 140, duration: 380, distance: 16, play: played })}>
+        {image != null && (
+          <View style={styles.deviceFrame}>
+            <Image
+              source={image}
+              style={styles.screenshot}
+              resizeMode="cover"
+              accessibilityLabel={alt}
+            />
+          </View>
+        )}
+      </MotiView>
+    </Reanimated.View>
   );
 }
 
@@ -684,6 +758,24 @@ const styles = StyleSheet.create({
     color: colors.gold,
   },
   eyebrowSolo: { marginBottom: spacing.sm },
+  eyebrowRule: {
+    width: 28,
+    height: 2,
+    borderRadius: 1,
+    marginBottom: spacing.sm,
+    transformOrigin: 'left center',
+  },
+  eyebrowRuleCentered: { alignSelf: 'center' },
+  progressBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: colors.gold,
+    zIndex: 50,
+    transformOrigin: 'left center',
+  },
   sectionHeading: {
     ...typography.displaySerif,
     fontSize: 34,
