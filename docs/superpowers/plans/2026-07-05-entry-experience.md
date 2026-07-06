@@ -89,7 +89,7 @@
 - [x] Playwright stills (real web export, 390×844@2x + desktop): splash mid-frame, Welcome first-run / returning-with-seeded-game / reduced-motion, Login, Register, GuestHome post-choice with guest data byte-intact. 10/10 behavioral checks. `%TEMP%\tpoker-verify\entry\`.
 - [x] Full gates: tsc 0 - jest 76/76 suites 620/620 tests - expo export green.
 - [x] Code-review pass (adversarial, multi-agent workflow: 7 lenses → refuter panels), findings fixed: SplashGate (entrances no longer play hidden under the splash / no double-exposed handoff), logout → Welcome reset (MainTabs survives the tree swap; initialRouteName can't do it), BrandSplash skip/exit/re-arm guards (+8-test lifecycle suite), context-aware Login guest link (dismiss over app, preserve invite flows), AsyncStorage zero-write pin, race-default pin.
-- [ ] Push `feature/entry-experience`; open PR (base `feature/lottie-polish`) marked **FROZEN for launch**; update RESUME doc pointer.
+- [x] Push `feature/entry-experience`; open PR (base `feature/lottie-polish`) marked **FROZEN for launch** → **PR #14** (gitleaks clean, 8 commits). RESUME doc pointer updated via docs PR to main. New merge order at launch: **#4 → #5 → #6 → #14 → #11**.
 
 ## Self-Review
 
