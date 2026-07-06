@@ -57,7 +57,10 @@ jest.mock('../../hooks/useReducedMotion', () => ({ useReducedMotion: () => false
 // Jest runs on the native platform, which resolves the empty native image stub —
 // substitute bundler asset ids so the <Image> branches render like on web.
 jest.mock('../../features/landing/landingImages', () => ({
-  landingImages: { liveCash: 1, settle: 2, tournament: 3, stats: 4 },
+  landingImages: {
+    liveCash: 1, settle: 2, tournament: 3, stats: 4,
+    studyLibrary: 5, spotTrainer: 6, aiCoach: 7,
+  },
   LANDING_IMAGE_WIDTH: 780,
   LANDING_IMAGE_HEIGHT: 1688,
 }));

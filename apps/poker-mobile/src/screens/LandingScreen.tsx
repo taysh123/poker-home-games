@@ -33,7 +33,7 @@ import { radii } from '../theme/radii';
 import { iconSize } from '../theme/iconSize';
 import { usePremium } from '../features/premium/state/PremiumContext';
 import { useAuth } from '../context/AuthContext';
-import { PRICING } from '../features/premium/config';
+import { PRICING, isFeatureLive } from '../features/premium/config';
 import { savePendingCheckout, type CheckoutPlan } from '../utils/pendingCheckout';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 import {
@@ -61,12 +61,27 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 const NAV_LINKS: { key: string; label: string }[] = [
   { key: 'live', label: 'Live' },
   { key: 'tournament', label: 'Tournament' },
-  { key: 'stats', label: 'Stats' },
+  { key: 'study', label: 'Study' },
+  { key: 'coach', label: 'Coach' },
   { key: 'pricing', label: 'Pricing' },
   { key: 'faq', label: 'FAQ' },
 ];
 
 const IMAGE_ASPECT = LANDING_IMAGE_WIDTH / LANDING_IMAGE_HEIGHT;
+
+/** Ambient accent mapping (approved): eyebrow text needs AA contrast, glows stay faint. */
+const ACCENT_TEXT = {
+  gold: colors.gold,
+  felt: colors.success,
+  teal: colors.info,
+  purple: colors.aiPurple,
+} as const;
+const ACCENT_GLOW = {
+  gold: colors.goldFaint,
+  felt: colors.feltFaint,
+  teal: colors.tealGlow,
+  purple: colors.aiPurpleFaint,
+} as const;
 
 /**
  * Web-only landing (renders null on native) — the web entry at the app root.
@@ -249,7 +264,15 @@ export default function LandingScreen() {
               >
                 <View style={[styles.sectionText, wide && styles.sectionTextWide]}>
                   <MotiView {...slideUpSequence({ reduced, delay: 0, duration: 320, play: played })}>
-                    <Text style={styles.eyebrow}>{s.eyebrow}</Text>
+                    <View style={[styles.eyebrowRow, !wide && styles.eyebrowRowCentered]}>
+                      <Text style={[styles.eyebrow, { color: ACCENT_TEXT[s.accent] }]}>{s.eyebrow}</Text>
+                      {s.featureKey != null && (
+                        <Chip
+                          label={isFeatureLive(s.featureKey) ? 'Premium' : 'Soon'}
+                          tone={isFeatureLive(s.featureKey) ? 'gold' : 'neutral'}
+                        />
+                      )}
+                    </View>
                     <Text style={styles.sectionHeading} accessibilityRole="header">
                       {s.heading}
                     </Text>
@@ -262,7 +285,10 @@ export default function LandingScreen() {
                   {...slideUpSequence({ reduced, delay: 140, duration: 380, distance: 16, play: played })}
                   style={styles.sectionMediaWrap}
                 >
-                  <View pointerEvents="none" style={styles.mediaGlow} />
+                  <View
+                    pointerEvents="none"
+                    style={[styles.mediaGlow, { backgroundColor: ACCENT_GLOW[s.accent] }]}
+                  />
                   {landingImages[s.image] != null && (
                     <View style={styles.deviceFrame}>
                       <Image
@@ -281,7 +307,7 @@ export default function LandingScreen() {
           {/* ── 3. Premium bridge + pricing (wiring byte-identical) ── */}
           <View onLayout={registerBlock('pricing')} style={styles.premiumBlock}>
             <MotiView {...slideUpSequence({ reduced, delay: 0, duration: 320, play: reveal.isRevealed('pricing') })}>
-              <Text style={styles.eyebrow}>{LANDING_PREMIUM.eyebrow}</Text>
+              <Text style={[styles.eyebrow, styles.eyebrowSolo]}>{LANDING_PREMIUM.eyebrow}</Text>
               <Text style={styles.sectionHeading} accessibilityRole="header">
                 {LANDING_PREMIUM.heading}
               </Text>
@@ -355,7 +381,7 @@ export default function LandingScreen() {
 
           {/* ── 4. FAQ accordion ── */}
           <View onLayout={registerBlock('faq')} style={styles.faqBlock}>
-            <Text style={styles.eyebrow}>FAQ</Text>
+            <Text style={[styles.eyebrow, styles.eyebrowSolo]}>FAQ</Text>
             <Text style={styles.sectionHeading} accessibilityRole="header">
               Questions, answered.
             </Text>
@@ -602,11 +628,18 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     maxWidth: 460,
   },
+  eyebrowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  eyebrowRowCentered: { justifyContent: 'center' },
   eyebrow: {
     ...typography.caps,
     color: colors.gold,
-    marginBottom: spacing.sm,
   },
+  eyebrowSolo: { marginBottom: spacing.sm },
   sectionHeading: {
     ...typography.displaySerif,
     fontSize: 34,

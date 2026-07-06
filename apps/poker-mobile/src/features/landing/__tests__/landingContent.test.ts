@@ -42,16 +42,44 @@ describe('landing content — honesty + correctness', () => {
     expect(LANDING_TRUST_LINE.toLowerCase()).toMatch(/not a gambling product/);
   });
 
-  it('has exactly 4 feature sections, each complete and backed by a bundled screenshot', () => {
-    expect(LANDING_SECTIONS).toHaveLength(4);
+  it('has 7 feature sections (free story → paid pillars), each complete and backed by a bundled screenshot', () => {
+    expect(LANDING_SECTIONS).toHaveLength(7);
     for (const s of LANDING_SECTIONS) {
       expect(s.eyebrow.length).toBeGreaterThan(0);
       expect(s.heading.length).toBeGreaterThan(0);
       expect(s.body.length).toBeGreaterThan(0);
       expect(s.imageAlt.length).toBeGreaterThan(10);
+      expect(['gold', 'felt', 'teal', 'purple']).toContain(s.accent);
       expect(landingImages[s.image]).toBeDefined(); // web bundle actually carries the shot
     }
-    expect(LANDING_SECTIONS.map(s => s.key)).toEqual(['live', 'settle', 'tournament', 'stats']);
+    expect(LANDING_SECTIONS.map(s => s.key)).toEqual([
+      'live', 'settle', 'tournament', 'stats', 'study', 'trainer', 'coach',
+    ]);
+  });
+
+  it('COPY GUARDRAIL: AI Coach is after-the-fact + expert-calibrated — never solver/GTO-exact/live-advice claims', () => {
+    const coach = LANDING_SECTIONS.find(s => s.key === 'coach')!;
+    expect(coach.body).toMatch(/expert-calibrated/i);
+    expect(coach.body).toMatch(/never live in-game advice/i);
+    expect(coach.featureKey).toBe('ai_coach');
+    // Locked positioning across ALL landing copy: no solver-verified / GTO-exact claims anywhere.
+    const allCopy = LANDING_SECTIONS.map(s => `${s.eyebrow} ${s.heading} ${s.body}`).join(' ');
+    expect(allCopy).not.toMatch(/solver[- ]verified|GTO[- ]exact|solver output/i);
+  });
+
+  it('sections tied to premium features reference real catalog keys', () => {
+    for (const s of LANDING_SECTIONS) {
+      if (s.featureKey) {
+        expect(PREMIUM_FEATURES.some(f => f.key === s.featureKey)).toBe(true);
+      }
+    }
+  });
+
+  it('FAQ pins the AI-Coach live-advice question with the after-the-fact answer', () => {
+    const coachFaq = LANDING_FAQ.find(f => /live advice/i.test(f.q));
+    expect(coachFaq).toBeDefined();
+    expect(coachFaq!.a).toMatch(/after-the-fact/i);
+    expect(coachFaq!.a).toMatch(/never advises during live play/i);
   });
 
   it('stats section copy stays honest — never promises leaderboard imagery it does not show', () => {

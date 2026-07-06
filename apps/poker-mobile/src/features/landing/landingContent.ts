@@ -1,9 +1,12 @@
 import type React from 'react';
 import type { Ionicons } from '@expo/vector-icons';
-import { PRICING, PREMIUM_FEATURES } from '../premium/config';
+import { PRICING, PREMIUM_FEATURES, type PremiumFeatureKey } from '../premium/config';
 import type { LandingImageKey } from './landingImages';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+/** Ambient-only section accents (approved 2026-07-06): eyebrow text + media glow. */
+export type LandingAccent = 'gold' | 'felt' | 'teal' | 'purple';
 
 export type LandingValueProp = { icon: IoniconName; title: string; body: string };
 export type LandingSection = {
@@ -14,6 +17,13 @@ export type LandingSection = {
   image: LandingImageKey;
   /** Accessible description of the screenshot for screen readers / axe alt-text. */
   imageAlt: string;
+  accent: LandingAccent;
+  /**
+   * Ties the section to the premium honesty catalog: the section chip renders
+   * live-vs-Soon from isFeatureLive(featureKey) at render time, so the page is
+   * truthful in every posture and flips automatically with the launch honesty flip.
+   */
+  featureKey?: PremiumFeatureKey;
 };
 export type LandingPlan = {
   key: 'monthly' | 'yearly';
@@ -58,6 +68,7 @@ export const LANDING_SECTIONS: LandingSection[] = [
     body: 'Buy-ins, cash-outs, and the pot — tracked as they happen. No spreadsheets.',
     image: 'liveCash',
     imageAlt: 'Live cash game screen: felt table with four seated players, their stacks, and a ₪250 pot',
+    accent: 'felt',
   },
   {
     key: 'settle',
@@ -66,6 +77,7 @@ export const LANDING_SECTIONS: LandingSection[] = [
     body: 'Count the chips once — we compute exactly who pays who.',
     image: 'settle',
     imageAlt: 'Game-over summary: ranked results with profit and loss, and the cash settlements list of who pays who',
+    accent: 'gold',
   },
   {
     key: 'tournament',
@@ -74,6 +86,7 @@ export const LANDING_SECTIONS: LandingSection[] = [
     body: 'Blind clock, prize pool, payouts, podium — the full tournament on one phone.',
     image: 'tournament',
     imageAlt: 'Live tournament dashboard: prize pool, level 1 blinds 25/50, countdown clock, players left and average stack',
+    accent: 'gold',
   },
   {
     key: 'stats',
@@ -82,6 +95,38 @@ export const LANDING_SECTIONS: LandingSection[] = [
     body: 'Results, streaks and stats for every game — free on this device, lifetime with a free account.',
     image: 'stats',
     imageAlt: 'Stats screen: games played, money on the table, biggest win, and recent results with winners',
+    accent: 'teal',
+  },
+  {
+    key: 'study',
+    eyebrow: 'STUDY',
+    heading: 'A real curriculum, not tips.',
+    body: 'Seventeen structured packs — cash, MTT, ICM, the mental game — built like a course.',
+    image: 'studyLibrary',
+    imageAlt: 'Content pack catalog: a curriculum of structured study packs with difficulty tiers, estimated hours, and premium locks',
+    accent: 'teal',
+    featureKey: 'premium_study',
+  },
+  {
+    key: 'trainer',
+    eyebrow: 'PRACTICE',
+    heading: "Drill it until it's automatic.",
+    body: 'Real preflop spots on a real table — instant feedback, honest ranges.',
+    image: 'spotTrainer',
+    imageAlt: 'Spot Trainer: a poker table scene asking button first-in open or fold, with hole cards and a correct-answer feedback card',
+    accent: 'felt',
+  },
+  {
+    // COPY GUARDRAIL (locked positioning): after-the-fact educational hand review,
+    // "expert-calibrated" — NEVER "solver-verified"/"GTO-exact", never live advice.
+    key: 'coach',
+    eyebrow: 'AI COACH',
+    heading: 'Review the hand. Learn the lesson.',
+    body: 'Paste a hand after the game and get expert-calibrated coaching — mistakes, good decisions, better lines. Educational review — never live in-game advice.',
+    image: 'aiCoach',
+    imageAlt: 'AI Coach hand review: summary of ace-king from the button with street-tagged mistakes and good decisions',
+    accent: 'purple',
+    featureKey: 'ai_coach',
   },
 ];
 
@@ -170,6 +215,10 @@ export const LANDING_FAQ: LandingFaq[] = [
   {
     q: 'Is this real-money gambling?',
     a: 'No. T Poker is a tracking and study tool for private home games. It handles no wagers and involves no real-money betting.',
+  },
+  {
+    q: 'Does the AI Coach give live advice during hands?',
+    a: 'No. The AI Coach is an after-the-fact educational review tool — you paste a hand you already played and get expert-calibrated coaching on it. It never advises during live play.',
   },
 ];
 

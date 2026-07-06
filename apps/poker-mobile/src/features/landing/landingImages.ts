@@ -6,7 +6,9 @@
  * Metro resolves `landingImages.web.ts` on web (real requires) and this empty
  * stub on native — a static `require` here would be bundled unconditionally.
  */
-export type LandingImageKey = 'liveCash' | 'settle' | 'finalCount' | 'tournament' | 'stats';
+export type LandingImageKey =
+  | 'liveCash' | 'settle' | 'finalCount' | 'tournament' | 'stats'
+  | 'studyLibrary' | 'spotTrainer' | 'aiCoach';
 
 /** Captured at 390×844 CSS @2x — every landing shot shares this aspect ratio. */
 export const LANDING_IMAGE_WIDTH = 780;
