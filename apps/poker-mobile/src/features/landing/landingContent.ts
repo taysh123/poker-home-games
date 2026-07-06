@@ -176,27 +176,23 @@ export function landingPlans(): LandingPlan[] {
 }
 
 /**
- * Pricing-card benefit list. Premium Study is the only live (purchasable) value;
- * every other premium feature is shown honestly with a Soon chip and no buy path.
- * Sourced from PREMIUM_FEATURES when available (drops premium_study, which we lead
- * with explicitly, and never advertises Advanced GTO / PACK-10). Falls back to a
- * static honest list if the catalog has not yet been extended.
+ * Pricing-card benefit list — a FULL passthrough of the premium catalog, live-first.
+ *
+ * Posture-agnostic by construction: `comingSoon` flows straight from
+ * PREMIUM_FEATURES (the honesty config the launch "honesty flip" edits), so the
+ * same code truthfully renders 1-live/3-Soon today and all-live post-flip with
+ * ZERO landing edits. (The previous version FILTERED on comingSoon===true, which
+ * made newly-live features silently vanish from the page after the flip.)
+ * Advanced GTO / PACK-10 is never advertised as paid value (blocklist).
  */
 export function landingBenefits(): LandingBenefit[] {
-  const soonFromCatalog = PREMIUM_FEATURES
-    .filter(f => f.key !== 'premium_study' && f.comingSoon)
+  return [...PREMIUM_FEATURES]
     .filter(f => !/advanced gto/i.test(f.title))
-    .map(f => ({ title: f.title, comingSoon: true as const }));
-
-  const soon: LandingBenefit[] = soonFromCatalog.length
-    ? soonFromCatalog
-    : [
-        { title: 'AI Coach', comingSoon: true },
-        { title: 'Advanced bankroll analytics', comingSoon: true },
-        { title: 'Cloud sync', comingSoon: true },
-      ];
-
-  return [{ title: PREMIUM_STUDY_BENEFIT, comingSoon: false }, ...soon];
+    .sort((a, b) => Number(a.comingSoon) - Number(b.comingSoon))
+    .map(f => ({
+      title: f.key === 'premium_study' ? PREMIUM_STUDY_BENEFIT : f.title,
+      comingSoon: f.comingSoon,
+    }));
 }
 
 export const LANDING_FAQ: LandingFaq[] = [

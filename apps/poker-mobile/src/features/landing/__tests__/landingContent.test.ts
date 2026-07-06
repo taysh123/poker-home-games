@@ -105,12 +105,40 @@ describe('landing content — honesty + correctness', () => {
     expect(yearly.subline).toMatch(/save 25%/);
   });
 
-  it('lists exactly one live (non-Soon) paid benefit — Premium Study', () => {
+  it('benefits mirror the premium catalog in ANY posture — full passthrough, live-first', () => {
+    // Structural, not numerical: stays green today (1 live / 3 Soon) AND after the
+    // launch honesty flip (all live). The posture itself is pinned by honesty.test.ts.
     const benefits = landingBenefits();
-    const live = benefits.filter(b => !b.comingSoon);
-    expect(live).toHaveLength(1);
-    expect(live[0].title).toBe(PREMIUM_STUDY_BENEFIT);
-    expect(benefits.some(b => b.comingSoon)).toBe(true); // at least one honest Soon
+    const catalog = PREMIUM_FEATURES.filter(f => !/advanced gto/i.test(f.title));
+    expect(benefits).toHaveLength(catalog.length);
+    const expectedLiveTitles = catalog
+      .filter(f => !f.comingSoon)
+      .map(f => (f.key === 'premium_study' ? PREMIUM_STUDY_BENEFIT : f.title));
+    expect(benefits.filter(b => !b.comingSoon).map(b => b.title).sort()).toEqual(expectedLiveTitles.sort());
+    const expectedSoonTitles = catalog.filter(f => f.comingSoon).map(f => f.title);
+    expect(benefits.filter(b => b.comingSoon).map(b => b.title).sort()).toEqual(expectedSoonTitles.sort());
+    // Live rows always render before Soon rows.
+    const firstSoon = benefits.findIndex(b => b.comingSoon);
+    if (firstSoon !== -1) expect(benefits.slice(firstSoon).every(b => b.comingSoon)).toBe(true);
+  });
+
+  it('post-flip simulation: after the honesty flip, every benefit renders live — nothing vanishes', () => {
+    jest.isolateModules(() => {
+      jest.doMock('../../premium/config', () => {
+        const real = jest.requireActual('../../premium/config');
+        return {
+          ...real,
+          PREMIUM_FEATURES: real.PREMIUM_FEATURES.map((f: { comingSoon: boolean }) => ({ ...f, comingSoon: false })),
+          isFeatureLive: () => true,
+        };
+      });
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const flipped = require('../landingContent');
+      const benefits = flipped.landingBenefits();
+      expect(benefits.length).toBeGreaterThanOrEqual(3);
+      expect(benefits.every((b: { comingSoon: boolean }) => !b.comingSoon)).toBe(true);
+    });
+    jest.dontMock('../../premium/config');
   });
 
   it('never advertises PACK-10 / Advanced GTO as paid value', () => {
