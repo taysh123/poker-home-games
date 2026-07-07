@@ -122,7 +122,7 @@ jobs:
           sudo mv gitleaks /usr/local/bin/gitleaks
           gitleaks version
       - name: Scan current tree
-        run: gitleaks detect --source . --no-git --redact --verbose
+        run: gitleaks detect --source . --config .gitleaks.toml --no-git --redact --verbose
       - name: Scan commit range
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
@@ -133,4 +133,4 @@ jobs:
             RANGE="-n 25"
           fi
           echo "Scanning: $RANGE"
-          gitleaks detect --source . --log-opts "$RANGE" --redact --verbose
+          gitleaks detect --source . --config .gitleaks.toml --log-opts "$RANGE" --redact --verbose
