@@ -1,0 +1,136 @@
+# T Poker CI — validates every PR to main and every push to main.
+#
+# Design notes (2026-07-07):
+# - Backend tests are fully self-contained (EF InMemory) — no services, no env, no DB.
+# - No global.json / engines anywhere in the repo, so versions are pinned HERE:
+#   .NET 8.0.x, Node 20.
+# - export-web is the only guard against Metro web-bundling breakage (what Vercel
+#   runs at deploy); it is deliberately a separate parallel job so the fast core
+#   signal (backend + mobile) is not delayed by it.
+# - gitleaks mirrors the manual scan run before every push: current tree + the
+#   commit range under review.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend · dotnet test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('src/**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+      - name: Test (restore + build + run)
+        run: dotnet test PokerApp.sln --nologo
+
+  mobile:
+    name: Mobile · tsc + jest
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/poker-mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/poker-mobile/package-lock.json
+      - run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Unit tests
+        run: npx jest --ci
+
+  landing:
+    name: Landing · vitest + build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/landing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/landing/package-lock.json
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Tests (honesty pins)
+        run: npm test
+      - name: Static build
+        run: npm run build
+
+  export-web:
+    name: Mobile · expo export (web)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: apps/poker-mobile
+    env:
+      # Public production URL (non-secret) — without it the exported bundle would
+      # silently point at localhost (src/api/config.ts falls back with a warning).
+      EXPO_PUBLIC_API_URL: https://poker-home-games-production.up.railway.app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/poker-mobile/package-lock.json
+      - run: npm ci
+      - name: Export web bundle (what Vercel builds)
+        run: npx expo export -p web
+
+  gitleaks:
+    name: Gitleaks · secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install gitleaks
+        run: |
+          curl -sSfL -o gitleaks.tar.gz \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz
+          tar -xzf gitleaks.tar.gz gitleaks
+          sudo mv gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+      - name: Scan current tree
+        run: gitleaks detect --source . --no-git --redact --verbose
+      - name: Scan commit range
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            RANGE="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+          elif [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ] && [ -n "${{ github.event.before }}" ]; then
+            RANGE="${{ github.event.before }}..${{ github.sha }}"
+          else
+            RANGE="-n 25"
+          fi
+          echo "Scanning: $RANGE"
+          gitleaks detect --source . --log-opts "$RANGE" --redact --verbose
