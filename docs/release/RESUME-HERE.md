@@ -119,6 +119,8 @@ None of these block launch, but they move it forward:
 - **Cloud Sync `xmin` concurrency hardening** — low priority; self-heals today. `backlog-tickets.md`.
 - **Cloud Sync tombstone compaction** — only matters at scale. `backlog-tickets.md`.
 - **Study content authoring** — grow the question pool + richer explanations (`study-content-spec.md`).
+- **Repo hygiene** — remove committed build output `src/PokerApp.API/out2/` and gitignore `out*/`
+  (one-line PR; found during the 2026-07-07 CI/case-sensitivity scan — harmless, just clutter).
 - **Security recommendations (deferred; NOT in PR #11)** — considered and consciously left as recommendations:
   **M3** refresh-token in web `localStorage` (→ HttpOnly cookie), **L1** Google `email_verified`, **L3** AddPlayer
   consent, **L4/L6** config, npm audit-fix (can break Expo). Full detail: memory `security-audit`.
