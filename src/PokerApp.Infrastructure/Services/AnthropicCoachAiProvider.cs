@@ -17,7 +17,10 @@ public sealed class AnthropicCoachAiProvider(CoachAiSettings settings, HttpClien
     public string Id => "anthropic";
 
     private const string AnthropicVersion = "2023-06-01";
-    private const string DefaultModel = "claude-sonnet-4-6";
+    // Fail-cheap: the coach economics (100 analyses/month) assume Haiku. Sonnet costs
+    // multiples more per analysis — never let a missing CoachAiSettings__Model env var
+    // silently select it. Pinned by CoachAiModelDefaultTests.
+    private const string DefaultModel = "claude-haiku-4-5-20251001";
     private const string Disclaimer =
         "Educational coaching feedback — not solver output and not guaranteed mathematically optimal.";
 
