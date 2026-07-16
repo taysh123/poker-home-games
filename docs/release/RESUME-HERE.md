@@ -121,6 +121,18 @@ None of these block launch, but they move it forward:
 - **Study content authoring** — grow the question pool + richer explanations (`study-content-spec.md`).
 - **Repo hygiene** — remove committed build output `src/PokerApp.API/out2/` and gitignore `out*/`
   (one-line PR; found during the 2026-07-07 CI/case-sensitivity scan — harmless, just clutter).
+- **Domain-migration follow-ups (tpoker.app, deferred 2026-07-16 — do RIGHT AFTER the stack merges;
+  all four values live in frozen-PR-owned files and currently work via the old domain's 307 redirects):**
+  1. `AppNavigator.tsx` linking `prefixes`: add `https://app.tpoker.app` (keep the old vercel domain
+     for already-shared invite links). Native-only concern — web invite routing is path-based.
+  2. `app.json` android `intentFilters` host → `app.tpoker.app` — part of the pre-store native OAuth
+     task (§5), together with serving `assetlinks.json` on the new domain.
+  3. `PaywallScreen.tsx` + `ProfileScreen.tsx` privacy/terms `Linking.openURL` absolutes →
+     `https://app.tpoker.app/*.html`.
+  4. `Program.cs` CORS hardcoded fallback → add `https://app.tpoker.app` (defense-in-depth only —
+     Railway `AllowedOrigins__0` is the operative fix and is already part of the migration).
+  Plus docs: CLAUDE.md deployment section + go-live-runbook env table still name
+  `poker-home-games-three.vercel.app` — update both post-merge.
 - **Security recommendations (deferred; NOT in PR #11)** — considered and consciously left as recommendations:
   **M3** refresh-token in web `localStorage` (→ HttpOnly cookie), **L1** Google `email_verified`, **L3** AddPlayer
   consent, **L4/L6** config, npm audit-fix (can break Expo). Full detail: memory `security-audit`.
