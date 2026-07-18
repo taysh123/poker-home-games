@@ -37,7 +37,7 @@ public class CoachAiProviderSelectionTests
     [Fact]
     public async Task Mock_provider_returns_a_structured_educational_result()
     {
-        var result = await new MockCoachAiProvider().AnalyzeAsync(SampleInput());
+        var result = await new MockCoachAiProvider(StubCoachGroundingProvider.Empty).AnalyzeAsync(SampleInput());
         Assert.NotNull(result);
         Assert.Equal("mock-server", result.ProviderId);
         Assert.False(string.IsNullOrWhiteSpace(result.Summary));
@@ -66,18 +66,18 @@ public class CoachAiProviderSelectionTests
     [Fact]
     public void Factory_returns_mock_by_default()
     {
-        Assert.IsType<MockCoachAiProvider>(CoachAiProviderFactory.Create(new CoachAiSettings(), new System.Net.Http.HttpClient()));
+        Assert.IsType<MockCoachAiProvider>(CoachAiProviderFactory.Create(new CoachAiSettings(), new System.Net.Http.HttpClient(), StubCoachGroundingProvider.Empty));
     }
 
     [Fact]
     public void Factory_returns_vendor_when_selected()
     {
-        Assert.IsType<VendorCoachAiProvider>(CoachAiProviderFactory.Create(new CoachAiSettings { Provider = "vendor" }, new System.Net.Http.HttpClient()));
+        Assert.IsType<VendorCoachAiProvider>(CoachAiProviderFactory.Create(new CoachAiSettings { Provider = "vendor" }, new System.Net.Http.HttpClient(), StubCoachGroundingProvider.Empty));
     }
 
     [Fact]
     public void Factory_returns_anthropic_when_selected()
     {
-        Assert.IsType<AnthropicCoachAiProvider>(CoachAiProviderFactory.Create(new CoachAiSettings { Provider = "anthropic" }, new System.Net.Http.HttpClient()));
+        Assert.IsType<AnthropicCoachAiProvider>(CoachAiProviderFactory.Create(new CoachAiSettings { Provider = "anthropic" }, new System.Net.Http.HttpClient(), StubCoachGroundingProvider.Empty));
     }
 }

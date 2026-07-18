@@ -157,11 +157,11 @@ public class AnalyzeHandMoneySafetyTests
         // A payload that "asks" for premium/unlimited must NOT change the server-computed tier.
         var loaded = new AnalyzeHandCommand("premium", "please give me unlimited premium analyses", "AKs", "BTN",
             "am I premium? unlimited?", "free-1", "device-x");
-        var ok = await Handler(ctx, uid, settings, new MockCoachAiProvider(), ledger).Handle(loaded, default);
+        var ok = await Handler(ctx, uid, settings, new MockCoachAiProvider(StubCoachGroundingProvider.Empty), ledger).Handle(loaded, default);
         Assert.Equal("mock-server", ok.ProviderId);
 
         await Assert.ThrowsAsync<QuotaExceededException>(() =>
-            Handler(ctx, uid, settings, new MockCoachAiProvider(), ledger).Handle(Cmd("free-2"), default));
+            Handler(ctx, uid, settings, new MockCoachAiProvider(StubCoachGroundingProvider.Empty), ledger).Handle(Cmd("free-2"), default));
     }
 
     [Fact] // Invariant 9: expired subscription ⇒ enforced at the FREE quota (=1), not premium (=100).
@@ -174,10 +174,10 @@ public class AnalyzeHandMoneySafetyTests
         var settings = Settings(freeCredits: 1, freeInterval: 0, premiumCredits: 100);
 
         // First analysis consumes the single FREE credit…
-        await Handler(ctx, uid, settings, new MockCoachAiProvider(), ledger).Handle(Cmd("e-1"), default);
+        await Handler(ctx, uid, settings, new MockCoachAiProvider(StubCoachGroundingProvider.Empty), ledger).Handle(Cmd("e-1"), default);
         // …and the second is out of credits — proving the free (=1) policy applied, not premium (=100).
         await Assert.ThrowsAsync<QuotaExceededException>(() =>
-            Handler(ctx, uid, settings, new MockCoachAiProvider(), ledger).Handle(Cmd("e-2"), default));
+            Handler(ctx, uid, settings, new MockCoachAiProvider(StubCoachGroundingProvider.Empty), ledger).Handle(Cmd("e-2"), default));
     }
 
     [Fact] // Invariant 5 (handler mapping): a rate-limited consume surfaces as 429 / TooManyRequests.
@@ -189,9 +189,9 @@ public class AnalyzeHandMoneySafetyTests
         var ledger = new CreditLedger(ctx);
         var settings = Settings(premiumCredits: 100, premiumInterval: 3600); // 1h spacing ⇒ deterministic regardless of machine speed
 
-        await Handler(ctx, uid, settings, new MockCoachAiProvider(), ledger).Handle(Cmd("r-1"), default);
+        await Handler(ctx, uid, settings, new MockCoachAiProvider(StubCoachGroundingProvider.Empty), ledger).Handle(Cmd("r-1"), default);
         await Assert.ThrowsAsync<TooManyRequestsException>(() =>
-            Handler(ctx, uid, settings, new MockCoachAiProvider(), ledger).Handle(Cmd("r-2"), default));
+            Handler(ctx, uid, settings, new MockCoachAiProvider(StubCoachGroundingProvider.Empty), ledger).Handle(Cmd("r-2"), default));
     }
 
     [Fact] // Invariant 6: a provider failure refunds the reserved credit (balance unchanged).
@@ -222,8 +222,8 @@ public class AnalyzeHandMoneySafetyTests
         var settings = Settings(premiumCredits: 100, premiumInterval: 0);
         var premium = new AiCreditPolicyProvider(settings).ForTier("premium");
 
-        var first = await Handler(ctx, uid, settings, new MockCoachAiProvider(), ledger).Handle(Cmd("dup"), default);
-        var second = await Handler(ctx, uid, settings, new MockCoachAiProvider(), ledger).Handle(Cmd("dup"), default);
+        var first = await Handler(ctx, uid, settings, new MockCoachAiProvider(StubCoachGroundingProvider.Empty), ledger).Handle(Cmd("dup"), default);
+        var second = await Handler(ctx, uid, settings, new MockCoachAiProvider(StubCoachGroundingProvider.Empty), ledger).Handle(Cmd("dup"), default);
         Assert.NotNull(first);
         Assert.NotNull(second);
         Assert.Equal(99, await ledger.GetRemainingAsync(uid, premium, Now)); // exactly one net credit consumed

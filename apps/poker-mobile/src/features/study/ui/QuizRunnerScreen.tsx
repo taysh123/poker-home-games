@@ -36,6 +36,8 @@ import { useEntitlements } from '../../../context/EntitlementsContext';
 import { useStudy } from '../state/StudyContext';
 import { track } from '../../../utils/analytics';
 import LockNudge from './LockNudge';
+import { useCoachGrounding } from '../../coach/data/useCoachGrounding';
+import { groundingForQuestion } from '../logic/quizGrounding';
 import {
   normalizeQuestions,
   selectQuestions,
@@ -74,6 +76,7 @@ export default function QuizRunnerScreen() {
   const { isPremium } = useEntitlements();
   const { limitFor, consumeLimit, recordQuizCompleted } = useStudy();
   const quizLimit = limitFor('quiz');
+  const grounding = useCoachGrounding();
 
   const [all, setAll] = useState<QuizQuestion[] | null>(null);
   const [error, setError] = useState(false);
@@ -169,6 +172,7 @@ export default function QuizRunnerScreen() {
               onAnswer={answer}
               onNext={next}
               isLast={idx + 1 >= run.length}
+              assertionsForConcept={grounding ? grounding.assertionsForConcept : null}
             />
           ) : (
             <ResultsView
@@ -245,11 +249,15 @@ function PickView({ total, categories, limit, onStartAll, onStartCategory }: {
   );
 }
 
-function RunView({ question, index, count, chosen, onAnswer, onNext, isLast }: {
+function RunView({ question, index, count, chosen, onAnswer, onNext, isLast, assertionsForConcept }: {
   question: QuizQuestion; index: number; count: number; chosen: QuizChoice | null;
   onAnswer: (c: QuizChoice) => void; onNext: () => void; isLast: boolean;
+  assertionsForConcept: ((conceptId: string) => string[]) | null;
 }) {
   const answered = chosen !== null;
+  const calibratedRefs = answered && assertionsForConcept
+    ? groundingForQuestion(question, assertionsForConcept)
+    : [];
   return (
     <>
       <ProgressBar
@@ -299,7 +307,9 @@ function RunView({ question, index, count, chosen, onAnswer, onNext, isLast }: {
         <Feedback
           correct={chosen === question.correct}
           correctKey={question.correct}
+          correctOptionText={question.options.find(o => o.key === question.correct)?.text ?? ''}
           explanation={question.explanation}
+          calibratedAssertions={calibratedRefs}
         />
       )}
 
@@ -312,8 +322,34 @@ function RunView({ question, index, count, chosen, onAnswer, onNext, isLast }: {
   );
 }
 
-/** Answer feedback with a subtle entrance (fade + rise). Respects reduced motion (renders instantly). */
-function Feedback({ correct, correctKey, explanation }: { correct: boolean; correctKey: QuizChoice; explanation: string }) {
+/**
+ * Calibrated reference section — surfaces the caveat-bearing assertion(s) from the grounded
+ * dataset that correspond to this question's linked concept. Assertions are verbatim from
+ * assertionsForConcept (safe_to_assert only; caveats intact). Expert-Calibrated, not GTO/solver-verified.
+ */
+function CalibrationReference({ assertions }: { assertions: string[] }) {
+  return (
+    <View style={styles.calibRef}>
+      <Text
+        style={styles.calibLabel}
+        accessibilityLabel="Calibrated reference — expert-calibrated, not solver-verified"
+      >
+        CALIBRATED REFERENCE
+      </Text>
+      {assertions.map((text, i) => (
+        <Text key={i} style={styles.calibBody}>{text}</Text>
+      ))}
+    </View>
+  );
+}
+
+/** Answer feedback structured as a coaching read: Verdict → THE PLAY (claim) → WHY (reasoning) →
+ *  CALIBRATED REFERENCE (evidence). All four steps share the same fade+rise entrance so they arrive
+ *  as one coaching unit. Reduced-motion renders instantly. S1 honesty gate is unchanged. */
+function Feedback({ correct, correctKey, correctOptionText, explanation, calibratedAssertions }: {
+  correct: boolean; correctKey: QuizChoice; correctOptionText: string;
+  explanation: string; calibratedAssertions: string[];
+}) {
   const reduced = useReducedMotion();
   const anim = useRef(new Animated.Value(reduced ? 1 : 0)).current;
   useEffect(() => {
@@ -322,7 +358,9 @@ function Feedback({ correct, correctKey, explanation }: { correct: boolean; corr
   }, [reduced, anim]);
   return (
     <Animated.View style={{ opacity: anim, transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }] }}>
+      {/* ── Coaching card: Verdict → THE PLAY → WHY ── */}
       <Card style={styles.feedback}>
+        {/* 1. Verdict */}
         <View style={styles.feedbackHead}>
           {correct ? (
             <MotiView {...successPop({ reduced })}>
@@ -333,8 +371,30 @@ function Feedback({ correct, correctKey, explanation }: { correct: boolean; corr
           )}
           <Text style={styles.feedbackTitle}>{correct ? 'Correct' : `Correct answer: ${correctKey}`}</Text>
         </View>
-        {!!explanation && <Text style={styles.feedbackBody}>{explanation}</Text>}
+
+        <View style={styles.coachDivider} />
+
+        {/* 2. THE PLAY — the recommended action as text, not just a letter (claim) */}
+        {!!correctOptionText && (
+          <View>
+            <Text style={styles.calibLabel}>THE PLAY</Text>
+            <Text style={styles.coachPlayText}>{correctOptionText}</Text>
+          </View>
+        )}
+
+        {/* 3. WHY — reasoning / explanation */}
+        {!!explanation && (
+          <View>
+            <Text style={styles.calibLabel}>WHY</Text>
+            <Text style={styles.feedbackBody}>{explanation}</Text>
+          </View>
+        )}
       </Card>
+
+      {/* 4. CALIBRATED REFERENCE — evidence step (S1: verbatim assertions, caveats intact) */}
+      {calibratedAssertions.length > 0 && (
+        <CalibrationReference assertions={calibratedAssertions} />
+      )}
     </Animated.View>
   );
 }
@@ -441,12 +501,27 @@ const styles = StyleSheet.create({
   optionKeyText: { ...typography.label, color: colors.textHigh },
   optionText: { ...typography.body, color: colors.textHigh, flex: 1 },
   optionTextActive: { color: colors.text },
-  feedback: { marginTop: spacing.sm, gap: spacing.xs },
+  feedback: { marginTop: spacing.sm, gap: spacing.sm },
   feedbackHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   feedbackTitle: { ...typography.h4, color: colors.text },
   feedbackBody: { ...typography.bodySmall, color: colors.textMuted, lineHeight: 20 },
+  coachDivider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
+  coachPlayText: { ...typography.h4, color: colors.textHigh, marginTop: spacing.xs },
   breakdownRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.xs },
   breakdownCat: { ...typography.body, color: colors.textHigh, flex: 1 },
   breakdownVal: { ...typography.label, color: colors.gold },
   limitChipRow: { marginTop: spacing.sm, flexDirection: 'row' },
+  // ── Calibrated reference section (grounding S1) ──
+  calibRef: {
+    backgroundColor: colors.goldFaint,
+    borderLeftWidth: 2,
+    borderLeftColor: colors.gold,
+    borderRadius: radii.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  calibLabel: { ...typography.caps, color: colors.gold },
+  calibBody: { ...typography.bodySmall, color: colors.textHigh, lineHeight: 20 },
 });

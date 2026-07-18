@@ -51,14 +51,15 @@ public class AnthropicCoachAiProviderTests
     });
 
     private static AnthropicCoachAiProvider Provider(HttpStatusCode status, string body, string? apiKey = "test-key")
-        => new(new CoachAiSettings { Provider = "anthropic", ApiKey = apiKey }, new HttpClient(new StubHandler(status, body)));
+        => new(new CoachAiSettings { Provider = "anthropic", ApiKey = apiKey }, new HttpClient(new StubHandler(status, body)), StubCoachGroundingProvider.Empty);
 
     [Fact]
     public async Task Throws_when_no_api_key()
     {
         var p = new AnthropicCoachAiProvider(
             new CoachAiSettings { Provider = "anthropic" }, // no ApiKey
-            new HttpClient(new StubHandler(HttpStatusCode.OK, AnthropicEnvelope(ValidInner()))));
+            new HttpClient(new StubHandler(HttpStatusCode.OK, AnthropicEnvelope(ValidInner()))),
+            StubCoachGroundingProvider.Empty);
         await Assert.ThrowsAsync<InvalidOperationException>(() => p.AnalyzeAsync(Input()));
     }
 
@@ -66,7 +67,7 @@ public class AnthropicCoachAiProviderTests
     public async Task Parses_a_valid_response_into_an_educational_result()
     {
         var handler = new StubHandler(HttpStatusCode.OK, AnthropicEnvelope(ValidInner()));
-        var p = new AnthropicCoachAiProvider(new CoachAiSettings { Provider = "anthropic", ApiKey = "test-key" }, new HttpClient(handler));
+        var p = new AnthropicCoachAiProvider(new CoachAiSettings { Provider = "anthropic", ApiKey = "test-key" }, new HttpClient(handler), StubCoachGroundingProvider.Empty);
 
         var result = await p.AnalyzeAsync(Input());
 
@@ -94,5 +95,108 @@ public class AnthropicCoachAiProviderTests
     {
         var p = Provider(HttpStatusCode.OK, "{ not json");
         await Assert.ThrowsAsync<InvalidOperationException>(() => p.AnalyzeAsync(Input()));
+    }
+
+    /// <summary>
+    /// C1 — proves BuildUserContent renders board / villain position / effective stack / format
+    /// label into the outbound Anthropic request body. Uses FakeHttpMessageHandler (captures body
+    /// at send time) — no real network call.
+    /// </summary>
+    [Fact]
+    public async Task BuildUserContent_renders_board_villain_stack_format_in_prompt()
+    {
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, AnthropicEnvelope(ValidInner()));
+        var p = new AnthropicCoachAiProvider(
+            new CoachAiSettings { Provider = "anthropic", ApiKey = "test-key" },
+            new HttpClient(handler),
+            StubCoachGroundingProvider.Empty);
+
+        var input = new CoachAnalysisInput(
+            Kind:            "manual",
+            Text:            "raised BTN, BB 3-bet, I called",
+            HeroHand:        "AKs",
+            HeroPosition:    "BTN",
+            Question:        "Is this a shove?",
+            Board:           "Ah 7d 2c",
+            VillainPosition: "BB",
+            StackBb:         25,
+            Format:          "mtt");
+
+        await p.AnalyzeAsync(input);
+
+        var body = handler.LastRequestBody!;
+        Assert.False(string.IsNullOrEmpty(body));
+        // "mtt" must be mapped to the human-readable label "Tournament".
+        Assert.Contains("Tournament", body);
+        // Villain position line must appear verbatim in the JSON-serialised content.
+        Assert.Contains("Villain position: BB", body);
+        // Effective stack label + depth must appear.
+        Assert.Contains("25bb", body);
+        // Board must appear with its label.
+        Assert.Contains("Board: Ah 7d 2c", body);
+    }
+
+    /// <summary>
+    /// C2 — proves the system prompt frames the request as after-the-fact review (not live advice),
+    /// is format-aware (cash game + tournament/ICM), reasons street by street, calibrates confidence
+    /// to available info, and never claims solver/GTO-optimal lines. System prompt is captured via
+    /// the outbound request body — it is serialised into the "system" JSON field at send time.
+    /// </summary>
+    [Fact]
+    public async Task SystemPrompt_frames_after_the_fact_review_cash_and_tournament()
+    {
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, AnthropicEnvelope(ValidInner()));
+        var p = new AnthropicCoachAiProvider(
+            new CoachAiSettings { Provider = "anthropic", ApiKey = "test-key" },
+            new HttpClient(handler),
+            StubCoachGroundingProvider.Empty);
+
+        await p.AnalyzeAsync(Input());
+
+        var body = handler.LastRequestBody!;
+        // 1. Framing: after-the-fact review, not live advice.
+        Assert.Contains("already played", body, StringComparison.OrdinalIgnoreCase);
+        // 2. Tournament awareness.
+        Assert.Contains("tournament", body, StringComparison.OrdinalIgnoreCase);
+        // 3. ICM reasoning for tournament format.
+        Assert.Contains("ICM", body, StringComparison.Ordinal);
+        // 4. Cash-game awareness.
+        Assert.Contains("cash", body, StringComparison.OrdinalIgnoreCase);
+        // 5. Street-by-street reasoning.
+        Assert.Contains("flop", body, StringComparison.OrdinalIgnoreCase);
+        // 6. Confidence calibration hook (missing info lowers confidence).
+        Assert.Contains("confidence", body, StringComparison.OrdinalIgnoreCase);
+        // 7. Anti-solver / anti-GTO-optimal wording.
+        Assert.Contains("never", body, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("GTO", body, StringComparison.Ordinal);
+        // 8. JSON output contract keys still instructed.
+        Assert.Contains("summary", body, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("mistakes", body, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("goodDecisions", body, StringComparison.Ordinal);
+        Assert.Contains("alternativeLines", body, StringComparison.Ordinal);
+        Assert.Contains("tips", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// C4 — when the grounding provider returns assertions, a labelled "Grounded reference facts" block carrying
+    /// the verbatim, caveat-bearing assertion is appended to the outbound user content. Uses a fixed stub — no
+    /// dependency on the real embedded dataset.
+    /// </summary>
+    [Fact]
+    public async Task Injects_grounded_reference_facts_block_when_grounding_returns_assertions()
+    {
+        const string assertion =
+            "UTG opens ~13.4% (RFI) at 100bb 6-max (Calibrated; source: Derived from calibrated ranges). Not solver-exact.";
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, AnthropicEnvelope(ValidInner()));
+        var p = new AnthropicCoachAiProvider(
+            new CoachAiSettings { Provider = "anthropic", ApiKey = "test-key" },
+            new HttpClient(handler),
+            new StubCoachGroundingProvider(new[] { assertion }));
+
+        await p.AnalyzeAsync(Input());
+
+        var body = handler.LastRequestBody!;
+        Assert.Contains("Grounded reference facts", body);  // the labelled block
+        Assert.Contains(assertion, body);                   // the verbatim caveat-bearing assertion
     }
 }

@@ -165,7 +165,7 @@ public class AnalyzeHandTests
     {
         using var ctx = TestInfra.NewContext();
         var uid = Guid.NewGuid();
-        var provider = new MockCoachAiProvider();
+        var provider = new MockCoachAiProvider(StubCoachGroundingProvider.Empty);
 
         var result = await Handler(ctx, uid, provider).Handle(Cmd("k1"), default);
         Assert.Equal("mock-server", result.ProviderId);
@@ -184,7 +184,7 @@ public class AnalyzeHandTests
             Handler(ctx, uid, new ThrowingCoachProvider()).Handle(Cmd("k1"), default));
 
         // Credit was refunded → a real analysis still works afterward.
-        var ok = await Handler(ctx, uid, new MockCoachAiProvider()).Handle(Cmd("k2"), default);
+        var ok = await Handler(ctx, uid, new MockCoachAiProvider(StubCoachGroundingProvider.Empty)).Handle(Cmd("k2"), default);
         Assert.NotNull(ok);
     }
 }

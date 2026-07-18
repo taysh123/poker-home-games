@@ -43,6 +43,10 @@ function toAnalyzeRequest(input: CoachInput): AnalyzeRequest {
         kind: 'manual',
         heroHand: input.heroHand,
         heroPosition: input.heroPosition,
+        villainPosition: input.villainPosition,
+        stackBb: input.stackBb,
+        board: input.board,
+        format: input.format,
         question: input.question,
         text: input.actions, // action line carried as free text
         idempotencyKey,

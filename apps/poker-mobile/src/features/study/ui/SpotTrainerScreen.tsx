@@ -65,6 +65,7 @@ export default function SpotTrainerScreen() {
   const [done, setDone] = useState(false);
 
   const raiseLabel = spot.range.scenario === 'vs_RFI' ? 'Raise (3-bet)' : 'Raise';
+  const strategyLabel = dataset.isIllustrative ? 'Trainer range' : 'GTO play';
 
   // Derive a full preflop hand from the range: stacks, committed chips, pot, action order up to hero.
   const villainPos = spot.range.villainPosition as PokerPosition | undefined;
@@ -288,8 +289,11 @@ export default function SpotTrainerScreen() {
               </Text>
             </View>
             <Text style={styles.feedbackBody}>
-              GTO play: {result.strategy.map(s => `${ACTION_LABEL[s.action]} ${Math.round(s.freq * 100)}%`).join(' · ')}
+              {strategyLabel}: {result.strategy.map(s => `${ACTION_LABEL[s.action]} ${Math.round(s.freq * 100)}%`).join(' · ')}
             </Text>
+            {dataset.isIllustrative ? (
+              <Text style={styles.illustrativeNote}>Illustrative training range — not solver output.</Text>
+            ) : null}
           </Card>
         ) : null}
         </ContentContainer>
@@ -387,6 +391,7 @@ const styles = StyleSheet.create({
   feedbackHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   feedbackTitle: { ...typography.h4 },
   feedbackBody: { ...typography.body, color: colors.textHigh },
+  illustrativeNote: { ...typography.bodySmall, color: colors.textMuted },
   resultCard: { alignItems: 'center', gap: spacing.xs },
   resultScore: { ...typography.amountHero, color: colors.gold },
   resultAcc: { ...typography.h3, color: colors.textHigh },
