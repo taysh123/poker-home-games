@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Terms of Service (Draft) — T Poker</title>
+  <title>Terms of Service — T Poker</title>
   <style>
     :root { color-scheme: dark; }
     body {
@@ -21,40 +21,25 @@
     p, li { color: #B8C4CF; font-size: 15px; }
     a { color: #E8C97A; }
     .card { background: #1A2535; border: 1px solid #243447; border-radius: 14px; padding: 4px 20px; margin: 16px 0; }
-    .draft {
-      background: rgba(243, 156, 18, 0.10);
-      border: 1px solid #F39C12;
-      border-radius: 14px;
-      padding: 4px 20px;
-      margin: 24px 0;
-    }
-    .draft strong { color: #F39C12; }
-    .counsel { color: #F39C12; font-size: 13px; font-style: italic; }
-    .footer { margin-top: 56px; padding-top: 24px; border-top: 1px solid #243447; color: #7A8A99; font-size: 13px; letter-spacing: 0.5px; }
+    .footer { margin-top: 56px; padding-top: 24px; border-top: 1px solid #243447; }
+    .pagenav { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-bottom: 16px; }
+    .pagenav a { color: #E8C97A; font-size: 14px; text-decoration: none; }
+    .pagenav a:hover { text-decoration: underline; }
+    .pagenav a[aria-current="page"] { color: #C9A84C; font-weight: 700; }
+    .copyright { color: #7A8A99; font-size: 13px; letter-spacing: 0.5px; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="brand">T POKER</div>
     <h1>Terms of Service</h1>
-    <div class="updated">Working draft — June 2026 · Not yet in effect</div>
-
-    <div class="draft">
-      <p>
-        <strong>⚠ DRAFT — PENDING LEGAL REVIEW. NOT YET BINDING.</strong>
-      </p>
-      <p>
-        This is a working outline of the intended Terms of Service for T Poker. It is
-        <strong>not legal advice</strong>, has <strong>not been reviewed by counsel</strong>, and is
-        <strong>not in force</strong>. Sections marked <span class="counsel">[counsel-owned]</span> must be
-        drafted or approved by a qualified attorney before T Poker offers paid subscriptions. Final,
-        attorney-approved Terms will replace this page and must be accepted before any purchase.
-      </p>
-    </div>
+    <div class="updated">Last updated: July 2, 2026 · Effective: July 2, 2026</div>
 
     <p>
       T Poker is a private home-game poker management app, operated by <strong>True Story Labs</strong>
-      ("we", "us"). These Terms will govern your use of the app once finalized and published.
+      ("we", "us"). These Terms of Service ("Terms") govern your use of the T Poker app and any premium
+      subscription you purchase. By creating an account, purchasing a subscription, or otherwise using the
+      app, you agree to these Terms.
     </p>
 
     <h2>1. Eligibility</h2>
@@ -82,69 +67,105 @@
     <h2>4. Subscriptions, billing &amp; auto-renewal</h2>
     <div class="card">
       <p>
-        Premium features <em>(when offered)</em> will be sold as auto-renewing subscriptions. The planned
-        pricing is <strong>$8.99 / month</strong> or <strong>$79.99 / year</strong> (USD); the exact,
-        localized price is always shown at the point of purchase and prevails over this figure. Billing is
-        processed by the app stores (Apple App Store / Google Play, via RevenueCat) on mobile and by
-        <strong>Stripe</strong> on the web — we never see or store your card details. The platform-required
-        disclosures:
+        Premium features are sold as auto-renewing subscriptions. The price is
+        <strong>$8.99 / month</strong> or <strong>$79.99 / year</strong> (USD); the exact, localized price
+        (and any applicable tax) is always shown at the point of purchase and prevails over this figure.
+        Billing is processed by the app stores (Apple App Store / Google Play, via RevenueCat) on mobile and
+        by <strong>Paddle</strong>, our authorized reseller and Merchant of Record, on the web — we never
+        see or store your card details. The platform-required disclosures:
       </p>
       <ul>
         <li><strong>Billing:</strong> the subscription price is charged to your store account (Apple App
           Store / Google Play) or payment method (web) at confirmation of purchase.</li>
         <li><strong>Auto-renewal:</strong> the subscription renews automatically for the same period unless
-          cancelled at least 24 hours before the end of the current period.</li>
-        <li><strong>Renewal charge:</strong> your account is charged for renewal within 24 hours before the
-          current period ends, at the then-current price.</li>
+          cancelled. For App Store / Google Play subscriptions, auto-renewal must be turned off at least
+          24 hours before the current period ends; for web subscriptions via Paddle, cancelling any time
+          before your renewal date stops the next charge.</li>
+        <li><strong>Renewal charge:</strong> your account is charged for the renewal at the then-current
+          price at the start of each new period (for app-store subscriptions, within 24 hours before the
+          current period ends).</li>
         <li><strong>Managing &amp; cancelling:</strong> you can manage or cancel anytime in your store
           account settings (Apple: Settings → Apple ID → Subscriptions; Google Play: Subscriptions) or, for
-          web purchases, via the billing portal. Cancellation takes effect at the end of the current period.</li>
+          web purchases, via the link in your Paddle receipt or by contacting us. Cancellation takes effect
+          at the end of the current period.</li>
         <li><strong>Price changes:</strong> we will give notice of price changes as required by the platform
           and applicable law; continued use after a change takes effect constitutes acceptance.</li>
         <li><strong>Restore:</strong> previously purchased subscriptions can be restored from the paywall or
           your profile.</li>
       </ul>
-      <p class="counsel">[counsel-owned] Exact subscription terms, statutory cancellation/withdrawal rights,
-        and consumer-law disclosures (e.g. EU/UK/US state requirements) to be confirmed by counsel and matched
-        to the live store configuration and final prices.</p>
+      <p>
+        As Merchant of Record for web purchases, Paddle collects and remits any applicable sales tax or VAT,
+        and statutory cancellation and withdrawal rights that apply to you (for example, consumer rights in
+        the EU/UK/US) are honored and applied at or after checkout as required by law. As the seller of
+        record for web purchases, Paddle's full business and contact details are shown at checkout and on
+        your invoice. See our <a href="/refund.html">Refund Policy</a> for how cancellations and refunds are handled.
+      </p>
     </div>
 
     <h2>5. Refunds</h2>
     <p>
-      Purchases are handled by the app stores (Apple / Google) or the web payment processor; refunds are
-      governed by their policies and applicable law.
-      <span class="counsel">[counsel-owned] Refund and cancellation-rights language to be finalized.</span>
+      Cancellations and refunds are described in our <a href="/refund.html">Refund Policy</a>, which forms
+      part of these Terms. In summary: you can cancel anytime and keep access through the period you have
+      paid for; web purchases are handled by Paddle as Merchant of Record; mobile purchases are handled by
+      the Apple App Store or Google Play under their policies; and any statutory refund or withdrawal rights
+      that apply to you are honored.
     </p>
 
     <h2>6. Disclaimers &amp; limitation of liability</h2>
-    <p class="counsel">
-      [counsel-owned] "As is" disclaimer, warranty limitations, and limitation/exclusion of liability to be
-      drafted by counsel for the relevant jurisdictions.
+    <p>
+      T Poker is provided "as is" and "as available", without warranties of any kind, whether express or
+      implied, including implied warranties of merchantability, fitness for a particular purpose, and
+      non-infringement. We do not warrant that the app will be uninterrupted, error-free, or that any
+      records, statistics, or settlement calculations are free of mistakes — you are responsible for
+      verifying amounts before you settle up with other players.
+    </p>
+    <p>
+      To the fullest extent permitted by law, True Story Labs will not be liable for any indirect,
+      incidental, special, consequential, or punitive damages, or for any loss of data or money arising
+      from your use of the app. Nothing in these Terms limits any liability that cannot lawfully be limited
+      or excluded, or affects your mandatory rights as a consumer.
     </p>
 
     <h2>7. Changes to these terms</h2>
     <p>
-      We may update these Terms. Material changes will be notified in-app or by email as required. The final
-      published version supersedes this draft.
+      We may update these Terms from time to time. Material changes will be notified in-app or by email as
+      required, and the current published version always governs your use of the app.
     </p>
 
     <h2>8. Governing law &amp; disputes</h2>
-    <p class="counsel">
-      [counsel-owned] Governing law, venue, and dispute-resolution (including any arbitration / class-action
-      provisions) to be specified by counsel.
+    <p>
+      These Terms are governed by the laws applicable at True Story Labs' principal place of business,
+      without regard to its conflict-of-laws rules, except where mandatory consumer-protection laws of your
+      country of residence provide you greater protection — in which case those laws apply. We would rather
+      resolve any concern directly, so please contact us first and we will try to sort it out in good faith.
+      Disputes that cannot be resolved informally will be handled by the courts of competent jurisdiction,
+      subject to any mandatory rights you have as a consumer.
     </p>
 
-    <h2>9. Contact</h2>
+    <h2>9. General</h2>
+    <p>
+      These Terms, together with our <a href="/privacy.html">Privacy Policy</a> and
+      <a href="/refund.html">Refund Policy</a>, are the entire agreement between you and True Story Labs
+      regarding the app. If any provision of these Terms is held unenforceable, the remaining provisions
+      stay in full effect. You may not assign these Terms without our consent; we may assign them in
+      connection with a merger, acquisition, or sale of assets.
+    </p>
+
+    <h2>10. Contact</h2>
     <p>
       True Story Labs — questions:
       <a href="mailto:truestorylabs@gmail.com?subject=T%20Poker%20Terms">truestorylabs@gmail.com</a>
     </p>
 
-    <p>
-      See also our <a href="/privacy.html">Privacy Policy</a>.
-    </p>
-
-    <div class="footer">© 2026 True Story Labs · T Poker · Terms of Service (working draft, not yet in effect)</div>
+    <footer class="footer">
+      <nav class="pagenav" aria-label="T Poker pages">
+        <a href="/pricing.html">Pricing</a>
+        <a href="/terms.html" aria-current="page">Terms of Service</a>
+        <a href="/privacy.html">Privacy Policy</a>
+        <a href="/refund.html">Refund Policy</a>
+      </nav>
+      <div class="copyright">© 2026 True Story Labs · T Poker</div>
+    </footer>
   </div>
 </body>
 </html>

@@ -21,14 +21,19 @@
     p, li { color: #B8C4CF; font-size: 15px; }
     a { color: #E8C97A; }
     .card { background: #1A2535; border: 1px solid #243447; border-radius: 14px; padding: 4px 20px; margin: 16px 0; }
-    .footer { margin-top: 56px; padding-top: 24px; border-top: 1px solid #243447; color: #7A8A99; font-size: 13px; letter-spacing: 0.5px; }
+    .footer { margin-top: 56px; padding-top: 24px; border-top: 1px solid #243447; }
+    .pagenav { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-bottom: 16px; }
+    .pagenav a { color: #E8C97A; font-size: 14px; text-decoration: none; }
+    .pagenav a:hover { text-decoration: underline; }
+    .pagenav a[aria-current="page"] { color: #C9A84C; font-weight: 700; }
+    .copyright { color: #7A8A99; font-size: 13px; letter-spacing: 0.5px; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="brand">T POKER</div>
     <h1>Privacy Policy</h1>
-    <div class="updated">Last updated: June 13, 2026</div>
+    <div class="updated">Last updated: July 2, 2026</div>
 
     <p>
       T Poker is a private home-game poker management app, operated by
@@ -57,17 +62,27 @@
 
     <h2>What we don't do</h2>
     <ul>
-      <li>We do not sell or share your data with third parties.</li>
+      <li>We do not sell your personal data, and we never share it with third parties for their own marketing.</li>
       <li>We do not run ads or advertising trackers.</li>
       <li>We do not process real-money transactions — T Poker only records what you track. Settling up happens between you and your friends, outside the app.</li>
     </ul>
 
+    <h2>Service providers we use</h2>
+    <p>
+      To run T Poker we rely on a few service providers that process data on our behalf, only to provide
+      their service to us: payment processors (<strong>Paddle</strong> for the web; Apple, Google and
+      RevenueCat for mobile), hosting providers (Railway for the database, Vercel for the web app), and
+      Google for optional sign-in. We do not sell your data to any of them or allow them to use it for
+      their own purposes.
+    </p>
+
     <h2>Payments &amp; subscriptions</h2>
     <div class="card">
       <p>
-        If T Poker offers a premium subscription, payments are processed by the app stores (Apple App Store /
-        Google Play, via RevenueCat) on mobile and by <strong>Stripe</strong> on the web. We do not see or store
-        your card or payment details — only a record of your entitlement (whether your subscription is active).
+        If you buy a premium subscription, payments are processed by the app stores (Apple App Store /
+        Google Play, via RevenueCat) on mobile and by <strong>Paddle</strong>, our Merchant of Record, on the
+        web. We do not see or store your card or payment details — Paddle (or the app store) handles the
+        transaction, and we receive only a record of your entitlement (whether your subscription is active).
         This is separate from poker buy-ins and settlements, which T Poker only tracks and never processes.
       </p>
     </div>
@@ -101,8 +116,23 @@
     <h2>Data location</h2>
     <p>
       Account data is stored in a PostgreSQL database hosted on Railway. The web app is
-      served via Vercel. Local guest data never leaves your device.
+      served via Vercel. Depending on those providers' regions, your data may be processed or stored on
+      servers located in the United States or elsewhere. Local guest data never leaves your device.
     </p>
+
+    <h2>Your rights &amp; data retention</h2>
+    <div class="card">
+      <p>
+        You can request access to, a copy of, or correction of the personal data we hold about you, and you
+        can delete your account and data at any time (see above). To make a request, email
+        <a href="mailto:truestorylabs@gmail.com?subject=T%20Poker%20data%20request">truestorylabs@gmail.com</a>.
+      </p>
+      <p>
+        We keep your account data while your account is active, and delete it on request or within 30 days
+        of account deletion. Depending on where you live, you may have additional rights under laws such as
+        the GDPR (EU/UK) or CCPA (California); we honor those rights where they apply.
+      </p>
+    </div>
 
     <h2>Responsible play &amp; age</h2>
     <div class="card">
@@ -125,7 +155,15 @@
       <a href="mailto:truestorylabs@gmail.com">truestorylabs@gmail.com</a>
     </p>
 
-    <div class="footer">© 2026 True Story Labs · T Poker</div>
+    <footer class="footer">
+      <nav class="pagenav" aria-label="T Poker pages">
+        <a href="/pricing.html">Pricing</a>
+        <a href="/terms.html">Terms of Service</a>
+        <a href="/privacy.html" aria-current="page">Privacy Policy</a>
+        <a href="/refund.html">Refund Policy</a>
+      </nav>
+      <div class="copyright">© 2026 True Story Labs · T Poker</div>
+    </footer>
   </div>
 </body>
 </html>

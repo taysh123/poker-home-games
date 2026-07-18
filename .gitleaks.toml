@@ -1,0 +1,24 @@
+# Gitleaks config — extends the DEFAULT ruleset; only the two verified
+# non-secrets below are allowlisted (by exact literal, never by path, so a real
+# secret in the same files would still be caught).
+#
+# Verified 2026-07-07 during CI bring-up (PR #16):
+#
+# 1. docs/release/paddle-billing-research.md:341 — Paddle's own documentation
+#    example of a CLIENT-SIDE token ("test_…", sandbox prefix). Paddle client
+#    tokens are public by design, and this one is a copied docs example, not ours.
+# 2. src/PokerApp.Tests/TestInfra.cs:18 — the self-describing fake JWT signing
+#    key used only by the in-memory test infrastructure
+#    ("test-secret-key-at-least-32-characters-long-000"). Never a real key.
+
+title = "T Poker gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Verified non-secrets — exact literals only (see header comments)"
+regexes = [
+  '''test_7d279f61a3499fed520f7cd8c08''',
+  '''test-secret-key-at-least-32-characters-long-000''',
+]

@@ -29,12 +29,14 @@ EAS reads `build.<profile>.env` from `eas.json` at build time. The values curren
 | Var | preview / beta / production | Notes |
 |-----|------------------------------|-------|
 | `EXPO_PUBLIC_API_URL` | `https://poker-home-games-production.up.railway.app` | Backend (Railway). |
-| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | `12435044751-eruvq9uduc9sk5mietg9eiab2epddsp6.apps.googleusercontent.com` | Google OAuth (web client id; the app falls back to public client IDs for native OAuth on SDK 54). |
+| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | `12435044751-eruvq9uduc9sk5mietg9eiab2epddsp6.apps.googleusercontent.com` | Google OAuth **web** client id — powers **web** sign-in only (verified working). Native iOS/Android Google sign-in is a separate setup (see the note below + `google-oauth-fix.md` §4). |
 | `EXPO_PUBLIC_APP_VARIANT` | `beta` (beta profile only) | Activates `BETA_FLAGS` in `src/config/features.ts`. Unset on `preview`/`production` ⇒ `PROD_FLAGS`. |
 
-> Optional native-OAuth overrides (only if you stop using the public fallback client IDs):
-> `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`, `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID`. Not required for the
-> current build profiles.
+> ⚠️ **Native Google sign-in is NOT wired for store builds yet.** The web client above powers **web**
+> sign-in only; a native iOS/Android build needs its **own** OAuth clients **and** the reversed-client-ID
+> iOS URL scheme. Before a store build, do the REQUIRED setup in `docs/google-oauth-fix.md` **§4** and set
+> `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` + `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` here. (Email/password is
+> unaffected; Google on Expo Go is impossible on SDK 54 regardless.)
 
 ## Build commands
 

@@ -1,5 +1,6 @@
 # T Poker
 
+[![CI](https://github.com/taysh123/poker-home-games/actions/workflows/ci.yml/badge.svg)](https://github.com/taysh123/poker-home-games/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-purple.svg)](https://dotnet.microsoft.com/)
 [![Expo SDK 54](https://img.shields.io/badge/Expo-SDK%2054-black.svg)](https://expo.dev/)
@@ -152,7 +153,7 @@ poker-app/
 | Backend | ASP.NET Core 8, MediatR CQRS, FluentValidation, EF Core 8, PostgreSQL |
 | Auth | JWT + refresh rotation, Google OAuth, BCrypt |
 | Notifications | In-app inbox + Expo push (native; device tokens, best-effort delivery) |
-| Testing | Jest (settlement engine, local store, money utils) |
+| Testing | xUnit — 150+ backend cases (auth, billing verifiers, settlements) · Jest — 60+ suites (settlement engine, local store, money utils) |
 
 ---
 
@@ -198,8 +199,11 @@ Guest mode works with no backend running — that's the point.
 cd apps/poker-mobile
 npx tsc --noEmit     # must pass before committing
 npx jest             # settlement engine + local store + money utils
-cd ../.. ; dotnet build PokerApp.sln
+cd ../.. ; dotnet test PokerApp.sln   # backend suite (auth, billing, settlements)
 ```
+
+CI runs the same gates (plus a web-bundle export and a secret scan) on every PR
+to `main` — see `.github/workflows/ci.yml`.
 
 ---
 

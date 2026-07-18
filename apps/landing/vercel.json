@@ -1,0 +1,8 @@
+{
+  "redirects": [
+    { "source": "/privacy.html", "destination": "https://app.tpoker.app/privacy.html", "permanent": true },
+    { "source": "/terms.html", "destination": "https://app.tpoker.app/terms.html", "permanent": true },
+    { "source": "/refund.html", "destination": "https://app.tpoker.app/refund.html", "permanent": true },
+    { "source": "/pricing.html", "destination": "https://app.tpoker.app/pricing.html", "permanent": true }
+  ]
+}

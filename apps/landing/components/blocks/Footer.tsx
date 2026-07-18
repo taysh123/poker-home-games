@@ -117,8 +117,13 @@ export function Footer() {
           </div>
         </div>
 
-        {/* Copyright bar */}
+        {/* Disclaimer + copyright bar */}
         <div className="mt-12 border-t border-border/40 pt-6 text-xs text-textMuted">
+          <p className="mb-3 max-w-3xl leading-relaxed">
+            T Poker is a home-game management and poker-study app for adults 18+. It does not offer
+            real-money gambling and does not process wagers, deposits, or payouts — any cash is exchanged
+            between players in person. Play responsibly and within your local laws.
+          </p>
           © {year} {SITE.company}. All rights reserved.
         </div>
       </Container>

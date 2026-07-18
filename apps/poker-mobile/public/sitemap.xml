@@ -1,9 +1,11 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <!-- Static sitemap of the publicly-served pages. The app shell is an SPA (client-rendered); per-spot/solver
      landing pages are a future SSG/SSR addition (see docs/product/seo-discoverability-audit.md) and are NOT
      listed here until they are real, indexable pages. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://poker-home-games-three.vercel.app/</loc></url>
-  <url><loc>https://poker-home-games-three.vercel.app/privacy.html</loc></url>
-  <url><loc>https://poker-home-games-three.vercel.app/terms.html</loc></url>
+  <url><loc>https://app.tpoker.app/</loc></url>
+  <url><loc>https://app.tpoker.app/pricing.html</loc></url>
+  <url><loc>https://app.tpoker.app/privacy.html</loc></url>
+  <url><loc>https://app.tpoker.app/terms.html</loc></url>
+  <url><loc>https://app.tpoker.app/refund.html</loc></url>
 </urlset>

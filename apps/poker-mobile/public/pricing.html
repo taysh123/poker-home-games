@@ -1,0 +1,161 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pricing â€” T Poker</title>
+  <meta name="description" content="T Poker pricing. Every home-game management tool is free. Premium is $8.99/month or $79.99/year for the full strategy study library." />
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #0F1923;
+      color: #E8EDF2;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.65;
+    }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 48px 24px 96px; }
+    .brand { color: #C9A84C; font-weight: 800; letter-spacing: 3px; font-size: 14px; }
+    h1 { color: #FFFFFF; font-size: 34px; letter-spacing: 0.5px; margin: 8px 0 6px; }
+    .subhead { color: #B8C4CF; font-size: 17px; margin: 0 0 8px; max-width: 620px; }
+    .billing-note { color: #7A8A99; font-size: 14px; margin: 0 0 36px; }
+    .plans { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    @media (max-width: 680px) { .plans { grid-template-columns: 1fr; } }
+    .plan {
+      background: #1A2535;
+      border: 1px solid #243447;
+      border-radius: 16px;
+      padding: 28px 26px;
+    }
+    .plan.premium { border-color: rgba(201,168,76,0.45); position: relative; overflow: hidden; }
+    .plan.premium::before {
+      content: "";
+      position: absolute; left: 0; right: 0; top: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(201,168,76,0.85), transparent);
+    }
+    .badge {
+      display: inline-block;
+      font-size: 12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+      padding: 5px 11px; border-radius: 999px;
+    }
+    .badge.free { background: rgba(201,168,76,0.12); color: #C9A84C; }
+    .badge.prem { background: #1E2D3D; border: 1px solid #243447; color: #E8EDF2; }
+    .plan h2 { color: #FFFFFF; font-size: 22px; margin: 16px 0 2px; }
+    .tagline { color: #7A8A99; font-size: 14px; margin: 0 0 18px; }
+    .price { display: flex; align-items: flex-end; gap: 8px; margin: 8px 0 2px; }
+    .price .amount { color: #FFFFFF; font-size: 46px; font-weight: 800; line-height: 1; }
+    .price .cadence { color: #7A8A99; font-size: 15px; padding-bottom: 6px; }
+    .price-alt { color: #B8C4CF; font-size: 14px; margin: 6px 0 0; }
+    .save { color: #E8C97A; font-weight: 700; }
+    ul.features { list-style: none; padding: 0; margin: 22px 0 0; }
+    ul.features li { color: #E8EDF2; font-size: 15px; padding: 7px 0 7px 28px; position: relative; }
+    ul.features li::before {
+      content: "âœ“"; position: absolute; left: 0; top: 6px;
+      color: #27AE60; font-weight: 700;
+    }
+    ul.features li.premium-live::before { color: #C9A84C; }
+    ul.features li.soon { color: #7A8A99; }
+    ul.features li.soon::before { content: "â—·"; color: #7A8A99; }
+    .soon-chip {
+      display: inline-block; margin-left: 8px; font-size: 11px; font-weight: 600;
+      color: #B8C4CF; background: #1E2D3D; border: 1px solid #243447;
+      border-radius: 999px; padding: 1px 8px; vertical-align: middle;
+    }
+    .cta {
+      display: inline-block; margin-top: 26px; width: 100%; text-align: center;
+      padding: 14px 20px; border-radius: 12px; font-size: 16px; font-weight: 700;
+      text-decoration: none;
+    }
+    .cta.primary { background: #C9A84C; color: #0F1923; }
+    .cta.secondary { background: transparent; color: #E8C97A; border: 1px solid rgba(201,168,76,0.5); }
+    .fineprint { color: #7A8A99; font-size: 13px; margin-top: 34px; line-height: 1.7; }
+    .fineprint a { color: #E8C97A; }
+    .footer { margin-top: 48px; padding-top: 24px; border-top: 1px solid #243447; }
+    .pagenav { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-bottom: 16px; }
+    .pagenav a { color: #E8C97A; font-size: 14px; text-decoration: none; }
+    .pagenav a:hover { text-decoration: underline; }
+    .pagenav a[aria-current="page"] { color: #C9A84C; font-weight: 700; }
+    .copyright { color: #7A8A99; font-size: 13px; letter-spacing: 0.5px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">T POKER</div>
+    <h1>Simple, honest pricing</h1>
+    <p class="subhead">
+      Every tool for running your home game â€” cash games, tournaments, settlements,
+      groups, and stats â€” is free. Upgrade for the full strategy study library.
+    </p>
+    <p class="billing-note">All prices in USD. Your exact, localized price (including any tax) is always shown at checkout.</p>
+
+    <div class="plans">
+
+      <!-- FREE -->
+      <section class="plan free" aria-labelledby="free-heading">
+        <span class="badge free">Always free</span>
+        <h2 id="free-heading">Free</h2>
+        <p class="tagline">Everything you need to run any game, at no cost.</p>
+        <div class="price">
+          <span class="amount">$0</span>
+          <span class="cadence">forever</span>
+        </div>
+        <ul class="features">
+          <li>Cash games &amp; tournaments</li>
+          <li>Buy-ins, cash-outs &amp; one-tap settlements</li>
+          <li>Blind clock &amp; prize-pool payouts</li>
+          <li>Groups, lifetime stats &amp; leaderboards</li>
+          <li>No account needed to start</li>
+        </ul>
+        <a class="cta secondary" href="https://app.tpoker.app">Start a free game</a>
+      </section>
+
+      <!-- PREMIUM -->
+      <section class="plan premium" aria-labelledby="premium-heading">
+        <span class="badge prem">Premium</span>
+        <h2 id="premium-heading">Premium</h2>
+        <p class="tagline">The full strategy library for players who want to improve.</p>
+        <div class="price">
+          <span class="amount">$8.99</span>
+          <span class="cadence">/ month</span>
+        </div>
+        <p class="price-alt">
+          or <strong>$79.99 / year</strong> â€” that's $6.67/mo,
+          <span class="save">save 25%</span>
+        </p>
+        <ul class="features">
+          <li class="premium-live">Premium Study â€” full lesson library, every study pack, all quizzes &amp; unlimited Spot Trainer</li>
+          <li class="soon">AI Coach â€” 100 hand analyses / month<span class="soon-chip">Coming soon</span></li>
+          <li class="soon">Cloud sync across all your devices<span class="soon-chip">Coming soon</span></li>
+          <li class="soon">Advanced bankroll analytics<span class="soon-chip">Coming soon</span></li>
+        </ul>
+        <p class="tagline" style="margin-top:14px;">
+          Today, Premium unlocks Premium Study. Features marked "Coming soon" are in development, are not
+          part of what you pay for now, and their details may change before launch.
+        </p>
+        <a class="cta primary" href="https://app.tpoker.app">Get Premium</a>
+      </section>
+
+    </div>
+
+    <p class="fineprint">
+      Premium is an auto-renewing subscription: it renews for the same period at the then-current
+      price until you cancel, and you can cancel anytime. On the web, payments are processed by
+      <strong>Paddle</strong>, our authorized reseller and Merchant of Record. On mobile, purchases
+      are handled by the Apple App Store or Google Play (via RevenueCat). Features marked
+      "Coming soon" are never charged for until they ship. See our
+      <a href="/terms.html">Terms of Service</a> and <a href="/refund.html">Refund Policy</a> for full details.
+    </p>
+
+    <footer class="footer">
+      <nav class="pagenav" aria-label="T Poker pages">
+        <a href="/pricing.html" aria-current="page">Pricing</a>
+        <a href="/terms.html">Terms of Service</a>
+        <a href="/privacy.html">Privacy Policy</a>
+        <a href="/refund.html">Refund Policy</a>
+      </nav>
+      <div class="copyright">Â© 2026 True Story Labs Â· T Poker</div>
+    </footer>
+  </div>
+</body>
+</html>
