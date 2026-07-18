@@ -68,7 +68,7 @@ describe('loadFile', () => {
   it('round-trips a saved v2 file', async () => {
     const f = emptyFile();
     f.progress.quizzesCompleted = 3;
-    f.progress.dailyLimitCounters = { quiz: { dayKey: '2026-06-25', count: 1 }, trainerSession: { dayKey: '', count: 0 } };
+    f.progress.dailyLimitCounters = { quiz: { dayKey: '2026-06-25', count: 1 }, trainerSession: { dayKey: '', count: 0 }, practiceQuestion: { dayKey: '', count: 0 } };
     await saveFile(f);
     const loaded = await loadFile();
     expect(loaded.progress.quizzesCompleted).toBe(3);

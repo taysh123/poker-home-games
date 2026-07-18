@@ -188,7 +188,7 @@ export function recordLessonCompleted(p: StudyProgress): StudyProgress {
   return { ...p, lessonsCompleted: (p.lessonsCompleted ?? 0) + 1 };
 }
 
-/** Read the daily-limit counters, defaulting for v1 data. Pure. */
+/** Read the daily-limit counters, defaulting per-kind (v1 data and pre-practiceQuestion files). Pure. */
 export function dailyCountersOf(p: StudyProgress): DailyLimitCounters {
-  return p.dailyLimitCounters ?? emptyDailyCounters();
+  return { ...emptyDailyCounters(), ...(p.dailyLimitCounters ?? {}) };
 }

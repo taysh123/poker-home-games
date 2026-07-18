@@ -28,13 +28,17 @@ export interface LimitStatus {
 
 /** Fresh counters (no day, zero counts). */
 export function emptyDailyCounters(): DailyLimitCounters {
-  return { quiz: { dayKey: '', count: 0 }, trainerSession: { dayKey: '', count: 0 } };
+  return {
+    quiz: { dayKey: '', count: 0 },
+    trainerSession: { dayKey: '', count: 0 },
+    practiceQuestion: { dayKey: '', count: 0 },
+  };
 }
 
 /** Count applied to today only (0 if the stored counter belongs to another day). */
 function countToday(counters: DailyLimitCounters, kind: DailyLimitKind, todayKey: string): number {
-  const c = counters[kind];
-  return c.dayKey === todayKey ? c.count : 0;
+  const c = counters[kind]; // may be absent in files stored before this kind existed — treat as fresh
+  return c && c.dayKey === todayKey ? c.count : 0;
 }
 
 /** Reps remaining today. Infinity for premium. Never negative for free. */
@@ -66,6 +70,12 @@ export function consumeToday(
   kind: DailyLimitKind,
   todayKey: string,
 ): DailyLimitCounters {
-  const isToday = counters[kind].dayKey === todayKey;
-  return { ...counters, [kind]: { dayKey: todayKey, count: (isToday ? counters[kind].count : 0) + 1 } };
+  const prev = counters[kind]; // tolerate files stored before this kind existed
+  const isToday = !!prev && prev.dayKey === todayKey;
+  return { ...counters, [kind]: { dayKey: todayKey, count: (isToday ? prev.count : 0) + 1 } };
+}
+
+/** Size a quiz run so it never outruns today's allowance (∞ ⇒ full length). Pure. */
+export function practiceRunCap(remaining: number, quizLength: number): number {
+  return remaining === Infinity ? quizLength : Math.max(0, Math.min(quizLength, remaining));
 }

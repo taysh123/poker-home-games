@@ -4,9 +4,10 @@ import {
   remainingToday,
   limitStatus,
   consumeToday,
+  practiceRunCap,
   type DailyLimitCounters,
 } from '../dailyLimits';
-import { FREE_QUIZ_PER_DAY, FREE_TRAINER_SESSIONS_PER_DAY } from '../../config';
+import { FREE_QUIZ_PER_DAY, FREE_TRAINER_SESSIONS_PER_DAY, FREE_PRACTICE_QUESTIONS_PER_DAY } from '../../config';
 
 const TODAY = '2026-06-25';
 const YESTERDAY = '2026-06-24';
@@ -106,5 +107,45 @@ describe('consumeToday', () => {
       c = consumeToday(c, 'trainerSession', TODAY);
     }
     expect(limitStatus(c, 'trainerSession', TODAY, false).allowed).toBe(false);
+  });
+});
+
+describe('practiceQuestion metering (free-first)', () => {
+  it('allows exactly FREE_PRACTICE_QUESTIONS_PER_DAY (5) per day, then blocks', () => {
+    expect(FREE_PRACTICE_QUESTIONS_PER_DAY).toBe(5);
+    let c = emptyDailyCounters();
+    for (let i = 0; i < FREE_PRACTICE_QUESTIONS_PER_DAY; i++) {
+      expect(limitStatus(c, 'practiceQuestion', TODAY, false).allowed).toBe(true);
+      c = consumeToday(c, 'practiceQuestion', TODAY);
+    }
+    const s = limitStatus(c, 'practiceQuestion', TODAY, false);
+    expect(s.allowed).toBe(false);
+    expect(s.remaining).toBe(0);
+  });
+
+  it('resets on a new day key', () => {
+    let c = emptyDailyCounters();
+    for (let i = 0; i < FREE_PRACTICE_QUESTIONS_PER_DAY; i++) c = consumeToday(c, 'practiceQuestion', TODAY);
+    expect(limitStatus(c, 'practiceQuestion', '2026-06-26', false).remaining).toBe(FREE_PRACTICE_QUESTIONS_PER_DAY);
+  });
+
+  it('premium bypasses to Infinity', () => {
+    expect(limitStatus(emptyDailyCounters(), 'practiceQuestion', TODAY, true).remaining).toBe(Infinity);
+  });
+
+  it('tolerates stored v2 counters missing the practiceQuestion key', () => {
+    const legacy = { quiz: { dayKey: '', count: 0 }, trainerSession: { dayKey: '', count: 0 } } as unknown as DailyLimitCounters;
+    expect(limitStatus(legacy, 'practiceQuestion', TODAY, false).remaining).toBe(FREE_PRACTICE_QUESTIONS_PER_DAY);
+    const after = consumeToday(legacy, 'practiceQuestion', TODAY);
+    expect(after.practiceQuestion).toEqual({ dayKey: TODAY, count: 1 });
+  });
+});
+
+describe('practiceRunCap', () => {
+  it('caps a quiz run at the remaining allowance', () => {
+    expect(practiceRunCap(3, 10)).toBe(3);
+    expect(practiceRunCap(12, 10)).toBe(10);
+    expect(practiceRunCap(Infinity, 10)).toBe(10);
+    expect(practiceRunCap(0, 10)).toBe(0);
   });
 });
