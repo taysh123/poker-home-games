@@ -355,7 +355,7 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
         <View style={{ height: spacing.huge }} />
         </ContentContainer>
       </ScrollView>
-      {justEnded && <Celebration />}
+      {justEnded && <Celebration variant="celebration" />}
       <ShareCard ref={shareRef} data={shareData} />
     </Screen>
   );

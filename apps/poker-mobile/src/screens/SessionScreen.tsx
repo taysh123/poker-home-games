@@ -1825,7 +1825,7 @@ export default function SessionScreen({ route, navigation }: Props) {
       {/* ── End Session Modal (Step 3: Game Over Summary) ── */}
       <Modal visible={endStep === 3} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          {endStep === 3 && <Celebration />}
+          {endStep === 3 && <Celebration variant="celebration" />}
           <View style={[styles.sheet, styles.sheetTall]}>
             <View style={styles.sheetHandle} />
             <View style={styles.summaryTrophyWrap}>

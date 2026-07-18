@@ -59,7 +59,7 @@ export default function AchievementUnlock({ achievements, onDone }: Props) {
   return (
     <View style={styles.overlay}>
       <Pressable style={styles.backdrop} onPress={advance} />
-      <Celebration />
+      <Celebration variant="achievement" />
       <Animated.View style={[styles.card, { opacity, transform: [{ scale }] }]}>
         <LinearGradient
           colors={[rarity + '33', 'transparent']}

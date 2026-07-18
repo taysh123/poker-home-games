@@ -39,6 +39,7 @@ export default function GuestStatsScreen({ embedded = false }: { embedded?: bool
       <Screen style={{ paddingTop: embedded ? 0 : insets.top }}>
         {!embedded && <Text style={[styles.title, styles.titleStandalone]}>Stats</Text>}
         <EmptyState
+          animated
           ionicon="bar-chart-outline"
           title="No numbers yet"
           subtitle={
