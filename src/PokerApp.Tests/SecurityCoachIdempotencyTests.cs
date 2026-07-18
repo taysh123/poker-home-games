@@ -42,7 +42,7 @@ public class SecurityCoachIdempotencyTests
     {
         using var ctx = TestInfra.NewContext();
         var uid = Guid.NewGuid();
-        var provider = new MockCoachAiProvider();
+        var provider = new MockCoachAiProvider(StubCoachGroundingProvider.Empty);
 
         // Free user has exactly one credit; the first analysis spends it.
         await Handler(ctx, uid, provider).Handle(Cmd("dupe-key", "AKs"), default);
@@ -57,7 +57,7 @@ public class SecurityCoachIdempotencyTests
     {
         using var ctx = TestInfra.NewContext();
         var uid = Guid.NewGuid();
-        var provider = new MockCoachAiProvider();
+        var provider = new MockCoachAiProvider(StubCoachGroundingProvider.Empty);
 
         // These two requests concatenate to the same string under a naive field-join, but are genuinely
         // different analyses — the effective key must distinguish them so the second still costs a credit.
@@ -71,7 +71,7 @@ public class SecurityCoachIdempotencyTests
     {
         using var ctx = TestInfra.NewContext();
         var uid = Guid.NewGuid();
-        var provider = new MockCoachAiProvider();
+        var provider = new MockCoachAiProvider(StubCoachGroundingProvider.Empty);
 
         await Handler(ctx, uid, provider).Handle(Cmd("retry-key", "AKs"), default);
 
