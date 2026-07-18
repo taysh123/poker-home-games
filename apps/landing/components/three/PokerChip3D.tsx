@@ -2,7 +2,7 @@
 
 /* eslint-disable react/no-unknown-property -- R3F three.js elements use non-DOM props (position, intensity, args, ...) */
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef, type RefObject } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
 
@@ -130,9 +130,22 @@ function makeEdgeTexture(): THREE.CanvasTexture {
 }
 
 const BASE_TILT_X = -0.5;
+const IDLE_SPIN = 0.45; // rad/s — the gentle turntable baseline (unchanged feel)
 
-/** The chip mesh + its slow, tasteful idle motion. */
-function Chip() {
+// Scroll-reactive spin tuning. Recent scroll velocity (px sampled once per frame)
+// maps to an *added* angular velocity that eases in (attack), is hard-clamped so
+// it always stays tasteful (never a wild casino spin), and relaxes back to the
+// idle baseline once scrolling stops. All values are rad/s.
+const SCROLL_TO_VELOCITY = 0.01; // px-per-frame → rad/s
+const MAX_SCROLL_VELOCITY = 2.4; // hard cap on the scroll-driven boost (both directions)
+const SCROLL_ATTACK = 8; // how quickly the boost eases in toward its target
+const SCROLL_DECAY = 2.6; // how quickly the boost relaxes back to idle
+
+/** Transient scroll-spin state, held in a ref so scrolling never re-renders. */
+type ScrollSpin = { target: number; current: number };
+
+/** The chip mesh + its slow, tasteful idle motion layered with scroll response. */
+function Chip({ scrollRef }: { scrollRef: RefObject<ScrollSpin> }) {
   const resources = useMemo(() => {
     const geometry = new THREE.CylinderGeometry(1, 1, 0.2, 64, 1);
     const faceTex = makeFaceTexture();
@@ -171,7 +184,13 @@ function Chip() {
   useFrame((state, delta) => {
     const t = state.clock.elapsedTime;
     const m = resources.mesh;
-    m.rotation.y += delta * 0.45; // slow turntable spin
+    const spin = scrollRef.current;
+    // Ease the scroll-driven boost toward its target (attack), then relax the
+    // target back to zero (decay → returns to idle). exp(-k·Δt) keeps both
+    // frame-rate-independent, so it feels identical at 60/120fps.
+    spin.current += (spin.target - spin.current) * (1 - Math.exp(-SCROLL_ATTACK * delta));
+    spin.target *= Math.exp(-SCROLL_DECAY * delta);
+    m.rotation.y += (IDLE_SPIN + spin.current) * delta; // idle baseline + scroll influence
     m.rotation.x = BASE_TILT_X + Math.sin(t * 0.6) * 0.06; // subtle tilt
     m.position.y = Math.sin(t * 0.9) * 0.05; // gentle bob
   });
@@ -185,6 +204,41 @@ function Chip() {
  * / Environment), capped DPR, and a single low-poly chip mesh.
  */
 export default function PokerChip3D({ onReady }: PokerChip3DProps) {
+  // Transient scroll-spin state shared with the in-Canvas useFrame loop. A ref
+  // (not state) means the high-frequency scroll signal never triggers a render.
+  const scrollRef = useRef<ScrollSpin>({ target: 0, current: 0 });
+
+  // Passive, rAF-throttled window scroll listener → maps scroll velocity to the
+  // chip's added spin. This whole scene is mounted ONLY after HeroChip's
+  // desktop + motion-allowed + in-view gates pass, so reduced-motion / the poster
+  // path never registers a listener and never spins.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let lastY = window.scrollY;
+    let rafId = 0;
+    let queued = false;
+    const sample = () => {
+      queued = false;
+      const y = window.scrollY;
+      const delta = y - lastY; // >0 scroll down, <0 scroll up → opposite spin
+      lastY = y;
+      const v = delta * SCROLL_TO_VELOCITY;
+      // Clamp so a fast flick or a scrollbar/page-jump can never spin it wildly.
+      scrollRef.current.target = Math.max(-MAX_SCROLL_VELOCITY, Math.min(MAX_SCROLL_VELOCITY, v));
+    };
+    const onScroll = () => {
+      // rAF-throttle: read the scroll position at most once per animation frame.
+      if (queued) return;
+      queued = true;
+      rafId = requestAnimationFrame(sample);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      cancelAnimationFrame(rafId);
+    };
+  }, []);
+
   return (
     <Canvas
       flat
@@ -202,7 +256,7 @@ export default function PokerChip3D({ onReady }: PokerChip3DProps) {
       <ambientLight intensity={0.9} />
       <directionalLight position={[3, 5, 4]} intensity={1.6} color="#fff3d6" />
       <directionalLight position={[-4, -1, 2]} intensity={0.7} color={GOLD_LIGHT} />
-      <Chip />
+      <Chip scrollRef={scrollRef} />
     </Canvas>
   );
 }

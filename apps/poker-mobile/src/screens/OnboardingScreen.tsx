@@ -3,7 +3,6 @@ import {
   View,
   Text,
   Image,
-  TouchableOpacity,
   StyleSheet,
   Dimensions,
   ScrollView,
@@ -16,7 +15,11 @@ import Animated, { useAnimatedStyle, withSpring, withTiming } from 'react-native
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
+import { spacing } from '../theme/spacing';
+import { radii } from '../theme/radii';
 import Screen from '../components/Screen';
+import PressableScale from '../components/motion/PressableScale';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import * as storage from '../utils/storage';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
@@ -42,10 +45,10 @@ const SLIDES = [
   },
 ];
 
-function Dot({ active }: { active: boolean }) {
+function Dot({ active, reduced }: { active: boolean; reduced: boolean }) {
   const style = useAnimatedStyle(() => ({
-    width: withSpring(active ? 24 : 8, { damping: 18, stiffness: 220 }),
-    opacity: withTiming(active ? 1 : 0.7, { duration: 200 }),
+    width: reduced ? (active ? 24 : 8) : withSpring(active ? 24 : 8, { damping: 18, stiffness: 220 }),
+    opacity: reduced ? (active ? 1 : 0.7) : withTiming(active ? 1 : 0.7, { duration: 200 }),
   }));
   return <Animated.View style={[styles.dot, active && styles.dotActive, style]} />;
 }
@@ -53,6 +56,7 @@ function Dot({ active }: { active: boolean }) {
 export default function OnboardingScreen({ navigation }: Props) {
   const scrollRef = useRef<ScrollView>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const reduced = useReducedMotion();
 
   async function markSeenAndNavigate() {
     await storage.setItemAsync('hasSeenOnboarding', 'true');
@@ -63,7 +67,7 @@ export default function OnboardingScreen({ navigation }: Props) {
   function goNext() {
     if (currentIndex < SLIDES.length - 1) {
       const next = currentIndex + 1;
-      scrollRef.current?.scrollTo({ x: next * width, animated: true });
+      scrollRef.current?.scrollTo({ x: next * width, animated: !reduced });
       setCurrentIndex(next);
     } else {
       markSeenAndNavigate();
@@ -82,9 +86,14 @@ export default function OnboardingScreen({ navigation }: Props) {
 
       {/* Skip button */}
       {currentIndex < SLIDES.length - 1 && (
-        <TouchableOpacity style={styles.skipBtn} onPress={markSeenAndNavigate} activeOpacity={0.7}>
+        <PressableScale
+          style={styles.skipBtn}
+          onPress={markSeenAndNavigate}
+          accessibilityRole="button"
+          accessibilityLabel="Skip onboarding"
+        >
           <Text style={styles.skipText}>Skip</Text>
-        </TouchableOpacity>
+        </PressableScale>
       )}
 
       {/* Slides */}
@@ -94,6 +103,7 @@ export default function OnboardingScreen({ navigation }: Props) {
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         scrollEnabled
+        focusable={true}
         onMomentumScrollEnd={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
           const index = Math.round(e.nativeEvent.contentOffset.x / width);
           if (index !== currentIndex && index >= 0 && index < SLIDES.length) setCurrentIndex(index);
@@ -101,7 +111,7 @@ export default function OnboardingScreen({ navigation }: Props) {
         style={styles.slideScroll}
       >
         {SLIDES.map((slide, i) => (
-          <View key={i} style={styles.slide}>
+          <View key={i} style={styles.slide} accessible accessibilityLabel={`${slide.title}. ${slide.subtitle}`}>
             <View style={styles.iconWrap}>
               <Ionicons name={slide.icon} size={40} color={colors.gold} />
             </View>
@@ -115,18 +125,24 @@ export default function OnboardingScreen({ navigation }: Props) {
       <View style={styles.footer}>
         <View style={styles.dots}>
           {SLIDES.map((_, i) => (
-            <Dot key={i} active={i === currentIndex} />
+            <Dot key={i} active={i === currentIndex} reduced={reduced} />
           ))}
         </View>
 
-        <TouchableOpacity style={styles.nextBtn} onPress={goNext} activeOpacity={0.85}>
+        <PressableScale
+          style={styles.nextBtn}
+          onPress={goNext}
+          haptic="light"
+          accessibilityRole="button"
+          accessibilityLabel={currentIndex < SLIDES.length - 1 ? 'Next' : 'Get started'}
+        >
           <Text style={styles.nextBtnText}>
             {currentIndex < SLIDES.length - 1 ? 'Next' : 'Get Started'}
           </Text>
           {currentIndex < SLIDES.length - 1 && (
             <Ionicons name="arrow-forward" size={16} color={colors.background} />
           )}
-        </TouchableOpacity>
+        </PressableScale>
       </View>
     </Screen>
   );
@@ -223,11 +239,12 @@ const styles = StyleSheet.create({
   nextBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
     backgroundColor: colors.gold,
-    borderRadius: 16,
+    borderRadius: radii.lg,
     paddingHorizontal: 32,
     paddingVertical: 16,
+    minHeight: 44,
     alignSelf: 'stretch',
     justifyContent: 'center',
   },

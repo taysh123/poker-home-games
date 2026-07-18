@@ -70,25 +70,33 @@ export default function Celebration({ haptic = true }: Props) {
   const [done, setDone] = useState(false);
   const reducedMotion = useReducedMotion();
 
+  // Skip the (44-particle) spec generation entirely under reduce motion — the
+  // burst never renders, so there is nothing to compute.
   const particles = useMemo<ParticleSpec[]>(
     () =>
-      Array.from({ length: PARTICLES }, () => ({
-        startX: Math.random() * SCREEN_W,
-        driftX: (Math.random() - 0.5) * 140,
-        fall: SCREEN_H * (0.55 + Math.random() * 0.45),
-        delay: Math.random() * 350,
-        size: 6 + Math.random() * 6,
-        color: PALETTE[Math.floor(Math.random() * PALETTE.length)],
-        spin: (Math.random() - 0.5) * 720,
-      })),
-    [],
+      reducedMotion
+        ? []
+        : Array.from({ length: PARTICLES }, () => ({
+            startX: Math.random() * SCREEN_W,
+            driftX: (Math.random() - 0.5) * 140,
+            fall: SCREEN_H * (0.55 + Math.random() * 0.45),
+            delay: Math.random() * 350,
+            size: 6 + Math.random() * 6,
+            color: PALETTE[Math.floor(Math.random() * PALETTE.length)],
+            spin: (Math.random() - 0.5) * 720,
+          })),
+    [reducedMotion],
   );
 
   useEffect(() => {
+    // Success haptic fires on BOTH paths — it IS the "success state" and is not
+    // motion, so a Reduce-Motion user still gets the confirmation instantly.
     if (haptic) successNotification();
+    // Reduce Motion: no confetti, so no auto-unmount timer is needed.
+    if (reducedMotion) return;
     const timer = setTimeout(() => setDone(true), DURATION + 400);
     return () => clearTimeout(timer);
-  }, [haptic]);
+  }, [haptic, reducedMotion]);
 
   // Respect the OS "reduce motion" setting UNCONDITIONALLY — accessibility is not feature-flagged.
   // (Prod-visible: a prod user with Reduce Motion ON no longer sees end-game confetti. Logged in the ledger.)

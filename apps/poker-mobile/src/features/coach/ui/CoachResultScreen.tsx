@@ -9,10 +9,13 @@ import Card from '../../../components/Card';
 import Chip from '../../../components/Chip';
 import SectionTitle from '../../../components/SectionTitle';
 import EmptyState from '../../../components/EmptyState';
+import { MotiView, slideUpSequence, staggerIn } from '../../../components/motion';
+import { useReducedMotion } from '../../../hooks/useReducedMotion';
 import { colors } from '../../../theme/colors';
 import { typography } from '../../../theme/typography';
 import { spacing } from '../../../theme/spacing';
 import { radii } from '../../../theme/radii';
+import { iconSize } from '../../../theme/iconSize';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
 import CrossPillarCTA from '../../../components/CrossPillarCTA';
 import TableBackdrop from '../../../components/table/TableBackdrop';
@@ -26,6 +29,7 @@ type Rt = RouteProp<RootStackParamList, 'CoachResult'>;
 export default function CoachResultScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Rt>();
+  const reduced = useReducedMotion();
   const { history } = useCoach();
   const analysis = history.find(a => a.id === route.params.id);
 
@@ -43,29 +47,43 @@ export default function CoachResultScreen() {
       {isFeatureEnabled('immersive') && <TableBackdrop />}
       <BrandHeader variant="screen" title="Coaching" subtitle={analysis.inputSummary} onBack={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.demoBanner}>
-          <Ionicons name="flask-outline" size={15} color={colors.warning} />
-          <Text style={styles.demoText}>Demo Analysis — Not Live AI Yet</Text>
-        </View>
-        <View style={styles.metaRow}>
+        <MotiView {...slideUpSequence({ reduced })}>
+          <View
+            style={styles.demoBanner}
+            accessible
+            accessibilityRole="text"
+            accessibilityLabel="Demo analysis — not live AI yet"
+          >
+            <Ionicons name="flask-outline" size={iconSize.xs} color={colors.warning} />
+            <Text style={styles.demoText}>Demo Analysis — Not Live AI Yet</Text>
+          </View>
+        </MotiView>
+
+        <MotiView {...slideUpSequence({ reduced, delay: staggerIn(1) })} style={styles.metaRow}>
           <Chip label={`${analysis.confidence} confidence`} tone="neutral" />
           <Chip label={`via ${analysis.providerId}`} tone="neutral" />
-        </View>
+        </MotiView>
 
-        <Card variant="hero">
-          <Text style={styles.summaryLabel}>SUMMARY</Text>
-          <Text style={styles.summary}>{analysis.summary}</Text>
-        </Card>
+        <MotiView {...slideUpSequence({ reduced, delay: staggerIn(2) })}>
+          <Card variant="hero">
+            <Text style={styles.summaryLabel}>SUMMARY</Text>
+            <Text style={styles.summary}>{analysis.summary}</Text>
+          </Card>
+        </MotiView>
 
         {analysis.mistakes.length > 0 && (
-          <PointSection title="MISTAKES" icon="alert-circle" tint={colors.error} points={analysis.mistakes} />
+          <MotiView {...slideUpSequence({ reduced, delay: staggerIn(3) })}>
+            <PointSection title="MISTAKES" icon="alert-circle" tint={colors.error} points={analysis.mistakes} />
+          </MotiView>
         )}
         {analysis.goodDecisions.length > 0 && (
-          <PointSection title="GOOD DECISIONS" icon="checkmark-circle" tint={colors.success} points={analysis.goodDecisions} />
+          <MotiView {...slideUpSequence({ reduced, delay: staggerIn(4) })}>
+            <PointSection title="GOOD DECISIONS" icon="checkmark-circle" tint={colors.success} points={analysis.goodDecisions} />
+          </MotiView>
         )}
 
         {analysis.alternativeLines.length > 0 && (
-          <View style={styles.section}>
+          <MotiView {...slideUpSequence({ reduced, delay: staggerIn(5) })} style={styles.section}>
             <SectionTitle>ALTERNATIVE LINES</SectionTitle>
             {analysis.alternativeLines.map((l, i) => (
               <Card key={i} padding={spacing.md} style={styles.altCard}>
@@ -73,38 +91,43 @@ export default function CoachResultScreen() {
                 <Text style={styles.altWhy}>{l.rationale}</Text>
               </Card>
             ))}
-          </View>
+          </MotiView>
         )}
 
         {analysis.tips.length > 0 && (
-          <View style={styles.section}>
+          <MotiView {...slideUpSequence({ reduced, delay: staggerIn(6) })} style={styles.section}>
             <SectionTitle>COACHING TIPS</SectionTitle>
             <Card style={{ gap: spacing.sm }}>
               {analysis.tips.map((t, i) => (
                 <View key={i} style={styles.tipRow}>
-                  <Ionicons name="bulb-outline" size={16} color={colors.gold} />
+                  <Ionicons name="bulb-outline" size={iconSize.xs} color={colors.gold} />
                   <Text style={styles.tipText}>{t}</Text>
                 </View>
               ))}
             </Card>
-          </View>
+          </MotiView>
         )}
 
         {isFeatureEnabled('retention') && isFeatureEnabled('study') && (
-          <View style={{ marginTop: spacing.md }}>
+          <MotiView {...slideUpSequence({ reduced, delay: staggerIn(7) })} style={{ marginTop: spacing.md }}>
             <CrossPillarCTA
               icon="school-outline"
               label="Drill this spot"
               sub="Practice the preflop decision in Study"
               onPress={() => navigation.navigate('StudyTrainer', { mode: 'spot' })}
             />
-          </View>
+          </MotiView>
         )}
 
-        <View style={styles.disclaimerRow}>
-          <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
+        <MotiView
+          {...slideUpSequence({ reduced, delay: staggerIn(8) })}
+          style={styles.disclaimerRow}
+          accessible
+          accessibilityLabel={analysis.disclaimer}
+        >
+          <Ionicons name="information-circle-outline" size={iconSize.xs} color={colors.textMuted} />
           <Text style={styles.disclaimer}>{analysis.disclaimer}</Text>
-        </View>
+        </MotiView>
       </ScrollView>
     </Screen>
   );
@@ -119,7 +142,7 @@ function PointSection({ title, icon, tint, points }: {
       {points.map((p, i) => (
         <Card key={i} padding={spacing.md} style={styles.pointCard}>
           <View style={styles.pointHead}>
-            <Ionicons name={icon} size={16} color={tint} />
+            <Ionicons name={icon} size={iconSize.xs} color={tint} />
             <Text style={styles.pointTitle}>{p.title}</Text>
             {p.street ? <Text style={styles.pointStreet}>{p.street}</Text> : null}
           </View>
@@ -134,7 +157,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: 100, gap: spacing.lg },
   demoBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
-    backgroundColor: 'rgba(243,156,18,0.12)', borderWidth: 1, borderColor: colors.warning,
+    backgroundColor: colors.warningFaint, borderWidth: 1, borderColor: colors.warning,
     borderRadius: radii.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
   },
   demoText: { ...typography.labelSmall, color: colors.warning },

@@ -12,7 +12,7 @@ export type ShareCardRow = {
   /** e.g. "+₪75" or "wins ₪100" */
   valueText: string;
   positive: boolean;
-  /** "🥇" etc for tournaments; rank number used otherwise. */
+  /** Tokenized rank label e.g. "#1" for the tournament podium; omitted otherwise. */
   medal?: string;
 };
 

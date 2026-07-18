@@ -4,7 +4,6 @@ import {
   Text,
   Image,
   ScrollView,
-  TouchableOpacity,
   StyleSheet,
 } from 'react-native';
 import PressableScale from '../components/motion/PressableScale';
@@ -15,9 +14,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { shadows } from '../theme/shadows';
+import { spacing } from '../theme/spacing';
+import { radii } from '../theme/radii';
+import { iconSize } from '../theme/iconSize';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import SessionListItem from '../components/SessionListItem';
+import SectionTitle from '../components/SectionTitle';
 import Screen from '../components/Screen';
+import { MotiView, slideUpSequence, staggerIn } from '../components/motion';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useLocalGames } from '../context/LocalGamesContext';
 import { gameResult } from '../local/localStats';
 import { formatCents } from '../utils/money';
@@ -30,6 +35,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export default function GuestHomeScreen() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
+  const reduced = useReducedMotion();
   const { games, activeGame } = useLocalGames();
 
   const recentFinished = games.filter(g => g.status === 'Finished').slice(0, 5);
@@ -38,7 +44,8 @@ export default function GuestHomeScreen() {
     <Screen>
     <ScrollView
       style={styles.flex}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 120 }]}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.huge * 2 }]}
+      showsVerticalScrollIndicator={false}
     >
       {/* Brand header */}
       <View style={styles.brandRow}>
@@ -46,14 +53,20 @@ export default function GuestHomeScreen() {
           <View style={styles.logoBadge}>
             <Image source={require('../../assets/logo.png')} style={styles.logoImg} resizeMode="contain" />
           </View>
-          <View>
+          <View style={styles.brandText}>
             <Text style={styles.brand}>T POKER</Text>
             <Text style={styles.tagline}>Your home game, handled.</Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.signInBtn} onPress={() => navigation.navigate('Login')} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Sign in">
+        <PressableScale
+          style={styles.signInBtn}
+          onPress={() => navigation.navigate('Login')}
+          haptic="light"
+          accessibilityRole="button"
+          accessibilityLabel="Sign in"
+        >
           <Text style={styles.signInBtnText}>Sign In</Text>
-        </TouchableOpacity>
+        </PressableScale>
       </View>
 
       {/* Active game */}
@@ -61,6 +74,7 @@ export default function GuestHomeScreen() {
         <PressableScale
           style={styles.activeCard}
           onPress={() => navigation.navigate('LocalSession', { gameId: activeGame.id })}
+          haptic="light"
           accessibilityRole="button"
           accessibilityLabel={`Resume live game ${activeGame.name}`}
         >
@@ -73,7 +87,7 @@ export default function GuestHomeScreen() {
               Live · {activeGame.players.length} players · started {timeAgo(activeGame.createdAt)}
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.gold} />
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.gold} />
         </PressableScale>
       )}
 
@@ -87,11 +101,12 @@ export default function GuestHomeScreen() {
             <PressableScale
               style={styles.heroCard}
               onPress={() => navigation.navigate('LocalNewGame', { mode: 'cash' })}
+              haptic="medium"
               accessibilityRole="button"
               accessibilityLabel="Start a cash game. Buy-ins, cash-outs, settle up."
             >
               <View style={styles.heroIconWrap}>
-                <Ionicons name="play" size={22} color={colors.background} style={{ marginLeft: 2 }} />
+                <Ionicons name="play" size={iconSize.sm} color={colors.background} style={styles.playGlyph} />
               </View>
               <Text style={styles.heroTitle}>Cash Game</Text>
               <Text style={styles.heroSubtitle}>Buy-ins, cash-outs, settle up</Text>
@@ -99,11 +114,12 @@ export default function GuestHomeScreen() {
             <PressableScale
               style={styles.heroCard}
               onPress={() => navigation.navigate('LocalNewGame', { mode: 'tournament' })}
+              haptic="medium"
               accessibilityRole="button"
               accessibilityLabel="Start a tournament. Blind clock, prize pool, podium."
             >
               <View style={[styles.heroIconWrap, styles.heroIconWrapAlt]}>
-                <Ionicons name="trophy" size={20} color={colors.gold} />
+                <Ionicons name="trophy" size={iconSize.sm} color={colors.gold} />
               </View>
               <Text style={styles.heroTitle}>Tournament</Text>
               <Text style={styles.heroSubtitle}>Blind clock, prize pool, podium</Text>
@@ -115,18 +131,19 @@ export default function GuestHomeScreen() {
       {/* Recent local games */}
       {recentFinished.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>RECENT GAMES</Text>
+          <SectionTitle>RECENT GAMES</SectionTitle>
           <View style={styles.sectionCard}>
             {recentFinished.map((game, i) => {
               const result = gameResult(game);
               return (
-                <SessionListItem
-                  key={game.id}
-                  name={game.name}
-                  meta={`${result.playerCount} players · ${formatCents(result.totalPotCents)} pot · ${timeAgo(result.endedAt)}`}
-                  onPress={() => navigation.navigate('LocalSessionSummary', { gameId: game.id })}
-                  isFirst={i === 0}
-                />
+                <MotiView key={game.id} {...slideUpSequence({ reduced, delay: staggerIn(i) })}>
+                  <SessionListItem
+                    name={game.name}
+                    meta={`${result.playerCount} players · ${formatCents(result.totalPotCents)} pot · ${timeAgo(result.endedAt)}`}
+                    onPress={() => navigation.navigate('LocalSessionSummary', { gameId: game.id })}
+                    isFirst={i === 0}
+                  />
+                </MotiView>
               );
             })}
           </View>
@@ -134,9 +151,15 @@ export default function GuestHomeScreen() {
       )}
 
       {/* Sign-in upsell — contextual account creation (value already shown) */}
-      <TouchableOpacity style={styles.upsellCard} onPress={() => { markSignupIntent(); navigation.navigate('Login'); }} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel="Make it official. Create a free account for groups, lifetime stats, leaderboards, and game history across devices.">
+      <PressableScale
+        style={styles.upsellCard}
+        onPress={() => { markSignupIntent(); navigation.navigate('Login'); }}
+        haptic="light"
+        accessibilityRole="button"
+        accessibilityLabel="Make it official. Create a free account for groups, lifetime stats, leaderboards, and game history across devices."
+      >
         <View style={styles.upsellIconWrap}>
-          <Ionicons name="cloud-upload-outline" size={20} color={colors.gold} />
+          <Ionicons name="cloud-upload-outline" size={iconSize.sm} color={colors.gold} />
         </View>
         <View style={styles.upsellText}>
           <Text style={styles.upsellTitle}>Make it official</Text>
@@ -144,8 +167,8 @@ export default function GuestHomeScreen() {
             Create a free account for groups, lifetime stats, leaderboards, and game history across devices.
           </Text>
         </View>
-        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-      </TouchableOpacity>
+        <Ionicons name="chevron-forward" size={iconSize.xs} color={colors.textMuted} />
+      </PressableScale>
     </ScrollView>
     </Screen>
   );
@@ -153,19 +176,19 @@ export default function GuestHomeScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  content: { padding: 20, gap: 16 },
+  content: { padding: spacing.xl, gap: spacing.lg },
 
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
-  brandLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  brandLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 },
   logoBadge: {
     width: 46,
     height: 46,
-    borderRadius: 14,
+    borderRadius: radii.md,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.goldMuted,
@@ -174,32 +197,35 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   logoImg: { width: 38, height: 38 },
+  brandText: { flexShrink: 1 },
   brand: { ...typography.displaySerif, fontSize: 27, color: colors.text, letterSpacing: 2.5 },
-  tagline: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
+  tagline: { ...typography.bodySmall, color: colors.textMuted, marginTop: 2 },
   signInBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 10,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm + 1,
+    minHeight: 40,
+    justifyContent: 'center',
+    borderRadius: radii.sm,
     borderWidth: 1.5,
     borderColor: colors.gold,
   },
-  signInBtnText: { fontSize: 13, fontWeight: '700', color: colors.gold },
+  signInBtnText: { ...typography.labelSmall, color: colors.gold },
 
   activeCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 16,
+    padding: spacing.lg,
+    borderRadius: radii.lg,
     backgroundColor: colors.surface,
     borderWidth: 1.5,
     borderColor: colors.gold,
-    gap: 12,
+    gap: spacing.md,
     ...shadows.goldSm,
   },
   activeDotWrap: {
     width: 32,
     height: 32,
-    borderRadius: 10,
+    borderRadius: radii.sm,
     backgroundColor: colors.goldFaint,
     borderWidth: 1,
     borderColor: colors.goldMuted,
@@ -208,28 +234,28 @@ const styles = StyleSheet.create({
   },
   activeDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.gold },
   activeInfo: { flex: 1, gap: 2 },
-  activeName: { fontSize: 15, fontWeight: '700', color: colors.text },
-  activeMeta: { fontSize: 12, color: colors.textMuted },
+  activeName: { ...typography.label, color: colors.text },
+  activeMeta: { ...typography.caption, color: colors.textMuted },
 
-  heroSection: { gap: 10 },
-  heroLead: { fontSize: 13, color: colors.textMuted },
-  heroRow: { flexDirection: 'row', gap: 12 },
+  heroSection: { gap: spacing.sm },
+  heroLead: { ...typography.bodySmall, color: colors.textMuted },
+  heroRow: { flexDirection: 'row', gap: spacing.md },
   heroCard: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 22,
-    paddingHorizontal: 14,
-    borderRadius: 18,
+    paddingVertical: spacing.xxl,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.goldMuted,
-    gap: 7,
+    gap: spacing.sm - 1,
     ...shadows.goldSm,
   },
   heroIconWrap: {
     width: 46,
     height: 46,
-    borderRadius: 23,
+    borderRadius: radii.pill,
     backgroundColor: colors.gold,
     alignItems: 'center',
     justifyContent: 'center',
@@ -240,13 +266,13 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.goldMuted,
   },
+  playGlyph: { marginLeft: 2 },
   heroTitle: { ...typography.h3, color: colors.text },
-  heroSubtitle: { fontSize: 12, color: colors.textMuted, textAlign: 'center', lineHeight: 16 },
+  heroSubtitle: { ...typography.caption, color: colors.textMuted, textAlign: 'center', lineHeight: 16 },
 
-  section: { gap: 10 },
-  sectionTitle: { fontSize: 12, fontWeight: '700', color: colors.textMuted, letterSpacing: 1 },
+  section: { gap: spacing.sm },
   sectionCard: {
-    borderRadius: 16,
+    borderRadius: radii.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
@@ -256,22 +282,22 @@ const styles = StyleSheet.create({
   upsellCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 16,
+    padding: spacing.lg,
+    borderRadius: radii.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    gap: 12,
+    gap: spacing.md,
   },
   upsellIconWrap: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: radii.control,
     backgroundColor: colors.goldFaint,
     alignItems: 'center',
     justifyContent: 'center',
   },
   upsellText: { flex: 1, gap: 3 },
-  upsellTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
-  upsellSubtitle: { fontSize: 12, color: colors.textMuted, lineHeight: 17 },
+  upsellTitle: { ...typography.label, color: colors.text },
+  upsellSubtitle: { ...typography.caption, color: colors.textMuted, lineHeight: 17 },
 });
