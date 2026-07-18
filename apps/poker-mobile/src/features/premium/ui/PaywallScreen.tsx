@@ -9,10 +9,13 @@ import Card from '../../../components/Card';
 import Chip from '../../../components/Chip';
 import PrimaryButton from '../../../components/PrimaryButton';
 import PressableScale from '../../../components/motion/PressableScale';
+import { MotiView, slideUpSequence, staggerIn, successPop } from '../../../components/motion';
+import { useReducedMotion } from '../../../hooks/useReducedMotion';
 import { colors } from '../../../theme/colors';
 import { typography } from '../../../theme/typography';
 import { spacing } from '../../../theme/spacing';
 import { radii } from '../../../theme/radii';
+import { iconSize } from '../../../theme/iconSize';
 import { showToast } from '../../../utils/toast';
 import { track } from '../../../utils/analytics';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
@@ -29,6 +32,7 @@ export default function PaywallScreen() {
   const route = useRoute<Rt>();
   const { isPremium, purchasing, purchase, restore, products } = usePremium();
   const { refresh: refreshEntitlement } = useEntitlements();
+  const reduced = useReducedMotion();
   const [plan, setPlan] = useState<'yearly' | 'monthly'>('yearly');
   const [restoring, setRestoring] = useState(false);
   // Honest pending state: checkout overlay is open / user was redirected — premium not yet granted.
@@ -113,15 +117,24 @@ export default function PaywallScreen() {
       <Screen>
         <BrandHeader variant="screen" title="T Poker Premium" onBack={() => navigation.goBack()} />
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <Card variant="hero">
-            <Text style={styles.heroTitle}>Go deeper. Play → Track → Study → Improve.</Text>
-            <Text style={styles.heroSub}>Premium isn't available yet — it's coming soon.</Text>
-          </Card>
+          <MotiView {...slideUpSequence({ reduced })}>
+            <Card variant="hero">
+              <Text style={styles.heroTitle}>Go deeper. Play → Track → Study → Improve.</Text>
+              <Text style={styles.heroSub}>Premium isn't available yet — it's coming soon.</Text>
+            </Card>
+          </MotiView>
           <View style={styles.features}>
-            {PREMIUM_FEATURES.map(f => (
-              <View key={f.key} style={styles.featureRow}>
+            {PREMIUM_FEATURES.map((f, i) => (
+              <MotiView
+                key={f.key}
+                {...slideUpSequence({ reduced, delay: staggerIn(i) })}
+                style={styles.featureRow}
+                accessible
+                accessibilityRole="text"
+                accessibilityLabel={`${f.title}, coming soon`}
+              >
                 <View style={styles.featureIcon}>
-                  <Ionicons name={f.icon as React.ComponentProps<typeof Ionicons>['name']} size={18} color={colors.gold} />
+                  <Ionicons name={f.icon as React.ComponentProps<typeof Ionicons>['name']} size={iconSize.xs} color={colors.gold} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={styles.featureTitleRow}>
@@ -130,7 +143,7 @@ export default function PaywallScreen() {
                   </View>
                   <Text style={styles.featureDesc}>{f.desc}</Text>
                 </View>
-              </View>
+              </MotiView>
             ))}
           </View>
         </ScrollView>
@@ -144,7 +157,9 @@ export default function PaywallScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {isPremium ? (
           <Card variant="hero" style={styles.activeCard}>
-            <Ionicons name="checkmark-circle" size={30} color={colors.gold} />
+            <MotiView {...successPop({ reduced })}>
+              <Ionicons name="checkmark-circle" size={iconSize.lg} color={colors.gold} />
+            </MotiView>
             <Text style={styles.activeTitle}>You're Premium</Text>
             <Text style={styles.activeSub}>All premium features are unlocked. Thanks for the support.</Text>
           </Card>
@@ -158,11 +173,12 @@ export default function PaywallScreen() {
             {/* Feature list: live benefits lead with gold styling; Soon features are muted with a chip.
                 isFeatureLive() is the single gating source — a Soon feature can never reach the CTA. */}
             <View style={styles.features}>
-              {PREMIUM_FEATURES.map(f => {
+              {PREMIUM_FEATURES.map((f, i) => {
                 const live = isFeatureLive(f.key);
                 return (
-                  <View
+                  <MotiView
                     key={f.key}
+                    {...slideUpSequence({ reduced, delay: staggerIn(i) })}
                     style={styles.featureRow}
                     accessible
                     accessibilityRole="text"
@@ -171,7 +187,7 @@ export default function PaywallScreen() {
                     <View style={[styles.featureIcon, !live && styles.featureIconSoon]}>
                       <Ionicons
                         name={f.icon as React.ComponentProps<typeof Ionicons>['name']}
-                        size={18}
+                        size={iconSize.xs}
                         color={live ? colors.gold : colors.textMuted}
                       />
                     </View>
@@ -184,7 +200,7 @@ export default function PaywallScreen() {
                       </View>
                       <Text style={styles.featureDesc}>{f.desc}</Text>
                     </View>
-                  </View>
+                  </MotiView>
                 );
               })}
             </View>
@@ -304,6 +320,7 @@ function PlanCard({
 }: {
   selected: boolean; onPress: () => void; title: string; price: string; sub: string; badge?: string;
 }) {
+  const reduced = useReducedMotion();
   return (
     <PressableScale
       onPress={onPress}
@@ -321,9 +338,9 @@ function PlanCard({
         ) : null}
         {/* Non-color affordance for the active state: checkmark icon supplements the gold border */}
         {selected && (
-          <View style={styles.planCheck}>
-            <Ionicons name="checkmark-circle" size={16} color={colors.gold} />
-          </View>
+          <MotiView style={styles.planCheck} {...successPop({ reduced })}>
+            <Ionicons name="checkmark-circle" size={iconSize.xs} color={colors.gold} />
+          </MotiView>
         )}
         <Text style={styles.planTitle}>{title}</Text>
         <Text style={styles.planPrice}>{price}</Text>
@@ -365,7 +382,7 @@ const styles = StyleSheet.create({
   legalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.xs },
   legalDot: { ...typography.bodySmall, color: colors.textDim },
   helpText: { ...typography.bodySmall, color: colors.textMuted, textDecorationLine: 'underline' },
-  fine: { ...typography.bodySmall, color: colors.textDim, textAlign: 'center' },
+  fine: { ...typography.bodySmall, color: colors.textMuted, textAlign: 'center' },
   activeCard: { alignItems: 'center', gap: spacing.xs },
   activeTitle: { ...typography.h2, color: colors.text },
   activeSub: { ...typography.body, color: colors.textMuted, textAlign: 'center' },

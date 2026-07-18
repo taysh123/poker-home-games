@@ -14,7 +14,11 @@ public sealed record AnalyzeHandCommand(
     string? HeroPosition,
     string? Question,
     string IdempotencyKey,
-    string? DeviceId = null) : IRequest<CoachAnalysisResult>;
+    string? DeviceId = null,
+    string? Board = null,
+    string? VillainPosition = null,
+    int? StackBb = null,
+    string? Format = null) : IRequest<CoachAnalysisResult>;
 
 public sealed class AnalyzeHandCommandValidator : AbstractValidator<AnalyzeHandCommand>
 {
@@ -30,6 +34,10 @@ public sealed class AnalyzeHandCommandValidator : AbstractValidator<AnalyzeHandC
         RuleFor(x => x.HeroPosition).MaximumLength(32);
         RuleFor(x => x.Question).MaximumLength(1000);
         RuleFor(x => x.DeviceId).MaximumLength(200);
+        RuleFor(x => x.Board).MaximumLength(64);
+        RuleFor(x => x.VillainPosition).MaximumLength(32);
+        RuleFor(x => x.Format).MaximumLength(16);
+        RuleFor(x => x.StackBb).GreaterThan(0).When(x => x.StackBb.HasValue);
     }
 }
 
@@ -78,7 +86,8 @@ public sealed class AnalyzeHandCommandHandler(
         try
         {
             var result = await aiProvider.AnalyzeAsync(
-                new CoachAnalysisInput(request.Kind, request.Text, request.HeroHand, request.HeroPosition, request.Question),
+                new CoachAnalysisInput(request.Kind, request.Text, request.HeroHand, request.HeroPosition, request.Question,
+                    request.Board, request.VillainPosition, request.StackBb, request.Format),
                 cancellationToken);
             audit.Record(AuditCategory.AiUsage, request.Kind, userId, new { providerId = result.ProviderId });
             audit.Record(AuditCategory.AiCost, result.ProviderId, userId, new { kind = request.Kind }); // cost hook (future paid providers)

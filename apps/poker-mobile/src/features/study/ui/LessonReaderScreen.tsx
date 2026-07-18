@@ -12,6 +12,8 @@ import Card from '../../../components/Card';
 import EmptyState from '../../../components/EmptyState';
 import StateView from '../../../components/StateView';
 import Markdown from '../../../components/Markdown';
+import { MotiView, slideUpSequence, staggerIn } from '../../../components/motion';
+import { useReducedMotion } from '../../../hooks/useReducedMotion';
 import { colors } from '../../../theme/colors';
 import { typography } from '../../../theme/typography';
 import { spacing } from '../../../theme/spacing';
@@ -30,6 +32,7 @@ export default function LessonReaderScreen() {
   const { moduleId, moduleName } = route.params;
   const { enabled, isLoaded, query } = useContent();
   const { recordLessonCompleted } = useStudy();
+  const reduced = useReducedMotion();
   const [sections, setSections] = useState<LessonSection[] | null>(null);
   const [error, setError] = useState(false);
 
@@ -67,11 +70,13 @@ export default function LessonReaderScreen() {
           empty={<EmptyState ionicon="book-outline" title="No lesson content" subtitle="Lessons arrive with the next content update." />}
           onRetry={() => setReloadKey(k => k + 1)}
         >
-          {(sections ?? []).map(s => (
-            <Card key={s.id} style={styles.section}>
-              {s.heading ? <Text style={styles.heading}>{s.heading}</Text> : null}
-              <Markdown>{s.body}</Markdown>
-            </Card>
+          {(sections ?? []).map((s, i) => (
+            <MotiView key={s.id} {...slideUpSequence({ reduced, delay: staggerIn(i) })}>
+              <Card style={styles.section}>
+                {s.heading ? <Text style={styles.heading}>{s.heading}</Text> : null}
+                <Markdown>{s.body}</Markdown>
+              </Card>
+            </MotiView>
           ))}
         </StateView>
       </ScrollView>

@@ -33,8 +33,8 @@ Without a default payment link, no checkout works — Paddle requires one before
 
    | Name | Billing cycle | Amount |
    |------|---------------|--------|
-   | T Poker Premium Monthly | Monthly | USD 11.99 |
-   | T Poker Premium Yearly  | Yearly  | USD 99.99 |
+   | T Poker Premium Monthly | Monthly | USD 8.99 |
+   | T Poker Premium Yearly  | Yearly  | USD 79.99 |
 
 3. After saving, note the `pri_…` IDs for each price — you'll need both.
 
@@ -121,7 +121,7 @@ the client-side token is safe but also not committed to source.
    - Premium Study shows with a gold icon (live feature, no "Soon" chip).
    - AI Coach / Cloud Sync / Advanced Bankroll show with "Soon" chips and no per-feature CTA.
    - Plan toggle defaults to Annual. "Best value" badge on Annual card.
-   - CTA label shows `Go Premium — $99.99/yr`.
+   - CTA label shows `Go Premium — $79.99/yr`.
 6. **Buy with a Paddle test card** (`4242 4242 4242 4242`, any future expiry, any CVC).
    The Paddle overlay should open inside the page (dark theme).
 7. **Confirm the overlay closes** and the PaywallScreen shows the "completing" pending state

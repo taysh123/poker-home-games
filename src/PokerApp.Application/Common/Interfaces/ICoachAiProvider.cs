@@ -1,6 +1,15 @@
 namespace PokerApp.Application.Common.Interfaces;
 
-public sealed record CoachAnalysisInput(string Kind, string? Text, string? HeroHand, string? HeroPosition, string? Question);
+public sealed record CoachAnalysisInput(
+    string Kind,
+    string? Text,
+    string? HeroHand,
+    string? HeroPosition,
+    string? Question,
+    string? Board = null,
+    string? VillainPosition = null,
+    int? StackBb = null,
+    string? Format = null);
 public sealed record CoachPointDto(string Title, string Detail, string? Street);
 public sealed record AlternativeLineDto(string Line, string Rationale);
 

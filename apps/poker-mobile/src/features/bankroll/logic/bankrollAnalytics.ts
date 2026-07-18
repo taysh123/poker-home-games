@@ -177,3 +177,134 @@ export function bankrollOverTime(
     return { at: s.startedAt, netCents, cumulativeCents: cumulative };
   });
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Advanced (risk) analytics — variance/std-dev, max drawdown, best/worst, histogram.
+// A companion to `summarize` so the everyday summary stays lean and these heavier
+// risk metrics stay opt-in. All integer cents, pure, deterministic.
+// ──────────────────────────────────────────────────────────────────────────────
+
+export interface AdvancedStats {
+  /** Number of sessions analysed (n). */
+  count: number;
+  /** Mean per-session net, integer cents (null when n = 0). */
+  meanNetCents: number | null;
+  /**
+   * Sample variance (n−1 estimator) of per-session net, in cents² (null when n < 2).
+   * Unit is cents² (variance of cent-denominated values) — surface std-dev, not this, in UI.
+   */
+  varianceCents2: number | null;
+  /** Sample standard deviation (n−1) of per-session net, integer cents (null when n < 2). */
+  stdDevCents: number | null;
+  /** Biggest single-session win (max net), integer cents (null when n = 0). */
+  bestNetCents: number | null;
+  /** Biggest single-session loss (min net), integer cents (null when n = 0). */
+  worstNetCents: number | null;
+  /** Largest peak-to-trough drop on the cumulative bankroll series, integer cents (≥ 0). */
+  maxDrawdownCents: number;
+}
+
+/**
+ * Maximum drawdown — the largest peak-to-trough drop across the cumulative series, in
+ * cents (always ≥ 0; 0 for an empty, single-point, or monotonically non-decreasing
+ * series). The high-water mark is seeded from the FIRST plotted point, matching what
+ * the bankroll chart shows; the result is therefore shift-invariant (independent of the
+ * starting-bankroll baseline, which only offsets every point by the same constant).
+ */
+export function maxDrawdownCents(points: BankrollPoint[]): number {
+  if (points.length < 2) return 0;
+  let peak = points[0].cumulativeCents;
+  let maxDrawdown = 0;
+  for (let i = 1; i < points.length; i++) {
+    const c = points[i].cumulativeCents;
+    if (c > peak) peak = c;
+    else {
+      const dd = peak - c;
+      if (dd > maxDrawdown) maxDrawdown = dd;
+    }
+  }
+  return maxDrawdown;
+}
+
+export interface NetHistogramBin {
+  /** Inclusive lower bound, integer cents. */
+  fromCents: number;
+  /** Upper bound, integer cents (exclusive, except the last bin which includes max). */
+  toCents: number;
+  /** Number of sessions whose net falls in this bin. */
+  count: number;
+}
+
+/**
+ * Distribution of per-session net into `binCount` equal-width bins across [min, max].
+ * Returns [] for no sessions and a single bin when every session nets the same. Bin
+ * edges are rounded to integer cents; bucket assignment uses the exact ratio so every
+ * session lands in exactly one bin (counts always sum to n).
+ */
+export function sessionNetHistogram(sessions: BankrollSession[], binCount = 7): NetHistogramBin[] {
+  const nets = sessions.map(sessionNetCents);
+  if (nets.length === 0) return [];
+  const min = Math.min(...nets);
+  const max = Math.max(...nets);
+  if (min === max) return [{ fromCents: min, toCents: max, count: nets.length }];
+
+  const span = max - min;
+  const bins: NetHistogramBin[] = [];
+  for (let i = 0; i < binCount; i++) {
+    bins.push({
+      fromCents: min + Math.round((span * i) / binCount),
+      toCents: min + Math.round((span * (i + 1)) / binCount),
+      count: 0,
+    });
+  }
+  bins[binCount - 1].toCents = max; // pin the final edge exactly to max
+  for (const x of nets) {
+    const idx = Math.min(binCount - 1, Math.max(0, Math.floor(((x - min) / span) * binCount)));
+    bins[idx].count++;
+  }
+  return bins;
+}
+
+/** Advanced risk metrics over a set of sessions (companion to `summarize`). */
+export function advancedStats(sessions: BankrollSession[]): AdvancedStats {
+  const n = sessions.length;
+  if (n === 0) {
+    return {
+      count: 0,
+      meanNetCents: null,
+      varianceCents2: null,
+      stdDevCents: null,
+      bestNetCents: null,
+      worstNetCents: null,
+      maxDrawdownCents: 0,
+    };
+  }
+
+  const nets = sessions.map(sessionNetCents);
+  const mean = nets.reduce((a, b) => a + b, 0) / n;
+  let best = nets[0];
+  let worst = nets[0];
+  for (const x of nets) {
+    if (x > best) best = x;
+    if (x < worst) worst = x;
+  }
+
+  let varianceCents2: number | null = null;
+  let stdDevCents: number | null = null;
+  if (n >= 2) {
+    const ss = nets.reduce((acc, x) => acc + (x - mean) * (x - mean), 0);
+    const variance = ss / (n - 1); // sample (n−1) estimator
+    varianceCents2 = Math.round(variance);
+    stdDevCents = Math.round(Math.sqrt(variance));
+  }
+
+  return {
+    count: n,
+    meanNetCents: Math.round(mean),
+    varianceCents2,
+    stdDevCents,
+    bestNetCents: best,
+    worstNetCents: worst,
+    maxDrawdownCents: maxDrawdownCents(bankrollOverTime(sessions)),
+  };
+}

@@ -3,7 +3,6 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,9 +13,14 @@ import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { Sora } from '../theme/fonts';
 import { shadows } from '../theme/shadows';
+import { spacing } from '../theme/spacing';
+import { radii } from '../theme/radii';
+import { iconSize } from '../theme/iconSize';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import PrimaryButton from '../components/PrimaryButton';
 import EmptyState from '../components/EmptyState';
+import Screen from '../components/Screen';
+import Chip from '../components/Chip';
 import { useLocalGames } from '../context/LocalGamesContext';
 import { settleGame } from '../local/settlements';
 import { contributionCents, tournamentResult } from '../local/tournament';
@@ -33,13 +37,24 @@ import { useAuth } from '../context/AuthContext';
 import { markSignupIntent } from '../utils/analytics';
 import AnimatedNumber from '../components/motion/AnimatedNumber';
 import Celebration from '../components/motion/Celebration';
+import { PressableScale, MotiView, slideUpSequence, staggerIn } from '../components/motion';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocalSessionSummary'>;
+
+/**
+ * Spread-ready entrance props for MotiView. The DS motion recipe's transition
+ * union is looser than MotiView's discriminated transition prop, so we cast at
+ * the boundary (type-only — identical runtime) and keep the DS recipes untouched.
+ */
+const entrance = (opts?: Parameters<typeof slideUpSequence>[0]) =>
+  slideUpSequence(opts) as unknown as React.ComponentProps<typeof MotiView>;
 
 /** Results + cash settlements for a finished local game. */
 export default function LocalSessionSummaryScreen({ route, navigation }: Props) {
   const { gameId } = route.params;
   const insets = useSafeAreaInsets();
+  const reduced = useReducedMotion();
   const { games, deleteGame } = useLocalGames();
   const { user } = useAuth();
 
@@ -81,14 +96,14 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
 
   if (!game) {
     return (
-      <View style={[styles.flex, { paddingTop: insets.top }]}>
+      <Screen style={{ paddingTop: insets.top }}>
         <EmptyState
           ionicon="alert-circle-outline"
           title="Game not found"
           subtitle="This local game may have been deleted."
           action={{ label: 'Go Home', onPress: () => navigation.popToTop() }}
         />
-      </View>
+      </Screen>
     );
   }
 
@@ -124,7 +139,7 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
           name: p.player.name,
           valueText: p.payoutCents > 0 ? `wins ${formatCents(p.payoutCents)}` : formatCentsSigned(p.netCents),
           positive: p.netCents >= 0,
-          medal: p.position === 1 ? '🥇' : p.position === 2 ? '🥈' : '🥉',
+          medal: `#${p.position}`,
         }))
       : results.slice(0, 3).map(r => ({
           name: r.player.name,
@@ -155,22 +170,22 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
   }
 
   return (
-    <View style={styles.flex}>
+    <Screen>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.popToTop()} hitSlop={12} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel="Close summary">
-          <Ionicons name="close" size={20} color={colors.text} />
-        </TouchableOpacity>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
+        <PressableScale style={styles.backBtn} onPress={() => navigation.popToTop()} hitSlop={12} haptic="light" accessibilityRole="button" accessibilityLabel="Close summary">
+          <Ionicons name="close" size={iconSize.sm} color={colors.text} />
+        </PressableScale>
         <Text style={styles.headerTitle} numberOfLines={1}>{game.name}</Text>
         <View style={styles.headerActions}>
           {canShareImages && (
-            <TouchableOpacity style={styles.backBtn} onPress={handleShareImage} hitSlop={12} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel="Share result card">
-              <Ionicons name="share-outline" size={18} color={colors.gold} />
-            </TouchableOpacity>
+            <PressableScale style={styles.backBtn} onPress={handleShareImage} hitSlop={12} haptic="light" accessibilityRole="button" accessibilityLabel="Share result card">
+              <Ionicons name="share-outline" size={iconSize.sm} color={colors.gold} />
+            </PressableScale>
           )}
-          <TouchableOpacity style={styles.backBtn} onPress={handleDelete} hitSlop={12} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel="Delete this game">
-            <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
-          </TouchableOpacity>
+          <PressableScale style={styles.backBtn} onPress={handleDelete} hitSlop={12} haptic="light" accessibilityRole="button" accessibilityLabel="Delete this game">
+            <Ionicons name="trash-outline" size={iconSize.sm} color={colors.textMuted} />
+          </PressableScale>
         </View>
       </View>
 
@@ -183,7 +198,11 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
             {results.map(({ player, netCents }, index) => {
               const isWinner = index === 0 && netCents > 0;
               return (
-                <View key={player.id} style={[styles.resultRow, isWinner && styles.resultRowWinner]}>
+                <MotiView
+                  key={player.id}
+                  {...entrance({ reduced, delay: staggerIn(index) })}
+                  style={[styles.resultRow, isWinner && styles.resultRowWinner]}
+                >
                   <Text style={[styles.resultRank, isWinner && styles.resultRankWinner]}>
                     {`#${index + 1}`}
                   </Text>
@@ -196,13 +215,13 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
                   ]}>
                     {formatCentsSigned(netCents)}
                   </Text>
-                </View>
+                </MotiView>
               );
             })}
           </>
         )}
         {/* Game over hero (celebration) */}
-        <View style={styles.heroCard}>
+        <MotiView {...entrance({ reduced })} style={styles.heroCard}>
           <LinearGradient
             colors={[colors.goldFaint, 'transparent']}
             start={{ x: 0.5, y: 0 }}
@@ -230,30 +249,32 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
           )}
           {championName && (
             <View style={styles.championRow}>
-              <Ionicons name="trophy" size={16} color={colors.goldLight} accessibilityLabel="Champion" />
+              <Ionicons name="trophy" size={iconSize.xs} color={colors.goldLight} accessibilityLabel="Champion" />
               <Text style={[styles.championName, { writingDirection: nameWritingDirection(championName) }]} numberOfLines={1}>{championName}</Text>
               {championSub && <Text style={styles.championSub}>{championSub}</Text>}
             </View>
           )}
-        </View>
+        </MotiView>
 
         {/* Tournament podium */}
         {podium && (
           <>
             <Text style={styles.sectionTitle}>FINAL STANDINGS</Text>
-            {podium.map(({ player, position, payoutCents, netCents }) => {
+            {podium.map(({ player, position, payoutCents, netCents }, index) => {
               const isChampion = position === 1;
               return (
-                <View key={player.id} style={[styles.resultRow, isChampion && styles.resultRowWinner]}>
+                <MotiView
+                  key={player.id}
+                  {...entrance({ reduced, delay: staggerIn(index) })}
+                  style={[styles.resultRow, isChampion && styles.resultRowWinner]}
+                >
                   <Text style={[styles.resultRank, isChampion && styles.resultRankWinner]}>
                     {`#${position}`}
                   </Text>
                   <View style={styles.podiumInfo}>
                     <View style={styles.podiumNameRow}>
                       <Text style={[styles.podiumName, { writingDirection: nameWritingDirection(player.name) }]} numberOfLines={1}>{player.name}</Text>
-                      {payoutCents > 0 && (
-                        <View style={styles.itmBadge}><Text style={styles.itmBadgeText}>ITM</Text></View>
-                      )}
+                      {payoutCents > 0 && <Chip label="ITM" tone="gold" style={{ alignSelf: 'center' }} />}
                     </View>
                     {payoutCents > 0 && (
                       <Text style={styles.podiumPayout}>wins {formatCents(payoutCents)}</Text>
@@ -265,7 +286,7 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
                   ]}>
                     {formatCentsSigned(netCents)}
                   </Text>
-                </View>
+                </MotiView>
               );
             })}
           </>
@@ -275,43 +296,43 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
         <Text style={styles.sectionTitle}>CASH SETTLEMENTS</Text>
         {transfers.length === 0 ? (
           <View style={styles.evenCard}>
-            <Ionicons name="checkmark-circle-outline" size={20} color={colors.success} />
+            <Ionicons name="checkmark-circle-outline" size={iconSize.sm} color={colors.success} />
             <Text style={styles.evenText}>Everyone is even — no payments needed.</Text>
           </View>
         ) : (
           transfers.map((t, i) => (
-            <View key={i} style={styles.transferRow}>
+            <MotiView key={i} {...entrance({ reduced, delay: staggerIn(i) })} style={styles.transferRow}>
               <View style={styles.transferNames}>
                 <Text style={[styles.transferPayer, { writingDirection: nameWritingDirection(playerName(t.fromPlayerId)) }]} numberOfLines={1}>{playerName(t.fromPlayerId)}</Text>
-                <Ionicons name="arrow-forward" size={14} color={colors.gold} />
+                <Ionicons name="arrow-forward" size={iconSize.xs} color={colors.gold} />
                 <Text style={[styles.transferReceiver, { writingDirection: nameWritingDirection(playerName(t.toPlayerId)) }]} numberOfLines={1}>{playerName(t.toPlayerId)}</Text>
               </View>
               <Text style={styles.transferAmount}>{formatCents(t.amountCents)}</Text>
-            </View>
+            </MotiView>
           ))
         )}
 
-        <View style={{ height: 32 }} />
+        <View style={{ height: spacing.xxxl }} />
         {user === null && (
-          <TouchableOpacity
+          <PressableScale
             style={styles.saveCard}
             onPress={() => { markSignupIntent(); navigation.navigate('Login'); }}
-            activeOpacity={0.85}
+            haptic="light"
             accessibilityRole="button"
             accessibilityLabel="Save this game to a free account to keep your history across devices"
           >
             <View style={styles.saveIconWrap}>
-              <Ionicons name="cloud-upload-outline" size={20} color={colors.gold} />
+              <Ionicons name="cloud-upload-outline" size={iconSize.sm} color={colors.gold} />
             </View>
             <View style={styles.saveText}>
               <Text style={styles.saveTitle}>Save this game</Text>
               <Text style={styles.saveSub}>Create a free account to keep your stats, groups, and history across devices.</Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-          </TouchableOpacity>
+            <Ionicons name="chevron-forward" size={iconSize.xs} color={colors.textMuted} />
+          </PressableScale>
         )}
         {isFeatureEnabled('retention') && (isFeatureEnabled('bankroll') || isFeatureEnabled('coach')) && (
-          <View style={{ gap: 10, marginBottom: 16 }}>
+          <View style={{ gap: spacing.sm, marginBottom: spacing.lg }}>
             {isFeatureEnabled('bankroll') && (
               <CrossPillarCTA
                 icon="wallet-outline"
@@ -331,32 +352,30 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
           </View>
         )}
         <PrimaryButton label="Done" onPress={() => navigation.popToTop()} />
-        <View style={{ height: 40 }} />
+        <View style={{ height: spacing.huge }} />
         </ContentContainer>
       </ScrollView>
-      {justEnded && <Celebration />}
+      {justEnded && <Celebration variant="celebration" />}
       <ShareCard ref={shareRef} data={shareData} />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.background },
-
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 14,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    gap: 12,
+    gap: spacing.md,
   },
   backBtn: {
     width: 36,
     height: 36,
-    borderRadius: 10,
+    borderRadius: radii.sm,
     backgroundColor: colors.surfaceHigh,
     borderWidth: 1,
     borderColor: colors.border,
@@ -364,20 +383,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: { flex: 1, ...typography.h3, color: colors.text, textAlign: 'center' },
-  headerActions: { flexDirection: 'row', gap: 8 },
+  headerActions: { flexDirection: 'row', gap: spacing.sm },
 
   scroll: { flex: 1 },
-  content: { padding: 20, gap: 10 },
+  content: { padding: spacing.xl, gap: spacing.sm },
 
   heroCard: {
     alignItems: 'center',
-    paddingVertical: 28,
-    borderRadius: 16,
+    paddingVertical: spacing.xxxl,
+    borderRadius: radii.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.goldMuted,
-    gap: 4,
-    marginBottom: 10,
+    gap: spacing.xs,
+    marginBottom: spacing.md,
     overflow: 'hidden',
     ...shadows.goldSm,
   },
@@ -386,44 +405,35 @@ const styles = StyleSheet.create({
   heroPot: { ...typography.amountHero, color: colors.text },
   heroMeta: { ...typography.bodySmall, color: colors.textMuted },
 
-  championRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
+  championRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },
   championName: { fontFamily: Sora['700'], fontSize: 16, color: colors.goldLight },
   championSub: { ...typography.amount, fontSize: 14, color: colors.textMuted },
 
   sectionTitle: {
     ...typography.caps,
     color: colors.textMuted,
-    marginTop: 14,
-    marginBottom: 2,
+    marginTop: spacing.lg,
+    marginBottom: spacing.xs,
   },
   sectionTitleFirst: { marginTop: 0 },
 
   resultRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 14,
-    borderRadius: 14,
+    padding: spacing.lg,
+    borderRadius: radii.md,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    gap: 12,
+    gap: spacing.md,
   },
   resultRowWinner: { borderColor: colors.goldMuted, backgroundColor: colors.goldFaint },
-  resultRank: { width: 34, fontSize: 14, fontWeight: '700', color: colors.textMuted },
+  resultRank: { width: 34, fontSize: 14, fontWeight: '700', color: colors.textMuted, fontVariant: ['tabular-nums'] },
   resultRankWinner: { fontSize: 18 },
   resultName: { flex: 1, fontSize: 16, fontWeight: '600', color: colors.text, textAlign: 'left' },
-  podiumInfo: { flex: 1, gap: 2 },
-  podiumNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  podiumInfo: { flex: 1, gap: spacing.xs },
+  podiumNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   podiumName: { fontSize: 16, fontWeight: '600', color: colors.text },
-  itmBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    backgroundColor: colors.goldFaint,
-    borderWidth: 1,
-    borderColor: colors.goldMuted,
-  },
-  itmBadgeText: { fontSize: 9, fontWeight: '800', color: colors.goldLight, letterSpacing: 0.5 },
   podiumPayout: { fontSize: 12, fontWeight: '600', color: colors.goldLight },
   resultNet: { fontSize: 16, fontWeight: '800', fontVariant: ['tabular-nums'] },
   netPositive: { color: colors.success },
@@ -433,9 +443,9 @@ const styles = StyleSheet.create({
   evenCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    padding: 16,
-    borderRadius: 14,
+    gap: spacing.sm,
+    padding: spacing.lg,
+    borderRadius: radii.md,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
@@ -446,13 +456,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    borderRadius: 14,
+    padding: spacing.lg,
+    borderRadius: radii.md,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  transferNames: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
+  transferNames: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
   transferPayer: { fontSize: 15, fontWeight: '600', color: colors.text },
   transferReceiver: { fontSize: 15, fontWeight: '600', color: colors.goldLight },
   transferAmount: { fontSize: 16, fontWeight: '800', color: colors.gold, fontVariant: ['tabular-nums'] },
@@ -460,23 +470,23 @@ const styles = StyleSheet.create({
   saveCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 16,
+    padding: spacing.lg,
+    borderRadius: radii.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.goldMuted,
-    gap: 12,
-    marginBottom: 16,
+    gap: spacing.md,
+    marginBottom: spacing.lg,
   },
   saveIconWrap: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: radii.md,
     backgroundColor: colors.goldFaint,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  saveText: { flex: 1, gap: 3 },
+  saveText: { flex: 1, gap: spacing.xs },
   saveTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
   saveSub: { fontSize: 12, color: colors.textMuted, lineHeight: 17 },
 });

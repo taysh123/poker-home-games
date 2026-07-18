@@ -33,6 +33,8 @@ public interface IApplicationDbContext
     DbSet<StoreWebhookEvent> StoreWebhookEvents { get; }
     // B5 — fraud / abuse
     DbSet<DeviceBinding> DeviceBindings { get; }
+    // S7a — Cloud Sync (premium-gated, user-scoped opaque blob store)
+    DbSet<CloudBackup> CloudBackups { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

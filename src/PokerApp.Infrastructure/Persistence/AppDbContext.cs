@@ -30,6 +30,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<CreditBalance> CreditBalances => Set<CreditBalance>();
     public DbSet<StoreWebhookEvent> StoreWebhookEvents => Set<StoreWebhookEvent>();
     public DbSet<DeviceBinding> DeviceBindings => Set<DeviceBinding>();
+    public DbSet<CloudBackup> CloudBackups => Set<CloudBackup>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

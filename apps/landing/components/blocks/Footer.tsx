@@ -20,8 +20,19 @@ export function Footer() {
 
           {/* Brand */}
           <div className="sm:col-span-2 lg:col-span-2">
-            <div className="font-display text-2xl text-text">
-              T<span className="text-gold">.</span>Poker
+            <div className="flex items-center gap-2.5">
+              {/* eslint-disable-next-line @next/next/no-img-element -- static export (images unoptimized); a 40px logo needs no next/image */}
+              <img
+                src="/brand/app-icon-128.png"
+                width={40}
+                height={40}
+                alt=""
+                aria-hidden="true"
+                className="rounded-lg"
+              />
+              <span className="font-display text-2xl text-text">
+                T<span className="text-gold">.</span>Poker
+              </span>
             </div>
             <p className="mt-2 max-w-xs text-sm leading-relaxed text-textMuted">
               The home-game manager with a coach built in.
@@ -106,8 +117,13 @@ export function Footer() {
           </div>
         </div>
 
-        {/* Copyright bar */}
+        {/* Disclaimer + copyright bar */}
         <div className="mt-12 border-t border-border/40 pt-6 text-xs text-textMuted">
+          <p className="mb-3 max-w-3xl leading-relaxed">
+            T Poker is a home-game management and poker-study app for adults 18+. It does not offer
+            real-money gambling and does not process wagers, deposits, or payouts — any cash is exchanged
+            between players in person. Play responsibly and within your local laws.
+          </p>
           © {year} {SITE.company}. All rights reserved.
         </div>
       </Container>

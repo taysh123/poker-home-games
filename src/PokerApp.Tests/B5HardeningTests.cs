@@ -213,7 +213,7 @@ public class AuditAndFraudWiringTests
     });
 
     private static AnalyzeHandCommandHandler Handler(AppDbContext ctx, Guid uid, FraudSettings settings, CapturingAuditLog audit) =>
-        new(new EntitlementService(ctx), Policies(), new CreditLedger(ctx), new MockCoachAiProvider(),
+        new(new EntitlementService(ctx), Policies(), new CreditLedger(ctx), new MockCoachAiProvider(StubCoachGroundingProvider.Empty),
             new FraudEvaluator(ctx, settings, audit), audit, new FakeCurrentUser(uid));
 
     private static AnalyzeHandCommand Cmd(string key, string? device = null) =>

@@ -4,71 +4,79 @@ import {
   Text,
   ScrollView,
   StyleSheet,
-  ActivityIndicator,
-  TouchableOpacity,
+  RefreshControl,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
+import { spacing } from '../theme/spacing';
+import { radii } from '../theme/radii';
+import { iconSize } from '../theme/iconSize';
 import { shadows } from '../theme/shadows';
 import { getPlayerProfile, getHeadToHead, PlayerProfileDto, HeadToHeadDto } from '../api/usersApi';
 import * as storage from '../utils/storage';
-import { formatPL, formatMoney, formatDate } from '../utils/formatters';
+import { formatPL, formatDate } from '../utils/formatters';
 import StatWidget from '../components/StatWidget';
 import SessionListItem from '../components/SessionListItem';
 import SkeletonCard from '../components/SkeletonCard';
 import Screen from '../components/Screen';
 import ScreenHeader from '../components/ScreenHeader';
 import Avatar from '../components/Avatar';
+import ProgressBar from '../components/ProgressBar';
+import PrimaryButton from '../components/PrimaryButton';
+import AnimatedNumber from '../components/motion/AnimatedNumber';
+import { MotiView, slideUpSequence, staggerIn } from '../components/motion';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PlayerProfile'>;
 
 export default function PlayerProfileScreen({ route, navigation }: Props) {
   const { userId, username } = route.params;
+  const reduced = useReducedMotion();
 
   const [profile, setProfile] = useState<PlayerProfileDto | null>(null);
   const [h2h, setH2H] = useState<HeadToHeadDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [myUserId, setMyUserId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadProfile = useCallback(async (isRefresh = false) => {
+    if (!isRefresh) setLoading(true);
+    setError(null);
+    try {
+      const token = await storage.getItemAsync('accessToken');
+      const userStr = await storage.getItemAsync('user');
+      const me = userStr ? JSON.parse(userStr) : null;
+      if (!token) return;
+
+      setMyUserId(me?.userId ?? null);
+
+      const [profileData, h2hData] = await Promise.all([
+        getPlayerProfile(token, userId),
+        me?.userId && me.userId !== userId
+          ? getHeadToHead(token, userId).catch(() => null)
+          : Promise.resolve(null),
+      ]);
+
+      setProfile(profileData);
+      setH2H(h2hData);
+    } catch (e: any) {
+      setError('Failed to load player profile.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [userId]);
 
   useFocusEffect(useCallback(() => {
-    let cancelled = false;
+    void loadProfile();
+  }, [loadProfile]));
 
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const token = await storage.getItemAsync('accessToken');
-        const userStr = await storage.getItemAsync('user');
-        const me = userStr ? JSON.parse(userStr) : null;
-        if (!token) return;
-
-        setMyUserId(me?.userId ?? null);
-
-        const [profileData, h2hData] = await Promise.all([
-          getPlayerProfile(token, userId),
-          me?.userId && me.userId !== userId
-            ? getHeadToHead(token, userId).catch(() => null)
-            : Promise.resolve(null),
-        ]);
-
-        if (!cancelled) {
-          setProfile(profileData);
-          setH2H(h2hData);
-        }
-      } catch (e: any) {
-        if (!cancelled) setError('Failed to load player profile.');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => { cancelled = true; };
-  }, [userId]));
+  const onRefresh = useCallback(() => { setRefreshing(true); void loadProfile(true); }, [loadProfile]);
 
   const isOwnProfile = myUserId === userId;
 
@@ -84,18 +92,18 @@ export default function PlayerProfileScreen({ route, navigation }: Props) {
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
           <View style={styles.heroSkeleton}>
             <SkeletonCard height={72} borderRadius={36} style={{ width: 72 }} />
-            <View style={{ flex: 1, gap: 8 }}>
-              <SkeletonCard height={20} borderRadius={8} style={{ width: '60%' }} />
+            <View style={{ flex: 1, gap: spacing.sm }}>
+              <SkeletonCard height={20} borderRadius={radii.sm} style={{ width: '60%' }} />
               <SkeletonCard height={14} borderRadius={6} style={{ width: '40%' }} />
             </View>
           </View>
           <View style={styles.statsRow}>
-            <SkeletonCard height={90} borderRadius={14} />
-            <SkeletonCard height={90} borderRadius={14} />
-            <SkeletonCard height={90} borderRadius={14} />
+            <SkeletonCard height={90} borderRadius={radii.md} />
+            <SkeletonCard height={90} borderRadius={radii.md} />
+            <SkeletonCard height={90} borderRadius={radii.md} />
           </View>
-          <SkeletonCard height={64} borderRadius={14} />
-          <SkeletonCard height={220} borderRadius={14} />
+          <SkeletonCard height={64} borderRadius={radii.md} />
+          <SkeletonCard height={220} borderRadius={radii.md} />
         </ScrollView>
       </Screen>
     );
@@ -107,9 +115,12 @@ export default function PlayerProfileScreen({ route, navigation }: Props) {
         {header}
         <View style={styles.center}>
           <Text style={styles.errorText}>{error ?? 'Player not found.'}</Text>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>Go Back</Text>
-          </TouchableOpacity>
+          <PrimaryButton
+            label="Go Back"
+            variant="outline"
+            fullWidth={false}
+            onPress={() => navigation.goBack()}
+          />
         </View>
       </Screen>
     );
@@ -121,11 +132,17 @@ export default function PlayerProfileScreen({ route, navigation }: Props) {
       ? colors.error
       : colors.textMuted;
 
-  const streakLabel = profile.currentStreak > 0
-    ? `🔥 ${profile.currentStreak}-game win streak`
+  const winRateColor = profile.winRate >= 50 ? colors.success : colors.textMuted;
+
+  const streak = profile.currentStreak > 0
+    ? { icon: 'flame' as const, text: `${profile.currentStreak}-game win streak`, color: colors.gold }
     : profile.currentStreak < 0
-      ? `❄️ ${Math.abs(profile.currentStreak)}-game skid`
+      ? { icon: 'snow' as const, text: `${Math.abs(profile.currentStreak)}-game skid`, color: colors.info }
       : null;
+
+  const heroA11y = `${profile.username}, ${formatPL(profile.totalProfitLoss)}, `
+    + `${profile.totalSessionsPlayed} sessions, ${profile.winRate}% win rate`
+    + (streak ? `, ${streak.text}` : '');
 
   return (
     <Screen>
@@ -134,9 +151,23 @@ export default function PlayerProfileScreen({ route, navigation }: Props) {
       style={styles.container}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={colors.gold}
+          colors={[colors.gold]}
+          progressBackgroundColor={colors.surface}
+        />
+      }
     >
       {/* Hero */}
-      <View style={styles.hero}>
+      <MotiView
+        style={styles.hero}
+        accessible
+        accessibilityLabel={heroA11y}
+        {...slideUpSequence({ reduced })}
+      >
         <Avatar
           name={profile.username}
           size={72}
@@ -149,17 +180,22 @@ export default function PlayerProfileScreen({ route, navigation }: Props) {
         />
         <View style={styles.heroInfo}>
           <Text style={styles.heroName}>{profile.username}</Text>
-          <Text style={[styles.heroPL, { color: plColor }]}>
-            {formatPL(profile.totalProfitLoss)}
-          </Text>
+          <AnimatedNumber
+            value={profile.totalProfitLoss}
+            format={formatPL}
+            style={[styles.heroPL, { color: plColor }]}
+          />
           <Text style={styles.heroSub}>
             {profile.totalSessionsPlayed} sessions · {profile.winRate}% win rate
           </Text>
-          {streakLabel && (
-            <Text style={styles.streakLabel}>{streakLabel}</Text>
+          {streak && (
+            <View style={styles.streakRow}>
+              <Ionicons name={streak.icon} size={iconSize.xs} color={streak.color} />
+              <Text style={[styles.streakLabel, { color: streak.color }]}>{streak.text}</Text>
+            </View>
           )}
         </View>
-      </View>
+      </MotiView>
 
       {/* Career numbers */}
       <View style={styles.statsRow}>
@@ -189,7 +225,7 @@ export default function PlayerProfileScreen({ route, navigation }: Props) {
       </View>
 
       {/* W/L/E record */}
-      <View style={styles.card}>
+      <MotiView style={styles.card} {...slideUpSequence({ reduced, delay: staggerIn(1) })}>
         <Text style={styles.sectionTitle}>Record</Text>
         <View style={styles.recordRow}>
           <View style={styles.recordItem}>
@@ -216,16 +252,31 @@ export default function PlayerProfileScreen({ route, navigation }: Props) {
             </>
           )}
         </View>
-      </View>
+        {profile.totalSessionsPlayed > 0 && (
+          <View style={styles.winRateWrap}>
+            <View style={styles.winRateLabelRow}>
+              <Text style={styles.winRateCaption}>Win rate</Text>
+              <Text style={[styles.winRatePct, { color: winRateColor }]}>{profile.winRate}%</Text>
+            </View>
+            <ProgressBar
+              value={profile.winRate / 100}
+              fillColor={winRateColor === colors.success ? colors.success : colors.gold}
+              accessibilityLabel={`Win rate ${profile.winRate} percent`}
+            />
+          </View>
+        )}
+      </MotiView>
 
       {/* Recent form */}
       {profile.recentForm.length > 0 && (
-        <View style={styles.card}>
+        <MotiView style={styles.card} {...slideUpSequence({ reduced, delay: staggerIn(2) })}>
           <Text style={styles.sectionTitle}>Recent Form</Text>
           <View style={styles.formRow}>
             {profile.recentForm.map((outcome, i) => (
               <View
                 key={i}
+                accessible
+                accessibilityLabel={outcome === 'W' ? 'Win' : outcome === 'L' ? 'Loss' : 'Even'}
                 style={[
                   styles.formDot,
                   outcome === 'W' && styles.formDotWin,
@@ -238,12 +289,12 @@ export default function PlayerProfileScreen({ route, navigation }: Props) {
             ))}
           </View>
           <Text style={styles.formCaption}>Oldest → Most recent</Text>
-        </View>
+        </MotiView>
       )}
 
       {/* Head-to-head (only when viewing someone else's profile) */}
       {!isOwnProfile && h2h && h2h.sessionsTogether > 0 && (
-        <View style={styles.h2hCard}>
+        <MotiView style={styles.h2hCard} {...slideUpSequence({ reduced, delay: staggerIn(3) })}>
           <Text style={styles.sectionTitle}>You vs. {profile.username}</Text>
           <View style={styles.verdictChip}>
             <Text style={[styles.verdictText, {
@@ -302,12 +353,12 @@ export default function PlayerProfileScreen({ route, navigation }: Props) {
               ))}
             </View>
           )}
-        </View>
+        </MotiView>
       )}
 
       {/* Recent sessions */}
       {profile.recentSessions.length > 0 && (
-        <View style={styles.card}>
+        <MotiView style={styles.card} {...slideUpSequence({ reduced, delay: staggerIn(4) })}>
           <Text style={styles.sectionTitle}>Recent Sessions</Text>
           {profile.recentSessions.map((s, i) => (
             <SessionListItem
@@ -319,18 +370,20 @@ export default function PlayerProfileScreen({ route, navigation }: Props) {
               isFirst={i === 0}
             />
           ))}
-        </View>
+        </MotiView>
       )}
 
       {profile.totalSessionsPlayed === 0 && (
         <View style={styles.emptyCard}>
-          <Text style={styles.emptyIcon}>🃏</Text>
+          <View style={styles.emptyIconWrap}>
+            <Ionicons name="albums-outline" size={iconSize.lg} color={colors.textDim} />
+          </View>
           <Text style={styles.emptyTitle}>No sessions yet</Text>
           <Text style={styles.emptySub}>{profile.username} hasn't finished any sessions.</Text>
         </View>
       )}
 
-      <View style={{ height: 32 }} />
+      <View style={{ height: spacing.xxxl }} />
     </ScrollView>
     </Screen>
   );
@@ -338,41 +391,42 @@ export default function PlayerProfileScreen({ route, navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 20, gap: 12 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
+  content: { padding: spacing.xl, gap: spacing.md },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.lg, padding: spacing.xl },
 
   // Hero
   hero: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-    paddingBottom: 8,
+    gap: spacing.lg,
+    paddingBottom: spacing.sm,
   },
-  heroInfo: { flex: 1, gap: 4 },
+  heroInfo: { flex: 1, gap: spacing.xs },
   heroName: { ...typography.h2, color: colors.text },
   heroPL: { ...typography.amountLarge, letterSpacing: -0.5 },
   heroSub: { ...typography.body, color: colors.textMuted },
-  streakLabel: { ...typography.labelSmall, color: colors.gold, marginTop: 2 },
+  streakRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: 2 },
+  streakLabel: { ...typography.labelSmall },
 
   // Skeleton hero
   heroSkeleton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-    paddingBottom: 8,
+    gap: spacing.lg,
+    paddingBottom: spacing.sm,
   },
 
   // Stats row
-  statsRow: { flexDirection: 'row', gap: 10 },
+  statsRow: { flexDirection: 'row', gap: spacing.sm },
 
   // Generic card
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 16,
+    borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 16,
-    gap: 12,
+    padding: spacing.lg,
+    gap: spacing.md,
     ...shadows.md,
   },
   sectionTitle: {
@@ -382,56 +436,60 @@ const styles = StyleSheet.create({
 
   // Record
   recordRow: { flexDirection: 'row', alignItems: 'center' },
-  recordItem: { flex: 1, alignItems: 'center', gap: 4 },
+  recordItem: { flex: 1, alignItems: 'center', gap: spacing.xs },
   recordValue: { ...typography.h2 },
   recordLabel: { ...typography.caption, color: colors.textMuted },
   recordDivider: { width: 1, height: 32, backgroundColor: colors.border },
 
+  // Win-rate bar
+  winRateWrap: { gap: spacing.sm },
+  winRateLabelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  winRateCaption: { ...typography.caption, color: colors.textMuted },
+  winRatePct: { ...typography.labelSmall, fontVariant: ['tabular-nums'] },
+
   // Recent form dots
-  formRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
+  formRow: { flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' },
   formDot: {
     width: 28,
     height: 28,
-    borderRadius: 14,
+    borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surfaceHigh,
   },
-  formDotWin: { backgroundColor: 'rgba(39,174,96,0.20)', borderWidth: 1, borderColor: 'rgba(39,174,96,0.5)' },
-  formDotLoss: { backgroundColor: 'rgba(231,76,60,0.20)', borderWidth: 1, borderColor: 'rgba(231,76,60,0.5)' },
+  formDotWin: { backgroundColor: colors.success + '33', borderWidth: 1, borderColor: colors.success + '80' },
+  formDotLoss: { backgroundColor: colors.error + '33', borderWidth: 1, borderColor: colors.error + '80' },
   formDotEven: { backgroundColor: colors.surfaceHigh, borderWidth: 1, borderColor: colors.border },
-  formDotText: { fontSize: 10, fontWeight: '700', color: colors.text },
+  formDotText: { ...typography.caption, fontWeight: '700', color: colors.text },
   formCaption: { ...typography.caption, color: colors.textDim },
 
   // H2H verdict
   verdictChip: {
     alignSelf: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 5,
-    borderRadius: 20,
+    borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surfaceHigh,
   },
   verdictText: {
-    fontSize: 11,
+    ...typography.caps,
     fontWeight: '800',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
   },
 
   // H2H card
   h2hCard: {
     backgroundColor: colors.surface,
-    borderRadius: 16,
+    borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.goldMuted,
-    padding: 16,
-    gap: 12,
+    padding: spacing.lg,
+    gap: spacing.md,
     ...shadows.gold,
   },
   h2hStats: { flexDirection: 'row', alignItems: 'center' },
-  h2hSide: { flex: 1, alignItems: 'center', gap: 4 },
+  h2hSide: { flex: 1, alignItems: 'center', gap: spacing.xs },
   h2hValue: { ...typography.h1 },
   h2hLabel: { ...typography.caption, color: colors.textMuted },
   h2hCenter: { flex: 1, alignItems: 'center', gap: 2 },
@@ -441,15 +499,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 8,
+    paddingTop: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
   h2hPLLabel: { ...typography.bodySmall, color: colors.textMuted },
   h2hPLValue: { ...typography.label },
   matchupsList: { gap: 0 },
-  matchupsTitle: { ...typography.caps, color: colors.textDim, marginBottom: 4 },
-  matchupRow: { paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  matchupsTitle: { ...typography.caps, color: colors.textDim, marginBottom: spacing.xs },
+  matchupRow: { paddingVertical: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   matchupBorder: { borderTopWidth: 1, borderTopColor: colors.border },
   matchupName: { ...typography.labelSmall, color: colors.text },
   matchupGroup: { ...typography.caption, color: colors.textMuted },
@@ -459,25 +517,25 @@ const styles = StyleSheet.create({
   // Empty
   emptyCard: {
     backgroundColor: colors.surface,
-    borderRadius: 16,
+    borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 32,
+    padding: spacing.xxxl,
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
-  emptyIcon: { fontSize: 36 },
+  emptyIconWrap: {
+    width: 68,
+    height: 68,
+    borderRadius: radii.xl,
+    backgroundColor: colors.surfaceHigh,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+  },
   emptyTitle: { ...typography.h3, color: colors.text },
   emptySub: { ...typography.body, color: colors.textMuted, textAlign: 'center' },
 
   // Error
   errorText: { ...typography.body, color: colors.error, textAlign: 'center' },
-  backBtn: {
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  backBtnText: { ...typography.label, color: colors.textMuted },
 });

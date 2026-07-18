@@ -1,19 +1,17 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   Image,
-  TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Animated,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { colors } from '../theme/colors';
-import { USE_NATIVE_DRIVER } from '../theme/motion';
+import { typography } from '../theme/typography';
 import { shadows } from '../theme/shadows';
 import { useAuth } from '../context/AuthContext';
 import { useGoogleAuth } from '../hooks/useGoogleAuth';
@@ -21,36 +19,22 @@ import GoogleAuthButton from '../components/GoogleAuthButton';
 import PrimaryButton from '../components/PrimaryButton';
 import Screen from '../components/Screen';
 import AppTextInput from '../components/AppTextInput';
+import PressableScale from '../components/motion/PressableScale';
+import { MotiView, slideUpSequence } from '../components/motion';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import { parseAuthError } from '../utils/parseAuthError';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
 
 export default function RegisterScreen({ navigation }: Props) {
   const { register, googleLogin } = useAuth();
+  const reduced = useReducedMotion();
 
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  const logoScale = useRef(new Animated.Value(0.7)).current;
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const formOpacity = useRef(new Animated.Value(0)).current;
-  const formSlide = useRef(new Animated.Value(24)).current;
-
-  useEffect(() => {
-    Animated.sequence([
-      Animated.parallel([
-        Animated.spring(logoScale, { toValue: 1, friction: 8, tension: 80, useNativeDriver: USE_NATIVE_DRIVER }),
-        Animated.timing(logoOpacity, { toValue: 1, duration: 400, useNativeDriver: USE_NATIVE_DRIVER }),
-      ]),
-      Animated.parallel([
-        Animated.timing(formOpacity, { toValue: 1, duration: 300, useNativeDriver: USE_NATIVE_DRIVER }),
-        Animated.spring(formSlide, { toValue: 0, friction: 10, tension: 90, useNativeDriver: USE_NATIVE_DRIVER }),
-      ]),
-    ]).start();
-  }, []);
 
   const { prompt: promptGoogle, ready: googleReady } = useGoogleAuth(async (result) => {
     if (result.type === 'cancel') return;
@@ -82,20 +66,23 @@ export default function RegisterScreen({ navigation }: Props) {
     }
   }
 
+  // Staggered entrance: header → card → footer (same rhythm as Login).
+  const group = (delay: number) => slideUpSequence({ reduced, delay, duration: 320 });
+
   return (
     <Screen>
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.bgDecor1} />
-      <View style={styles.bgDecor2} />
+      <View style={styles.bgDecor1} pointerEvents="none" />
+      <View style={styles.bgDecor2} pointerEvents="none" />
       <ScrollView
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View style={[styles.header, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}>
+        <MotiView {...group(0)} style={styles.header}>
           <View style={styles.logoOuter}>
             <View style={styles.logoRing}>
               <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
@@ -105,9 +92,9 @@ export default function RegisterScreen({ navigation }: Props) {
           <View style={styles.brandAccent} />
           <Text style={styles.title}>Create account</Text>
           <Text style={styles.subtitle}>Join your first poker group</Text>
-        </Animated.View>
+        </MotiView>
 
-        <Animated.View style={[styles.card, { opacity: formOpacity, transform: [{ translateY: formSlide }] }]}>
+        <MotiView {...group(80)} style={styles.card}>
           <View style={styles.form}>
             <AppTextInput
               label="Username"
@@ -116,6 +103,9 @@ export default function RegisterScreen({ navigation }: Props) {
               placeholder="johndoe"
               autoCapitalize="none"
               autoCorrect={false}
+              autoComplete="username"
+              textContentType="username"
+              returnKeyType="next"
             />
             <AppTextInput
               label="Email"
@@ -125,6 +115,9 @@ export default function RegisterScreen({ navigation }: Props) {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
+              autoComplete="email"
+              textContentType="emailAddress"
+              returnKeyType="next"
             />
             <AppTextInput
               label="Password"
@@ -132,6 +125,10 @@ export default function RegisterScreen({ navigation }: Props) {
               onChangeText={setPassword}
               placeholder="••••••••"
               secureTextEntry
+              autoComplete="new-password"
+              textContentType="newPassword"
+              returnKeyType="done"
+              onSubmitEditing={handleRegister}
               error={error || undefined}
             />
 
@@ -153,14 +150,20 @@ export default function RegisterScreen({ navigation }: Props) {
               <GoogleAuthButton onPress={promptGoogle} disabled={!googleReady || loading} />
             </>
           )}
-        </Animated.View>
+        </MotiView>
 
-        <Animated.View style={[styles.footer, { opacity: formOpacity }]}>
+        <MotiView {...group(160)} style={styles.footer}>
           <Text style={styles.footerText}>Already have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={8}>
+          <PressableScale
+            onPress={() => navigation.goBack()}
+            hitSlop={8}
+            haptic="light"
+            accessibilityRole="button"
+            accessibilityLabel="Sign in to your account"
+          >
             <Text style={styles.link}>Sign In</Text>
-          </TouchableOpacity>
-        </Animated.View>
+          </PressableScale>
+        </MotiView>
       </ScrollView>
     </KeyboardAvoidingView>
     </Screen>
@@ -187,7 +190,8 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 110,
-    backgroundColor: 'rgba(74,144,226,0.04)',
+    backgroundColor: colors.infoFaint,
+    opacity: 0.35,
   },
 
   header: { alignItems: 'center', marginBottom: 36 },
@@ -210,10 +214,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   logo: { width: 84, height: 84, borderRadius: 20 },
-  appName: { fontSize: 11, fontWeight: '800', color: colors.gold, letterSpacing: 3, marginBottom: 8 },
+  appName: { ...typography.caps, color: colors.gold, letterSpacing: 3, marginBottom: 8 },
   brandAccent: { width: 24, height: 2, borderRadius: 1, backgroundColor: colors.goldMuted, marginBottom: 16 },
-  title: { fontSize: 30, fontWeight: '800', color: colors.text, marginBottom: 6, letterSpacing: -0.5 },
-  subtitle: { fontSize: 15, color: colors.textMuted },
+  title: { ...typography.display, color: colors.text, marginBottom: 6 },
+  subtitle: { ...typography.body, color: colors.textMuted },
 
   card: {
     backgroundColor: colors.surface,
@@ -227,8 +231,9 @@ const styles = StyleSheet.create({
   buttonTop: { marginTop: 4 },
   dividerRow: { flexDirection: 'row', alignItems: 'center', marginTop: 20, marginBottom: 16, gap: 10 },
   dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
-  dividerText: { color: colors.textDim, fontSize: 12, fontWeight: '600', letterSpacing: 0.3 },
-  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 28 },
-  footerText: { color: colors.textMuted, fontSize: 15 },
-  link: { color: colors.gold, fontSize: 15, fontWeight: '700' },
+  // textMuted (not textDim): 12px caption on the surface card must clear WCAG AA contrast.
+  dividerText: { ...typography.caption, color: colors.textMuted },
+  footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 28 },
+  footerText: { ...typography.body, color: colors.textMuted },
+  link: { ...typography.label, color: colors.gold },
 });

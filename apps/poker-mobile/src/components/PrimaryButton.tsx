@@ -2,6 +2,7 @@ import React from 'react';
 import { Text, ActivityIndicator, StyleSheet, View, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, gradients } from '../theme/colors';
+import { radii } from '../theme/radii';
 import PressableScale from './motion/PressableScale';
 
 type Variant = 'gold' | 'gradient' | 'outline' | 'danger';
@@ -70,6 +71,7 @@ export default function PrimaryButton({
       onPress={onPress}
       haptic="light"
       disabled={disabled || loading}
+      accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
     >
       {variant === 'gradient' && (
@@ -89,7 +91,7 @@ const styles = StyleSheet.create({
   base: {
     paddingVertical: 16,
     paddingHorizontal: 24,
-    borderRadius: 12,
+    borderRadius: radii.control,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 52,

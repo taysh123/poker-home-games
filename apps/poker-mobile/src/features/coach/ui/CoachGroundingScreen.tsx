@@ -17,9 +17,12 @@ import Card from '../../../components/Card';
 import EmptyState from '../../../components/EmptyState';
 import StateView from '../../../components/StateView';
 import Chip from '../../../components/Chip';
+import { MotiView, slideUpSequence, staggerIn } from '../../../components/motion';
+import { useReducedMotion } from '../../../hooks/useReducedMotion';
 import { colors } from '../../../theme/colors';
 import { typography } from '../../../theme/typography';
 import { spacing } from '../../../theme/spacing';
+import { iconSize } from '../../../theme/iconSize';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
 import { useCoachGrounding, type GroundedAssertion } from '../data/useCoachGrounding';
 
@@ -27,6 +30,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function CoachGroundingScreen() {
   const navigation = useNavigation<Nav>();
+  const reduced = useReducedMotion();
   const grounding = useCoachGrounding();
   const items = useMemo(() => grounding?.allAssertions() ?? [], [grounding]);
 
@@ -40,19 +44,30 @@ export default function CoachGroundingScreen() {
           empty={<EmptyState ionicon="shield-checkmark-outline" title="No references yet" subtitle="Grounded references arrive with the content update." />}
         >
           {/* Honesty framing — these are general references, NOT analysis of any specific hand. */}
-          <Card style={styles.intro}>
-            <View style={styles.introHead}>
-              <Ionicons name="information-circle-outline" size={16} color={colors.gold} />
-              <Text style={styles.introTitle}>Reference facts, not hand advice</Text>
-            </View>
-            <Text style={styles.introBody}>
-              These are general, source-cited facts the coach may quote — each labeled with its verification
-              tier and caveat. They are not tailored to any specific hand you analyze.
-            </Text>
-            {grounding && <Text style={styles.introMeta}>{items.length} references · dataset {grounding.datasetVersion}</Text>}
-          </Card>
+          <MotiView {...slideUpSequence({ reduced })}>
+            <Card style={styles.intro}>
+              <View style={styles.introHead}>
+                <Ionicons name="information-circle-outline" size={iconSize.xs} color={colors.gold} />
+                <Text style={styles.introTitle}>Reference facts, not hand advice</Text>
+              </View>
+              <Text style={styles.introBody}>
+                These are general, source-cited facts the coach may quote — each labeled with its verification
+                tier and caveat. They are not tailored to any specific hand you analyze.
+              </Text>
+              {grounding && <Text style={styles.introMeta}>{items.length} references · dataset {grounding.datasetVersion}</Text>}
+            </Card>
+          </MotiView>
 
-          {items.map(item => <ReferenceRow key={item.groundingId} item={item} />)}
+          {items.map((item, i) => (
+            <MotiView
+              key={item.groundingId}
+              {...slideUpSequence({ reduced, delay: staggerIn(i + 1) })}
+              accessible
+              accessibilityLabel={`${item.assertion}. Tier: ${item.tier || 'Reference'}.${item.citation ? ` Source: ${item.citation}.` : ''}`}
+            >
+              <ReferenceRow item={item} />
+            </MotiView>
+          ))}
         </StateView>
       </ScrollView>
     </Screen>

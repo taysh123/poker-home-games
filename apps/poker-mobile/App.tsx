@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { Linking } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { DMSerifDisplay_400Regular } from '@expo-google-fonts/dm-serif-display';
@@ -38,12 +38,22 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { RootStackParamList } from './src/navigation/AppNavigator';
 import { isFeatureEnabled } from './src/config/features';
 import BrandSplash from './src/components/brand/BrandSplash';
+import { SplashGateProvider } from './src/components/brand/SplashGate';
+import { colors } from './src/theme/colors';
 
 WebBrowser.maybeCompleteAuthSession();
 
 // Make Inter the app-wide default for all Text/TextInput (weight → family mapped).
 // Safe at module load — applies once the font files finish loading below.
 applyInterDefault();
+
+// Web shell: paint the browser canvas navy at the earliest point our code runs,
+// so the moment between HTML load and the first React frame is deep navy instead
+// of a white flash. (The exported index.html ships an unstyled <body>.)
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  document.documentElement.style.backgroundColor = colors.backgroundDeep;
+  document.body.style.backgroundColor = colors.backgroundDeep;
+}
 
 function extractDeepLink(url: string): { type: 'session' | 'group'; token: string } | null {
   const s = url.match(/(?:tpoker:\/\/join\/session\/|\/join\/session\/)([A-Za-z0-9_-]+)/);
@@ -55,7 +65,7 @@ function extractDeepLink(url: string): { type: 'session' | 'group'; token: strin
 
 export default function App() {
   const navRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
-  // Dual-brand launch splash (flag-gated). When off, start already "done".
+  // Branded launch splash (~1.2s, flag `v2Splash` = kill-switch). When off, start already "done".
   const [splashDone, setSplashDone] = useState(!isFeatureEnabled('v2Splash'));
   // Serif display accents (titles + hero numerals). On fontError we proceed —
   // unknown fontFamily falls back to the system font, which is cosmetic only.
@@ -115,7 +125,12 @@ export default function App() {
                     <EngagementProvider>
                       <StatusBar style="light" />
                       <ReminderScheduler />
-                      <AppNavigator navigationRef={navRef} />
+                      {/* Entry screens hold their entrance until the splash resolves
+                          (SplashGate) — otherwise the choreography plays unseen under
+                          the opaque overlay and the handoff double-exposes the brand. */}
+                      <SplashGateProvider done={splashDone}>
+                        <AppNavigator navigationRef={navRef} />
+                      </SplashGateProvider>
                       {!splashDone && <BrandSplash onDone={() => setSplashDone(true)} />}
                     </EngagementProvider>
                   </CoachProvider>

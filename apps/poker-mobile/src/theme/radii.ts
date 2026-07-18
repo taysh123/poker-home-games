@@ -8,5 +8,7 @@ export const radii = {
   md: 14,
   lg: 16,
   xl: 20,
+  /** Form controls (inputs, buttons) — 12, sits between sm and md. */
+  control: 12,
   pill: 999,
 } as const;

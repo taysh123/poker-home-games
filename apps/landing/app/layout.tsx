@@ -17,9 +17,9 @@ const dmSerif = DM_Serif_Display({
   variable: '--font-display',
 });
 
-const title = 'T Poker — Run your home poker game';
+const title = 'T Poker — Home-game manager & poker study';
 const description =
-  'Track cash games and tournaments, settle up automatically, and see who is really winning — all free. Plus a personal coach when you want to improve.';
+  'T Poker is a free home-game management and poker-study app — track buy-ins, settle up automatically, and see your session stats. It is not a gambling product: no real-money wagering, no deposits, no payouts. For adults 18+.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.siteUrl),

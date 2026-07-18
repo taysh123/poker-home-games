@@ -72,7 +72,7 @@ describe('tournament creation', () => {
     const { file, playerIds } = newTournament(5000);
     const game = file.games[0];
     expect(game.mode).toBe('tournament');
-    expect(game.schemaVersion).toBe(3);
+    expect(game.schemaVersion).toBe(4);
     expect(game.txns).toHaveLength(3);
     expect(game.txns.every(t => t.tag === 'entry')).toBe(true);
     expect(prizePoolCents(game)).toBe(15000);
@@ -327,7 +327,7 @@ describe('blind structure + stored clock', () => {
 });
 
 describe('schema migration', () => {
-  it('migrates stored v1 files to v3 cash games', async () => {
+  it('migrates stored v1 files all the way to v4 cash games', async () => {
     const v1 = {
       schemaVersion: 1,
       games: [{
@@ -338,8 +338,10 @@ describe('schema migration', () => {
     };
     await AsyncStorage.setItem('tpoker.localGames.v1', JSON.stringify(v1));
     const loaded = await loadFile();
-    expect(loaded.schemaVersion).toBe(3);
-    expect(loaded.games[0]).toMatchObject({ schemaVersion: 3, mode: 'cash', name: 'Old Game' });
+    expect(loaded.schemaVersion).toBe(4);
+    expect(loaded.games[0]).toMatchObject({ schemaVersion: 4, mode: 'cash', name: 'Old Game' });
+    // v4 backfill: updatedAt = endedAt ?? createdAt.
+    expect(loaded.games[0].updatedAt).toBe('2026-01-01T02:00:00.000Z');
   });
 
   it('migrates v2 tournaments (preset → payouts[] + blindLevels[] + clock)', async () => {
@@ -358,7 +360,7 @@ describe('schema migration', () => {
     };
     await AsyncStorage.setItem('tpoker.localGames.v1', JSON.stringify(v2));
     const loaded = await loadFile();
-    expect(loaded.schemaVersion).toBe(3);
+    expect(loaded.schemaVersion).toBe(4);
     const t = loaded.games[0].tournament!;
     expect(t.payouts).toEqual([60, 40]);
     expect(t.blindLevels.length).toBeGreaterThan(0);
@@ -367,7 +369,7 @@ describe('schema migration', () => {
     expect(t.lateRegLevels).toBe(0);
   });
 
-  it('round-trips v3 tournaments through storage', async () => {
+  it('round-trips current (v4) tournaments through storage', async () => {
     const { file } = newTournament();
     await saveFile(file);
     const loaded = await loadFile();

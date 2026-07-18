@@ -48,7 +48,7 @@ export default function BrandHeader({ variant = 'screen', title, subtitle, onBac
         ) : null}
 
         {/* Logo home anchor */}
-        <PressableScale style={styles.logoBtn} onPress={goHome} haptic="light" accessibilityLabel="Home">
+        <PressableScale style={styles.logoBtn} onPress={goHome} haptic="light" accessibilityRole="button" accessibilityLabel="Home">
           <View style={[styles.logoRing, isBrand && styles.logoRingBrand]}>
             <Image source={require('../../assets/logo.png')} style={isBrand ? styles.logoBrand : styles.logo} resizeMode="contain" />
           </View>
