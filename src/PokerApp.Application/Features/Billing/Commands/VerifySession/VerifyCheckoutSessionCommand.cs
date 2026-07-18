@@ -40,6 +40,12 @@ public sealed class VerifyCheckoutSessionCommandHandler(
         var verified = await verifier.VerifyAsync(SubscriptionStore.Paddle, request.SessionId, cancellationToken)
             ?? throw new BadRequestException("Checkout session could not be verified.");
 
+        // Bind the grant to the caller: Paddle exposes the transaction id in the ?_ptxn= redirect URL, so a leaked
+        // id must NOT let another account claim the subscription. custom_data.app_user_id (set at checkout) is the
+        // real owner. Same generic error as an unverifiable txn — never reveal "valid but not yours".
+        if (verified.AppUserId is { Length: > 0 } owner && owner != currentUser.UserId.ToString())
+            throw new BadRequestException("Checkout session could not be verified.");
+
         var now = DateTime.UtcNow;
         var sub = await context.Subscriptions.FirstOrDefaultAsync(
             s => s.Store == verified.Store && s.OriginalTransactionId == verified.OriginalTransactionId,

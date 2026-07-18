@@ -7,7 +7,7 @@ public sealed class AddHandRecordCommandValidator : AbstractValidator<AddHandRec
     public AddHandRecordCommandValidator()
     {
         RuleFor(x => x.WinnerName).NotEmpty().MaximumLength(100);
-        RuleFor(x => x.PotAmount).GreaterThan(0);
+        RuleFor(x => x.PotAmount).GreaterThan(0).LessThanOrEqualTo(1_000_000);
         RuleFor(x => x.Note).MaximumLength(300).When(x => x.Note != null);
     }
 }

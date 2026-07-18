@@ -1,12 +1,15 @@
+using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using PokerApp.API.Middleware;
 using PokerApp.Application;
+using PokerApp.Application.Common;
 using PokerApp.Infrastructure;
 using PokerApp.Infrastructure.Identity;
 using PokerApp.Infrastructure.Persistence;
@@ -44,42 +47,33 @@ builder.Services.AddCors(options =>
 });
 
 // ── Rate Limiting ───────────────────────────────────────────────────────────
+// Partitioned so ONE client can't exhaust the limit for everyone (audit H1/M2): the auth limiters are keyed
+// per client IP, and the coach limiter per authenticated user. The client IP is the real caller only because
+// UseForwardedHeaders (below, prod) de-proxies X-Forwarded-For behind Railway; and UseAuthentication runs
+// BEFORE UseRateLimiter so http.User is populated for the per-user coach key. Keys are never null (RateLimitKeys).
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-    options.AddFixedWindowLimiter("auth-login", opt =>
+    static FixedWindowRateLimiterOptions Window(int permitLimit) => new()
     {
-        opt.Window = TimeSpan.FromMinutes(1);
-        opt.PermitLimit = 10;
-        opt.QueueLimit = 0;
-        opt.AutoReplenishment = true;
-    });
+        Window = TimeSpan.FromMinutes(1),
+        PermitLimit = permitLimit,
+        QueueLimit = 0,
+        AutoReplenishment = true,
+    };
 
-    options.AddFixedWindowLimiter("auth-register", opt =>
-    {
-        opt.Window = TimeSpan.FromMinutes(1);
-        opt.PermitLimit = 5;
-        opt.QueueLimit = 0;
-        opt.AutoReplenishment = true;
-    });
+    static string ClientIp(HttpContext http) => RateLimitKeys.ForClientIp(http.Connection.RemoteIpAddress?.ToString());
 
-    options.AddFixedWindowLimiter("auth-refresh", opt =>
-    {
-        opt.Window = TimeSpan.FromMinutes(1);
-        opt.PermitLimit = 20;
-        opt.QueueLimit = 0;
-        opt.AutoReplenishment = true;
-    });
+    // Auth limiters — per client IP.
+    options.AddPolicy("auth-login", http => RateLimitPartition.GetFixedWindowLimiter(ClientIp(http), _ => Window(10)));
+    options.AddPolicy("auth-register", http => RateLimitPartition.GetFixedWindowLimiter(ClientIp(http), _ => Window(5)));
+    options.AddPolicy("auth-refresh", http => RateLimitPartition.GetFixedWindowLimiter(ClientIp(http), _ => Window(20)));
 
-    // AI analyses: cap request rate (cost control is also enforced per-account in the credit ledger).
-    options.AddFixedWindowLimiter("coach-analyze", opt =>
-    {
-        opt.Window = TimeSpan.FromMinutes(1);
-        opt.PermitLimit = 12;
-        opt.QueueLimit = 0;
-        opt.AutoReplenishment = true;
-    });
+    // AI analyses — per authenticated user (request-rate backstop; per-account cost control also lives in the credit ledger).
+    options.AddPolicy("coach-analyze", http => RateLimitPartition.GetFixedWindowLimiter(
+        RateLimitKeys.ForUser(http.User.FindFirstValue(ClaimTypes.NameIdentifier), http.Connection.RemoteIpAddress?.ToString()),
+        _ => Window(12)));
 });
 
 // ── Response compression + controllers + Swagger ────────────────────────────
@@ -208,6 +202,24 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "PokerApp API v1"));
 }
 
+// De-proxy the client IP so per-IP rate limiting (audit H1) sees the REAL caller, not Railway's edge. Railway
+// is a single trusted proxy with a dynamic IP, so we clear KnownNetworks/KnownProxies and trust exactly one
+// hop (ForwardLimit = 1 → the rightmost X-Forwarded-For entry). SECURITY: this trusts the immediate proxy to
+// have set X-Forwarded-For — correct on Railway, where external traffic can only reach the app via that edge.
+// Do NOT run this app directly internet-exposed without a trusted proxy, or a client could spoof X-Forwarded-For
+// to dodge/mis-attribute the rate limiter. Skipped in Development (no proxy locally → real socket IP is used).
+if (!app.Environment.IsDevelopment())
+{
+    var forwardedHeaders = new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+        ForwardLimit = 1,
+    };
+    forwardedHeaders.KnownNetworks.Clear();
+    forwardedHeaders.KnownProxies.Clear();
+    app.UseForwardedHeaders(forwardedHeaders);
+}
+
 // Defensive HTTP security headers on every response (belt-and-suspenders with Railway's TLS edge):
 // nosniff, frame-deny (clickjacking), referrer + permissions policy, report-only CSP, HSTS (prod). Additive.
 app.UseMiddleware<SecurityHeadersMiddleware>();
@@ -221,9 +233,13 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseResponseCompression();
 
+// Authentication runs BEFORE the rate limiter so the coach limiter can partition per authenticated user
+// (audit M2 — http.User must be populated when the partition key is computed). Authorization still runs
+// AFTER, so [Authorize] enforcement is unchanged. Auth-limiter keys (per IP) don't depend on this ordering.
+app.UseAuthentication();
+
 app.UseRateLimiter();
 
-app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

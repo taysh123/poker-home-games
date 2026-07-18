@@ -664,7 +664,7 @@ All of these override the empty values in `appsettings.Production.json` at runti
 
 - Restored `Program.cs` after Phase 33d stripped DI/auth/rate-limiter/exception-middleware. See commit `36b1e45` — all `[Authorize]`, `[EnableRateLimiting]`, and `IMediator`-using endpoints were 500-ing in production.
 - `Program.cs` now reads CORS allow-list from `AllowedOrigins` configuration (Railway: `AllowedOrigins__0=https://<vercel-domain>`) with a hardcoded fallback to the production Vercel domain.
-- **Critical pipeline order:** `UseCors` → `UseMiddleware<ExceptionHandlingMiddleware>` → `UseResponseCompression` → `UseRateLimiter` → `UseAuthentication` → `UseAuthorization` → `MapControllers`.
+- **Critical pipeline order:** `UseForwardedHeaders` (prod only) → `SecurityHeadersMiddleware` → `UseCors` → `UseMiddleware<ExceptionHandlingMiddleware>` → `UseResponseCompression` → `UseAuthentication` → `UseRateLimiter` → `UseAuthorization` → `MapControllers`. **`UseAuthentication` precedes `UseRateLimiter`** so the `coach-analyze` limiter can partition per authenticated user (audit M2); `UseForwardedHeaders` de-proxies the client IP so the auth limiters partition per real client IP behind Railway (audit H1). Rate-limit partition keys live in `PokerApp.Application.Common.RateLimitKeys` (pure/tested); `Program.cs` supplies the IP / user-id claim.
 
 ---
 

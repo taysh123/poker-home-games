@@ -53,6 +53,9 @@ public sealed class PaddleBillingVerifier(PaddleSettings settings, BillingSettin
             DateTime? start = ParseRfc3339(BillingPeriod(t, "starts_at"));
             DateTime? end = ParseRfc3339(BillingPeriod(t, "ends_at"));
             var productId = FirstPriceId(t);
+            // The account that opened the checkout — set by PaddleCheckoutService as custom_data.app_user_id.
+            // The handler binds the grant to this so a leaked txn id can't be claimed by another account.
+            var appUserId = CustomData(t, "app_user_id");
             var mappedStatus = SubscriptionStatus.Active; // a paid txn ⇒ active by default
 
             // The authoritative period + status live on the subscription — fetch it when the transaction didn't carry them.
@@ -80,7 +83,7 @@ public sealed class PaddleBillingVerifier(PaddleSettings settings, BillingSettin
 
             return new VerifiedSubscription(
                 SubscriptionStore.Paddle, productId, subId, periodStart, periodEnd,
-                AutoRenew: true, IsSandbox: isSandbox, Status: mappedStatus);
+                AutoRenew: true, IsSandbox: isSandbox, Status: mappedStatus, AppUserId: appUserId);
         }
         catch { return null; }
     }
@@ -105,6 +108,12 @@ public sealed class PaddleBillingVerifier(PaddleSettings settings, BillingSettin
         entity.TryGetProperty("items", out var items) && items.ValueKind == JsonValueKind.Array
         && items.GetArrayLength() > 0 && items[0].TryGetProperty("price", out var price)
             ? Str(price, "id") : "";
+
+    // custom_data.<field> as a string, or null when absent (so AppUserId stays null → no binding check).
+    private static string? CustomData(JsonElement entity, string field) =>
+        entity.TryGetProperty("custom_data", out var cd) && cd.ValueKind == JsonValueKind.Object
+        && cd.TryGetProperty(field, out var v) && v.ValueKind == JsonValueKind.String
+            ? v.GetString() : null;
 
     private static string BillingPeriod(JsonElement entity, string field) =>
         entity.TryGetProperty("billing_period", out var bp) && bp.ValueKind == JsonValueKind.Object ? Str(bp, field) : "";

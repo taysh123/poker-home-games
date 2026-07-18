@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using FluentValidation;
 using MediatR;
 using PokerApp.Application.Common.Exceptions;
@@ -57,6 +59,11 @@ public sealed class AnalyzeHandCommandHandler(
         var userId = currentUser.UserId; // [Authorize] guarantees a verified account — no anonymous AI
         var now = DateTime.UtcNow;
 
+        // Idempotency is bound to the request CONTENT, not just the client-supplied key: otherwise replaying
+        // one key with a different hand/question short-circuits the ledger (Allowed, no credit spent) and
+        // re-invokes the paid model for free (audit H3). A genuine retry (same key + same content) still dedups.
+        var idempotencyKey = EffectiveIdempotencyKey(request);
+
         var entitlement = await entitlements.GetAsync(userId, cancellationToken);
         var policy = policyProvider.ForTier(entitlement.IsPremium ? "premium" : "free");
 
@@ -66,7 +73,7 @@ public sealed class AnalyzeHandCommandHandler(
         if (assessment.ShouldBlock)
             throw new TooManyRequestsException("This request was blocked for unusual activity.");
 
-        var decision = await ledger.TryConsumeAsync(userId, policy, request.IdempotencyKey, now, cancellationToken);
+        var decision = await ledger.TryConsumeAsync(userId, policy, idempotencyKey, now, cancellationToken);
         if (!decision.Allowed)
         {
             if (decision.Reason == CreditDenyReason.RateLimited)
@@ -89,9 +96,25 @@ public sealed class AnalyzeHandCommandHandler(
         catch
         {
             // Provider failed after the reserve — refund so the credit isn't burned.
-            await ledger.RefundAsync(userId, request.IdempotencyKey, now, CancellationToken.None);
+            await ledger.RefundAsync(userId, idempotencyKey, now, CancellationToken.None);
             audit.Record(AuditCategory.CreditSpend, "refund", userId, new { idempotencyKey = request.IdempotencyKey });
             throw;
         }
+    }
+
+    /// <summary>
+    /// Derives the ledger idempotency key from the client key AND the request content, so a replay with the
+    /// same key but different content is a distinct charge (audit H3). A genuine retry (same key + same
+    /// content) still dedups. Each field is length-prefixed ("len:value") so the encoding is injective for
+    /// ANY content — an attacker cannot split fields to forge a collision — and the SHA-256 hash keeps the
+    /// result fixed-length (within the ledger's 200-char IdempotencyKey column) and content out of storage.
+    /// </summary>
+    private static string EffectiveIdempotencyKey(AnalyzeHandCommand r)
+    {
+        var sb = new StringBuilder();
+        foreach (var field in new[] { r.IdempotencyKey, r.Kind, r.Text, r.HeroHand, r.HeroPosition, r.Question })
+            sb.Append(field?.Length ?? -1).Append(':').Append(field);
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(sb.ToString()));
+        return "coach:" + Convert.ToHexString(hash);
     }
 }
