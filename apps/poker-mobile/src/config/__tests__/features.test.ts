@@ -38,9 +38,22 @@ describe('feature flags — production resolution', () => {
     expect(isFeatureEnabled('onboardingV2')).toBe(true);
   });
 
+  it('v2Splash is ON in production (launch splash — flag remains the kill-switch)', () => {
+    const { isFeatureEnabled } = loadFlags();
+    expect(isFeatureEnabled('v2Splash')).toBe(true);
+  });
+
+  it('welcome is ON in production (entry chooser — flag remains the kill-switch)', () => {
+    const { isFeatureEnabled } = loadFlags();
+    expect(isFeatureEnabled('welcome')).toBe(true);
+  });
+
   it('every other flag stays OFF in production (paywall/coach/solver/mastery stay OFF)', () => {
     const { featureFlags } = loadFlags();
-    const expectedOn = new Set(['nav5', 'onboardingV2', 'study', 'content', 'retention', 'immersive']);
+    const expectedOn = new Set([
+      'nav5', 'onboardingV2', 'study', 'content', 'retention', 'immersive',
+      'v2Splash', 'welcome',
+    ]);
     for (const [flag, value] of Object.entries(featureFlags)) {
       expect(value).toBe(expectedOn.has(flag));
     }

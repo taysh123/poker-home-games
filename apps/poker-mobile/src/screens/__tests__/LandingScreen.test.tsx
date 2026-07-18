@@ -39,9 +39,40 @@ jest.mock('expo-linear-gradient', () => {
     LinearGradient: ({ children, ...rest }: any) => <View {...rest}>{children}</View>,
   };
 });
+// Motion layer → plain Views (recipes stay real — they're pure; moti ships ESM).
+jest.mock('../../components/motion/PressableScale', () => {
+  const { Pressable } = require('react-native');
+  return { __esModule: true, default: (props: any) => <Pressable {...props} /> };
+});
+jest.mock('../../components/motion', () => {
+  const { View } = require('react-native');
+  const recipes = jest.requireActual('../../components/motion/recipes');
+  return {
+    __esModule: true,
+    ...recipes,
+    MotiView: ({ children, ...rest }: any) => <View {...rest}>{children}</View>,
+  };
+});
+jest.mock('../../hooks/useReducedMotion', () => ({ useReducedMotion: () => false }));
+// Jest runs on the native platform, which resolves the empty native image stub —
+// substitute bundler asset ids so the <Image> branches render like on web.
+jest.mock('../../features/landing/landingImages', () => ({
+  landingImages: {
+    liveCash: 1, settle: 2, tournament: 3, stats: 4,
+    studyLibrary: 5, spotTrainer: 6, aiCoach: 7,
+  },
+  LANDING_IMAGE_WIDTH: 780,
+  LANDING_IMAGE_HEIGHT: 1688,
+}));
 
+import { fireEvent } from '@testing-library/react-native';
 import LandingScreen from '../LandingScreen';
-import { PREMIUM_STUDY_BENEFIT } from '../../features/landing/landingContent';
+import {
+  PREMIUM_STUDY_BENEFIT,
+  LANDING_TRUST_LINE,
+  LANDING_SECTIONS,
+  LANDING_FAQ,
+} from '../../features/landing/landingContent';
 import { PRICING } from '../../features/premium/config';
 
 describe('LandingScreen (web)', () => {
@@ -53,9 +84,46 @@ describe('LandingScreen (web)', () => {
     });
   });
 
-  it('renders the hero headline', () => {
+  it('renders the approved hero: headline, chooser CTAs, and the always-visible trust line', () => {
     render(<LandingScreen />);
-    expect(screen.getByText(/Run the night/i)).toBeTruthy();
+    expect(screen.getByText('Your home game, handled.')).toBeTruthy();
+    expect(screen.getByText('Start a free game')).toBeTruthy();
+    expect(screen.getByText('Sign in')).toBeTruthy();
+    expect(screen.getByText(LANDING_TRUST_LINE)).toBeTruthy();
+  });
+
+  it('hero wiring: "Start a free game" opens the game wizard; "Sign in" opens Login (unchanged contracts)', () => {
+    render(<LandingScreen />);
+    fireEvent.press(screen.getByText('Start a free game'));
+    expect(mockNavigate).toHaveBeenCalledWith('LocalNewGame', { mode: 'cash' });
+    fireEvent.press(screen.getByText('Sign in'));
+    expect(mockNavigate).toHaveBeenCalledWith('Login');
+  });
+
+  it('renders all 4 feature sections with headings and accessible screenshots', () => {
+    render(<LandingScreen />);
+    for (const s of LANDING_SECTIONS) {
+      expect(screen.getByText(s.eyebrow)).toBeTruthy();
+      expect(screen.getByText(s.heading)).toBeTruthy();
+      expect(screen.getByLabelText(s.imageAlt)).toBeTruthy();
+    }
+  });
+
+  it('store pills: pre-launch "Coming soon" state, no links (badge licensing)', () => {
+    render(<LandingScreen />);
+    expect(screen.getByLabelText('Coming soon to the App Store')).toBeTruthy();
+    expect(screen.getByLabelText('Coming soon to Google Play')).toBeTruthy();
+    expect(screen.getAllByText('Coming soon to')).toHaveLength(2);
+    expect(screen.queryByText('Get it on')).toBeNull();
+  });
+
+  it('FAQ is an accordion: questions visible, answers collapsed until tapped', () => {
+    render(<LandingScreen />);
+    const first = LANDING_FAQ[0];
+    expect(screen.getByText(first.q)).toBeTruthy();
+    expect(screen.queryByText(first.a)).toBeNull();
+    fireEvent.press(screen.getByText(first.q));
+    expect(screen.getByText(first.a)).toBeTruthy();
   });
 
   it('renders both prices from PRICING', () => {
@@ -83,8 +151,9 @@ describe('LandingScreen (web)', () => {
     render(<LandingScreen />);
     expect(screen.getByText('Privacy')).toBeTruthy();
     expect(screen.getByText('Terms')).toBeTruthy();
-    expect(screen.getByText(/18\+/)).toBeTruthy();
-    expect(screen.getByText(/not a gambling product/i)).toBeTruthy();
+    // 18+/not-gambling now appears in BOTH the hero trust line and the footer disclaimer.
+    expect(screen.getAllByText(/18\+/).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText(/not a gambling product/i).length).toBeGreaterThanOrEqual(2);
   });
 
   it('a11y: exposes accessible link roles for the legal links', () => {

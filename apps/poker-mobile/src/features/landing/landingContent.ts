@@ -1,10 +1,30 @@
 import type React from 'react';
 import type { Ionicons } from '@expo/vector-icons';
-import { PRICING, PREMIUM_FEATURES } from '../premium/config';
+import { PRICING, PREMIUM_FEATURES, type PremiumFeatureKey } from '../premium/config';
+import type { LandingImageKey } from './landingImages';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
+/** Ambient-only section accents (approved 2026-07-06): eyebrow text + media glow. */
+export type LandingAccent = 'gold' | 'felt' | 'teal' | 'purple';
+
 export type LandingValueProp = { icon: IoniconName; title: string; body: string };
+export type LandingSection = {
+  key: string;
+  eyebrow: string;
+  heading: string;
+  body: string;
+  image: LandingImageKey;
+  /** Accessible description of the screenshot for screen readers / axe alt-text. */
+  imageAlt: string;
+  accent: LandingAccent;
+  /**
+   * Ties the section to the premium honesty catalog: the section chip renders
+   * live-vs-Soon from isFeatureLive(featureKey) at render time, so the page is
+   * truthful in every posture and flips automatically with the launch honesty flip.
+   */
+  featureKey?: PremiumFeatureKey;
+};
 export type LandingPlan = {
   key: 'monthly' | 'yearly';
   productId: string;
@@ -22,32 +42,99 @@ export const PREMIUM_STUDY_BENEFIT =
   'Full lesson library — every study pack · all quizzes · unlimited Spot Trainer';
 
 export const LANDING_HERO = {
-  headline: 'Run the night. Settle in one tap.',
+  headline: 'Your home game, handled.',
   subhead:
-    'T Poker is the free home-game club tool — cash games and tournaments, ' +
-    'buy-ins, a blind clock, and instant settlements. No account needed to start.',
+    "Track buy-ins, settle up instantly, and crown your crew's champion — " +
+    'free, no account needed.',
   primaryCta: 'Start a free game',
-  secondaryCta: 'See Premium',
+  secondaryCta: 'Sign in',
 };
 
-/** Free club tool — the differentiator / acquisition hook. */
-export const LANDING_CLUB_VALUE: LandingValueProp[] = [
+/**
+ * Always visible directly under the hero CTAs — truthful positioning is part of
+ * the brand (and of the Paddle/store review posture). Never bury or remove it.
+ */
+export const LANDING_TRUST_LINE = 'Free for your home game · 18+ · Not a gambling product.';
+
+/**
+ * One idea per section, GTO-Wizard rhythm: eyebrow → big heading → 1–2 lines →
+ * large real product screenshot (landingImages). Order = page order = anchor nav.
+ */
+export const LANDING_SECTIONS: LandingSection[] = [
   {
-    icon: 'play-circle',
-    title: 'Cash & tournaments',
-    body: 'Track every buy-in and cash-out, or run a tournament with a blind clock and prize pool.',
+    key: 'live',
+    eyebrow: 'LIVE GAME',
+    heading: 'Run the table in real time.',
+    body: 'Buy-ins, cash-outs, and the pot — tracked as they happen. No spreadsheets.',
+    image: 'liveCash',
+    imageAlt: 'Live cash game screen: felt table with four seated players, their stacks, and a ₪250 pot',
+    accent: 'felt',
   },
   {
-    icon: 'people',
-    title: 'Built for your crew',
-    body: 'Groups, lifetime stats, leaderboards, and head-to-head — your regular game, organized.',
+    key: 'settle',
+    eyebrow: 'SETTLE UP',
+    heading: 'Everyone leaves square.',
+    body: 'Count the chips once — we compute exactly who pays who.',
+    image: 'settle',
+    imageAlt: 'Game-over summary: ranked results with profit and loss, and the cash settlements list of who pays who',
+    accent: 'gold',
   },
   {
-    icon: 'flash',
-    title: 'One-tap settlements',
-    body: 'We do the debt math. Everyone knows who owes who the moment the night ends.',
+    key: 'tournament',
+    eyebrow: 'TOURNAMENT MODE',
+    heading: 'Host it like a tournament director.',
+    body: 'Blind clock, prize pool, payouts, podium — the full tournament on one phone.',
+    image: 'tournament',
+    imageAlt: 'Live tournament dashboard: prize pool, level 1 blinds 25/50, countdown clock, players left and average stack',
+    accent: 'gold',
+  },
+  {
+    key: 'stats',
+    eyebrow: 'KNOW YOUR NUMBERS',
+    heading: 'Your poker story, in numbers.',
+    body: 'Results, streaks and stats for every game — free on this device, lifetime with a free account.',
+    image: 'stats',
+    imageAlt: 'Stats screen: games played, money on the table, biggest win, and recent results with winners',
+    accent: 'teal',
+  },
+  {
+    key: 'study',
+    eyebrow: 'STUDY',
+    heading: 'A real curriculum, not tips.',
+    body: 'Seventeen structured packs — cash, MTT, ICM, the mental game — built like a course.',
+    image: 'studyLibrary',
+    imageAlt: 'Content pack catalog: a curriculum of structured study packs with difficulty tiers, estimated hours, and premium locks',
+    accent: 'teal',
+    featureKey: 'premium_study',
+  },
+  {
+    key: 'trainer',
+    eyebrow: 'PRACTICE',
+    heading: "Drill it until it's automatic.",
+    body: 'Real preflop spots on a real table — instant feedback, honest ranges.',
+    image: 'spotTrainer',
+    imageAlt: 'Spot Trainer: a poker table scene asking button first-in open or fold, with hole cards and a correct-answer feedback card',
+    accent: 'felt',
+  },
+  {
+    // COPY GUARDRAIL (locked positioning): after-the-fact educational hand review,
+    // "expert-calibrated" — NEVER "solver-verified"/"GTO-exact", never live advice.
+    key: 'coach',
+    eyebrow: 'AI COACH',
+    heading: 'Review the hand. Learn the lesson.',
+    body: 'Paste a hand after the game and get expert-calibrated coaching — mistakes, good decisions, better lines. Educational review — never live in-game advice.',
+    image: 'aiCoach',
+    imageAlt: 'AI Coach hand review: summary of ace-king from the button with street-tagged mistakes and good decisions',
+    accent: 'purple',
+    featureKey: 'ai_coach',
   },
 ];
+
+/** Premium bridge section (leads into pricing). */
+export const LANDING_PREMIUM = {
+  eyebrow: 'PREMIUM',
+  heading: 'Sharpen your edge between games.',
+};
 
 /** Get better between sessions — Premium Study. */
 export const LANDING_STUDY_VALUE: LandingValueProp[] = [
@@ -89,27 +176,23 @@ export function landingPlans(): LandingPlan[] {
 }
 
 /**
- * Pricing-card benefit list. Premium Study is the only live (purchasable) value;
- * every other premium feature is shown honestly with a Soon chip and no buy path.
- * Sourced from PREMIUM_FEATURES when available (drops premium_study, which we lead
- * with explicitly, and never advertises Advanced GTO / PACK-10). Falls back to a
- * static honest list if the catalog has not yet been extended.
+ * Pricing-card benefit list — a FULL passthrough of the premium catalog, live-first.
+ *
+ * Posture-agnostic by construction: `comingSoon` flows straight from
+ * PREMIUM_FEATURES (the honesty config the launch "honesty flip" edits), so the
+ * same code truthfully renders 1-live/3-Soon today and all-live post-flip with
+ * ZERO landing edits. (The previous version FILTERED on comingSoon===true, which
+ * made newly-live features silently vanish from the page after the flip.)
+ * Advanced GTO / PACK-10 is never advertised as paid value (blocklist).
  */
 export function landingBenefits(): LandingBenefit[] {
-  const soonFromCatalog = PREMIUM_FEATURES
-    .filter(f => f.key !== 'premium_study' && f.comingSoon)
+  return [...PREMIUM_FEATURES]
     .filter(f => !/advanced gto/i.test(f.title))
-    .map(f => ({ title: f.title, comingSoon: true as const }));
-
-  const soon: LandingBenefit[] = soonFromCatalog.length
-    ? soonFromCatalog
-    : [
-        { title: 'AI Coach', comingSoon: true },
-        { title: 'Advanced bankroll analytics', comingSoon: true },
-        { title: 'Cloud sync', comingSoon: true },
-      ];
-
-  return [{ title: PREMIUM_STUDY_BENEFIT, comingSoon: false }, ...soon];
+    .sort((a, b) => Number(a.comingSoon) - Number(b.comingSoon))
+    .map(f => ({
+      title: f.key === 'premium_study' ? PREMIUM_STUDY_BENEFIT : f.title,
+      comingSoon: f.comingSoon,
+    }));
 }
 
 export const LANDING_FAQ: LandingFaq[] = [
@@ -129,7 +212,30 @@ export const LANDING_FAQ: LandingFaq[] = [
     q: 'Is this real-money gambling?',
     a: 'No. T Poker is a tracking and study tool for private home games. It handles no wagers and involves no real-money betting.',
   },
+  {
+    q: 'Does the AI Coach give live advice during hands?',
+    a: 'No. The AI Coach is an after-the-fact educational review tool — you paste a hand you already played and get expert-calibrated coaching on it. It never advises during live play.',
+  },
 ];
+
+export type StoreLinks = { appStoreUrl: string | null; playStoreUrl: string | null };
+
+/**
+ * Store listing URLs — null until the apps are published (approved 2026-07-06).
+ * Official badge artwork is licensed ONLY for live listings/pre-orders (verified
+ * against Apple's marketing guidelines + Google's Partner Hub badge rules), so
+ * null renders our own Velvet-Table "Coming soon" pills: nominative store-name
+ * text with generic glyphs, no badge-geometry imitation.
+ * AT LAUNCH: set EXPO_PUBLIC_APPSTORE_URL / EXPO_PUBLIC_PLAYSTORE_URL, self-host
+ * the official badge assets (Apple badge generator requires the live listing;
+ * Google Partner Marketing Hub ZIP), swap the linked-pill branch in
+ * LandingScreen's StorePill for the official artwork, and add both trademark
+ * credit lines next to the footer legal links.
+ */
+export const STORE_LINKS: StoreLinks = {
+  appStoreUrl: process.env.EXPO_PUBLIC_APPSTORE_URL || null,
+  playStoreUrl: process.env.EXPO_PUBLIC_PLAYSTORE_URL || null,
+};
 
 export const LANDING_LEGAL_LINKS: LandingLegalLink[] = [
   { label: 'Pricing', href: '/pricing.html' },

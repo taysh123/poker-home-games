@@ -22,6 +22,7 @@ import SessionListItem from '../components/SessionListItem';
 import SectionTitle from '../components/SectionTitle';
 import Screen from '../components/Screen';
 import { MotiView, slideUpSequence, staggerIn } from '../components/motion';
+import { useSplashDone } from '../components/brand/SplashGate';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useLocalGames } from '../context/LocalGamesContext';
 import { gameResult } from '../local/localStats';
@@ -36,9 +37,16 @@ export default function GuestHomeScreen() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
+  const splashDone = useSplashDone();
   const { games, activeGame } = useLocalGames();
 
   const recentFinished = games.filter(g => g.status === 'Finished').slice(0, 5);
+
+  // One-time mount stagger: brand header → hero/active card → recent rows → upsell,
+  // held until the splash resolves (legacy welcome-off path cold-starts here). Tab
+  // screens stay mounted, so focus changes never re-trigger this (mount-once).
+  const entrance = (i: number) =>
+    slideUpSequence({ reduced, delay: staggerIn(i, 70), duration: 320, play: splashDone });
 
   return (
     <Screen>
@@ -48,7 +56,7 @@ export default function GuestHomeScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* Brand header */}
-      <View style={styles.brandRow}>
+      <MotiView {...entrance(0)} style={styles.brandRow}>
         <View style={styles.brandLeft}>
           <View style={styles.logoBadge}>
             <Image source={require('../../assets/logo.png')} style={styles.logoImg} resizeMode="contain" />
@@ -67,10 +75,11 @@ export default function GuestHomeScreen() {
         >
           <Text style={styles.signInBtnText}>Sign In</Text>
         </PressableScale>
-      </View>
+      </MotiView>
 
       {/* Active game */}
       {activeGame && (
+        <MotiView {...entrance(1)}>
         <PressableScale
           style={styles.activeCard}
           onPress={() => navigation.navigate('LocalSession', { gameId: activeGame.id })}
@@ -89,11 +98,12 @@ export default function GuestHomeScreen() {
           </View>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.gold} />
         </PressableScale>
+        </MotiView>
       )}
 
       {/* Start a game — Cash and Tournament as first-class choices */}
       {!activeGame && (
-        <View style={styles.heroSection}>
+        <MotiView {...entrance(1)} style={styles.heroSection}>
           <Text style={styles.heroLead}>
             Start a game — right now, no account needed.
           </Text>
@@ -125,7 +135,7 @@ export default function GuestHomeScreen() {
               <Text style={styles.heroSubtitle}>Blind clock, prize pool, podium</Text>
             </PressableScale>
           </View>
-        </View>
+        </MotiView>
       )}
 
       {/* Recent local games */}
@@ -136,7 +146,7 @@ export default function GuestHomeScreen() {
             {recentFinished.map((game, i) => {
               const result = gameResult(game);
               return (
-                <MotiView key={game.id} {...slideUpSequence({ reduced, delay: staggerIn(i) })}>
+                <MotiView key={game.id} {...slideUpSequence({ reduced, delay: staggerIn(i, 40, 140), play: splashDone })}>
                   <SessionListItem
                     name={game.name}
                     meta={`${result.playerCount} players · ${formatCents(result.totalPotCents)} pot · ${timeAgo(result.endedAt)}`}
@@ -151,6 +161,7 @@ export default function GuestHomeScreen() {
       )}
 
       {/* Sign-in upsell — contextual account creation (value already shown) */}
+      <MotiView {...entrance(4)}>
       <PressableScale
         style={styles.upsellCard}
         onPress={() => { markSignupIntent(); navigation.navigate('Login'); }}
@@ -169,6 +180,7 @@ export default function GuestHomeScreen() {
         </View>
         <Ionicons name="chevron-forward" size={iconSize.xs} color={colors.textMuted} />
       </PressableScale>
+      </MotiView>
     </ScrollView>
     </Screen>
   );
