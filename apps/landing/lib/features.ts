@@ -1,12 +1,10 @@
-import { SITE } from './site';
-
 /**
  * Honesty model — the SINGLE source of truth for what is actually purchasable.
  *
- * Exactly ONE premium benefit is live today: Premium Study. Everything else is
- * genuinely "coming soon" and MUST NOT carry a `buyHref` (the UI only renders a
- * buy CTA when `feature.live && feature.buyHref`). This file is pinned by
- * `__tests__/honesty.test.ts` so we can never accidentally sell vapor.
+ * FREE-FIRST LAUNCH (2026-07-19): NOTHING is purchasable — web payments are dead and
+ * app-store billing comes later. Every benefit is "coming soon" and MUST NOT carry a
+ * `buyHref` (the UI only renders a buy CTA when `feature.live && feature.buyHref`).
+ * This file is pinned by `__tests__/honesty.test.ts` so we can never accidentally sell vapor.
  */
 export type PremiumFeature = {
   key: string;
@@ -22,8 +20,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     key: 'premium_study',
     title: 'Premium Study',
     desc: 'Full lesson library — every study pack, all quizzes, unlimited Spot Trainer.',
-    live: true,
-    buyHref: SITE.appUrl,
+    live: false,
   },
   {
     key: 'ai_coach',

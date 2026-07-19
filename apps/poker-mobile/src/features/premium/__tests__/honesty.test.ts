@@ -1,16 +1,10 @@
 import { PREMIUM_FEATURES } from '../config';
 
-describe('honesty gate (spec §10)', () => {
-  it('has exactly ONE live (comingSoon:false) premium feature and it is premium_study', () => {
-    const live = PREMIUM_FEATURES.filter(f => f.comingSoon === false);
-    expect(live).toHaveLength(1);
-    expect(live[0].key).toBe('premium_study');
-  });
-
-  it('every other premium feature is marked comingSoon:true', () => {
-    const others = PREMIUM_FEATURES.filter(f => f.key !== 'premium_study');
-    expect(others.length).toBeGreaterThan(0);
-    expect(others.every(f => f.comingSoon === true)).toBe(true);
+describe('honesty gate (free-first launch)', () => {
+  it('has ZERO live features — every premium benefit is comingSoon:true', () => {
+    expect(PREMIUM_FEATURES.filter(f => f.comingSoon === false)).toHaveLength(0);
+    expect(PREMIUM_FEATURES.length).toBeGreaterThanOrEqual(4);
+    expect(PREMIUM_FEATURES.every(f => f.comingSoon === true)).toBe(true);
   });
 
   it('uses the exact approved premium_study benefit copy', () => {
