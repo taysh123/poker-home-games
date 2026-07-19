@@ -11,6 +11,7 @@ import {
   dailyCountersOf,
 } from '../logic/progress';
 import { limitStatus, consumeToday, type DailyLimitKind, type LimitStatus } from '../logic/dailyLimits';
+import { localDayKey } from '../logic/localDay';
 import { STARTER_DATASET } from '../data/starterRanges';
 import { isFeatureEnabled } from '../../../config/features';
 import { useEntitlements } from '../../../context/EntitlementsContext';
@@ -54,7 +55,8 @@ const StudyContext = createContext<StudyContextType>({
   recordLessonCompleted: async () => {},
 });
 
-const todayKey = () => new Date().toISOString().slice(0, 10);
+// Local-midnight day key — see logic/localDay.ts (was UTC via toISOString, resetting at 02:00-03:00 IL time).
+const todayKey = () => localDayKey();
 
 export function StudyProvider({ children }: { children: React.ReactNode }) {
   const [file, setFile] = useState<StudyFile>(store.emptyFile());
