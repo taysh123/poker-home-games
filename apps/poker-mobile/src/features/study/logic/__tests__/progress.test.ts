@@ -126,7 +126,7 @@ import { recordQuizCompleted, recordLessonCompleted } from '../progress';
 describe('emptyProgress — Phase 1 additive fields', () => {
   it('defaults daily-limit counters and completion counters', () => {
     const p = emptyProgress();
-    expect(p.dailyLimitCounters).toEqual({ quiz: { dayKey: '', count: 0 }, trainerSession: { dayKey: '', count: 0 } });
+    expect(p.dailyLimitCounters).toEqual({ quiz: { dayKey: '', count: 0 }, trainerSession: { dayKey: '', count: 0 }, practiceQuestion: { dayKey: '', count: 0 } });
     expect(p.quizzesCompleted).toBe(0);
     expect(p.lessonsCompleted).toBe(0);
   });
