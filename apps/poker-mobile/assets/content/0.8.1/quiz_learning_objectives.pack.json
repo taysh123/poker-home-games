@@ -1,0 +1,292 @@
+{
+ "manifest": {
+  "dataset_version": "0.8.1",
+  "pack_id": "quiz_learning_objectives",
+  "source_sheet": "Quiz_Learning_Objectives",
+  "exported": "2026-06-20",
+  "row_count": 22,
+  "content_hash": "93b7cec28ec0b5980910db247e82c09d0412f2f5ad5116a10df746296b681745",
+  "verification_rollup": {},
+  "marketable_as": "Educational"
+ },
+ "schema": [
+  {
+   "column": "ObjectiveID",
+   "datatype": "string",
+   "allowed": null,
+   "required": "Y",
+   "fk": null
+  },
+  {
+   "column": "Objective",
+   "datatype": "string",
+   "allowed": null,
+   "required": "N",
+   "fk": null
+  },
+  {
+   "column": "Topic",
+   "datatype": "string",
+   "allowed": null,
+   "required": "N",
+   "fk": null
+  },
+  {
+   "column": "Difficulty",
+   "datatype": "string",
+   "allowed": null,
+   "required": "N",
+   "fk": null
+  },
+  {
+   "column": "BloomLevel",
+   "datatype": "string",
+   "allowed": null,
+   "required": "N",
+   "fk": null
+  },
+  {
+   "column": "LinkedModule",
+   "datatype": "string",
+   "allowed": null,
+   "required": "N",
+   "fk": "Learning_Modules.ModuleID"
+  },
+  {
+   "column": "AssessedByCollection",
+   "datatype": "string",
+   "allowed": null,
+   "required": "N",
+   "fk": null
+  },
+  {
+   "column": "LinkedLessonID",
+   "datatype": "string",
+   "allowed": null,
+   "required": "N",
+   "fk": "(node)"
+  }
+ ],
+ "rows": [
+  {
+   "ObjectiveID": "LO-001",
+   "Objective": "Select the correct opening range by position and stack",
+   "Topic": "RFI",
+   "Difficulty": "Beginner",
+   "BloomLevel": "Apply",
+   "LinkedModule": "LM-01",
+   "AssessedByCollection": "QCOL-01",
+   "LinkedLessonID": "CK-001"
+  },
+  {
+   "ObjectiveID": "LO-002",
+   "Objective": "Defend the big blind at the correct frequency vs each open size",
+   "Topic": "BB Defense",
+   "Difficulty": "Intermediate",
+   "BloomLevel": "Apply",
+   "LinkedModule": "LM-02",
+   "AssessedByCollection": "QCOL-02",
+   "LinkedLessonID": "CK-003"
+  },
+  {
+   "ObjectiveID": "LO-003",
+   "Objective": "Adjust calling ranges for ICM risk premium",
+   "Topic": "ICM",
+   "Difficulty": "Advanced",
+   "BloomLevel": "Analyze",
+   "LinkedModule": "LM-15",
+   "AssessedByCollection": "QCOL-04",
+   "LinkedLessonID": "CK-025"
+  },
+  {
+   "ObjectiveID": "LO-004",
+   "Objective": "Identify maximum-pressure bubble and pay-jump spots",
+   "Topic": "ICM",
+   "Difficulty": "Advanced",
+   "BloomLevel": "Evaluate",
+   "LinkedModule": "LM-17",
+   "AssessedByCollection": "QCOL-04",
+   "LinkedLessonID": "CK-028"
+  },
+  {
+   "ObjectiveID": "LO-005",
+   "Objective": "Apply Nash jam/call ranges from 5-15bb",
+   "Topic": "Push/Fold",
+   "Difficulty": "Beginner",
+   "BloomLevel": "Apply",
+   "LinkedModule": "LM-06",
+   "AssessedByCollection": "QCOL-03",
+   "LinkedLessonID": "CK-020"
+  },
+  {
+   "ObjectiveID": "LO-006",
+   "Objective": "Reshove correctly vs steals at 12-20bb",
+   "Topic": "Push/Fold",
+   "Difficulty": "Intermediate",
+   "BloomLevel": "Apply",
+   "LinkedModule": "LM-12",
+   "AssessedByCollection": "QCOL-03",
+   "LinkedLessonID": "CK-021"
+  },
+  {
+   "ObjectiveID": "LO-007",
+   "Objective": "Choose c-bet size by board texture and range advantage",
+   "Topic": "Postflop",
+   "Difficulty": "Intermediate",
+   "BloomLevel": "Apply",
+   "LinkedModule": "LM-03",
+   "AssessedByCollection": "QCOL-05",
+   "LinkedLessonID": "CK-010"
+  },
+  {
+   "ObjectiveID": "LO-008",
+   "Objective": "Barrel the correct turn cards and give up the rest",
+   "Topic": "Postflop",
+   "Difficulty": "Advanced",
+   "BloomLevel": "Analyze",
+   "LinkedModule": "LM-10",
+   "AssessedByCollection": "QCOL-05",
+   "LinkedLessonID": "CK-012"
+  },
+  {
+   "ObjectiveID": "LO-009",
+   "Objective": "Bluff-catch using blockers and MDF",
+   "Topic": "Postflop",
+   "Difficulty": "Advanced",
+   "BloomLevel": "Analyze",
+   "LinkedModule": "LM-22",
+   "AssessedByCollection": "QCOL-05",
+   "LinkedLessonID": "CK-015"
+  },
+  {
+   "ObjectiveID": "LO-010",
+   "Objective": "Make correct river value/bluff/fold decisions",
+   "Topic": "River Decisions",
+   "Difficulty": "Advanced",
+   "BloomLevel": "Evaluate",
+   "LinkedModule": "LM-22",
+   "AssessedByCollection": "QCOL-06",
+   "LinkedLessonID": "CK-015"
+  },
+  {
+   "ObjectiveID": "LO-011",
+   "Objective": "Identify pool type and choose the right exploit",
+   "Topic": "Population Exploits",
+   "Difficulty": "Advanced",
+   "BloomLevel": "Evaluate",
+   "LinkedModule": "LM-11",
+   "AssessedByCollection": "QCOL-07",
+   "LinkedLessonID": "CK-031"
+  },
+  {
+   "ObjectiveID": "LO-012",
+   "Objective": "Exploit calling stations and nits for max EV",
+   "Topic": "Population Exploits",
+   "Difficulty": "Advanced",
+   "BloomLevel": "Apply",
+   "LinkedModule": "LM-27",
+   "AssessedByCollection": "QCOL-07",
+   "LinkedLessonID": "CK-032"
+  },
+  {
+   "ObjectiveID": "LO-013",
+   "Objective": "Adjust ranges by stack depth (tournament gears)",
+   "Topic": "Tournament",
+   "Difficulty": "Intermediate",
+   "BloomLevel": "Apply",
+   "LinkedModule": "LM-13",
+   "AssessedByCollection": "QCOL-08",
+   "LinkedLessonID": "CK-023"
+  },
+  {
+   "ObjectiveID": "LO-014",
+   "Objective": "Use antes to widen steals and reshoves",
+   "Topic": "Tournament",
+   "Difficulty": "Intermediate",
+   "BloomLevel": "Apply",
+   "LinkedModule": "LM-07",
+   "AssessedByCollection": "QCOL-08",
+   "LinkedLessonID": "CK-024"
+  },
+  {
+   "ObjectiveID": "LO-015",
+   "Objective": "Use combinatorics and blockers to narrow ranges",
+   "Topic": "Hand Reading",
+   "Difficulty": "Advanced",
+   "BloomLevel": "Analyze",
+   "LinkedModule": "LM-25",
+   "AssessedByCollection": "QCOL-09",
+   "LinkedLessonID": "CK-034"
+  },
+  {
+   "ObjectiveID": "LO-016",
+   "Objective": "Attack capped ranges with pressure",
+   "Topic": "Hand Reading",
+   "Difficulty": "Advanced",
+   "BloomLevel": "Analyze",
+   "LinkedModule": "LM-25",
+   "AssessedByCollection": "QCOL-09",
+   "LinkedLessonID": "CK-035"
+  },
+  {
+   "ObjectiveID": "LO-017",
+   "Objective": "Apply tilt control and stop-loss discipline",
+   "Topic": "Mental Game",
+   "Difficulty": "Beginner",
+   "BloomLevel": "Apply",
+   "LinkedModule": "LM-04",
+   "AssessedByCollection": "QCOL-10",
+   "LinkedLessonID": "CK-036"
+  },
+  {
+   "ObjectiveID": "LO-018",
+   "Objective": "Build and size value/bluff 3-bet ranges",
+   "Topic": "RFI",
+   "Difficulty": "Intermediate",
+   "BloomLevel": "Apply",
+   "LinkedModule": "LM-08",
+   "AssessedByCollection": "QCOL-01",
+   "LinkedLessonID": "CK-004"
+  },
+  {
+   "ObjectiveID": "LO-019",
+   "Objective": "Respond correctly to 3-bets and 4-bets",
+   "Topic": "RFI",
+   "Difficulty": "Advanced",
+   "BloomLevel": "Analyze",
+   "LinkedModule": "LM-09",
+   "AssessedByCollection": "QCOL-01",
+   "LinkedLessonID": "CK-005"
+  },
+  {
+   "ObjectiveID": "LO-020",
+   "Objective": "Classify boards by range and nut advantage",
+   "Topic": "Postflop",
+   "Difficulty": "Intermediate",
+   "BloomLevel": "Understand",
+   "LinkedModule": "LM-23",
+   "AssessedByCollection": "QCOL-05",
+   "LinkedLessonID": "CK-011"
+  },
+  {
+   "ObjectiveID": "LO-021",
+   "Objective": "Compute and apply MDF in defense decisions",
+   "Topic": "Postflop",
+   "Difficulty": "Advanced",
+   "BloomLevel": "Apply",
+   "LinkedModule": "LM-25",
+   "AssessedByCollection": "QCOL-06",
+   "LinkedLessonID": "CK-015"
+  },
+  {
+   "ObjectiveID": "LO-022",
+   "Objective": "Manage bankroll and move-down discipline",
+   "Topic": "Mental Game",
+   "Difficulty": "Beginner",
+   "BloomLevel": "Understand",
+   "LinkedModule": "LM-04",
+   "AssessedByCollection": "QCOL-10",
+   "LinkedLessonID": "CK-038"
+  }
+ ]
+}

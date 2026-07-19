@@ -157,9 +157,11 @@ members, leaderboard, session-player, search, and profile DTOs.
 Tournament is a FIRST-CLASS mode: dual entry cards on GuestHome, a "Host a
 Tournament" CTA on authed Home, and rich mode cards in the wizard — all navigate
 `LocalNewGame { mode }` (optional route param preselects the wizard). Store
-listing assets (icons, feature graphic, 18 screenshots at exact store sizes)
-live in `apps/poker-mobile/store-assets/` — regenerate screenshots via the
-verification harness after visual changes. Release process: docs/store-release.md.
+listing assets (icons, feature graphic, screenshots at exact store sizes) live in
+`apps/poker-mobile/store-assets/` in **study-first order** (Spot Trainer → Lessons →
+daily quiz, then game-night shots). Regenerate the study screens via the Playwright
+harness `store-assets/store-shots.mjs` after visual changes (see that dir's README).
+Release process: docs/store-release.md.
 
 ## Local games schema v3 + tournaments
 
