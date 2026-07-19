@@ -6,10 +6,17 @@
 [![Expo SDK 54](https://img.shields.io/badge/Expo-SDK%2054-black.svg)](https://expo.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6.svg)](https://www.typescriptlang.org/)
 
-**The private poker club in your pocket.** T Poker runs your home cash game —
-buy-ins, rebuys, cash-outs, and the dreaded end-of-night math — and settles
-everything down to "Bob pays Alice ₪40". Built for friend groups who play
-every week and argue about the ledger every time.
+**Learn poker, then run game night.** T Poker pairs a poker **study** app —
+daily lessons, a daily quiz, and decision drills that build instinct — with a
+home-game **manager** that tracks buy-ins, rebuys, and cash-outs and settles the
+night down to "Bob pays Alice ₪40". Built for friend groups who play every week,
+want to get better between sessions, and argue about the ledger every time.
+
+> **Free-first:** the home-game manager, groups, stats, a daily quiz, three
+> starter lessons, and ten practice questions a day are **all free**. Premium
+> features (the full lesson library, unlimited practice, AI Coach, Cloud Sync,
+> advanced bankroll analytics) are shown honestly as **"Coming soon"** and are
+> not purchasable yet — see [the free/paid split](#freepaid-split).
 
 > **Web:** [poker-home-games-three.vercel.app](https://poker-home-games-three.vercel.app) · **Android:** installable
 > v1.1.0 APKs building on EAS ([builds](https://expo.dev/accounts/taysh/projects/t-poker/builds)) ·
@@ -19,6 +26,11 @@ every week and argue about the ledger every time.
 
 ## Why T Poker
 
+- **Learn between sessions — free every day.** A real study pillar: structured
+  lessons (three starter modules free, the full library coming soon), a daily
+  quiz, and a **Spot Trainer** that drills preflop decisions — with streaks, XP,
+  and a shared daily allowance of ten free practice questions across both trainer
+  modes. All on-device, works for guests, no account needed.
 - **Start playing in 30 seconds, no account.** Guest mode opens to two cards —
   **Cash Game** or **Tournament** — and runs the whole night on-device: name the
   players, track the money, settle up. Nothing leaves your phone.
@@ -114,6 +126,25 @@ biggest win/loss, and time played.
 
 ---
 
+## Free/paid split
+
+T Poker launches **free-first**. Everything below the line is live and free today;
+premium features are built but shown honestly as **"Coming soon"** and are **not
+purchasable** — app-store billing arrives in a later release, and a single honesty
+config (pinned by CI) guarantees nothing unshipped is ever advertised as buyable.
+
+| Free at launch | "Coming soon" (gated off, not purchasable) |
+|---|---|
+| Home-game manager — buy-ins, cash-outs, blind timer, settlements | Full lesson library (beyond the 3 starters) |
+| Groups, crew, leaderboards, lifetime stats | Unlimited practice (beyond 10/day) |
+| Practice / Spot Trainer — **10 questions per day** (shared across both trainer modes, resets at local midnight) | AI Coach (makes **zero** API calls in the free build) |
+| **3 starter lessons** | Cloud Sync |
+| Daily quiz | Advanced bankroll analytics |
+
+The free experience is fully self-contained: no reachable checkout, no paid API
+calls, and every locked surface shows an honest "coming soon" state with no
+purchase path.
+
 ## Architecture
 
 ```
@@ -153,7 +184,7 @@ poker-app/
 | Backend | ASP.NET Core 8, MediatR CQRS, FluentValidation, EF Core 8, PostgreSQL |
 | Auth | JWT + refresh rotation, Google OAuth, BCrypt |
 | Notifications | In-app inbox + Expo push (native; device tokens, best-effort delivery) |
-| Testing | xUnit — 150+ backend cases (auth, billing verifiers, settlements) · Jest — 60+ suites (settlement engine, local store, money utils) |
+| Testing | xUnit — 215 backend cases (auth, billing verifiers, settlements, coach) · Jest — 80 suites / 677 cases (settlement engine, local store, study limits, honesty guards) · Vitest — landing honesty pins |
 
 ---
 

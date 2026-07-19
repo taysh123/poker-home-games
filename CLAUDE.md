@@ -10,6 +10,8 @@ T Poker is a premium live poker home-game management platform for private friend
 
 **Core principle:** The live session screen is the critical path — it must work flawlessly, with minimal taps and no blocking UI. Everything else is secondary.
 
+**Launch status (2026-07-19):** shipping **free-first** to the app stores. Web payments are dead (Paddle rejects poker); app-store billing comes later behind the existing `IBillingVerifier` seam. All frozen launch PRs (#4→#5→#6→#14→#11) and the free-first split (#20) are merged to `main`. Free = home-game manager + groups/stats + daily quiz + 3 starter lessons + **10 shared practice questions/day** (`FREE_PRACTICE_QUESTIONS_PER_DAY` in `apps/poker-mobile/src/features/study/config.ts`; both trainers share one pool via `recordPracticeAnswer`). Premium (full lessons, unlimited practice, AI Coach, Cloud Sync, advanced bankroll) is **"Coming soon", not purchasable** — a CI-pinned honesty config (`features/premium/config.ts`, all `comingSoon: true`) keeps zero live features; AI Coach makes **zero** API calls. Design of record: `docs/superpowers/specs/2026-07-18-free-first-split-design.md`. The Paddle-gated plan in `docs/release/RESUME-HERE.md` §1–§7 is **superseded/historical**.
+
 ---
 
 ## Commands
@@ -389,7 +391,7 @@ Copy `.env.example` → `.env`. Expo Go in development uses the hardcoded Expo p
 ```json
 {
   "ConnectionStrings": { "DefaultConnection": "Host=localhost;Database=poker_app_dev;..." },
-  "JwtSettings": { "Secret": "...", "Issuer": "TPoker", "Audience": "TPokerUsers" },
+  "JwtSettings": { "SecretKey": "<min-32-char dev secret>", "Issuer": "PokerApp", "Audience": "PokerApp" },
   "GoogleSettings": { "ClientIds": ["your-google-web-client-id.apps.googleusercontent.com"] }
 }
 ```
