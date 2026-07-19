@@ -9,29 +9,40 @@
 
 ## ✅ Where we actually are (2026-07-19)
 
-- **All frozen PRs are MERGED to `main`** — #4 → #5 → #6 → #14 → #11 landed in order, then the free-first
-  split (**PR #20**). Production (Railway API + Vercel web/landing) is deployed and healthy.
-- **Free-first split is live in the build:** the home-game manager, groups, stats, a daily quiz, three starter
-  lessons (LM-01/LM-05/LM-04), and **10 shared practice questions/day** (Spot + Decision trainer, resets at
-  local midnight) are all free. Premium (full lesson library, unlimited practice, AI Coach, Cloud Sync, advanced
-  bankroll) is **"Coming soon" and not purchasable** — a CI-pinned honesty config guarantees **zero** live/
-  chargeable features. AI Coach makes **zero** API calls (coach flag off + mock provider + no Anthropic key).
-- **Education-first framing** shipped: onboarding pillars lead Learn → Practice → Play → Track; store listing
-  copy leads with the study pillar (`docs/store-release.md`).
+Everything below is **merged to `main`, deployed, and production-verified healthy** (Railway API + Vercel web/landing).
 
-## ⏭️ WHEN I COME BACK — do this next (store launch, no billing)
+- **All launch code is merged** — frozen stack #4 → #5 → #6 → #14 → #11, then the free-first split (**PR #20**),
+  the docs-reality update (**PR #21**), and store screenshots + a lessons-ingest fix (**PR #22**). No open PRs.
+- **Free-first split is live:** home-game manager, groups, stats, daily quiz, **three starter lessons**
+  (LM-01/LM-05/LM-04, verified rendering in prod), and **10 shared practice questions/day** (Spot + Decision
+  trainer draw from ONE pool, resets at local midnight) — all free. Premium (full lesson library, unlimited
+  practice, AI Coach, Cloud Sync, advanced bankroll) is **"Coming soon", not purchasable** — a CI-pinned honesty
+  config guarantees **zero** live/chargeable features. AI Coach makes **zero** API calls (coach flag off + mock
+  provider + no Anthropic key). Ship invariants: `docs/superpowers/specs/2026-07-18-free-first-split-design.md` §5.6.
+- **Education-first framing** shipped: onboarding leads Learn → Practice → Play → Track; store copy leads with the
+  study pillar (`docs/store-release.md`).
+- **Store screenshots DONE** — study-first (Spot Trainer → Lessons → daily quiz, then game-night shots) at all
+  three store sizes in `apps/poker-mobile/store-assets/screenshots/{play-phone,ios-6.7,ios-5.5}/`. Regenerate the
+  three study shots with the Playwright harness `store-assets/store-shots.mjs` (see that dir's README).
+- **Two fixes shipped this round:** the Decision Trainer no longer bypasses the daily cap (one shared pool of 10),
+  and the 3 free lessons now actually ingest (they were silently quarantined → "No lessons yet").
 
-1. **Native store prep (no payments needed):** `eas login` on this machine, create the iOS/Android Google OAuth
-   clients for `com.tpoker.app`, and apply the not-yet-applied iOS reversed-client-ID URL scheme to `app.json`
-   (`docs/google-oauth-fix.md` §4; `docs/store-release.md` Steps 3 + 8).
-2. **Store assets:** regenerate the store screenshots in **study-first order** (lead with Spot Trainer / Lessons /
-   quiz). ⚠️ The `store-shots.js` harness referenced by `store-assets/README.md` is **not in the repo** — author a
-   capture harness or run your local one before submission.
-3. **Submit** per `docs/store-release.md` (category Lifestyle/Utilities + Education secondary; reviewer note frames
-   it as a study + scorekeeping tool, not gambling).
-4. **Later (post-launch):** wire real app-store billing behind `IBillingVerifier`; only then flip any `comingSoon`.
+## ⏭️ WHEN I COME BACK — remaining path to store launch (no billing needed)
 
-**Domain-migration follow-ups (§6 below) still apply** now that the stack has merged.
+1. **`eas login`** on this machine (`npx eas-cli login` from `apps/poker-mobile`) — EAS credentials didn't travel
+   with the machine; required before any `eas build`.
+2. **Business / entity decision** — talk to the accountant about whether to launch under a personal account or a
+   registered entity (tax + store-account ownership). Free launch takes no payments, so this is not a hard blocker,
+   but decide before creating the final store listings under a publisher name.
+3. **Native store setup:** create the iOS + Android Google OAuth clients for `com.tpoker.app`, set the client-ID
+   env vars, and apply the not-yet-applied iOS reversed-client-ID URL scheme to `app.json`
+   (`docs/google-oauth-fix.md` §4; `docs/store-release.md` Steps 3 + 8). Then `eas build --profile production`.
+4. **Screenshots:** ✅ study-first set is committed at all store sizes. Optional polish: a designer pass, or capture
+   the three study shots on the iPad size too (only phone sizes are done).
+5. **Submit** per `docs/store-release.md` — category Lifestyle/Utilities + **Education** secondary; reviewer note
+   frames it as a poker **study** app + scorekeeping tool, **not** gambling. Play: "App (not game)".
+6. **Later (post-launch):** wire real app-store billing behind the `IBillingVerifier` seam; only then flip any
+   `comingSoon` in `features/premium/config.ts`. Also the domain-migration follow-ups (§6 below).
 
 ---
 
