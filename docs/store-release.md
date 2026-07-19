@@ -74,9 +74,15 @@ replace them later; they're submission-valid now.
 | Screenshots | phone 1080×1920 — 2–8 of them | 6.7" 1290×2796 (required) + 5.5" 1242×2208 |
 | Feature graphic | 1024×500 (required, in store-assets) | — |
 
-**Suggested copy** (edit to taste):
-- *Short description (80):* "Run your home poker night — buy-ins, settlements, tournaments. No spreadsheets."
-- *Long description:* lead with guest mode (works instantly, no account), settlements ("Bob pays Alice ₪40"), tournament mode (blind clock, podium payouts), groups/stats for regulars. Avoid gambling language — this is a scorekeeping tool. Close with a one-line responsible-play note (see below).
+**Suggested copy — education-first (free-first launch, 2026-07-19; edit to taste):**
+- *Subtitle (iOS, 30):* "Learn poker · Run game night"
+- *Short description (80):* "Learn real poker strategy with daily drills and lessons — and run game night."
+- *Long description:* LEAD with the study pillar — free daily lessons, the daily quiz, and Spot Trainer drills
+  (5 free questions every day) — then the home-game manager: guest mode (works instantly, no account),
+  settlements ("Bob pays Alice ₪40"), tournament mode (blind clock, podium payouts), groups/stats for regulars.
+  Avoid gambling language — this is a study + scorekeeping tool. Close with a one-line responsible-play note (see below).
+- *Screenshot order:* lead with the education set — Spot Trainer → Lessons → daily quiz — then the game-night
+  set (tournament clock, Final Count, settlements, stats). Regenerate via the store-assets harness.
 
 **Positioning & responsible play (keep this framing consistent everywhere):**
 T Poker is a **private home-game management and scorekeeping tool for adults
@@ -91,11 +97,13 @@ Login footer, the Profile → About & Support card, and the privacy policy.
 
 ## Step 6 — Category, rating, privacy forms
 
-- **Category:** Lifestyle or Utilities/Tools. **NOT Casino/Card games.** Add a
-  reviewer note on both stores: *"T Poker is a scorekeeping and expense-settlement
-  tool for private home games. It contains no wagering, no real-money play, no
-  chips/odds simulation, and no payouts — it only records what players track
-  themselves, like a spreadsheet."*
+- **Category:** Lifestyle or Utilities/Tools primary; **Education as the iOS secondary
+  category** (the study pillar — lessons, daily quiz, trainer — strengthens the
+  non-gambling case). **NOT Casino/Card games.** Add a reviewer note on both stores:
+  *"T Poker is a poker STUDY app (lessons, quizzes, decision drills) with a
+  scorekeeping and expense-settlement tool for private home games. It contains no
+  wagering, no real-money play, no chips/odds simulation, and no payouts — it only
+  records what players track themselves, like a spreadsheet."*
 - **Age rating questionnaires:** answer "no" to gambling/simulated gambling
   (nothing is wagered in-app). The app is positioned for **adults (18+)** — set the
   content/target-audience to an adult audience (not children), consistent with the
