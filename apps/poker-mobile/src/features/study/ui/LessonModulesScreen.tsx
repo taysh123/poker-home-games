@@ -25,8 +25,7 @@ import { colors } from '../../../theme/colors';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
 import { useContent } from '../../../context/ContentContext';
 import { useEntitlements } from '../../../context/EntitlementsContext';
-import { toModules, type LessonModule } from '../logic/lessons';
-import { buildPackCatalog, availabilityOf, packById, type Pack } from '../../premium/logic/marketableLabel';
+import { toModules, lessonAvailability, type LessonModule } from '../logic/lessons';
 import { isFeatureEnabled } from '../../../config/features';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -37,8 +36,6 @@ export default function LessonModulesScreen() {
   const { isPremium } = useEntitlements();
   const reduced = useReducedMotion();
   const [modules, setModules] = useState<LessonModule[] | null>(null);
-  const [packs, setPacks] = useState<Pack[]>([]);
-  const [modulePackIds, setModulePackIds] = useState<Record<string, string>>({});
   const [error, setError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -47,31 +44,16 @@ export default function LessonModulesScreen() {
     let cancelled = false;
     setError(false);
     setModules(null);
-    Promise.all([
-      query.all('learning_modules'),
-      query.all('pack_manifests'),
-      query.all('premium_content_catalog'),
-    ])
-      .then(([moduleRows, manifests, catalog]) => {
-        if (cancelled) return;
-        setModules(toModules(moduleRows));
-        setPacks(buildPackCatalog(manifests, catalog));
-        // stash module→PackID map for the join
-        setModulePackIds(Object.fromEntries(moduleRows.map(r => [String(r['ModuleID'] ?? ''), String(r['PackID'] ?? '')])));
-      })
+    query.all('learning_modules')
+      .then(moduleRows => { if (!cancelled) setModules(toModules(moduleRows)); })
       .catch(() => { if (!cancelled) setError(true); });
     return () => { cancelled = true; };
   }, [isLoaded, query, reloadKey]);
 
   const loading = enabled && !error && (!isLoaded || modules === null);
 
-  // Fail-open: if no PackID or pack not found, treat as available (lessons not sold individually).
-  const availabilityForModule = (moduleId: string) => {
-    const packId = modulePackIds[moduleId];
-    if (!packId) return 'available' as const;
-    const pack = packById(packs, packId);
-    return pack ? availabilityOf(pack, isPremium) : ('available' as const);
-  };
+  // Free-first: FREE_LESSON_MODULE_IDS (config) is the single gate — see lessonAvailability.
+  const availabilityForModule = (moduleId: string) => lessonAvailability(moduleId, isPremium);
 
   return (
     <Screen animated>
@@ -85,30 +67,24 @@ export default function LessonModulesScreen() {
           onRetry={() => setReloadKey(k => k + 1)}
         >
           {(modules ?? []).map((m, i) => {
-            const availability = availabilityForModule(m.moduleId);
-            const locked = availability === 'locked';
-            const comingSoon = availability === 'coming_soon';
+            const locked = availabilityForModule(m.moduleId) === 'locked';
             return (
               <MotiView key={m.moduleId} {...slideUpSequence({ reduced, delay: staggerIn(i) })}>
               <ListRow
                 icon="book-outline"
                 title={m.moduleName || m.moduleId}
                 titleLines={2}
-                dim={comingSoon}
+                dim={locked}
                 onPress={
                   locked
                     ? (isFeatureEnabled('paywall') ? () => navigation.navigate('Paywall', { trigger: 'lesson_locked' }) : undefined)
-                    : comingSoon
-                      ? undefined
-                      : () => navigation.navigate('LessonReader', { moduleId: m.moduleId, moduleName: m.moduleName })
+                    : () => navigation.navigate('LessonReader', { moduleId: m.moduleId, moduleName: m.moduleName })
                 }
-                accessibilityLabel={`Open lesson module ${m.moduleName || m.moduleId}${locked ? ', premium locked' : comingSoon ? ', coming soon' : ''}`}
+                accessibilityLabel={`Open lesson module ${m.moduleName || m.moduleId}${locked ? ', locked — coming soon' : ''}`}
                 titleRight={
                   locked
-                    ? <Ionicons name="lock-closed" size={16} color={colors.gold} />
-                    : comingSoon
-                      ? <Chip label="Soon" tone="neutral" />
-                      : <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                    ? <Chip label="Soon" tone="neutral" />
+                    : <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
                 }
               />
               </MotiView>

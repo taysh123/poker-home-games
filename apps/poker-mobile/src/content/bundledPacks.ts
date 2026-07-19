@@ -11,6 +11,8 @@ import {
   quizSamplePackArtifact,
   packManifestsPackArtifact,
   premiumContentCatalogPackArtifact,
+  learningModulesPackArtifact,
+  lessonContentPackArtifact,
 } from './bundledArtifacts';
 
 // Gated by the caller: the only invoker is bootstrapContent(), which returns early when the `content`
@@ -30,6 +32,14 @@ export function bundledPacks(): ContentPack[] {
     packs.push(catalog, manifests);
   } catch {
     /* pack catalog not bundled → catalog screen shows an honest empty state */
+  }
+  // Lesson pair (free-first) — modules + their section text ingest together (FK lesson_content → learning_modules).
+  try {
+    const modules = learningModulesPackArtifact() as ContentPack;
+    const lessons = lessonContentPackArtifact() as ContentPack;
+    packs.push(modules, lessons);
+  } catch {
+    /* lesson packs not bundled → Lessons shows the honest empty state */
   }
   return packs;
 }
