@@ -70,13 +70,13 @@ The full shipped-feature ledger lives in [docs/CHANGELOG.md](docs/CHANGELOG.md).
 
 ## Screenshots
 
-| Home | Tournament clock | Podium |
+| Spot Trainer | Lessons | Daily quiz |
 |---|---|---|
-| ![Home](apps/poker-mobile/store-assets/screenshots/play-phone/01-home.png) | ![Tournament](apps/poker-mobile/store-assets/screenshots/play-phone/02-tournament-live.png) | ![Podium](apps/poker-mobile/store-assets/screenshots/play-phone/03-tournament-podium.png) |
+| ![Spot Trainer](apps/poker-mobile/store-assets/screenshots/play-phone/01-spot-trainer.png) | ![Lessons](apps/poker-mobile/store-assets/screenshots/play-phone/02-lessons.png) | ![Daily quiz](apps/poker-mobile/store-assets/screenshots/play-phone/03-daily-quiz.png) |
 
-| The Final Count | Cash settlements | Stats |
+| Tournament clock | The Final Count | Stats |
 |---|---|---|
-| ![The Final Count](apps/poker-mobile/store-assets/screenshots/play-phone/04-final-count.png) | ![Cash settlements](apps/poker-mobile/store-assets/screenshots/play-phone/05-cash-summary.png) | ![Stats](apps/poker-mobile/store-assets/screenshots/play-phone/06-stats.png) |
+| ![Tournament](apps/poker-mobile/store-assets/screenshots/play-phone/05-tournament-live.png) | ![The Final Count](apps/poker-mobile/store-assets/screenshots/play-phone/07-final-count.png) | ![Stats](apps/poker-mobile/store-assets/screenshots/play-phone/09-stats.png) |
 
 _Captured from the real production web build. Store-sized sets (Play 1080×1920, App
 Store 6.7" 1290×2796 and 5.5" 1242×2208) live in
