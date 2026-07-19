@@ -1,30 +1,45 @@
 # ▶️ RESUME HERE — T Poker launch status
 
-> **Read this first when you come back.** Everything is built, verified, and safely parked in GitHub PRs.
-> Nothing is running locally; production is stable and unchanged. This doc has the whole picture + exact steps.
-> _Last updated: 2026-07-02._
+> **Read this first when you come back.** _Last updated: 2026-07-19._
+>
+> ⚠️ **Strategy changed — this doc's Paddle-gated plan below (§1–§7) is SUPERSEDED and kept only for history.**
+> Web payments are dead (Paddle rejects poker). We pivoted to a **free-first app-store launch**; app-store
+> billing comes later behind the existing `IBillingVerifier` seam. Current design of record:
+> [`docs/superpowers/specs/2026-07-18-free-first-split-design.md`](../superpowers/specs/2026-07-18-free-first-split-design.md).
+
+## ✅ Where we actually are (2026-07-19)
+
+- **All frozen PRs are MERGED to `main`** — #4 → #5 → #6 → #14 → #11 landed in order, then the free-first
+  split (**PR #20**). Production (Railway API + Vercel web/landing) is deployed and healthy.
+- **Free-first split is live in the build:** the home-game manager, groups, stats, a daily quiz, three starter
+  lessons (LM-01/LM-05/LM-04), and **10 shared practice questions/day** (Spot + Decision trainer, resets at
+  local midnight) are all free. Premium (full lesson library, unlimited practice, AI Coach, Cloud Sync, advanced
+  bankroll) is **"Coming soon" and not purchasable** — a CI-pinned honesty config guarantees **zero** live/
+  chargeable features. AI Coach makes **zero** API calls (coach flag off + mock provider + no Anthropic key).
+- **Education-first framing** shipped: onboarding pillars lead Learn → Practice → Play → Track; store listing
+  copy leads with the study pillar (`docs/store-release.md`).
+
+## ⏭️ WHEN I COME BACK — do this next (store launch, no billing)
+
+1. **Native store prep (no payments needed):** `eas login` on this machine, create the iOS/Android Google OAuth
+   clients for `com.tpoker.app`, and apply the not-yet-applied iOS reversed-client-ID URL scheme to `app.json`
+   (`docs/google-oauth-fix.md` §4; `docs/store-release.md` Steps 3 + 8).
+2. **Store assets:** regenerate the store screenshots in **study-first order** (lead with Spot Trainer / Lessons /
+   quiz). ⚠️ The `store-shots.js` harness referenced by `store-assets/README.md` is **not in the repo** — author a
+   capture harness or run your local one before submission.
+3. **Submit** per `docs/store-release.md` (category Lifestyle/Utilities + Education secondary; reviewer note frames
+   it as a study + scorekeeping tool, not gambling).
+4. **Later (post-launch):** wire real app-store billing behind `IBillingVerifier`; only then flip any `comingSoon`.
+
+**Domain-migration follow-ups (§6 below) still apply** now that the stack has merged.
 
 ---
 
-## ⏭️ WHEN I COME BACK — do this first
-
-**Check Paddle's decision on the resubmitted landing domain → `https://tpoker-landing-xi.vercel.app`.**
-
-- ✅ **If Paddle APPROVED** → you're cleared to launch. Go to **§4 (launch sequence)** and follow
-  **`docs/release/go-live-runbook.md`** click-by-click: Paddle live keys → one **test purchase + refund** →
-  **honesty flip** → **merge PRs #4 → #5 → #6 → #14 → #11** → **deploy + set the Railway config
-  (`ASPNETCORE_ENVIRONMENT=Production` — see §4 step 5 / runbook Part 4 Step 3b)** → **activate the AI Coach with
-  the Haiku model** → live. 🎉
-- ❌ **If Paddle REJECTED again** → don't fight it. Consider an **alternative Merchant-of-Record processor**
-  (e.g. **Lemon Squeezy**) and **ping the strategist** to decide the switch. Billing sits behind a vendor-agnostic
-  seam (`IBillingVerifier` / `ICheckoutService`), so swapping processors is contained — not a rewrite.
-- ⏳ **While waiting (either outcome), you can progress:** talk to the **accountant** (tax/business setup for taking
-  payments) and do the **native iOS/Android Google OAuth** setup for store builds (see §5).
-
-**TL;DR:** All code is DONE and frozen in PRs. The only launch blocker is **Paddle**, currently **re-reviewing the
-resubmitted landing domain** (up to ~3 working days). Production is safe — every new feature is behind an OFF switch.
-
 ---
+
+> 🕰️ **Everything from here down (§1–§7) is HISTORICAL** — the pre-merge, Paddle-gated plan. All five PRs have
+> since merged and the Paddle path is abandoned. Kept for provenance; do not act on it. The current plan is the
+> banner at the top of this file.
 
 ## 1. Where we are — all code built, frozen in PRs
 
