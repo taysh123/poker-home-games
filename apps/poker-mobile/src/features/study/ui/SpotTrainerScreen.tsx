@@ -28,6 +28,7 @@ import { useEntitlements } from '../../../context/EntitlementsContext';
 import LockNudge from './LockNudge';
 import Chip from '../../../components/Chip';
 import { generateSpot, evaluateSpot, type Spot, type SpotResult } from '../logic/trainer';
+import { practiceRunCap } from '../logic/dailyLimits';
 import type { RangeAction } from '../types';
 import TableScene from '../../../components/table/TableScene';
 import ActionTimeline from '../../../components/table/ActionTimeline';
@@ -52,11 +53,14 @@ export default function SpotTrainerScreen() {
   const { width: winW } = useWindowDimensions();
   const { width: TABLE_W, height: TABLE_H } = tableDimensions(winW - spacing.xl * 2);
   const isQuiz = mode === 'spot';
-  const { dataset, recordAnswer, limitFor, consumeLimit } = useStudy();
+  const { dataset, recordPracticeAnswer, limitFor } = useStudy();
   const { isPremium } = useEntitlements();
   const reduced = useReducedMotion();
-  const sessionLimit = limitFor('trainerSession');
-  const [blocked] = useState(!sessionLimit.allowed);
+  // Free-first: ONE shared pool of practice questions per local day across Spot + Decision modes.
+  const qLimit = limitFor('practiceQuestion');
+  const [blocked] = useState(!qLimit.allowed);
+  // Quiz runs are pre-sized to today's allowance so nobody is cut off mid-question.
+  const [runCap, setRunCap] = useState(() => practiceRunCap(qLimit.remaining, QUIZ_LENGTH));
 
   const [spot, setSpot] = useState<Spot>(() => generateSpot(dataset, Math.random));
   const [result, setResult] = useState<SpotResult | null>(null);
@@ -116,9 +120,8 @@ export default function SpotTrainerScreen() {
   const toCallLabel = Number.isInteger(snapshot.toCallBb) ? String(snapshot.toCallBb) : snapshot.toCallBb.toFixed(1);
 
   useEffect(() => {
-    if (blocked) return; // do not start or consume a session the user can't run
+    if (blocked) return; // do not start a session the user can't run
     track('study_trainer_started', { mode });
-    void consumeLimit('trainerSession');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -130,16 +133,20 @@ export default function SpotTrainerScreen() {
 
   async function choose(action: RangeAction) {
     if (result) return; // already revealed
+    if (!limitFor('practiceQuestion').allowed) return; // belt-and-braces: never answer past the pool
     const r = evaluateSpot(spot.range, spot.hand, action);
     setResult(r);
     setAnswered(a => a + 1);
     if (r.correct) setCorrectCount(c => c + 1);
     track('study_spot_answered', { mode, correct: r.correct });
-    await recordAnswer(r.correct);
+    // ONE commit records the answer AND consumes one from the shared daily pool (Spot + Decision).
+    await recordPracticeAnswer(r.correct);
   }
 
   function next() {
-    if (isQuiz && answered >= QUIZ_LENGTH) { finishSession(); return; }
+    if (isQuiz && answered >= runCap) { finishSession(); return; }
+    // Decision mode drills until the shared daily pool runs dry, then ends with results intact.
+    if (!isQuiz && !limitFor('practiceQuestion').allowed) { finishSession(); return; }
     setSpot(generateSpot(dataset, Math.random));
     setResult(null);
   }
@@ -152,8 +159,8 @@ export default function SpotTrainerScreen() {
           <ContentContainer>
             <LockNudge
               title="Daily free limit reached"
-              comingSoonBody="Daily free limit reached — resets tomorrow. Premium (unlimited) coming soon."
-              upgradeBody="You've used today's free trainer sessions. Go unlimited with Premium."
+              comingSoonBody="Daily free limit reached — resets at midnight. Unlimited practice is coming soon."
+              upgradeBody="You've used today's free practice questions. Go unlimited with Premium."
               trigger="trainer_daily_limit"
               icon="time-outline"
             />
@@ -180,10 +187,15 @@ export default function SpotTrainerScreen() {
             </Card>
           </MotiView>
           <View style={styles.doneBtns}>
-            <PrimaryButton label="Train again" variant="gradient" onPress={() => {
-              setAnswered(0); setCorrectCount(0); setResult(null); setDone(false);
-              setSpot(generateSpot(dataset, Math.random));
-            }} />
+            {limitFor('practiceQuestion').allowed && (
+              <PrimaryButton label="Train again" variant="gradient" onPress={() => {
+                const fresh = limitFor('practiceQuestion');
+                if (!fresh.allowed) return;
+                setRunCap(practiceRunCap(fresh.remaining, QUIZ_LENGTH));
+                setAnswered(0); setCorrectCount(0); setResult(null); setDone(false);
+                setSpot(generateSpot(dataset, Math.random));
+              }} />
+            )}
             <PrimaryButton label="Done" variant="outline" onPress={() => navigation.goBack()} />
             {isFeatureEnabled('retention') && isFeatureEnabled('coach') && (
               <CrossPillarCTA
@@ -204,7 +216,7 @@ export default function SpotTrainerScreen() {
       <BrandHeader
         variant="screen"
         title={isQuiz ? 'Spot Trainer' : 'Decision Trainer'}
-        subtitle={isQuiz ? `${Math.min(answered + (result ? 0 : 1), QUIZ_LENGTH)} / ${QUIZ_LENGTH}` : `✓ ${correctCount} / ${answered}`}
+        subtitle={isQuiz ? `${Math.min(answered + (result ? 0 : 1), runCap)} / ${runCap}` : `✓ ${correctCount} / ${answered}`}
         onBack={() => navigation.goBack()}
         right={!isQuiz && answered > 0 ? (
           <PressableScale onPress={finishSession} hitSlop={8} accessibilityRole="button" accessibilityLabel="Finish session">
@@ -214,18 +226,18 @@ export default function SpotTrainerScreen() {
       />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <ContentContainer style={styles.stack}>
-        <View style={styles.limitRow} accessible accessibilityLabel={sessionLimit.remaining === Infinity ? 'Unlimited trainer sessions with Premium' : `${sessionLimit.remaining} free trainer sessions left today`}>
+        <View style={styles.limitRow} accessible accessibilityLabel={qLimit.remaining === Infinity ? 'Unlimited practice questions with Premium' : `${qLimit.remaining} free questions left today`}>
           <Chip
-            label={sessionLimit.remaining === Infinity ? 'Unlimited sessions' : `${sessionLimit.remaining} free session${sessionLimit.remaining === 1 ? '' : 's'} left today`}
-            tone={sessionLimit.remaining === Infinity ? 'gold' : 'neutral'}
+            label={qLimit.remaining === Infinity ? 'Unlimited questions' : `${qLimit.remaining} free question${qLimit.remaining === 1 ? '' : 's'} left today`}
+            tone={qLimit.remaining === Infinity ? 'gold' : 'neutral'}
             icon="time-outline"
           />
         </View>
         {isQuiz && (
           <ProgressBar
-            value={Math.min(answered + (result ? 0 : 1), QUIZ_LENGTH) / QUIZ_LENGTH}
+            value={Math.min(answered + (result ? 0 : 1), runCap) / Math.max(1, runCap)}
             height={6}
-            accessibilityLabel={`Spot ${Math.min(answered + (result ? 0 : 1), QUIZ_LENGTH)} of ${QUIZ_LENGTH}`}
+            accessibilityLabel={`Spot ${Math.min(answered + (result ? 0 : 1), runCap)} of ${runCap}`}
           />
         )}
         {!isQuiz && (
@@ -305,7 +317,7 @@ export default function SpotTrainerScreen() {
         <ContentContainer>
           {result ? (
             <PrimaryButton
-              label={isQuiz && answered >= QUIZ_LENGTH ? 'See results' : 'Next spot'}
+              label={isQuiz && answered >= runCap ? 'See results' : 'Next spot'}
               variant="gradient"
               onPress={next}
             />

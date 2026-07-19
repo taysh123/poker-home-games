@@ -4,7 +4,7 @@
  * accuracy.
  */
 import { STUDY_SCHEMA_VERSION, type StudyProgress } from '../types';
-import { emptyDailyCounters, type DailyLimitCounters } from './dailyLimits';
+import { emptyDailyCounters, consumeToday, type DailyLimitCounters } from './dailyLimits';
 
 export const DEFAULT_DAILY_GOAL = 10;
 export const MIN_DAILY_GOAL = 3;
@@ -163,6 +163,20 @@ export function recordAnswer(p: StudyProgress, correct: boolean, dayKey: string)
   };
 }
 
+/**
+ * Record one PRACTICE (Spot/Decision) answer: update totals + streaks AND consume one from today's shared
+ * 'practiceQuestion' pool — composed into ONE new progress so a single context commit carries both mutations.
+ * This is the fix for the double-commit clobber that made Decision Trainer bypass the cap: never split the
+ * answer and the consume across two commits built from the same base. Both trainers call this → one pool. Pure.
+ */
+export function recordPracticeAnswer(p: StudyProgress, correct: boolean, dayKey: string): StudyProgress {
+  const answered = recordAnswer(p, correct, dayKey);
+  return {
+    ...answered,
+    dailyLimitCounters: consumeToday(dailyCountersOf(answered), 'practiceQuestion', dayKey),
+  };
+}
+
 export interface StudyStats {
   accuracyPct: number | null;
   answeredToday: number;
@@ -188,7 +202,7 @@ export function recordLessonCompleted(p: StudyProgress): StudyProgress {
   return { ...p, lessonsCompleted: (p.lessonsCompleted ?? 0) + 1 };
 }
 
-/** Read the daily-limit counters, defaulting for v1 data. Pure. */
+/** Read the daily-limit counters, defaulting per-kind (v1 data and pre-practiceQuestion files). Pure. */
 export function dailyCountersOf(p: StudyProgress): DailyLimitCounters {
-  return p.dailyLimitCounters ?? emptyDailyCounters();
+  return { ...emptyDailyCounters(), ...(p.dailyLimitCounters ?? {}) };
 }

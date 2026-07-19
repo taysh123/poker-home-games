@@ -3,6 +3,7 @@
  * ordered, render-ready sections. No workbook access; the screen reads rows via `useContent().query` only.
  */
 import type { Row } from '../../../content/types';
+import { FREE_LESSON_MODULE_IDS } from '../config';
 
 export interface LessonSection {
   id: string;
@@ -33,4 +34,14 @@ export function sortSections(rows: Row[]): LessonSection[] {
 /** `learning_modules` rows → module list items. */
 export function toModules(rows: Row[]): LessonModule[] {
   return rows.map(r => ({ moduleId: String(r['ModuleID'] ?? ''), moduleName: String(r['ModuleName'] ?? '') }));
+}
+
+/**
+ * Free-first gate: config's FREE_LESSON_MODULE_IDS is the single source of which lessons are open —
+ * it OVERRIDES the workbook's FreeOrPremium column (the workbook marks 5 free; launch opens 3).
+ * Premium (future) opens everything. Fail-closed: unknown/empty id ⇒ locked.
+ */
+export function lessonAvailability(moduleId: string, isPremium: boolean): 'available' | 'locked' {
+  if (isPremium) return 'available';
+  return FREE_LESSON_MODULE_IDS.includes(moduleId) ? 'available' : 'locked';
 }

@@ -76,15 +76,16 @@ export type PremiumFeatureKey =
  * "Soon" chip on these so it never presents an unshipped benefit as available. Clear each flag only when
  * the feature is genuinely live (and real billing is wired). Never charge for a `comingSoon`.
  *
- * Launch set (decided): ONE live benefit — `premium_study` (comingSoon: false) — plus AI Coach, Cloud Sync,
- * and Advanced Bankroll Analytics as "Soon". No "Advanced GTO"/solver claims — study content is positioned
+ * FREE-FIRST LAUNCH (2026-07-19): NOTHING is live/chargeable — web payments are dead (Paddle rejects
+ * poker) and app-store billing comes later. ALL FOUR benefits are "Coming soon"; the S9 honesty flip
+ * from the old Paddle plan must never run. No "Advanced GTO"/solver claims — study content is positioned
  * as expert-calibrated, never GTO/solver-verified.
  *
- * `comingSoon` is non-optional boolean — the honesty CI guard (honesty.test.ts) checks `=== false` / `=== true`
- * so the intent is always explicit. Only `premium_study` is live (comingSoon: false).
+ * `comingSoon` is non-optional boolean — the honesty CI guard (honesty.test.ts) checks `=== true`
+ * so the intent is always explicit. Zero live features until real app-store billing ships.
  */
 export const PREMIUM_FEATURES: { key: PremiumFeatureKey; icon: string; title: string; desc: string; comingSoon: boolean }[] = [
-  { key: 'premium_study',     icon: 'library',     title: 'Premium Study',           desc: 'Full lesson library — every study pack · all quizzes · unlimited Spot Trainer', comingSoon: false },
+  { key: 'premium_study',     icon: 'library',     title: 'Premium Study',           desc: 'Full lesson library — every study pack · all quizzes · unlimited Spot Trainer', comingSoon: true },
   { key: 'ai_coach',          icon: 'sparkles',    title: 'AI Coach',                desc: '100 hand analyses every month', comingSoon: true },
   { key: 'cloud_sync',        icon: 'cloud-done',  title: 'Cloud sync',              desc: 'Your data, across all devices', comingSoon: true },
   { key: 'advanced_bankroll', icon: 'stats-chart', title: 'Advanced bankroll analytics', desc: 'Variance, filters & deeper trends', comingSoon: true },

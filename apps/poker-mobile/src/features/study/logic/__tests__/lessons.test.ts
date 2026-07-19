@@ -1,4 +1,5 @@
-import { sortSections, toModules } from '../lessons';
+import { sortSections, toModules, lessonAvailability } from '../lessons';
+import { FREE_LESSON_MODULE_IDS } from '../../config';
 import { createContentStore } from '../../../../content/contentStore';
 import { createMemoryBackend } from '../../../../content/memoryBackend';
 import { makePack } from '../../../../content/__tests__/fixtures';
@@ -16,6 +17,25 @@ describe('sortSections', () => {
   });
   it('handles missing fields gracefully', () => {
     expect(sortSections([{ LessonContentID: 'X' }])[0]).toMatchObject({ id: 'X', order: 0, heading: '', body: '' });
+  });
+});
+
+describe('lessonAvailability (free-first: FREE_LESSON_MODULE_IDS wins)', () => {
+  it('pins the launch set to the 3 zero-prerequisite starters', () => {
+    expect(FREE_LESSON_MODULE_IDS).toEqual(['LM-01', 'LM-05', 'LM-04']);
+  });
+
+  it('opens exactly the free-listed modules for free users', () => {
+    for (const id of FREE_LESSON_MODULE_IDS) expect(lessonAvailability(id, false)).toBe('available');
+  });
+
+  it('locks everything else for free users (incl. workbook-Free LM-02/LM-06)', () => {
+    for (const id of ['LM-02', 'LM-06', 'LM-03', 'LM-15', '']) expect(lessonAvailability(id, false)).toBe('locked');
+  });
+
+  it('premium opens all modules', () => {
+    expect(lessonAvailability('LM-15', true)).toBe('available');
+    expect(lessonAvailability('LM-02', true)).toBe('available');
   });
 });
 

@@ -30,12 +30,13 @@ type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
 const { width } = Dimensions.get('window');
 
-/** The four pillars — pillar-led onboarding (Play → Track → Study → Improve). */
+/** The four pillars — education-first onboarding (Learn → Practice → Play → Track).
+ *  Free-first launch: no AI promises here — coaching is honestly "coming soon" (router card, flag-gated). */
 const PILLARS: { icon: IoniconsName; title: string; subtitle: string }[] = [
-  { icon: 'play-circle', title: 'Play', subtitle: 'Run the night — cash games & tournaments with a blind clock. Settle up in one tap.' },
-  { icon: 'wallet',      title: 'Track', subtitle: 'Know your bankroll — every session, ROI, and win rate. Your real numbers, not vibes.' },
-  { icon: 'school',      title: 'Study', subtitle: 'Sharpen your game — daily preflop drills, streaks, and a growing range library.' },
-  { icon: 'sparkles',    title: 'Improve', subtitle: 'Get an AI read — paste a hand, get clear coaching. Your first analysis is on us.' },
+  { icon: 'school',      title: 'Learn',    subtitle: 'Real lessons, a daily quiz, and drills that build instinct. Free every day.' },
+  { icon: 'fitness',     title: 'Practice', subtitle: 'Ten free trainer questions a day. Streaks that keep you sharp.' },
+  { icon: 'play-circle', title: 'Play',     subtitle: 'Run the night — buy-ins, blind clock, one-tap settlement.' },
+  { icon: 'wallet',      title: 'Track',    subtitle: 'Your real numbers — sessions, ROI, win rate.' },
 ];
 
 type ActionKey = 'play' | 'track' | 'study' | 'improve';
@@ -117,7 +118,7 @@ export default function OnboardingV2Screen({ navigation }: Props) {
       onPress: () => enterAction('study', 'StudyTrainer', { mode: 'spot' }), show: isFeatureEnabled('study'),
     },
     {
-      key: 'improve', icon: 'sparkles', title: 'Try the AI Coach', sub: 'Free with an account',
+      key: 'improve', icon: 'sparkles', title: 'Try the AI Coach', sub: 'AI hand coaching — coming soon',
       onPress: chooseImprove, show: isFeatureEnabled('coach'), teaser: true,
     },
   ];

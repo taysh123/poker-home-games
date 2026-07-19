@@ -1,11 +1,10 @@
 import { PREMIUM_FEATURES, liveFeatureKeys, isFeatureLive, paywallPriceFor, PRICING } from '../config';
 
 describe('paywall content rules', () => {
-  it('only premium_study is live; everything else is Soon', () => {
-    expect(liveFeatureKeys()).toEqual(['premium_study']);
-    expect(isFeatureLive('premium_study')).toBe(true);
+  it('free-first: NOTHING is live — every feature is Soon', () => {
+    expect(liveFeatureKeys()).toEqual([]);
     for (const f of PREMIUM_FEATURES) {
-      if (f.key !== 'premium_study') expect(isFeatureLive(f.key)).toBe(false);
+      expect(isFeatureLive(f.key)).toBe(false);
     }
   });
 

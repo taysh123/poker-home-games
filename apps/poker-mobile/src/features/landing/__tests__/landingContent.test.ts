@@ -111,11 +111,11 @@ describe('landing content — honesty + correctness', () => {
     const benefits = landingBenefits();
     const catalog = PREMIUM_FEATURES.filter(f => !/advanced gto/i.test(f.title));
     expect(benefits).toHaveLength(catalog.length);
-    const expectedLiveTitles = catalog
-      .filter(f => !f.comingSoon)
-      .map(f => (f.key === 'premium_study' ? PREMIUM_STUDY_BENEFIT : f.title));
+    // premium_study renders its benefit copy in EVERY posture (landingBenefits maps by key, not by liveness).
+    const displayTitle = (f: (typeof catalog)[number]) => (f.key === 'premium_study' ? PREMIUM_STUDY_BENEFIT : f.title);
+    const expectedLiveTitles = catalog.filter(f => !f.comingSoon).map(displayTitle);
     expect(benefits.filter(b => !b.comingSoon).map(b => b.title).sort()).toEqual(expectedLiveTitles.sort());
-    const expectedSoonTitles = catalog.filter(f => f.comingSoon).map(f => f.title);
+    const expectedSoonTitles = catalog.filter(f => f.comingSoon).map(displayTitle);
     expect(benefits.filter(b => b.comingSoon).map(b => b.title).sort()).toEqual(expectedSoonTitles.sort());
     // Live rows always render before Soon rows.
     const firstSoon = benefits.findIndex(b => b.comingSoon);

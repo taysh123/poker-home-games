@@ -10,6 +10,8 @@ import {
   analyticsContractArtifact,
   packManifestsPackArtifact,
   premiumContentCatalogPackArtifact,
+  learningModulesPackArtifact,
+  lessonContentPackArtifact,
 } from '../bundledArtifacts';
 
 describe('bundled artifacts ↔ CONTENT_DATASET_VERSION', () => {
@@ -29,6 +31,14 @@ describe('bundled artifacts ↔ CONTENT_DATASET_VERSION', () => {
   });
   it('premium_content_catalog pack manifest dataset_version matches', () => {
     expect((premiumContentCatalogPackArtifact() as { manifest: { dataset_version: string } }).manifest.dataset_version)
+      .toBe(CONTENT_DATASET_VERSION);
+  });
+  it('learning_modules pack manifest dataset_version matches', () => {
+    expect((learningModulesPackArtifact() as { manifest: { dataset_version: string } }).manifest.dataset_version)
+      .toBe(CONTENT_DATASET_VERSION);
+  });
+  it('lesson_content pack manifest dataset_version matches', () => {
+    expect((lessonContentPackArtifact() as { manifest: { dataset_version: string } }).manifest.dataset_version)
       .toBe(CONTENT_DATASET_VERSION);
   });
 });

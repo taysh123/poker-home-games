@@ -7,24 +7,15 @@ import {
 import { STORE_BADGES } from '../lib/stores';
 
 describe('honesty model', () => {
-  it('has exactly one live feature, and it is premium_study', () => {
-    const live = PREMIUM_FEATURES.filter((f) => f.live);
-    expect(live).toHaveLength(1);
-    expect(live[0].key).toBe('premium_study');
-    expect(liveFeatures()).toEqual(live);
+  it('free-first launch: ZERO live features — nothing is purchasable', () => {
+    expect(PREMIUM_FEATURES.filter((f) => f.live)).toHaveLength(0);
+    expect(liveFeatures()).toEqual([]);
+    expect(comingSoonFeatures()).toHaveLength(PREMIUM_FEATURES.length);
   });
 
-  it('the only live feature exposes a buyHref pointing at the app', () => {
-    const study = PREMIUM_FEATURES.find((f) => f.key === 'premium_study');
-    expect(study).toBeDefined();
-    expect(study?.live).toBe(true);
-    expect(study?.buyHref).toBeTruthy();
-  });
-
-  it('every non-live feature has NO buyHref (never sell vapor)', () => {
-    const coming = comingSoonFeatures();
-    expect(coming.length).toBeGreaterThan(0);
-    for (const f of coming) {
+  it('NO feature exposes a buyHref (never sell vapor)', () => {
+    expect(PREMIUM_FEATURES.length).toBeGreaterThanOrEqual(4);
+    for (const f of PREMIUM_FEATURES) {
       expect(f.live).toBe(false);
       expect(f.buyHref).toBeUndefined();
     }

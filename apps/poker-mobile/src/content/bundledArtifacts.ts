@@ -42,3 +42,15 @@ export function premiumContentCatalogPackArtifact(): unknown {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require('../../assets/content/0.8.1/premium_content_catalog.pack.json');
 }
+
+/** Learning modules ContentPack (lesson catalog — 28 modules; free-first opens 3 via FREE_LESSON_MODULE_IDS). */
+export function learningModulesPackArtifact(): unknown {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require('../../assets/content/0.8.1/learning_modules.pack.json');
+}
+
+/** Lesson content ContentPack (section text; FK → learning_modules). Bundled WITH learning_modules. */
+export function lessonContentPackArtifact(): unknown {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require('../../assets/content/0.8.1/lesson_content.pack.json');
+}

@@ -419,6 +419,26 @@ export default function ProfileScreen({ navigation }: Props) {
           <CloudSyncCard onGoPremium={() => navigation.navigate('Paywall', { trigger: 'profile' })} />
         </MotiView>
 
+        {/* ── Premium teaser (free-first): deliberately NOT paywall-gated — the destination's
+               flag-OFF branch is the honest Coming-soon preview (no plans, no purchase, no
+               restore; pinned by the honesty guards). Builds desire, sells nothing. ── */}
+        {!isFeatureEnabled('paywall') && (
+          <MotiView {...slideUpSequence({ reduced, delay: staggerIn(4) })}>
+            <PressableScale
+              style={styles.aboutRow}
+              onPress={() => navigation.navigate('Paywall', { trigger: 'profile_teaser' })}
+              haptic="light"
+              accessibilityRole="button"
+              accessibilityLabel="Premium, coming soon — see what's planned"
+            >
+              <Ionicons name="sparkles-outline" size={16} color={colors.gold} />
+              <Text style={styles.aboutRowText}>Premium</Text>
+              <Text style={styles.aboutRowValue}>Coming soon</Text>
+              <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
+            </PressableScale>
+          </MotiView>
+        )}
+
         {/* ── Subscription & usage (flag-gated) ─────────────────────────── */}
         {isFeatureEnabled('paywall') && (
           <MotiView {...slideUpSequence({ reduced, delay: staggerIn(4) })}>
