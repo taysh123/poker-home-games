@@ -12,6 +12,9 @@ import {
   premiumContentCatalogPackArtifact,
   learningModulesPackArtifact,
   lessonContentPackArtifact,
+  calibrationReportPackArtifact,
+  coachKnowledgeMapPackArtifact,
+  quizLearningObjectivesPackArtifact,
 } from '../bundledArtifacts';
 
 describe('bundled artifacts ↔ CONTENT_DATASET_VERSION', () => {
@@ -39,6 +42,18 @@ describe('bundled artifacts ↔ CONTENT_DATASET_VERSION', () => {
   });
   it('lesson_content pack manifest dataset_version matches', () => {
     expect((lessonContentPackArtifact() as { manifest: { dataset_version: string } }).manifest.dataset_version)
+      .toBe(CONTENT_DATASET_VERSION);
+  });
+  it('calibration_report pack manifest dataset_version matches', () => {
+    expect((calibrationReportPackArtifact() as { manifest: { dataset_version: string } }).manifest.dataset_version)
+      .toBe(CONTENT_DATASET_VERSION);
+  });
+  it('coach_knowledge_map pack manifest dataset_version matches', () => {
+    expect((coachKnowledgeMapPackArtifact() as { manifest: { dataset_version: string } }).manifest.dataset_version)
+      .toBe(CONTENT_DATASET_VERSION);
+  });
+  it('quiz_learning_objectives pack manifest dataset_version matches', () => {
+    expect((quizLearningObjectivesPackArtifact() as { manifest: { dataset_version: string } }).manifest.dataset_version)
       .toBe(CONTENT_DATASET_VERSION);
   });
 });

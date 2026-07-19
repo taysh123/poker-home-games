@@ -13,6 +13,9 @@ import {
   premiumContentCatalogPackArtifact,
   learningModulesPackArtifact,
   lessonContentPackArtifact,
+  calibrationReportPackArtifact,
+  coachKnowledgeMapPackArtifact,
+  quizLearningObjectivesPackArtifact,
 } from './bundledArtifacts';
 
 // Gated by the caller: the only invoker is bootstrapContent(), which returns early when the `content`
@@ -33,11 +36,16 @@ export function bundledPacks(): ContentPack[] {
   } catch {
     /* pack catalog not bundled → catalog screen shows an honest empty state */
   }
-  // Lesson pair (free-first) — modules + their section text ingest together (FK lesson_content → learning_modules).
+  // Lesson set (free-first) — modules + section text + the leaf tables their hard FKs resolve against
+  // (calibration_report, coach_knowledge_map, quiz_learning_objectives). All-or-nothing: without the leaves,
+  // learning_modules/lesson_content dangle and quarantine ("No lessons yet"). See lessonIngest.test.ts.
   try {
     const modules = learningModulesPackArtifact() as ContentPack;
     const lessons = lessonContentPackArtifact() as ContentPack;
-    packs.push(modules, lessons);
+    const calibration = calibrationReportPackArtifact() as ContentPack;
+    const knowledge = coachKnowledgeMapPackArtifact() as ContentPack;
+    const objectives = quizLearningObjectivesPackArtifact() as ContentPack;
+    packs.push(modules, lessons, calibration, knowledge, objectives);
   } catch {
     /* lesson packs not bundled → Lessons shows the honest empty state */
   }

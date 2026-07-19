@@ -54,3 +54,25 @@ export function lessonContentPackArtifact(): unknown {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require('../../assets/content/0.8.1/lesson_content.pack.json');
 }
+
+// Referenced-table leaves the lesson packs hard-FK into — MUST be bundled or the lesson packs dangle and
+// quarantine ("No lessons yet"). All three are FK-leaves for the bundled set (calibration_report has no FKs;
+// coach_knowledge_map's are all soft '(node)'; quiz_learning_objectives → learning_modules, which is bundled).
+
+/** Calibration report ContentPack (learning_modules.CalibrationProfileID → this). */
+export function calibrationReportPackArtifact(): unknown {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require('../../assets/content/0.8.1/calibration_report.pack.json');
+}
+
+/** Coach knowledge map ContentPack (lesson_content.LinkedConceptID → this). */
+export function coachKnowledgeMapPackArtifact(): unknown {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require('../../assets/content/0.8.1/coach_knowledge_map.pack.json');
+}
+
+/** Quiz learning objectives ContentPack (lesson_content.LinkedObjectiveID → this). */
+export function quizLearningObjectivesPackArtifact(): unknown {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require('../../assets/content/0.8.1/quiz_learning_objectives.pack.json');
+}
