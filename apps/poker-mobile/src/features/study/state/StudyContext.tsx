@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import * as store from '../data/studyStore';
 import {
   recordAnswer as applyAnswer,
+  recordPracticeAnswer as applyPracticeAnswer,
   setDailyGoal as applyGoal,
   refreshFreezeTokens,
   autoFreezeMissedDay,
@@ -31,6 +32,8 @@ type StudyContextType = {
   isLoaded: boolean;
   /** Record one answered spot (uses today's date for streaks). */
   recordAnswer: (correct: boolean) => Promise<void>;
+  /** Record one PRACTICE answer AND consume one from the shared daily pool — a SINGLE commit (Spot + Decision). */
+  recordPracticeAnswer: (correct: boolean) => Promise<void>;
   /** Customize the daily goal (clamped 3–25). */
   setDailyGoal: (goal: number) => Promise<void>;
   /** Whether one more metered free rep is allowed today + how many remain (premium ⇒ Infinity). */
@@ -48,6 +51,7 @@ const StudyContext = createContext<StudyContextType>({
   dataset: STARTER_DATASET,
   isLoaded: false,
   recordAnswer: async () => {},
+  recordPracticeAnswer: async () => {},
   setDailyGoal: async () => {},
   limitFor: () => ({ allowed: true, remaining: Infinity }),
   consumeLimit: async () => {},
@@ -97,6 +101,13 @@ export function StudyProvider({ children }: { children: React.ReactNode }) {
     await commit({ ...file, progress: applyAnswer(file.progress, correct, todayKey()) });
   }, [file, commit]);
 
+  // Composed answer+consume in ONE commit. Splitting these across two commits (recordAnswer THEN consumeLimit)
+  // from the same render-closure `file` clobbered the practice counter — the root cause of the Decision-Trainer
+  // "unlimited" bug. Both trainers call this, so they share ONE daily pool.
+  const recordPracticeAnswer = useCallback(async (correct: boolean) => {
+    await commit({ ...file, progress: applyPracticeAnswer(file.progress, correct, todayKey()) });
+  }, [file, commit]);
+
   const setDailyGoal = useCallback(async (goal: number) => {
     await commit({ ...file, progress: applyGoal(file.progress, goal) });
   }, [file, commit]);
@@ -121,7 +132,7 @@ export function StudyProvider({ children }: { children: React.ReactNode }) {
   }, [file, commit]);
 
   return (
-    <StudyContext.Provider value={{ progress: file.progress, dataset: STARTER_DATASET, isLoaded, recordAnswer, setDailyGoal, limitFor, consumeLimit, recordQuizCompleted, recordLessonCompleted }}>
+    <StudyContext.Provider value={{ progress: file.progress, dataset: STARTER_DATASET, isLoaded, recordAnswer, recordPracticeAnswer, setDailyGoal, limitFor, consumeLimit, recordQuizCompleted, recordLessonCompleted }}>
       {children}
     </StudyContext.Provider>
   );

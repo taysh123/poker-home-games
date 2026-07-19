@@ -111,8 +111,8 @@ describe('consumeToday', () => {
 });
 
 describe('practiceQuestion metering (free-first)', () => {
-  it('allows exactly FREE_PRACTICE_QUESTIONS_PER_DAY (5) per day, then blocks', () => {
-    expect(FREE_PRACTICE_QUESTIONS_PER_DAY).toBe(5);
+  it('allows exactly FREE_PRACTICE_QUESTIONS_PER_DAY (10) per day, then blocks', () => {
+    expect(FREE_PRACTICE_QUESTIONS_PER_DAY).toBe(10);
     let c = emptyDailyCounters();
     for (let i = 0; i < FREE_PRACTICE_QUESTIONS_PER_DAY; i++) {
       expect(limitStatus(c, 'practiceQuestion', TODAY, false).allowed).toBe(true);

@@ -34,7 +34,7 @@ const { width } = Dimensions.get('window');
  *  Free-first launch: no AI promises here — coaching is honestly "coming soon" (router card, flag-gated). */
 const PILLARS: { icon: IoniconsName; title: string; subtitle: string }[] = [
   { icon: 'school',      title: 'Learn',    subtitle: 'Real lessons, a daily quiz, and drills that build instinct. Free every day.' },
-  { icon: 'fitness',     title: 'Practice', subtitle: 'Five free trainer questions a day. Streaks that keep you sharp.' },
+  { icon: 'fitness',     title: 'Practice', subtitle: 'Ten free trainer questions a day. Streaks that keep you sharp.' },
   { icon: 'play-circle', title: 'Play',     subtitle: 'Run the night — buy-ins, blind clock, one-tap settlement.' },
   { icon: 'wallet',      title: 'Track',    subtitle: 'Your real numbers — sessions, ROI, win rate.' },
 ];

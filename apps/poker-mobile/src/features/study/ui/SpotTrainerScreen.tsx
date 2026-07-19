@@ -53,7 +53,7 @@ export default function SpotTrainerScreen() {
   const { width: winW } = useWindowDimensions();
   const { width: TABLE_W, height: TABLE_H } = tableDimensions(winW - spacing.xl * 2);
   const isQuiz = mode === 'spot';
-  const { dataset, recordAnswer, limitFor, consumeLimit } = useStudy();
+  const { dataset, recordPracticeAnswer, limitFor } = useStudy();
   const { isPremium } = useEntitlements();
   const reduced = useReducedMotion();
   // Free-first: ONE shared pool of practice questions per local day across Spot + Decision modes.
@@ -139,8 +139,8 @@ export default function SpotTrainerScreen() {
     setAnswered(a => a + 1);
     if (r.correct) setCorrectCount(c => c + 1);
     track('study_spot_answered', { mode, correct: r.correct });
-    await consumeLimit('practiceQuestion'); // one unit per answered question (shared daily pool)
-    await recordAnswer(r.correct);
+    // ONE commit records the answer AND consumes one from the shared daily pool (Spot + Decision).
+    await recordPracticeAnswer(r.correct);
   }
 
   function next() {

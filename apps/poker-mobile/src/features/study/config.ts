@@ -7,7 +7,7 @@
  */
 
 /** Free practice questions (Spot + Decision trainer, SHARED pool) per local day. THE tunable knob. */
-export const FREE_PRACTICE_QUESTIONS_PER_DAY = 5;
+export const FREE_PRACTICE_QUESTIONS_PER_DAY = 10;
 
 /** Free multiple-choice quizzes a non-premium user may complete per local day. */
 export const FREE_QUIZ_PER_DAY = 1;
