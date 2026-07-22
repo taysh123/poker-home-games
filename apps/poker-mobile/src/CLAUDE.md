@@ -1,209 +1,107 @@
 # Frontend Architecture — poker-mobile/src
 
+> Rewritten 2026-07-22 against the Phase-1 audit (the previous version described a 4-tab app with
+> per-file axios instances — long gone). Keep this file PATTERNS-first: point at the load-bearing
+> files instead of enumerating every screen (inventories rot; ~50 routable surfaces exist).
+
 ## Directory Map
 
 ```
 src/
-├── api/           # Typed Axios wrappers — one file per backend resource
-├── components/    # Shared UI components
-├── context/       # React contexts (auth session)
-├── hooks/         # Custom React hooks
-├── navigation/    # Navigation stack definition
-├── screens/       # One file per screen — owns its own state + data fetching
-├── theme/         # Design tokens (colors)
-└── utils/         # Pure helper modules
+├── analytics/     # Vendor-neutral warehouse contract + adapter (tested; PostHog wiring in utils/analytics)
+├── api/           # Typed API modules — ALL share api/apiClient.ts (see below)
+├── components/    # Shared UI (~50): Velvet Table set, motion/ (Reanimated 4), brand/ (splash), table/ (felt kit)
+├── config/        # features.ts — the compile-time flag switchboard (see below)
+├── content/       # ContentStore: bundled pack ingest/validate/quarantine (sqlite native, memory web)
+├── context/       # Core contexts (Auth, ActiveSession, LocalGames, Currency, Entitlements, Content)
+├── features/      # Feature verticals, each with logic/ (pure, tested) + state/ + ui/ + data/
+│   ├── bankroll/  premium/  study/  coach/  engagement/  mastery/  landing/  solver/  auth/
+├── hooks/         # useGoogleAuth, useAppleAuth, useReminderScheduler, usePushNotifications, ...
+├── local/         # Guest game engine: schema v4, settlements port, tournament engine, cloud-sync client
+├── navigation/    # AppNavigator (two trees) + entryRouting.ts (pure, pinned)
+├── screens/       # Classic screens (SessionScreen 3k lines — the critical path; Home, Groups, ...)
+├── theme/         # 10 token files: colors, typography, fonts, spacing, radii, shadows, blur, iconSize, zIndex, motion
+└── utils/         # Pure helpers: money, confirm/toast (web-safe), storage, analytics, reminders, localDay ban
 ```
 
----
+## The rules that bite (read these before coding)
 
-## api/
+1. **Flags:** `config/features.ts` is the single compile-time switchboard (PROD/BETA/DEV
+   resolution). PROD-ON today: study, content, retention, nav5, onboardingV2, immersive,
+   v2Splash, welcome, analytics, reminders. `features.test.ts` asserts the EXACT prod matrix —
+   any flag flip must extend `expectedOn` in the same PR.
+2. **StudyContext writes are updater-based composed operations.** Never chain raw writes from one
+   handler; never re-introduce `consumeLimit`-style primitives (this bug class shipped twice —
+   see `state/__tests__/StudyContext.compose.test.tsx`).
+3. **Day keys are LOCAL** (`features/study/logic/localDay.ts`). `toISOString().slice(0, 10)` is
+   banned repo-wide by `utils/__tests__/dayKeyBan.test.ts`.
+4. **Analytics:** `utils/analytics.ts` — typed events; dispatch is consent-gated PostHog EU
+   (flag + Welcome-choice consent + opt-out + build key; pinned by `analyticsDispatch.test.ts`).
+   Upgrade-trigger ids are TYPED (`features/premium/triggers.ts`) — no ad-hoc strings.
+5. **Web-safety:** `Alert.alert` is a no-op on web — use `utils/confirm.ts` / `utils/toast.ts`.
+   `Share.share` needs a clipboard fallback. Storage via `utils/storage.ts` only.
+6. **Honesty guards:** `features/premium/config.ts` (all `comingSoon: true`) + `paywall` flag OFF
+   are CI-pinned. Nothing purchasable; LockNudge is the one lock/limit surface.
+7. **Money is integer cents** in `local/` (`utils/money.ts`); the settlement engine is a pinned
+   TS port of the C# service — change both together (`local/__tests__/settlements.test.ts`).
 
-Each file creates its own `axios` instance with `baseURL = API_BASE_URL` and
-`Content-Type: application/json`. Functions accept a `token` argument and attach it
-as `Authorization: Bearer <token>`.
+## api/ — ONE shared client
 
-| File | Resource |
-|------|---------|
-| `config.ts` | Exports `API_BASE_URL` — `localhost:5062` on web, LAN IP on mobile |
-| `authApi.ts` | `/api/auth/*` — login, register, logout, google |
-| `groupsApi.ts` | `/api/groups/*` — list, create, detail, members |
-| `sessionsApi.ts` | `/api/sessions/*` and `/api/groups/:id/sessions` |
-| `settlementsApi.ts` | `/api/settlements/*` — calculate, list, mark paid |
-| `statsApi.ts` | `/api/auth/stats` — user lifetime statistics |
+All API modules import `api/apiClient.ts`: a single axios instance whose 401 interceptor
+refreshes the token behind a mutex and retries; refresh failure → `onUnauthenticated` → logout.
+Exception: `deviceTokensApi.ts` (own instance; push tokens bypass refresh). Token plumbing is
+manual: functions take an explicit `token` argument; screens read it from `utils/storage.ts`
+before each call (no request interceptor). `config.ts` exports `API_BASE_URL`.
 
-**Pattern for authenticated calls:**
-```typescript
-const token = await SecureStore.getItemAsync('accessToken'); // via storage.ts
-if (!token) return;
-const data = await getSomeResource(token, ...args);
-```
+## Navigation — two trees, one route name
 
----
+`navigation/AppNavigator.tsx` branches on `user === null`:
+- **Guest tree**: Welcome chooser → (first run) OnboardingV2 → `GuestTabNavigator`; local-game
+  screens; Login/Register as dismissible modals; invite deep links stash via
+  `utils/pendingInvite.ts` and resume after auth.
+- **Authed tree**: `TabNavigator` + all server screens + the same local-game screens.
 
-## context/AuthContext.tsx
+Both trees register the route name `MainTabs`; React Navigation swaps trees on auth change.
+Prod IA is the flag-gated 5-tab layout (`nav5`): Home / Track / Study / Groups (+Coach when its
+flag is on). ~20 shared deep screens are registered in BOTH trees — adding one means editing
+both blocks (known debt). Entry routing decisions are pure in `navigation/entryRouting.ts`
+(Jest-pinned). Deep links: `/join/group/:token`, `/join/session/:token` (+ `tpoker://`).
 
-Provides `{ user, isLoading, login, register, googleLogin, logout }` to the whole app.
+## State — 13 contexts, no global store
 
-**Session lifecycle:**
-1. On startup: `restoreSession()` reads `user` from storage → if found, sets state
-2. On login/register: calls API → `saveSession()` → `setUser()` first (drives navigation),
-   then persists tokens to storage best-effort (failure doesn't block navigation)
-3. On logout: calls `/api/auth/logout` server-side, then `clearSession()` → `setUser(null)`
-4. AppNavigator renders auth screens when `user === null`, app screens otherwise
+Providers nest in App.tsx: SafeArea → Currency → Auth → Premium → Entitlements → Content →
+ActiveSession → LocalGames → Bankroll → Study → Mastery → Coach → Engagement (+ SplashGate).
+Notable: ActiveSession polls `/api/auth/stats` every 30s and drives LiveGameBar (unions server
+active session with the local active game); EngagementContext derives XP/rank from the other
+pillars' signals — XP is MONOTONIC (rides cumulative `studyDays`, never the volatile streak);
+Entitlements is server-authoritative, fail-closed, cached at `tpoker.entitlement.v1`.
+Guests get the full tree — every feature context works signed-out.
 
----
+## Study & content (prod-ON)
 
-## utils/storage.ts
+- ContentStore ingests the bundled packs at startup (`content/bundledPacks.ts` — the FULL
+  1,460-question free bank; `calibration_report` is pushed FIRST, exactly once, as the shared FK
+  leaf; `quiz_sample` was removed and must never return — both map to table `quiz_bank`).
+- Daily quiz: filters via `selectQuestions`, then `logic/quizRotation.ts#dailyRotation` — one
+  stable seeded shuffle + a daily-advancing window (fresh daily, stable within a day, no repeats
+  until the pool cycles). Metering: `FREE_QUIZ_PER_DAY = 1`, shared practice pool
+  `FREE_PRACTICE_QUESTIONS_PER_DAY = 10` (`features/study/config.ts`).
+- Streaks live in StudyContext (freeze tokens, weekly refill, auto-freeze — `retention` flag).
+  Reminders: two kinds only (`daily_study`, `streak_risk`), honesty-pinned; OS permission asked
+  once, after the first completed drill.
 
-Platform-aware key-value storage wrapper with the same async API as `expo-secure-store`.
+## screens/ — where the risk is
 
-- **Web**: delegates to `localStorage` (expo-secure-store's native bindings don't work in browsers)
-- **Native**: delegates to `expo-secure-store` (encrypted Keychain/Keystore)
+`SessionScreen.tsx` (~3.1k lines) is the money-critical live-session monolith and duplicates
+"The Final Count" with `LocalSessionScreen`/`LocalSessionSummaryScreen` (sync-by-convention —
+extraction is master-plan slice 2.1; don't build new end-game features on top before it).
+Screen-level tests exist only for Landing/Login/Welcome (+ context/composition tests) — logic
+lives in `features/*/logic` and `local/` precisely so it's testable without screens.
 
-All files that need token persistence import from here — never import `expo-secure-store` directly.
+## Adding a screen
 
-```typescript
-import * as SecureStore from '../utils/storage'; // not 'expo-secure-store'
-```
-
----
-
-## hooks/
-
-| File | Purpose |
-|------|---------|
-| `useGoogleAuth.ts` | Wraps `expo-auth-session` Google OAuth (id_token flow). Returns `{ prompt, ready }`. Works on web + native via hardcoded PUBLIC client-ID fallbacks; web redirect = page origin (pin port 8081). Expo Go unsupported on SDK 54. |
-
----
-
-## navigation/AppNavigator.tsx
-
-Two trees branched on `user === null` — but the logged-out tree is a **full guest
-experience**, not a login wall:
-
-**Guest tree** (`user === null`):
-- Onboarding (first run only) → `GuestTabNavigator` (route name `MainTabs`)
-- Guest tabs: GuestHome | LocalSessions | GroupsAuthGate | GuestStats
-- Local game screens: LocalNewGame, LocalSession, LocalSessionSummary
-- Login/Register pushed as dismissible modals; JoinSession/JoinGroup show a
-  "Sign in to join" CTA that stashes a pending invite (`utils/pendingInvite.ts`)
-  and resumes the join after login
-
-**Authed tree** (`user !== null`): `TabNavigator` (Home | AllSessions | GroupsList | Stats)
-+ all server-backed deep screens + the same local game screens (a guest who logs in
-mid-game can still reach their local game).
-
-Both tab navigators share `tabScreenOptions` and render `LiveGameBar` (which unions
-server `activeSession` with the local `activeGame` — server wins).
-
-React Navigation automatically swaps trees when `user` changes — no manual `navigation.replace()` needed. Logout lands on guest Home.
-
----
-
-## screens/
-
-Each screen is self-contained. It owns:
-- Local state (loading, error, data)
-- Token read from storage
-- API call on mount (or `useFocusEffect`)
-- Navigation actions
-
-**Screens inventory:**
-
-| Screen | Route | Tab? | Purpose |
-|--------|-------|------|---------|
-| `LoginScreen` | Login | — | Email/password sign-in |
-| `RegisterScreen` | Register | — | New account creation |
-| `HomeScreen` | Home | ✅ Tab 1 | Dashboard: active sessions, quick stats, groups |
-| `AllSessionsScreen` | AllSessions | ✅ Tab 2 | All sessions across groups (active first, then recent) |
-| `GroupsListScreen` | GroupsList | ✅ Tab 3 | All user groups |
-| `StatsScreen` | Stats | ✅ Tab 4 | Lifetime P&L, win/loss record, session history |
-| `CreateGroupScreen` | CreateGroup (modal) | — | New group form |
-| `GroupDetailScreen` | GroupDetail | — | Group info, members, leaderboard, activity |
-| `InvitationsScreen` | Invitations | — | Accept/decline group invites |
-| `EditGroupScreen` | EditGroup (modal) | — | Edit group name/description |
-| `SessionsListScreen` | SessionsList | — | Sessions in a group |
-| `CreateSessionScreen` | CreateSession (modal) | — | New session form |
-| `SessionScreen` | Session | — | Unified live + finished session (Draft/Active/Finished adaptive) |
-| `SettlementScreen` | Settlement | — | Who owes who, mark paid |
-| `ProfileScreen` | Profile | — | Edit profile, change password, delete account |
-| `SplashScreen` | — | — | Initial loading screen |
-| `GuestHomeScreen` | (guest) Home | ✅ Tab 1 | Guest dashboard: start/resume local game, recent games, sign-in upsell |
-| `LocalSessionsScreen` | (guest) AllSessions | ✅ Tab 2 | Local games list (live first) |
-| `GroupsAuthGateScreen` | (guest) GroupsList | ✅ Tab 3 | Premium sign-in gate for Groups |
-| `GuestStatsScreen` | (guest) Stats | ✅ Tab 4 | Table stats from local games + upsell |
-| `LocalNewGameScreen` | LocalNewGame | — | 3-step local game wizard (both trees) |
-| `LocalSessionScreen` | LocalSession | — | Live local game: buy-ins/cash-outs, undo, end flow with final stacks |
-| `LocalSessionSummaryScreen` | LocalSessionSummary | — | Results, cash settlement pairs, confetti, delete |
-
----
-
-## local/ — guest game engine
-
-| File | Purpose |
-|------|---------|
-| `types.ts` | `LocalGame`/`LocalPlayer`/`LocalTxn` — amounts are ALWAYS integer cents |
-| `settlements.ts` | TS port of backend `SettlementCalculatorService.cs` — keep in sync; pinned by Jest fixtures |
-| `localGamesStore.ts` | Pure mutations + AsyncStorage persistence (`tpoker.localGames.v1`), corrupt-data quarantine |
-| `localStats.ts` | Table-level stats from finished local games |
-| `__tests__/` | Jest suites (run `npx jest` before committing) |
-
-State lives in `context/LocalGamesContext.tsx` (max one Active game, serialized writes).
-
----
-
-## theme/colors.ts
-
-All colors are defined here. Never hardcode hex values in component files.
-
-| Token | Value | Use |
-|-------|-------|-----|
-| `background` | `#0F1923` | Screen backgrounds |
-| `surface` | `#1A2535` | Cards, inputs |
-| `surfaceHigh` | `#1E2D3D` | Raised surfaces, avatar |
-| `border` | `#243447` | Card borders, dividers |
-| `gold` | `#C9A84C` | Primary accent, buttons |
-| `goldLight` | `#E8C97A` | Highlighted amounts |
-| `text` | `#FFFFFF` | Primary text |
-| `textMuted` | `#7A8A99` | Labels, secondary text |
-| `textDim` | `#3A4A5A` | Placeholders, disabled |
-| `error` | `#E74C3C` | Error states |
-| `success` | `#27AE60` | Positive outcomes |
-
----
-
-## components/
-
-| File | Purpose |
-|------|---------|
-| `ActionSheet.tsx` | Bottom sheet with options; glass card on iOS |
-| `AppTextInput.tsx` | Labeled input with focus/error states, prefix, hint |
-| `Badge.tsx`, `EmptyState.tsx`, `FormRow.tsx`, `SectionCard.tsx` | Small layout/labels |
-| `GoogleAuthButton.tsx` | "Continue with Google" — native only until `webClientId` configured |
-| `GroupListItem.tsx`, `SessionListItem.tsx` | List rows (LIVE pill, W/L/E badges) |
-| `PrimaryButton.tsx` | Gold/outline/danger button — internally a `PressableScale` (spring + haptic) |
-| `SkeletonCard.tsx`, `SkeletonRow.tsx` | Loading placeholders with `Shimmer` sweep |
-| `StatWidget.tsx`, `RecapCard.tsx`, `Toast.tsx`, `LoadingScreen.tsx` | Stats/feedback |
-| `StepIndicator.tsx`, `GuestNameInput.tsx` | Extracted wizard pieces shared by NewGame + LocalNewGame |
-
-### components/motion/ — Reanimated 4 primitives
-
-| File | Purpose |
-|------|---------|
-| `PressableScale.tsx` | Base touchable: spring press-scale + optional haptic |
-| `Shimmer.tsx` | Gradient sweep for skeletons (opacity pulse on web) |
-| `AnimatedNumber.tsx` | rAF count-up for money values |
-| `GlassView.tsx` | iOS blur surface; solid fallback elsewhere. Static chrome only |
-| `Celebration.tsx` | Confetti burst on game end; auto-unmounts |
-
-**Web caveat:** `Alert.alert` is a no-op on react-native-web — use `utils/confirm.ts` for confirmations that must work on web.
-
----
-
-## Adding a New Screen
-
-1. Add the route name + params to `RootStackParamList` in `AppNavigator.tsx`
-2. Add `<Stack.Screen>` inside the appropriate stack (auth or app)
-3. Create `src/screens/MyNewScreen.tsx`
-4. If it needs auth: read token from `storage.getItemAsync('accessToken')`
-5. Create or reuse an API function in `src/api/`
+1. Route name + params in `RootStackParamList` (AppNavigator).
+2. `<Stack.Screen>` in the correct tree — BOTH trees if guests can reach it.
+3. Screen wraps in `components/Screen`; tokens only (no hex, no raw font sizes); web-safe
+   dialogs; a11y labels on touchables.
+4. Typed analytics events; typed trigger ids for any premium-adjacent surface.

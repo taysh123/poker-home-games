@@ -1,5 +1,9 @@
 # Backend Architecture — PokerApp
 
+> Rewritten 2026-07-22 against the Phase-1 audit (the previous version predated Billing, Coach,
+> Sync, Entitlements, Notifications, and the Phase-46 pipeline). Patterns-first — the folder
+> tree is the inventory.
+
 ## Solution Structure
 
 ```
@@ -7,149 +11,93 @@ src/
 ├── PokerApp.API/            # HTTP layer: controllers, middleware, DI, Program.cs
 ├── PokerApp.Application/    # Business logic: commands, queries, validators, DTOs
 ├── PokerApp.Domain/         # Core domain: entities, enums (no framework dependencies)
-└── PokerApp.Infrastructure/ # Data access: EF Core, migrations, repositories
+├── PokerApp.Infrastructure/ # EF Core (Persistence/), services, billing, identity, settings
+└── PokerApp.Tests/          # xUnit — security/billing/coach/sync seams (~230 tests)
 ```
 
-Dependency direction (inner layers never depend on outer):
-```
-Domain  ←  Application  ←  Infrastructure
-                ↑
-               API
-```
+Dependency direction (inner never depends on outer): `Domain ← Application ← Infrastructure`, API on top.
 
----
+## Application layer — CQRS via MediatR
 
-## Domain Layer (`PokerApp.Domain`)
+`Application/Features/` has TEN areas: **Auth** (login/register/refresh/Google/Apple/profile/
+delete-account), **Billing** (validate-purchase, webhooks, checkout remnants), **Coach**
+(AnalyzeHand + credits), **Entitlements**, **Groups**, **Notifications**, **Sessions**,
+**Settlements**, **Sync**, **Users** (stats, achievements, profile, search, weekly digest).
 
-Pure C# records and classes. No EF Core, no ASP.NET, no MediatR.
+Each command/query: `*Command.cs` (record `IRequest<T>`) + handler + FluentValidation validator
+(commands only) + response/DTO. MediatR + FluentValidation scan by assembly — register nothing
+manually. Controllers stay thin: claims → command → `mediator.Send()` → status code.
+`ExceptionHandlingMiddleware` maps NotFound→404, BadRequest→400, Validation→400+fields,
+Conflict→409, Unauthorized→401, UnauthorizedAccess→403.
 
-**Entities:**
+## Domain — key entities beyond the game core
 
-| Entity | Purpose |
-|--------|---------|
-| `User` | Player account — email, username, Google ID, refresh tokens |
-| `Group` | Poker group — name, owner, members |
-| `GroupMember` | Join table: User ↔ Group with role (Owner/Admin/Member) |
-| `GroupInvitation` | Pending invite with expiry |
-| `Session` | Poker cash game — group, status, blinds, chip ratio |
-| `SessionPlayer` | Player in a session — buy-ins, cash-out, final balance |
-| `BuyIn` | A single buy-in or rebuy transaction |
-| `CashOut` | A cash-out transaction |
-| `Settlement` | A payment record: payer → receiver, amount, status |
-| `RefreshToken` | JWT refresh token with expiry and revocation flag |
-| `BaseEntity` | `Id` (Guid), `CreatedAt`, `UpdatedAt` |
+Game core: User, Group, GroupMember, GroupInvitation, GroupInviteLink, Session, SessionPlayer,
+SessionInviteToken, BuyIn, CashOut, Settlement, HandRecord, RefreshToken.
+Platform: Notification, DeviceToken, Achievement (+UserAchievement, seeded catalog),
+Subscription, StoreWebhookEvent, CreditBalance, CreditLedgerEntry, CloudBackup.
 
----
+## Infrastructure
 
-## Application Layer (`PokerApp.Application`)
+- **EF Core:** `Persistence/` — AppDbContext, per-entity Configurations, and **Migrations under
+  `Persistence/Migrations/`** (26+; startup applies them via a fire-and-forget task after
+  ApplicationStarted — a failed migration logs but does not stop traffic).
+- **Services** (~22): AchievementEvaluator (post-EndSession), NotificationService (+ExpoPushService,
+  best-effort inside try/catch), EntitlementService (fail-closed; sandbox subs excluded unless
+  `AcceptSandbox` — default FALSE), CreditLedger (atomic reserve/refund, content-bound idempotency),
+  CoachAiProviderFactory (mock default; `anthropic` only via server config), GoogleAuthService /
+  AppleAuthService (JWKS + audience + nonce, fail-closed), FraudEvaluator, AuditLog (ILogger only).
 
-CQRS via MediatR. Each feature folder contains:
-- `Commands/` — state-mutating operations (POST/PUT/DELETE)
-- `Queries/` — read operations (GET)
+## Billing — FAIL-CLOSED in production (PR #24)
 
-Each command/query has:
-- `*Command.cs` / `*Query.cs` — the MediatR request record
-- `*CommandHandler.cs` / `*QueryHandler.cs` — the handler
-- `*CommandValidator.cs` — FluentValidation rules (commands only)
-- `*Response.cs` / `*Dto.cs` — typed return types
+`BillingVerifierSelection.Resolve(provider, isProduction)` (pure, test-pinned): in Production any
+non-`"direct"` provider ⇒ `DisabledBillingVerifier` (verifies nothing → validate returns 400).
+The mock verifier (grants premium for ANY receipt) is a dev/test-only seam. `AcceptSandbox`
+defaults false in code; `appsettings.Production.json` pins `direct` + `AcceptSandbox=false`
+(pinned by `BillingFailClosedProdTests`). App-store billing later plugs into `IBillingVerifier`
+(Apple JWS / Google OIDC verifiers exist, credential-gated).
 
-**Features:**
+## AI Coach — dormant by four layers
 
-| Feature | Commands | Queries |
-|---------|---------|---------|
-| Auth | Login, Register, Logout, RefreshToken, GoogleLogin | GetCurrentUser |
-| Groups | CreateGroup, UpdateGroup, InviteUser, AcceptInvitation, DeclineInvitation, LeaveGroup, RemoveMember | GetMyGroups, GetGroupById, GetGroupMembers, GetMyInvitations |
-| Sessions | CreateSession, StartSession, EndSession, AddPlayer, RemovePlayer, AddBuyIn, AddCashOut | GetGroupSessions, GetSessionById, GetSessionBalances |
-| Settlements | CalculateSettlements, MarkSettlementPaid | GetSessionSettlements |
-| Users | — | GetMyStats |
+Client `coach` flag OFF → server provider default `"mock"` (deterministic, zero API calls) →
+null `CoachAiSettings:ApiKey` throws fail-closed (credit refunded) → `[Authorize]` everywhere.
+AnalyzeHand: entitlement → fraud score → atomic credit reserve → provider → refund-on-throw;
+SHA-256 content-bound idempotency key. Server persists NO analysis content (credits ledger only).
 
-**Adding a new feature:**
-1. Create folder `Features/MyFeature/Commands/MyCommand/`
-2. Add `MyCommand.cs` (record implementing `IRequest<TResponse>`)
-3. Add `MyCommandHandler.cs` (implementing `IRequestHandler<MyCommand, TResponse>`)
-4. Add `MyCommandValidator.cs` (inheriting `AbstractValidator<MyCommand>`)
-5. Register nothing — MediatR and FluentValidation scan by convention (see `DependencyInjection.cs`)
+## Cloud Sync — live but dark
 
----
+`CloudBackup` (one row per user+namespace, opaque payload ≤1MB, app-level Version concurrency);
+`GET/PUT /api/sync/{ns}`; allow-list {localGames, study, coach} in `SyncContract`, whose
+`EnsurePremiumAsync` currently 403s ALL free users (per-namespace free policy is master-plan 3.2,
+with an owner-approved S7a test re-scope).
 
-## Infrastructure Layer (`PokerApp.Infrastructure`)
+## Program.cs pipeline (Phase 46 — ORDER MATTERS)
 
-**`AppDbContext.cs`** — EF Core DbContext with all DbSet<T> properties.
+`/health` → Swagger(dev) → **UseForwardedHeaders (prod only, ForwardLimit=1)** →
+SecurityHeadersMiddleware → **UseCors** → ExceptionHandlingMiddleware → UseResponseCompression →
+**UseAuthentication** → **UseRateLimiter** → UseAuthorization → MapControllers.
+CORS precedes the exception middleware (headers on error responses); Authentication precedes the
+rate limiter so `coach-analyze` partitions per user; ForwardedHeaders de-proxies the client IP so
+auth limiters partition per real IP behind Railway (requires `ASPNETCORE_ENVIRONMENT=Production`).
+Partition keys are pure in `PokerApp.Application.Common.RateLimitKeys`. JWT: 15-min access +
+30-day rotating refresh (SHA-256-hashed at rest); `JwtKey.ResolveSigningKey` fails closed outside
+Development on a missing/short secret. Config key is `JwtSettings:SecretKey`.
 
-**`Configurations/`** — One `IEntityTypeConfiguration<T>` per entity. Keeps entity
-mapping out of the DbContext and organises indexes, FK constraints, and column types.
+## Auth flow notes
 
-**`Migrations/`** — EF Core migrations. Generate with:
-```powershell
-cd src/PokerApp.Infrastructure
-dotnet ef migrations add MyMigration --startup-project ../PokerApp.API
-dotnet ef database update --startup-project ../PokerApp.API
-```
+- Google + Apple sign-in validate identity tokens server-side (JWKS, issuer, audience allow-lists
+  `GoogleSettings:ClientIds` / `AppleSettings:ClientIds`, optional nonce — Apple compares the
+  token's nonce claim VERBATIM to the supplied value; the iOS client sends one random UUID per
+  attempt).
+- Open email registration is OFF (`AuthSettings.AllowEmailRegistration=false`) — verified
+  providers only; existing email accounts keep working.
 
----
+## Testing & dev
 
-## API Layer (`PokerApp.API`)
-
-**`Program.cs` — middleware pipeline order (IMPORTANT):**
-```csharp
-app.UseCors("Dev");                        // 1st — CORS headers on ALL responses
-app.UseMiddleware<ExceptionHandlingMiddleware>(); // 2nd — catches exceptions
-app.UseHttpsRedirection();                 // (prod only)
-app.UseAuthentication();                   // JWT validation
-app.UseAuthorization();                    // [Authorize] enforcement
-app.MapControllers();
-```
-
-CORS must be before the exception middleware so CORS headers are present on error
-responses. If reversed, browser CORS errors mask the real HTTP status codes.
-
-**Controllers** — thin. No business logic. Only:
-1. Extract user identity: `User.FindFirstValue(ClaimTypes.NameIdentifier)`
-2. Build command/query from request body + route params
-3. `await _mediator.Send(command)`
-4. Return appropriate HTTP status code
-
-**`ExceptionHandlingMiddleware.cs`** — maps domain exceptions to HTTP status codes:
-
-| Exception | HTTP |
-|-----------|------|
-| `NotFoundException` | 404 |
-| `BadRequestException` | 400 |
-| `ValidationException` | 400 + field errors |
-| `ConflictException` | 409 |
-| `UnauthorizedException` | 401 |
-| `UnauthorizedAccessException` | 403 |
-| anything else | 500 + TraceId |
-
----
-
-## Auth Flow
-
-```
-POST /api/auth/register or /api/auth/login
-  → LoginCommandHandler / RegisterCommandHandler
-  → validate credentials / create user
-  → generate accessToken (JWT, 15 min) + refreshToken (30 days, stored in DB)
-  → return { accessToken, refreshToken, userId, username, email }
-
-POST /api/auth/refresh
-  → find refresh token in DB → validate not expired, not revoked
-  → rotate: revoke old, issue new pair
-  → return new { accessToken, refreshToken }
-
-POST /api/auth/logout  [Authorize]
-  → revoke refresh token in DB
-```
-
-JWT claims: `sub` (userId), `email`, `username`.
-Controllers extract `userId` with `User.FindFirstValue(ClaimTypes.NameIdentifier)`.
-
----
-
-## Development Checklist
-
-- Run backend: `dotnet run --launch-profile http` from `src/PokerApp.API`
-- Swagger UI: `http://localhost:5062/swagger`
-- Build check: `dotnet build PokerApp.sln` from repo root
-- DB connection: set `DefaultConnection` in `appsettings.Development.json`
-- Never commit production secrets — use environment variables or user-secrets in prod
+- `dotnet test PokerApp.sln` — suites concentrate on the security/billing/coach/sync seams.
+  KNOWN GAP: Sessions/Groups/Settlements handlers have no backend unit tests; the settlement
+  algorithm is pinned by the TS port's fixtures (`apps/poker-mobile/src/local/__tests__/`).
+- Run API: `dotnet run --launch-profile http` from `src/PokerApp.API` (Swagger at :5062).
+- Migrations: `dotnet ef migrations add X --startup-project ../PokerApp.API` from
+  `src/PokerApp.Infrastructure` (files land in `Persistence/Migrations/`).
+- Never commit build output (`out*/` is gitignored — `out2/` was 51 committed DLLs until 0.5).
