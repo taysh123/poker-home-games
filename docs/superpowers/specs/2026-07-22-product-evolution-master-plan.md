@@ -89,6 +89,14 @@ publisher entity (still provisional).
 - Rewrite stale CLAUDE.md sections (root + src/ + apps/poker-mobile/src/) against the audit;
   delete committed `out2/` build artifacts + gitignore.
 
+### 0.6 Legal-pages reconciliation (PRE-SUBMISSION — owner-added 2026-07-22)
+- terms.html / pricing.html / refund.html still name Paddle as the live web Merchant of Record
+  (with $8.99/$79.99 web pricing), contradicting the 0.2-updated privacy.html ("nothing is
+  currently purchasable; app stores when premium launches"). Store reviewers read these pages —
+  reconcile BEFORE store submission: rewrite all three to the honest free-first posture,
+  re-pin their `legalSurfaces.test.ts` blocks deliberately (same treatment privacy.html got).
+- Ordering: must land before the store listing is submitted for review; independent of 0.3–0.5.
+
 ## 4. Wave 1 — A: Personalized onboarding (~2 weeks)
 
 - **1.1 Quiz funnel** inside OnboardingV2's phase machine ('slides' | 'router' gains 'quiz'):
