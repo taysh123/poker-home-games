@@ -18,7 +18,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ── Layers ──────────────────────────────────────────────────────────────────
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddInfrastructure(builder.Configuration, builder.Environment.IsProduction());
 
 // ── CORS ────────────────────────────────────────────────────────────────────
 // Production: read explicit origins from configuration (Railway sets
@@ -169,10 +169,9 @@ if (!app.Environment.IsDevelopment() && configuredOrigins.Length == 0)
         "Set AllowedOrigins__0 to your web domain if this is not intended.", string.Join(",", prodOrigins));
 }
 
-// Fail-loud on a billing misconfig in Production. The mock verifier grants premium for ANY non-empty
-// receipt (safe for dev/tests; catastrophic in prod). We log rather than hard-fail because the paywall
-// flag is OFF and purchase validation isn't user-reachable yet — but a forgotten env var must be impossible
-// to miss. Mirrors the JWT/CORS fail-closed posture. See BillingSettings + MockBillingVerifier.
+// Fail-loud on a billing misconfig in Production. The code path is already fail-closed
+// (BillingVerifierSelection: non-"direct" in prod ⇒ DisabledBillingVerifier, which verifies nothing;
+// AcceptSandbox defaults false) — this log exists so a misconfigured deploy is impossible to miss.
 if (app.Environment.IsProduction())
 {
     var billingProvider = builder.Configuration.GetSection("BillingSettings")["Provider"];
@@ -180,9 +179,9 @@ if (app.Environment.IsProduction())
     if (!string.Equals(billingProvider, "direct", StringComparison.OrdinalIgnoreCase))
     {
         startupLogger.LogCritical(
-            "BILLING: Production is running the MOCK billing verifier (BillingSettings:Provider={Provider}). " +
-            "The mock grants premium for ANY non-empty receipt — set BillingSettings__Provider=direct before " +
-            "enabling purchases.", billingProvider ?? "(null)");
+            "BILLING: Production billing verification is DISABLED (BillingSettings:Provider={Provider} is not " +
+            "\"direct\") — purchase validation will reject every receipt. Set BillingSettings__Provider=direct " +
+            "with real store credentials before enabling purchases.", billingProvider ?? "(null)");
     }
     else if (string.Equals(acceptSandbox, "true", StringComparison.OrdinalIgnoreCase))
     {

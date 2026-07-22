@@ -8,15 +8,15 @@ namespace PokerApp.Infrastructure.Services;
 /// <summary>Computes the current entitlement from the newest valid subscription. Fail-closed → free.</summary>
 /// <remarks>
 /// <paramref name="billing"/> is injected by DI (registered singleton); it is optional only so tests can
-/// construct the service without it. When absent it is permissive (never regresses today's behavior); in
-/// production DI always supplies the real value, so <c>AcceptSandbox=false</c> excludes sandbox/mock subs.
+/// construct the service without it. When absent it FAILS CLOSED (sandbox subs grant nothing) — tests that
+/// exercise sandbox grants pass <c>new BillingSettings { AcceptSandbox = true }</c> explicitly.
 /// </remarks>
 public sealed class EntitlementService(IApplicationDbContext db, BillingSettings? billing = null) : IEntitlementService
 {
     public async Task<EntitlementDto> GetAsync(Guid userId, CancellationToken ct = default)
     {
         var now = DateTime.UtcNow;
-        var acceptSandbox = billing?.AcceptSandbox ?? true; // null (tests) ⇒ permissive; prod DI supplies the real flag
+        var acceptSandbox = billing?.AcceptSandbox ?? false; // null (tests) ⇒ FAIL CLOSED; sandbox acceptance is explicit opt-in
 
         // Consider ONLY subscriptions that grant premium right now (status allows it AND the period has not
         // ended), then take the latest-ending — so a refunded/expired sub with a far-future CurrentPeriodEnd can
