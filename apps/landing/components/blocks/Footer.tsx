@@ -1,8 +1,10 @@
-import { Container } from '@/components/ui/Container';
+﻿import { Container } from '@/components/ui/Container';
 import { SITE } from '@/lib/site';
 
+// min-h-[44px] + inline-flex: these were bare `text-sm` links in a gap-3 column, giving each a
+// ~20px tap target. The columns use gap-1 now so the taller links don't stretch the layout.
 const linkClass =
-  'text-sm text-textMuted transition-colors hover:text-textHigh ' +
+  'inline-flex min-h-[44px] items-center text-sm text-textMuted transition-colors hover:text-textHigh ' +
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold ' +
   'focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm';
 
@@ -35,7 +37,7 @@ export function Footer() {
               </span>
             </div>
             <p className="mt-2 max-w-xs text-sm leading-relaxed text-textMuted">
-              The home-game manager with a coach built in.
+              Learn poker properly. Keep the score straight on game night.
             </p>
             <a
               href={SITE.appUrl}
@@ -43,7 +45,7 @@ export function Footer() {
               rel="noopener noreferrer"
               className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-gold transition-colors hover:text-goldLight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm"
             >
-              Start for free →
+              Start for free &rarr;
             </a>
           </div>
 
@@ -52,7 +54,7 @@ export function Footer() {
             <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-textMuted">
               Product
             </p>
-            <nav aria-label="Product links" className="flex flex-col gap-3">
+            <nav aria-label="Product links" className="flex flex-col gap-1">
               <a
                 href={SITE.appUrl}
                 target="_blank"
@@ -93,7 +95,7 @@ export function Footer() {
             <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-textMuted">
               Company
             </p>
-            <nav aria-label="Legal and contact links" className="flex flex-col gap-3">
+            <nav aria-label="Legal and contact links" className="flex flex-col gap-1">
               <a
                 href={SITE.privacyUrl}
                 target="_blank"
@@ -119,12 +121,18 @@ export function Footer() {
 
         {/* Disclaimer + copyright bar */}
         <div className="mt-12 border-t border-border/40 pt-6 text-xs text-textMuted">
-          <p className="mb-3 max-w-3xl leading-relaxed">
-            T Poker is a home-game management and poker-study app for adults 18+. It does not offer
-            real-money gambling and does not process wagers, deposits, or payouts — any cash is exchanged
-            between players in person. Play responsibly and within your local laws.
+          {/* The responsible-play boilerplate that used to close this paragraph is an operator's
+              phrase: it implies we run something to play. We don't. See __tests__/positioning.test.ts.
+              text-sm, not the surrounding text-xs — this is the paragraph a store reviewer is meant
+              to actually read, and it was set two steps smaller than the copyright line. */}
+          <p className="mb-3 max-w-3xl text-sm leading-relaxed text-textHigh">
+            T Poker is a poker strategy training app with a scorekeeping tool for private home games,
+            intended for adults 18+. It is not a gambling product: there is no wagering, no chance
+            mechanic, and no money inside the app &mdash; nothing is deposited, held, won, or paid
+            out. Any cash is exchanged between friends in person. Check your local laws before
+            organising a home game.
           </p>
-          © {year} {SITE.company}. All rights reserved.
+          &copy; {year} {SITE.company}. All rights reserved.
         </div>
       </Container>
     </footer>

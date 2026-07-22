@@ -1,16 +1,18 @@
-import { Shield, Calculator, Lock, Gift, Star } from 'lucide-react';
+import { GraduationCap, Calculator, Lock, Gift } from 'lucide-react';
 import { Container } from '@/components/ui/Container';
 import { Reveal } from '@/components/ui/Reveal';
 import { SOCIAL_PROOF_ITEMS } from '@/lib/content';
 
 /**
- * Social Proof strip — four honest trust signals.
- * No invented numbers or testimonials. A clearly-marked placeholder slot
- * will be swapped for real ratings once we have them.
+ * Social Proof strip — four honest trust signals. No invented numbers or testimonials.
+ *
+ * There used to be a dashed empty box here reading "Early player ratings & reviews — coming soon".
+ * Shipping a labelled placeholder is worse than shipping nothing: it advertises absence, and the
+ * page already says "coming soon" often enough. Add real ratings when there are real ratings.
  */
 
 // Icons keyed by index — presentation layer only, not content
-const ICONS = [Shield, Calculator, Lock, Gift];
+const ICONS = [GraduationCap, Calculator, Lock, Gift];
 
 export function SocialProof() {
   return (
@@ -40,23 +42,6 @@ export function SocialProof() {
             );
           })}
         </div>
-
-        {/*
-          Placeholder slot — replaced with real ratings/reviews once collected.
-          Explicitly labelled so visitors understand it is intentionally empty.
-        */}
-        <Reveal delay={0.35} className="mt-12">
-          <div
-            className="flex items-center justify-center gap-3 rounded-2xl border border-dashed border-border/60 px-8 py-5 text-sm text-textMuted"
-            aria-label="Social proof placeholder — coming soon"
-          >
-            <Star
-              className="h-4 w-4 shrink-0 text-gold/50"
-              aria-hidden="true"
-            />
-            <span>Early player ratings &amp; reviews — coming soon</span>
-          </div>
-        </Reveal>
       </Container>
     </section>
   );

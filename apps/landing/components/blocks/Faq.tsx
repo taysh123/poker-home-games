@@ -23,7 +23,9 @@ import { FAQ_ITEMS } from '@/lib/content';
  *   for users who prefer reduced motion — no DOM branching needed.
  */
 export function Faq() {
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  // Item 0 ("Is this real-money gambling?") starts OPEN. With everything collapsed, the single most
+  // important answer on the page was one click away from anyone skimming — including store reviewers.
+  const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
     <Section aria-labelledby="faq-heading">

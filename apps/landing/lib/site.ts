@@ -1,11 +1,12 @@
 /**
- * Canonical site constants. The app web build is the live product — all primary
- * CTAs link OUT to it (signup + Paddle billing live there).
+ * Canonical site constants. The app web build is the live product — all primary CTAs link OUT to
+ * it. There is no billing anywhere: web payments were abandoned with the free-first pivot, and
+ * nothing is purchasable in the app either.
  *
- * Domains (2026-07-16): marketing site = tpoker.app; app web build =
+ * Domains (verified 2026-07-23, all resolving): marketing site = tpoker.app; app web build =
  * app.tpoker.app (the old poker-home-games-three.vercel.app 307-redirects there).
- * Policy pages ship inside the APP build's public/ dir, so they live on the app
- * domain — link them directly (no redirect hop for Paddle/SEO crawlers).
+ * Policy pages ship inside the APP build's public/ dir, so they live on the app domain — link them
+ * directly so crawlers and store reviewers don't take a redirect hop.
  */
 export const SITE = {
   name: 'T Poker',

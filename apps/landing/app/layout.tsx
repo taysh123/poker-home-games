@@ -17,9 +17,11 @@ const dmSerif = DM_Serif_Display({
   variable: '--font-display',
 });
 
-const title = 'T Poker — Home-game manager & poker study';
+// Education leads in the title, the tag, and the keywords — the same order the store listing uses
+// (docs/release/store-submission-readiness.md). Nothing here should read as a poker game.
+const title = 'T Poker — Learn poker strategy & keep score at home games';
 const description =
-  'T Poker is a free home-game management and poker-study app — track buy-ins, settle up automatically, and see your session stats. It is not a gambling product: no real-money wagering, no deposits, no payouts. For adults 18+.';
+  'T Poker teaches poker strategy with lessons, a daily quiz, and decision drills — and keeps the buy-in ledger for your home game, settling up in the fewest transfers. Not a gambling product: no wagering, no deposits, no payouts, no money in the app. For adults 18+.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.siteUrl),
@@ -30,13 +32,14 @@ export const metadata: Metadata = {
   description,
   applicationName: SITE.name,
   keywords: [
+    'learn poker strategy',
+    'poker training app',
+    'poker lessons',
+    'poker quiz',
+    'poker strategy drills',
     'home poker game',
-    'poker home game manager',
     'poker buy-in tracker',
-    'poker settlement',
-    'poker stats',
-    'cash game tracker',
-    'poker tournament manager',
+    'poker settlement calculator',
   ],
   authors: [{ name: SITE.company }],
   alternates: {
@@ -54,7 +57,7 @@ export const metadata: Metadata = {
         url: '/og.png',
         width: 1200,
         height: 630,
-        alt: 'T Poker — run your home poker game, no mess, no arguments.',
+        alt: 'T Poker — learn poker strategy, and keep the score straight on game night.',
       },
     ],
   },
