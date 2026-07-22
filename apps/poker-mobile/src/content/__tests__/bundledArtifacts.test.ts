@@ -6,7 +6,7 @@
 import { CONTENT_DATASET_VERSION } from '../datasetVersion';
 import {
   coachGroundingArtifact,
-  quizSamplePackArtifact,
+  quizBankPackArtifact,
   analyticsContractArtifact,
   packManifestsPackArtifact,
   premiumContentCatalogPackArtifact,
@@ -24,8 +24,8 @@ describe('bundled artifacts ↔ CONTENT_DATASET_VERSION', () => {
   it('analytics contract dataset_version matches', () => {
     expect((analyticsContractArtifact() as { dataset_version: string }).dataset_version).toBe(CONTENT_DATASET_VERSION);
   });
-  it('quiz sample pack manifest dataset_version matches', () => {
-    expect((quizSamplePackArtifact() as { manifest: { dataset_version: string } }).manifest.dataset_version)
+  it('quiz bank pack manifest dataset_version matches', () => {
+    expect((quizBankPackArtifact() as { manifest: { dataset_version: string } }).manifest.dataset_version)
       .toBe(CONTENT_DATASET_VERSION);
   });
   it('pack_manifests pack manifest dataset_version matches', () => {

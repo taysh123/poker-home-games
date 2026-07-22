@@ -34,6 +34,7 @@ export type AnalyticsEvent =
   | 'study_spot_answered'
   | 'study_trainer_finished'
   | 'study_quiz_completed'
+  | 'study_question_reported'
   | 'study_lesson_completed'
   | 'bankroll_session_logged'
   | 'group_created'
