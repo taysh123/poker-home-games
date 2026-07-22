@@ -13,6 +13,11 @@ export function nextStep(step: QuizStep): QuizStep | 'router' {
   return i >= 0 && i < FUNNEL_STEPS.length - 1 ? FUNNEL_STEPS[i + 1] : 'router';
 }
 
+export function prevStep(step: QuizStep): QuizStep | null {
+  const i = FUNNEL_STEPS.indexOf(step);
+  return i > 0 ? FUNNEL_STEPS[i - 1] : null;
+}
+
 export interface FunnelOption<Id extends string = string> {
   id: Id;
   label: string;

@@ -31,6 +31,7 @@ import { ContentProvider } from './src/context/ContentContext';
 import { PremiumProvider } from './src/features/premium/state/PremiumContext';
 import { BankrollProvider } from './src/features/bankroll/state/BankrollContext';
 import { StudyProvider } from './src/features/study/state/StudyContext';
+import { PersonaProvider } from './src/features/persona/state/PersonaContext';
 import { CoachProvider } from './src/features/coach/state/CoachContext';
 import { MasteryProvider } from './src/features/mastery/state/MasteryContext';
 import { EngagementProvider } from './src/features/engagement/state/EngagementContext';
@@ -120,6 +121,7 @@ export default function App() {
       <SafeAreaProvider>
       <CurrencyProvider>
       <AuthProvider>
+        <PersonaProvider>
         <PremiumProvider>
         <EntitlementsProvider>
           <ContentProvider>
@@ -149,6 +151,7 @@ export default function App() {
           </ContentProvider>
         </EntitlementsProvider>
         </PremiumProvider>
+        </PersonaProvider>
       </AuthProvider>
       </CurrencyProvider>
       </SafeAreaProvider>

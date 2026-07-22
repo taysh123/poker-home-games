@@ -1,81 +1,118 @@
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  Image,
-  StyleSheet,
-  Dimensions,
-  ScrollView,
-  Platform,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
-} from 'react-native';
+import { View, Text, Image, StyleSheet, Platform, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { useAnimatedStyle, withSpring, withTiming } from 'react-native-reanimated';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { spacing } from '../theme/spacing';
 import { radii } from '../theme/radii';
 import Screen from '../components/Screen';
+import PrimaryButton from '../components/PrimaryButton';
 import PressableScale from '../components/motion/PressableScale';
+import { MotiView, slideUpSequence, staggerIn } from '../components/motion';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import * as storage from '../utils/storage';
 import { track, markSignupIntent } from '../utils/analytics';
 import { isFeatureEnabled } from '../config/features';
+import { usePersona } from '../features/persona/state/PersonaContext';
+import {
+  FUNNEL_STEPS,
+  nextStep,
+  prevStep,
+  GOAL_OPTIONS,
+  SKILL_OPTIONS,
+  FORMAT_OPTIONS,
+  orderActionsForGoal,
+  type QuizStep,
+  type FunnelOption,
+} from '../features/persona/logic/funnel';
+import type { PersonaGoal } from '../features/persona/types';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
-
-const { width } = Dimensions.get('window');
-
-/** The four pillars — education-first onboarding (Learn → Practice → Play → Track).
- *  Free-first launch: no AI promises here — coaching is honestly "coming soon" (router card, flag-gated). */
-const PILLARS: { icon: IoniconsName; title: string; subtitle: string }[] = [
-  { icon: 'school',      title: 'Learn',    subtitle: 'Real lessons, a daily quiz, and drills that build instinct. Free every day.' },
-  { icon: 'fitness',     title: 'Practice', subtitle: 'Ten free trainer questions a day. Streaks that keep you sharp.' },
-  { icon: 'play-circle', title: 'Play',     subtitle: 'Run the night — buy-ins, blind clock, one-tap settlement.' },
-  { icon: 'wallet',      title: 'Track',    subtitle: 'Your real numbers — sessions, ROI, win rate.' },
-];
-
 type ActionKey = 'play' | 'track' | 'study' | 'improve';
 
-function Dot({ active, reduced }: { active: boolean; reduced: boolean }) {
-  const style = useAnimatedStyle(() => ({
-    width: reduced ? (active ? 24 : 8) : withSpring(active ? 24 : 8, { damping: 18, stiffness: 220 }),
-    opacity: reduced ? (active ? 1 : 0.7) : withTiming(active ? 1 : 0.7, { duration: 200 }),
-  }));
-  return <Animated.View style={[styles.dot, active && styles.dotActive, style]} />;
-}
+/** Copy per question step — headlines are chapters (DM Serif), subs stay quiet. */
+const STEP_COPY: Record<Exclude<QuizStep, 'promise' | 'name'>, { headline: string; sub: string }> = {
+  goal: { headline: 'What brings you to the table?', sub: 'We tune your first screen around this.' },
+  skill: { headline: 'How sharp is your game?', sub: 'Honest answer, better drills.' },
+  format: { headline: 'What do you play?', sub: 'Your study feed follows your game.' },
+};
+
+const STEP_OPTIONS: Record<Exclude<QuizStep, 'promise' | 'name'>, FunnelOption[]> = {
+  goal: GOAL_OPTIONS,
+  skill: SKILL_OPTIONS,
+  format: FORMAT_OPTIONS,
+};
+
+/** The beat between selecting and advancing — long enough to feel the choice land. */
+const SELECT_BEAT_MS = 250;
 
 /**
- * V2.1 onboarding — introduces all four pillars, then drops the user into a REAL action
- * (account-free) via a starting-point router. Account creation is contextual + later (the
- * Improve teaser + the existing guest upsells). Gated behind the `onboardingV2` flag.
+ * Quiet Luxury funnel (Wave 1) — the personalized onboarding quiz. Replaces the pillar slides
+ * (their promise lives in step one); `onboardingV2` OFF still falls back to the legacy screen.
+ * One question per screen, one tap per answer, skippable ALWAYS; every answer commits to the
+ * persona store immediately (skip keeps partials). Exit contract everywhere: await markSeen()
+ * THEN navigation.reset. The typed name is display-only — NEVER in analytics (test-pinned).
  */
 export default function OnboardingV2Screen({ navigation }: Props) {
-  const scrollRef = useRef<ScrollView>(null);
-  const [index, setIndex] = useState(0);
-  const [phase, setPhase] = useState<'slides' | 'router'>('slides');
   const reduced = useReducedMotion();
+  const { persona, answerStep, completeFunnel } = usePersona();
+
+  const [phase, setPhase] = useState<'quiz' | 'router'>('quiz');
+  const [step, setStep] = useState<QuizStep>('promise');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [name, setName] = useState('');
+  // Local mirror of this run's answers — synchronous source for analytics + router ordering.
+  const [answers, setAnswers] = useState<{ goal?: string; skill?: string; format?: string }>({});
+  const beatTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     track('onboarding_started');
+    return () => { if (beatTimer.current) clearTimeout(beatTimer.current); };
   }, []);
 
   async function markSeen() {
     try { await storage.setItemAsync('hasSeenOnboarding', 'true'); } catch { /* best-effort */ }
   }
 
-  function goNext() {
-    if (index < PILLARS.length - 1) {
-      const next = index + 1;
-      scrollRef.current?.scrollTo({ x: next * width, animated: !reduced });
-      setIndex(next);
-    } else {
-      setPhase('router');
-    }
+  function advanceFrom(current: QuizStep) {
+    setSelectedId(null);
+    const next = nextStep(current);
+    if (next === 'router') setPhase('router');
+    else setStep(next);
+  }
+
+  function chooseOption(current: Exclude<QuizStep, 'promise' | 'name'>, id: string) {
+    if (selectedId) return; // the beat is running — one choice per step
+    setSelectedId(id);
+    setAnswers(prev => ({ ...prev, [current]: id }));
+    void answerStep(current, id);
+    track('funnel_step_answered', { step: current, answer: id });
+    if (reduced) { advanceFrom(current); return; }
+    beatTimer.current = setTimeout(() => advanceFrom(current), SELECT_BEAT_MS);
+  }
+
+  function goBack() {
+    if (beatTimer.current) { clearTimeout(beatTimer.current); beatTimer.current = null; }
+    setSelectedId(null);
+    const prev = prevStep(step);
+    if (prev) setStep(prev);
+  }
+
+  async function finishName(named: boolean) {
+    const trimmed = named ? name.trim() : '';
+    void answerStep('name', trimmed);
+    void completeFunnel();
+    // IDs + flags only — the typed name itself never leaves the device via analytics.
+    track('funnel_completed', {
+      goal: answers.goal ?? null,
+      skill: answers.skill ?? null,
+      format: answers.format ?? null,
+      named: trimmed.length > 0,
+    });
+    setPhase('router');
   }
 
   async function skip() {
@@ -84,8 +121,6 @@ export default function OnboardingV2Screen({ navigation }: Props) {
     navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
   }
 
-  // Enter a real action: record the funnel, mark onboarding done, and reset the stack so
-  // the chosen flow sits above Home (back returns to Home, not onboarding).
   async function enterAction(action: ActionKey, target: keyof RootStackParamList, params?: object) {
     track('onboarding_completed', { via: action });
     track('first_action_completed', { action });
@@ -97,7 +132,6 @@ export default function OnboardingV2Screen({ navigation }: Props) {
   }
 
   async function chooseImprove() {
-    // Improve needs an account (no anonymous AI) — this is the contextual signup path.
     track('onboarding_completed', { via: 'improve' });
     await markSignupIntent();
     await markSeen();
@@ -123,17 +157,26 @@ export default function OnboardingV2Screen({ navigation }: Props) {
     },
   ];
 
+  const goalForOrder = (answers.goal ?? persona?.goal ?? null) as PersonaGoal | null;
+  const orderedActions = orderActionsForGoal(actions.filter(a => a.show), goalForOrder);
+
+  // Progress: quiz steps + the router = 6 units; the bar never starts at zero.
+  const stepIndex = phase === 'router' ? FUNNEL_STEPS.length : FUNNEL_STEPS.indexOf(step);
+  const progressPct = ((stepIndex + 1) / (FUNNEL_STEPS.length + 1)) * 100;
+
+  const enter = (i: number) => slideUpSequence({ reduced, delay: staggerIn(i, 60), duration: 280 });
+
   return (
     <Screen style={styles.container}>
-      {/* Brand mark */}
-      <View style={styles.brandRow}>
-        <View style={styles.brandLogoRing}>
-          <Image source={require('../../assets/logo.png')} style={styles.brandLogo} resizeMode="contain" />
-        </View>
-        <Text style={styles.brandName}>T POKER</Text>
+      {/* Quiet progress — always present, never at zero */}
+      <View
+        style={styles.progressTrack}
+        accessibilityLabel={`Step ${stepIndex + 1} of ${FUNNEL_STEPS.length + 1}`}
+      >
+        <View style={[styles.progressFill, { width: `${progressPct}%` }]} />
       </View>
 
-      {/* Skip */}
+      {/* Skip — every phase, always quiet */}
       <PressableScale
         style={styles.skipBtn}
         onPress={skip}
@@ -143,86 +186,138 @@ export default function OnboardingV2Screen({ navigation }: Props) {
         <Text style={styles.skipText}>Skip</Text>
       </PressableScale>
 
-      {phase === 'slides' ? (
-        <>
-          <ScrollView
-            ref={scrollRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
-              const i = Math.round(e.nativeEvent.contentOffset.x / width);
-              if (i !== index && i >= 0 && i < PILLARS.length) setIndex(i);
-            }}
-            style={styles.slideScroll}
-          >
-            {PILLARS.map((p, i) => (
-              <View key={p.title} style={styles.slide} accessible accessibilityLabel={`${p.title}. ${p.subtitle}`}>
-                <View style={styles.iconWrap}>
-                  <Ionicons name={p.icon} size={40} color={colors.gold} />
-                </View>
-                <Text style={styles.pillarKicker}>{`Pillar ${i + 1} of ${PILLARS.length}`}</Text>
-                <Text style={styles.slideTitle}>{p.title}</Text>
-                <Text style={styles.slideSubtitle}>{p.subtitle}</Text>
-              </View>
-            ))}
-          </ScrollView>
-
-          <View style={styles.footer}>
-            <View style={styles.dots}>
-              {PILLARS.map((p, i) => <Dot key={p.title} active={i === index} reduced={reduced} />)}
+      {phase === 'quiz' && step === 'promise' && (
+        <MotiView key="promise" {...enter(0)} style={styles.promiseWrap}>
+          <View style={styles.brandRow}>
+            <View style={styles.brandLogoRing}>
+              <Image source={require('../../assets/logo.png')} style={styles.brandLogo} resizeMode="contain" />
             </View>
+          </View>
+          <Text style={styles.promiseHeadline} accessibilityRole="header">Win your home game.</Text>
+          <Text style={styles.promiseSub}>Study daily. Run the night. Know your numbers.</Text>
+          <View style={styles.promiseCtaWrap}>
+            <PrimaryButton
+              variant="gradient"
+              label="Let's set you up"
+              onPress={() => advanceFrom('promise')}
+            />
+            <Text style={styles.promiseFootnote}>Five quick questions — under a minute.</Text>
+          </View>
+        </MotiView>
+      )}
+
+      {phase === 'quiz' && step !== 'promise' && step !== 'name' && (
+        <MotiView key={step} {...enter(0)} style={styles.stepWrap}>
+          <Text style={styles.stepHeadline} accessibilityRole="header">{STEP_COPY[step].headline}</Text>
+          <Text style={styles.stepSub}>{STEP_COPY[step].sub}</Text>
+          <View style={styles.options}>
+            {STEP_OPTIONS[step].map((o, i) => {
+              const selected = selectedId === o.id;
+              return (
+                <MotiView key={o.id} {...enter(i + 1)}>
+                  <PressableScale
+                    style={[styles.option, selected && styles.optionSelected]}
+                    onPress={() => chooseOption(step, o.id)}
+                    haptic="light"
+                    accessibilityRole="button"
+                    accessibilityLabel={`${o.label}. ${o.sub ?? ''}`}
+                    accessibilityState={{ selected }}
+                  >
+                    <View style={styles.optionText}>
+                      <Text style={[styles.optionLabel, selected && styles.optionLabelSelected]}>{o.label}</Text>
+                      {!!o.sub && <Text style={styles.optionSub}>{o.sub}</Text>}
+                    </View>
+                  </PressableScale>
+                </MotiView>
+              );
+            })}
+          </View>
+        </MotiView>
+      )}
+
+      {phase === 'quiz' && step === 'name' && (
+        <MotiView key="name" {...enter(0)} style={styles.stepWrap}>
+          <Text style={styles.stepHeadline} accessibilityRole="header">What should we call you?</Text>
+          <Text style={styles.stepSub}>Just for your greeting — never shared.</Text>
+          <TextInput
+            style={styles.nameInput}
+            placeholder="Your name (optional)"
+            placeholderTextColor={colors.textDim}
+            value={name}
+            onChangeText={setName}
+            autoCapitalize="words"
+            autoCorrect={false}
+            returnKeyType="done"
+            onSubmitEditing={() => void finishName(true)}
+            accessibilityLabel="Your name, optional"
+          />
+          <View style={styles.nameActions}>
+            <PrimaryButton label="Continue" onPress={() => void finishName(true)} />
             <PressableScale
-              style={styles.primaryBtn}
-              onPress={goNext}
-              haptic="light"
+              style={styles.quietBtn}
+              onPress={() => void finishName(false)}
               accessibilityRole="button"
-              accessibilityLabel={index < PILLARS.length - 1 ? 'Next pillar' : 'Get started'}
+              accessibilityLabel="Skip the name question"
             >
-              <Text style={styles.primaryBtnText}>{index < PILLARS.length - 1 ? 'Next' : 'Get Started'}</Text>
-              {index < PILLARS.length - 1 && <Ionicons name="arrow-forward" size={16} color={colors.background} />}
+              <Text style={styles.quietBtnText}>Skip this</Text>
             </PressableScale>
           </View>
-        </>
-      ) : (
-        // ── Starting-point router ──
-        <View style={styles.routerWrap}>
+        </MotiView>
+      )}
+
+      {phase === 'router' && (
+        <MotiView key="router" {...enter(0)} style={styles.routerWrap}>
           <View style={styles.routerHead}>
-            <Text style={styles.routerTitle}>Where do you want to start?</Text>
+            <Text style={styles.routerTitle} accessibilityRole="header">Where do you want to start?</Text>
             <Text style={styles.routerSub}>Jump in — no account needed.</Text>
           </View>
 
           <View style={styles.cards}>
-            {actions.filter(a => a.show).map(a => (
-              <PressableScale
-                key={a.key}
-                style={[styles.card, a.teaser && styles.cardTeaser]}
-                onPress={a.onPress}
-                haptic="light"
-                accessibilityRole="button"
-                accessibilityLabel={`${a.title}. ${a.sub}`}
-              >
-                <View style={[styles.cardIcon, a.teaser && styles.cardIconTeaser]}>
-                  <Ionicons name={a.icon} size={20} color={a.teaser ? colors.background : colors.gold} />
-                </View>
-                <View style={styles.cardText}>
-                  <Text style={styles.cardTitle}>{a.title}</Text>
-                  <Text style={styles.cardSub}>{a.sub}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-              </PressableScale>
+            {orderedActions.map((a, i) => (
+              <MotiView key={a.key} {...enter(i + 1)}>
+                <PressableScale
+                  style={[styles.card, a.teaser && styles.cardTeaser]}
+                  onPress={a.onPress}
+                  haptic="light"
+                  accessibilityRole="button"
+                  accessibilityLabel={`${a.title}. ${a.sub}`}
+                >
+                  <View style={[styles.cardIcon, a.teaser && styles.cardIconTeaser]}>
+                    <Ionicons name={a.icon} size={20} color={a.teaser ? colors.background : colors.gold} />
+                  </View>
+                  <View style={styles.cardText}>
+                    <Text style={styles.cardTitle}>{a.title}</Text>
+                    <Text style={styles.cardSub}>{a.sub}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                </PressableScale>
+              </MotiView>
             ))}
           </View>
 
           <PressableScale
-            style={styles.exploreBtn}
+            style={styles.quietBtn}
             onPress={skip}
             accessibilityRole="button"
             accessibilityLabel="Explore on my own"
           >
-            <Text style={styles.exploreText}>I'll explore on my own</Text>
+            <Text style={styles.quietBtnText}>I'll explore on my own</Text>
           </PressableScale>
-        </View>
+        </MotiView>
+      )}
+
+      {/* Back — quiz question steps only (the promise has nothing to go back to) */}
+      {phase === 'quiz' && step !== 'promise' && (
+        <PressableScale
+          style={styles.backBtn}
+          onPress={goBack}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+        >
+          <Ionicons name="arrow-back" size={16} color={colors.textMuted} />
+          <Text style={styles.backText}>Back</Text>
+        </PressableScale>
       )}
     </Screen>
   );
@@ -233,40 +328,57 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: Platform.OS === 'ios' ? 48 : 32,
+    paddingHorizontal: spacing.xl,
   },
-  brandRow: { alignItems: 'center', gap: 10, paddingTop: 8 },
+
+  progressTrack: {
+    height: 3, borderRadius: 2, backgroundColor: colors.surfaceHigh,
+    marginTop: spacing.sm, marginBottom: spacing.md, overflow: 'hidden',
+  },
+  progressFill: { height: 3, borderRadius: 2, backgroundColor: colors.gold },
+
+  skipBtn: { position: 'absolute', top: Platform.OS === 'ios' ? 56 : 36, right: 24, zIndex: 10, paddingHorizontal: 12, paddingVertical: 6, minHeight: 44, justifyContent: 'center' },
+  skipText: { ...typography.bodySmall, color: colors.textMuted, fontWeight: '600' },
+
+  // Promise
+  promiseWrap: { flex: 1, justifyContent: 'center', gap: spacing.md },
+  brandRow: { alignItems: 'center', marginBottom: spacing.lg },
   brandLogoRing: {
     width: 64, height: 64, borderRadius: 20, backgroundColor: colors.surface,
     borderWidth: 1, borderColor: colors.goldMuted, alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
   },
   brandLogo: { width: 52, height: 52 },
-  brandName: { ...typography.displaySerif, fontSize: 20, color: colors.goldLight, letterSpacing: 4 },
+  promiseHeadline: { ...typography.displaySerif, fontSize: 34, lineHeight: 42, color: colors.text, textAlign: 'center' },
+  promiseSub: { ...typography.body, color: colors.textMuted, textAlign: 'center', lineHeight: 24 },
+  promiseCtaWrap: { marginTop: spacing.xl, gap: spacing.md, alignItems: 'center' },
+  promiseFootnote: { ...typography.caption, color: colors.textDim },
 
-  skipBtn: { position: 'absolute', top: Platform.OS === 'ios' ? 56 : 36, right: 24, zIndex: 10, paddingHorizontal: 12, paddingVertical: 6 },
-  skipText: { ...typography.bodySmall, color: colors.textMuted, fontWeight: '600' },
-
-  slideScroll: { flex: 1 },
-  slide: { width, flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40, gap: spacing.md },
-  iconWrap: {
-    width: 96, height: 96, borderRadius: 28, backgroundColor: colors.goldFaint,
-    borderWidth: 1, borderColor: colors.goldMuted, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm,
+  // Question steps
+  stepWrap: { flex: 1, justifyContent: 'center', gap: spacing.sm },
+  stepHeadline: { ...typography.displaySerif, fontSize: 26, lineHeight: 34, color: colors.text },
+  stepSub: { ...typography.bodySmall, color: colors.textMuted, marginBottom: spacing.lg },
+  options: { gap: spacing.md },
+  option: {
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    borderRadius: radii.lg, paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, minHeight: 64,
+    justifyContent: 'center',
   },
-  pillarKicker: { ...typography.caps, color: colors.gold },
-  slideTitle: { ...typography.displaySerif, color: colors.text, textAlign: 'center' },
-  slideSubtitle: { ...typography.body, color: colors.textMuted, textAlign: 'center', lineHeight: 22 },
+  optionSelected: { borderColor: colors.gold, backgroundColor: colors.goldFaint },
+  optionText: { gap: 2 },
+  optionLabel: { ...typography.label, color: colors.text },
+  optionLabelSelected: { color: colors.goldLight },
+  optionSub: { ...typography.bodySmall, color: colors.textMuted },
 
-  footer: { paddingHorizontal: 24, gap: 24, alignItems: 'center' },
-  dots: { flexDirection: 'row', gap: 8 },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.surfaceHigh },
-  dotActive: { width: 24, backgroundColor: colors.gold },
-  primaryBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.gold, borderRadius: radii.lg,
-    paddingHorizontal: 32, paddingVertical: 16, alignSelf: 'stretch', justifyContent: 'center', minHeight: 44,
+  // Name step
+  nameInput: {
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    borderRadius: radii.control, paddingHorizontal: spacing.lg, paddingVertical: 14, minHeight: 52,
+    ...typography.body, color: colors.text,
   },
-  primaryBtnText: { fontSize: 16, fontWeight: '700', color: colors.background },
+  nameActions: { marginTop: spacing.lg, gap: spacing.sm },
 
   // Router
-  routerWrap: { flex: 1, justifyContent: 'center', paddingHorizontal: spacing.xl, gap: spacing.xl },
+  routerWrap: { flex: 1, justifyContent: 'center', gap: spacing.xl },
   routerHead: { gap: spacing.xs, alignItems: 'center' },
   routerTitle: { ...typography.h1, color: colors.text, textAlign: 'center' },
   routerSub: { ...typography.body, color: colors.textMuted, textAlign: 'center' },
@@ -285,6 +397,13 @@ const styles = StyleSheet.create({
   cardText: { flex: 1, gap: 2 },
   cardTitle: { ...typography.label, color: colors.text },
   cardSub: { ...typography.bodySmall, color: colors.textMuted },
-  exploreBtn: { alignItems: 'center', paddingVertical: spacing.sm, minHeight: 44, justifyContent: 'center' },
-  exploreText: { ...typography.label, color: colors.textMuted },
+
+  quietBtn: { alignItems: 'center', paddingVertical: spacing.sm, minHeight: 44, justifyContent: 'center' },
+  quietBtnText: { ...typography.label, color: colors.textMuted },
+
+  backBtn: {
+    position: 'absolute', bottom: Platform.OS === 'ios' ? 52 : 36, left: 24,
+    flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 8,
+  },
+  backText: { ...typography.bodySmall, color: colors.textMuted, fontWeight: '600' },
 });

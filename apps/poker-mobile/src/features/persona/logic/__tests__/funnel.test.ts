@@ -7,6 +7,7 @@ import { emptyPersona } from '../../types';
 import {
   FUNNEL_STEPS,
   nextStep,
+  prevStep,
   applyAnswer,
   GOAL_OPTIONS,
   SKILL_OPTIONS,
@@ -25,6 +26,14 @@ describe('funnel steps', () => {
     expect(nextStep('skill')).toBe('format');
     expect(nextStep('format')).toBe('name');
     expect(nextStep('name')).toBe('router');
+  });
+
+  it('prevStep walks back; the promise step has no back', () => {
+    expect(prevStep('goal')).toBe('promise');
+    expect(prevStep('skill')).toBe('goal');
+    expect(prevStep('format')).toBe('skill');
+    expect(prevStep('name')).toBe('format');
+    expect(prevStep('promise')).toBeNull();
   });
 });
 
