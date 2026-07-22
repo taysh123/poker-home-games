@@ -65,16 +65,38 @@ describe('terms.html — binding Terms of Service (no draft scaffolding)', () =>
   });
 });
 
-describe('privacy.html — Paddle-consistent, stores intact', () => {
-  it('names Paddle for web payments and does NOT mention Stripe', () => {
-    expect(privacy).toMatch(/Paddle/);
+describe('privacy.html — free-first honest + consent-scoped analytics (Wave 0.2)', () => {
+  // Deliberate re-pin (owner decision 5, 2026-07-22): Paddle web billing is dead (rejected poker);
+  // the policy now states nothing is purchasable and names the future app-store processors only.
+  it('states nothing is purchasable and does NOT name dead web processors', () => {
+    expect(privacy).toMatch(/currently purchasable|cannot be bought/i);
+    expect(privacy).toMatch(/Coming soon/);
+    expect(privacy).not.toMatch(/\bPaddle\b/);
     expect(privacy).not.toMatch(/\bStripe\b/i);
+    expect(privacy).not.toMatch(/\bRevenueCat\b/);
+    expect(privacy).not.toMatch(/Merchant of Record/i);
   });
 
-  it('keeps the mobile processors (RevenueCat / Apple / Google) accurate', () => {
-    expect(privacy).toMatch(/RevenueCat/);
+  it('names the future app-store processors', () => {
     expect(privacy).toMatch(/Apple App Store/);
     expect(privacy).toMatch(/Google Play/);
+  });
+
+  it('discloses consent-scoped anonymous analytics: PostHog, EU, opt-out, and the exclusions', () => {
+    expect(privacy).toMatch(/PostHog/);
+    expect(privacy).toMatch(/European Union/);
+    expect(privacy).toMatch(/after you make your explicit\s+choice on the\s+welcome screen/i);
+    expect(privacy).toMatch(/Profile → Privacy/);
+    // The never-collected list must stay explicit — game amounts / player names / hands.
+    expect(privacy).toMatch(/never include.*game amounts/is);
+    expect(privacy).toMatch(/player names/);
+    expect(privacy).toMatch(/hand contents/);
+  });
+
+  it('scopes the guest guarantee to GAME data (analytics is disclosed separately)', () => {
+    expect(privacy).toMatch(/game data stays on your device/i);
+    expect(privacy).toMatch(/Guest-mode game data never reaches our servers/i);
+    expect(privacy).toMatch(/Local guest game data never leaves\s+your device/i);
   });
 
   it('has a contact address and cross-links all four pages', () => {

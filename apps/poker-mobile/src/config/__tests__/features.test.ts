@@ -53,6 +53,10 @@ describe('feature flags — production resolution', () => {
     const expectedOn = new Set([
       'nav5', 'onboardingV2', 'study', 'content', 'retention', 'immersive',
       'v2Splash', 'welcome',
+      // Wave 0.2 — analytics DISPATCH kill-switch (intentional extension, not a weakening):
+      // sends are additionally gated on the user's explicit Welcome-choice consent + a build-time
+      // PostHog key; see utils/analytics.ts + utils/__tests__/analyticsDispatch.test.ts.
+      'analytics',
     ]);
     for (const [flag, value] of Object.entries(featureFlags)) {
       expect(value).toBe(expectedOn.has(flag));

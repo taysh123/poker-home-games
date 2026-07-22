@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Linking,
+  Switch,
 } from 'react-native';
 import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,6 +35,7 @@ import Avatar from '../components/Avatar';
 import { AVATAR_COLORS } from '../utils/avatarColor';
 import { confirmDialog } from '../utils/confirm';
 import { showToast } from '../utils/toast';
+import { track, setAnalyticsOptOut, isAnalyticsSharingEnabled } from '../utils/analytics';
 
 // Curated identity emojis — poker-flavored plus broadly fun picks.
 const IDENTITY_EMOJIS = [
@@ -48,6 +50,18 @@ export default function ProfileScreen({ navigation }: Props) {
   const { user, updateUser, logout } = useAuth();
   const { code: currencyCode } = useCurrency();
   const reduced = useReducedMotion();
+
+  // Wave 0.2 — anonymous-usage-analytics sharing toggle (consent stays; this is the opt-out).
+  const [analyticsSharing, setAnalyticsSharing] = useState(isAnalyticsSharingEnabled());
+  function toggleAnalyticsSharing(next: boolean) {
+    setAnalyticsSharing(next);
+    void setAnalyticsOptOut(!next);
+  }
+  // Premium-teaser impression — once per screen visit (paywall OFF ⇒ the teaser row renders).
+  React.useEffect(() => {
+    if (!isFeatureEnabled('paywall')) track('nudge_impression', { trigger: 'profile_teaser', paywallOn: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Profile edit state
   const [editingProfile, setEditingProfile] = useState(false);
@@ -507,6 +521,35 @@ export default function ProfileScreen({ navigation }: Props) {
           </MotiView>
         )}
 
+        {/* ── Privacy — anonymous usage analytics (Wave 0.2, opt-out any time) ── */}
+        {isFeatureEnabled('analytics') && (
+          <MotiView {...slideUpSequence({ reduced, delay: staggerIn(5) })}>
+          <View style={styles.section}>
+            <View style={[styles.sectionHeader, { marginBottom: 12 }]}>
+              <View style={styles.sectionTitleRow}>
+                <View style={styles.sectionIconWrap}>
+                  <Ionicons name="shield-checkmark-outline" size={14} color={colors.gold} />
+                </View>
+                <Text style={styles.sectionTitle}>Privacy</Text>
+              </View>
+            </View>
+            <View style={styles.aboutRow} accessible accessibilityRole="switch" accessibilityState={{ checked: analyticsSharing }} accessibilityLabel="Share anonymous usage analytics">
+              <Ionicons name="pulse-outline" size={16} color={colors.textMuted} />
+              <Text style={styles.aboutRowText}>Share anonymous usage analytics</Text>
+              <Switch
+                value={analyticsSharing}
+                onValueChange={toggleAnalyticsSharing}
+                trackColor={{ false: colors.border, true: colors.goldMuted }}
+                thumbColor={analyticsSharing ? colors.gold : colors.textDim}
+              />
+            </View>
+            <Text style={styles.privacyHint}>
+              Feature usage only — never your game amounts, player names, or hands.
+            </Text>
+          </View>
+          </MotiView>
+        )}
+
         {/* ── About & Support ─────────────────────────────────────────── */}
         <MotiView {...slideUpSequence({ reduced, delay: staggerIn(5) })}>
         <View style={styles.section}>
@@ -709,6 +752,7 @@ const styles = StyleSheet.create({
   },
   aboutRowText: { flex: 1, fontSize: 14, color: colors.textHigh, fontWeight: '500' },
   aboutRowValue: { fontSize: 13, color: colors.gold, fontWeight: '600', marginRight: 6 },
+  privacyHint: { fontSize: 12, color: colors.textMuted, marginTop: 6, marginLeft: 4, lineHeight: 17 },
   aboutResponsible: {
     fontSize: 12,
     color: colors.textDim,

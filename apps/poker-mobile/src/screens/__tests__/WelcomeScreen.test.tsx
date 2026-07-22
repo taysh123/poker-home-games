@@ -16,9 +16,11 @@ jest.mock('../../utils/storage', () => ({
 
 const mockTrack = jest.fn();
 const mockMarkSignupIntent = jest.fn().mockResolvedValue(undefined);
+const mockGrantAnalyticsConsent = jest.fn().mockResolvedValue(undefined);
 jest.mock('../../utils/analytics', () => ({
   track: (...args: unknown[]) => mockTrack(...args),
   markSignupIntent: (...args: unknown[]) => mockMarkSignupIntent(...args),
+  grantAnalyticsConsent: (...args: unknown[]) => mockGrantAnalyticsConsent(...args),
 }));
 
 // Local games context — overridden per test via mockGames/mockActiveGame.
@@ -98,10 +100,22 @@ describe('WelcomeScreen — brand + chooser', () => {
     expect(nav.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'Onboarding' }] });
   });
 
+  it('both chooser arms grant analytics consent — the explicit choice IS the consent boundary', () => {
+    // Wave 0.2 (spec decision 5): the Welcome choice is the moment analytics may initialize.
+    // Nothing sends before it — pinned for real (unmocked module) in analyticsDispatch.test.ts.
+    renderWelcome();
+    expect(mockGrantAnalyticsConsent).not.toHaveBeenCalled(); // rendering alone is NOT consent
+    fireEvent.press(screen.getByText('Continue as guest'));
+    expect(mockGrantAnalyticsConsent).toHaveBeenCalledTimes(1);
+    fireEvent.press(screen.getByText('Sign in'));
+    expect(mockGrantAnalyticsConsent).toHaveBeenCalledTimes(2);
+  });
+
   it('never writes guest data — secure storage AND AsyncStorage (local games) untouched', () => {
-    // markSignupIntent (Sign-in arm) is an analytics-only attribution marker and is
-    // mocked out above; the guarantee pinned here is about GUEST DATA: the keys the
-    // local-games store and onboarding gate live under are never written or cleared.
+    // markSignupIntent (Sign-in arm) and the analytics consent marker are analytics-only
+    // attribution/consent writes and are mocked out above; the guarantee pinned here is about
+    // GUEST DATA: the keys the local-games store and onboarding gate live under are never
+    // written or cleared.
     const AsyncStorage = require('@react-native-async-storage/async-storage');
     const nav = renderWelcome({ firstRun: false });
     fireEvent.press(screen.getByText('Continue as guest'));

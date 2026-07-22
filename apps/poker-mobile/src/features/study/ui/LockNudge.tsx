@@ -4,7 +4,7 @@
  * NO purchase path — only honest "coming soon" copy. When ON, it routes to the live PaywallScreen
  * (built in Subsystem 3). Lock state is conveyed by icon + text (never color alone).
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -15,6 +15,8 @@ import { colors } from '../../../theme/colors';
 import { typography } from '../../../theme/typography';
 import { spacing } from '../../../theme/spacing';
 import { isFeatureEnabled } from '../../../config/features';
+import { track } from '../../../utils/analytics';
+import type { TriggerId } from '../../premium/triggers';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -26,8 +28,8 @@ interface LockNudgeProps {
   comingSoonBody: string;
   /** Body shown above the Upgrade CTA when paywall is ON. */
   upgradeBody: string;
-  /** Analytics/routing context passed to Paywall. */
-  trigger: string;
+  /** Typed analytics/routing context (features/premium/triggers.ts — never ad-hoc strings). */
+  trigger: TriggerId;
   /** Icon — defaults to a lock. */
   icon?: React.ComponentProps<typeof Ionicons>['name'];
 }
@@ -36,6 +38,12 @@ export default function LockNudge({ title, comingSoonBody, upgradeBody, trigger,
   const navigation = useNavigation<Nav>();
   const paywallOn = isFeatureEnabled('paywall');
   const body = paywallOn ? upgradeBody : comingSoonBody;
+
+  // Impression (0.2): once per mount — the E-workstream conversion baseline.
+  useEffect(() => {
+    track('nudge_impression', { trigger, paywallOn });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <Card style={styles.card}>
