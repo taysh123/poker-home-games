@@ -27,6 +27,10 @@ export type AnalyticsEvent =
   | 'onboarding_completed'
   | 'onboarding_skipped'
   | 'first_action_completed'
+  // Wave 1 — Quiet Luxury funnel. Props are step/answer IDS + flags ONLY; the optional typed
+  // name is display-only and must NEVER appear in an event (screen-test pinned).
+  | 'funnel_step_answered'
+  | 'funnel_completed'
   | 'account_created'
   // Entry chooser (Welcome)
   | 'welcome_shown'
