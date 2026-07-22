@@ -19,10 +19,12 @@ export function coachGroundingArtifact(): unknown {
   return require('../../assets/content/0.8.1/coach_grounding.json');
 }
 
-/** Quiz sample ContentPack ({ manifest, schema, rows }). */
-export function quizSamplePackArtifact(): unknown {
+/** Full quiz bank ContentPack ({ manifest, schema, rows }) — 1,460 free questions (0.1 replaces the
+ *  30-question quiz_sample; both map to table `quiz_bank`, so exactly one may ever be bundled).
+ *  Hard FK CalibrationProfileID → Calibration_Report: bundle WITH calibration_report or it dangles. */
+export function quizBankPackArtifact(): unknown {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require('../../assets/content/0.8.1/quiz_sample.pack.json');
+  return require('../../assets/content/0.8.1/quiz_bank.pack.json');
 }
 
 /** Analytics contract ({ dataset_version, events }). */

@@ -38,6 +38,9 @@ import { track } from '../../../utils/analytics';
 import LockNudge from './LockNudge';
 import { useCoachGrounding } from '../../coach/data/useCoachGrounding';
 import { groundingForQuestion } from '../logic/quizGrounding';
+import { dailyRotation } from '../logic/quizRotation';
+import { localDayKey } from '../logic/localDay';
+import { showToast } from '../../../utils/toast';
 import {
   normalizeQuestions,
   selectQuestions,
@@ -89,6 +92,7 @@ export default function QuizRunnerScreen() {
   const [idx, setIdx] = useState(0);
   const [chosen, setChosen] = useState<QuizChoice | null>(null);
   const [outcomes, setOutcomes] = useState<boolean[]>([]);
+  const [reportedIds, setReportedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!isLoaded || !query) return;
@@ -110,14 +114,25 @@ export default function QuizRunnerScreen() {
   const loading = enabled && !error && (!isLoaded || all === null);
 
   const startRun = (cat: string | null) => {
-    const pool = selectQuestions(all ?? [], { category: cat ?? undefined, freeOnly: !isPremium, limit: RUN_LIMIT });
-    if (pool.length === 0) return;
+    // Daily rotation (0.1): filter the pool, then take today's window of the seeded cycle — fresh
+    // questions each local day, stable within a day, no repeats until the pool cycles.
+    const pool = selectQuestions(all ?? [], { category: cat ?? undefined, freeOnly: !isPremium });
+    const todaysRun = dailyRotation(pool, localDayKey(), RUN_LIMIT);
+    if (todaysRun.length === 0) return;
     setCategory(cat);
-    setRun(pool);
+    setRun(todaysRun);
     setIdx(0);
     setChosen(null);
     setOutcomes([]);
+    setReportedIds(new Set());
     setPhase('run');
+  };
+
+  const reportQuestion = (q: QuizQuestion) => {
+    if (reportedIds.has(q.id)) return;
+    setReportedIds(prev => new Set(prev).add(q.id));
+    track('study_question_reported', { id: q.id, category: q.category || 'general' });
+    showToast("Thanks — we'll review this question.", 'success');
   };
 
   const answer = (choice: QuizChoice) => {
@@ -174,6 +189,8 @@ export default function QuizRunnerScreen() {
               onNext={next}
               isLast={idx + 1 >= run.length}
               assertionsForConcept={grounding ? grounding.assertionsForConcept : null}
+              onReport={() => reportQuestion(run[idx])}
+              reported={reportedIds.has(run[idx]?.id ?? '')}
             />
           ) : (
             <ResultsView
@@ -250,10 +267,11 @@ function PickView({ total, categories, limit, onStartAll, onStartCategory }: {
   );
 }
 
-function RunView({ question, index, count, chosen, onAnswer, onNext, isLast, assertionsForConcept }: {
+function RunView({ question, index, count, chosen, onAnswer, onNext, isLast, assertionsForConcept, onReport, reported }: {
   question: QuizQuestion; index: number; count: number; chosen: QuizChoice | null;
   onAnswer: (c: QuizChoice) => void; onNext: () => void; isLast: boolean;
   assertionsForConcept: ((conceptId: string) => string[]) | null;
+  onReport: () => void; reported: boolean;
 }) {
   const answered = chosen !== null;
   const calibratedRefs = answered && assertionsForConcept
@@ -317,6 +335,18 @@ function RunView({ question, index, count, chosen, onAnswer, onNext, isLast, ass
       {answered && (
         <View style={{ marginTop: spacing.md }}>
           <PrimaryButton label={isLast ? 'See results' : 'Next question'} onPress={onNext} />
+          <PressableScale
+            onPress={onReport}
+            disabled={reported}
+            accessibilityRole="button"
+            accessibilityLabel="Report this question"
+            accessibilityState={{ disabled: reported }}
+            style={styles.reportLink}
+          >
+            <Text style={[styles.reportLinkText, reported && styles.reportLinkDone]}>
+              {reported ? 'Reported — thank you' : 'Something wrong? Report this question'}
+            </Text>
+          </PressableScale>
         </View>
       )}
     </>
@@ -503,6 +533,9 @@ const styles = StyleSheet.create({
   optionText: { ...typography.body, color: colors.textHigh, flex: 1 },
   optionTextActive: { color: colors.text },
   feedback: { marginTop: spacing.sm, gap: spacing.sm },
+  reportLink: { alignSelf: 'center', marginTop: spacing.sm, paddingVertical: spacing.xs, paddingHorizontal: spacing.sm },
+  reportLinkText: { ...typography.caption, color: colors.textMuted },
+  reportLinkDone: { color: colors.textDim },
   feedbackHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   feedbackTitle: { ...typography.h4, color: colors.text },
   feedbackBody: { ...typography.bodySmall, color: colors.textMuted, lineHeight: 20 },
