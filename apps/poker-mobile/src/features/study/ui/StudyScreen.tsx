@@ -18,6 +18,7 @@ import { iconSize } from '../../../theme/iconSize';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
 import { useStudy } from '../state/StudyContext';
 import { studyStats } from '../logic/progress';
+import { localDayKey } from '../logic/localDay';
 import { isFeatureEnabled } from '../../../config/features';
 import TableBackdrop from '../../../components/table/TableBackdrop';
 import { useContent } from '../../../context/ContentContext';
@@ -26,12 +27,11 @@ import { buildPackCatalog, availabilityOf, type Pack } from '../../premium/logic
 import LockNudge from './LockNudge';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-const todayKey = () => new Date().toISOString().slice(0, 10);
 
 export default function StudyScreen() {
   const navigation = useNavigation<Nav>();
   const { progress, dataset, setDailyGoal } = useStudy();
-  const stats = studyStats(progress, todayKey());
+  const stats = studyStats(progress, localDayKey());
   const goalPct = Math.min(1, progress.dailyGoal > 0 ? stats.answeredToday / progress.dailyGoal : 0);
   const retention = isFeatureEnabled('retention');
   const freezeTokens = progress.freezeTokens ?? 0;

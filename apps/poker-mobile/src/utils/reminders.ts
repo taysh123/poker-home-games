@@ -4,6 +4,7 @@
  * Mirrors the lazy-require pattern in hooks/usePushNotifications.ts so web bundles never load it.
  */
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { eligibleReminders, type ReminderPrefs, type ReminderSignals } from './reminderLogic';
 
 const isNative = Platform.OS === 'ios' || Platform.OS === 'android';
@@ -26,6 +27,26 @@ export async function ensureReminderPermission(): Promise<boolean> {
       granted = req.granted;
     }
     return granted;
+  } catch {
+    return false;
+  }
+}
+
+const PERMISSION_ASKED_KEY = 'tpoker.reminders.permissionAsked.v1';
+
+/**
+ * Contextual ONE-TIME permission ask (Wave 0.3): call after the user's first completed drill —
+ * never at onboarding or app start. The OS prompt fires at most once ever (persisted marker);
+ * users can still enable reminders later from the preferences screen, which asks explicitly.
+ * Returns whether permission is granted by THIS ask (false when skipped/no-op).
+ */
+export async function requestReminderPermissionOnce(): Promise<boolean> {
+  if (!isNative) return false;
+  try {
+    const asked = await AsyncStorage.getItem(PERMISSION_ASKED_KEY);
+    if (asked) return false;
+    await AsyncStorage.setItem(PERMISSION_ASKED_KEY, '1');
+    return await ensureReminderPermission();
   } catch {
     return false;
   }

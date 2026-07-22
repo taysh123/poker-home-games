@@ -38,7 +38,10 @@ export const PROD_FLAGS: Record<FeatureFlag, boolean> = {
   nav5: true,
   onboardingV2: true,
   retention: true,
-  reminders: false,
+  // Wave 0.3 — streak/daily-study reminders ON (native-only local notifications). Flipped only
+  // after the free_ai reminder kind was REMOVED (it advertised a non-live AI analysis) — pinned
+  // by the honesty test in utils/__tests__/reminderLogic.test.ts.
+  reminders: true,
   currencyPrefs: false,
   polish: false,
   coachScreenshot: false,

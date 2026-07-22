@@ -13,16 +13,14 @@ import { typography } from '../theme/typography';
 import { spacing } from '../theme/spacing';
 import { radii } from '../theme/radii';
 import { useStudy } from '../features/study/state/StudyContext';
-import { useEntitlements } from '../context/EntitlementsContext';
-import { useCoach } from '../features/coach/state/CoachContext';
 import { studyStats } from '../features/study/logic/progress';
+import { localDayKey } from '../features/study/logic/localDay';
 import { loadReminderPrefs, saveReminderPrefs } from '../utils/reminderPrefs';
 import { ensureReminderPermission, rescheduleReminders } from '../utils/reminders';
 import { DEFAULT_REMINDER_PREFS, type ReminderPrefs } from '../utils/reminderLogic';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-const todayKey = () => new Date().toISOString().slice(0, 10);
 const fmtHour = (h: number) => `${((h + 11) % 12) + 1}:00 ${h < 12 ? 'AM' : 'PM'}`;
 
 /**
@@ -32,8 +30,6 @@ const fmtHour = (h: number) => `${((h + 11) % 12) + 1}:00 ${h < 12 ? 'AM' : 'PM'
 export default function NotificationPreferencesScreen() {
   const navigation = useNavigation<Nav>();
   const { progress } = useStudy();
-  const { isPremium } = useEntitlements();
-  const { creditsRemaining, policyKind } = useCoach();
   const [prefs, setPrefs] = useState<ReminderPrefs>(DEFAULT_REMINDER_PREFS);
   const reduced = useReducedMotion();
 
@@ -43,12 +39,10 @@ export default function NotificationPreferencesScreen() {
     setPrefs(next);
     await saveReminderPrefs(next);
     if (turnedOn) await ensureReminderPermission();
-    const stats = studyStats(progress, todayKey());
+    const stats = studyStats(progress, localDayKey());
     await rescheduleReminders(next, {
       goalMetToday: stats.goalMetToday,
       streakAlive: progress.currentStreak > 0,
-      isFreeUser: !isPremium,
-      hasUnusedFreeCredit: policyKind === 'lifetime' && creditsRemaining > 0,
     });
   }
 
@@ -88,15 +82,6 @@ export default function NotificationPreferencesScreen() {
             sub="Evening nudge if your streak is alive but today's goal isn't met"
             value={prefs.streakRisk}
             onChange={v => apply({ ...prefs, streakRisk: v }, v)}
-          />
-        </MotiView>
-        <MotiView {...slideUpSequence({ reduced, delay: staggerIn(3) })}>
-          <ToggleRow
-            icon="sparkles-outline"
-            title="Unused free analysis"
-            sub="Remind me to use my free AI Coach analysis"
-            value={prefs.freeAi}
-            onChange={v => apply({ ...prefs, freeAi: v }, v)}
           />
         </MotiView>
         <Text style={styles.note}>Reminders are scheduled on your device. No data leaves the app.</Text>
