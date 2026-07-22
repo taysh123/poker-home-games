@@ -74,7 +74,7 @@ export default function QuizRunnerScreen() {
   const { enabled, isLoaded, query } = useContent();
   const mastery = useMastery();
   const { isPremium } = useEntitlements();
-  const { limitFor, consumeLimit, recordQuizCompleted } = useStudy();
+  const { limitFor, recordQuizFinished } = useStudy();
   const quizLimit = limitFor('quiz');
   const grounding = useCoachGrounding();
 
@@ -132,8 +132,9 @@ export default function QuizRunnerScreen() {
     setPhase('results');
     const score = scoreQuiz(outcomes);
     track('study_quiz_completed', { category: category ?? 'all', total: score.total, pct: score.pct });
-    void consumeLimit('quiz');
-    void recordQuizCompleted();
+    // ONE composed commit — chaining consumeLimit + recordQuizCompleted here silently bypassed the
+    // daily cap (the second commit clobbered the first). See StudyContext's write-API rule.
+    void recordQuizFinished();
   };
 
   const next = () => {
