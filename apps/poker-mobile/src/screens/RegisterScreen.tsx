@@ -15,7 +15,9 @@ import { typography } from '../theme/typography';
 import { shadows } from '../theme/shadows';
 import { useAuth } from '../context/AuthContext';
 import { useGoogleAuth } from '../hooks/useGoogleAuth';
+import { useAppleAuth } from '../hooks/useAppleAuth';
 import GoogleAuthButton from '../components/GoogleAuthButton';
+import AppleAuthButton from '../components/AppleAuthButton';
 import PrimaryButton from '../components/PrimaryButton';
 import Screen from '../components/Screen';
 import AppTextInput from '../components/AppTextInput';
@@ -27,7 +29,7 @@ import { parseAuthError } from '../utils/parseAuthError';
 type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
 
 export default function RegisterScreen({ navigation }: Props) {
-  const { register, googleLogin } = useAuth();
+  const { register, googleLogin, appleLogin } = useAuth();
   const reduced = useReducedMotion();
 
   const [username, setUsername] = useState('');
@@ -45,6 +47,21 @@ export default function RegisterScreen({ navigation }: Props) {
       await googleLogin(result.idToken);
     } catch {
       setError('Google sign-in failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  // Sign in with Apple — iOS only (Guideline 4.8: Google sign-in on iOS requires an Apple option).
+  const { prompt: promptApple, available: appleAvailable } = useAppleAuth(async (result) => {
+    if (result.type === 'cancel') return;
+    if (result.type === 'error') { setError(result.message); return; }
+    setError('');
+    setLoading(true);
+    try {
+      await appleLogin(result.identityToken, result.nonce);
+    } catch {
+      setError('Apple sign-in failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -140,14 +157,23 @@ export default function RegisterScreen({ navigation }: Props) {
             />
           </View>
 
-          {googleReady !== false && (
+          {(googleReady !== false || appleAvailable) && (
             <>
               <View style={styles.dividerRow}>
                 <View style={styles.dividerLine} />
                 <Text style={styles.dividerText}>or continue with</Text>
                 <View style={styles.dividerLine} />
               </View>
-              <GoogleAuthButton onPress={promptGoogle} disabled={!googleReady || loading} />
+              {googleReady !== false && (
+                <GoogleAuthButton onPress={promptGoogle} disabled={!googleReady || loading} />
+              )}
+              {appleAvailable && (
+                <AppleAuthButton
+                  onPress={promptApple}
+                  disabled={loading}
+                  style={googleReady !== false ? styles.appleButton : undefined}
+                />
+              )}
             </>
           )}
         </MotiView>
@@ -233,6 +259,7 @@ const styles = StyleSheet.create({
   dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
   // textMuted (not textDim): 12px caption on the surface card must clear WCAG AA contrast.
   dividerText: { ...typography.caption, color: colors.textMuted },
+  appleButton: { marginTop: 12 },
   footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 28 },
   footerText: { ...typography.body, color: colors.textMuted },
   link: { ...typography.label, color: colors.gold },

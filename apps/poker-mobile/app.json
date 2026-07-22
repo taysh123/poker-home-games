@@ -17,6 +17,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.tpoker.app",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -54,6 +55,7 @@
       "themeColor": "#0A111B"
     },
     "plugins": [
+      "expo-apple-authentication",
       "expo-web-browser",
       "expo-secure-store",
       "expo-font",
