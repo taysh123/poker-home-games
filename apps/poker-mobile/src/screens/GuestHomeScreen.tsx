@@ -29,6 +29,17 @@ import { gameResult } from '../local/localStats';
 import { formatCents } from '../utils/money';
 import { timeAgo } from '../utils/formatters';
 import { markSignupIntent } from '../utils/analytics';
+import { usePersona } from '../features/persona/state/PersonaContext';
+import { heroVariantForGoal, drillCardSub } from '../features/persona/logic/recommendations';
+import { useStudy } from '../features/study/state/StudyContext';
+import { isFeatureEnabled } from '../config/features';
+
+/** Time-of-day salutation (local clock; display-only). */
+function greetingWord(hour = new Date().getHours()): string {
+  if (hour < 12) return 'Morning';
+  if (hour < 18) return 'Afternoon';
+  return 'Evening';
+}
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -39,6 +50,16 @@ export default function GuestHomeScreen() {
   const reduced = useReducedMotion();
   const splashDone = useSplashDone();
   const { games, activeGame } = useLocalGames();
+  const { persona } = usePersona();
+  const { limitFor } = useStudy();
+  const greetName = persona?.displayName ?? null;
+  // The drill hero is honest against the SHARED daily pool: sub reflects what's actually left,
+  // and a spent pool hides the card entirely (no dead-end tap into the limit nudge).
+  const drillSub = drillCardSub(limitFor('practiceQuestion').remaining);
+  const showDrill =
+    heroVariantForGoal(persona?.goal ?? null) === 'improver' &&
+    isFeatureEnabled('study') &&
+    drillSub !== null;
 
   const recentFinished = games.filter(g => g.status === 'Finished').slice(0, 5);
 
@@ -101,11 +122,34 @@ export default function GuestHomeScreen() {
         </MotiView>
       )}
 
-      {/* Start a game — Cash and Tournament as first-class choices */}
+      {/* Hero — goal-led (1.3): improvers get today's drill first; hosts get the game cards. */}
       {!activeGame && (
         <MotiView {...entrance(1)} style={styles.heroSection}>
+          {!!greetName && (
+            <Text style={styles.greeting}>{`${greetingWord()}, ${greetName}.`}</Text>
+          )}
+          {showDrill && (
+            <PressableScale
+              style={styles.drillCard}
+              onPress={() => navigation.navigate('StudyTrainer', { mode: 'spot' })}
+              haptic="medium"
+              accessibilityRole="button"
+              accessibilityLabel={`Today's drill. ${drillSub}.`}
+            >
+              <View style={styles.drillIconWrap}>
+                <Ionicons name="flash" size={iconSize.sm} color={colors.background} />
+              </View>
+              <View style={styles.drillText}>
+                <Text style={styles.drillTitle}>Today's drill</Text>
+                <Text style={styles.drillSub}>{drillSub}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.gold} />
+            </PressableScale>
+          )}
           <Text style={styles.heroLead}>
-            Start a game — right now, no account needed.
+            {showDrill
+              ? 'Or run your game night.'
+              : 'Start a game — right now, no account needed.'}
           </Text>
           <View style={styles.heroRow}>
             <PressableScale
@@ -251,6 +295,22 @@ const styles = StyleSheet.create({
 
   heroSection: { gap: spacing.sm },
   heroLead: { ...typography.bodySmall, color: colors.textMuted },
+  greeting: { ...typography.displaySerif, fontSize: 22, lineHeight: 28, color: colors.text, marginBottom: spacing.xs },
+  drillCard: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    // goldFaint tint = the established "today's featured action" treatment — reads as the hero,
+    // distinct from the plain-surface game cards below it.
+    backgroundColor: colors.goldFaint, borderWidth: 1, borderColor: colors.goldMuted,
+    borderRadius: radii.lg, paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, minHeight: 72,
+    ...shadows.md,
+  },
+  drillIconWrap: {
+    width: 40, height: 40, borderRadius: radii.sm, backgroundColor: colors.gold,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  drillText: { flex: 1, gap: 2 },
+  drillTitle: { ...typography.label, color: colors.text },
+  drillSub: { ...typography.bodySmall, color: colors.textMuted },
   heroRow: { flexDirection: 'row', gap: spacing.md },
   heroCard: {
     flex: 1,

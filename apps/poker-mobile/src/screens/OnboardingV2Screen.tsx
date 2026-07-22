@@ -13,6 +13,7 @@ import { MotiView, slideUpSequence, staggerIn } from '../components/motion';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import * as storage from '../utils/storage';
 import { track, markSignupIntent } from '../utils/analytics';
+import { showToast } from '../utils/toast';
 import { isFeatureEnabled } from '../config/features';
 import { usePersona } from '../features/persona/state/PersonaContext';
 import {
@@ -29,7 +30,7 @@ import {
 import type { PersonaGoal } from '../features/persona/types';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding' | 'PersonaQuiz'>;
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 type ActionKey = 'play' | 'track' | 'study' | 'improve';
 
@@ -58,22 +59,57 @@ const SELECT_BEAT_MS = 250;
  * persona store immediately (skip keeps partials). Exit contract everywhere: await markSeen()
  * THEN navigation.reset. The typed name is display-only — NEVER in analytics (test-pinned).
  */
-export default function OnboardingV2Screen({ navigation }: Props) {
+export default function OnboardingV2Screen({ navigation, route }: Props) {
   const reduced = useReducedMotion();
-  const { persona, answerStep, completeFunnel } = usePersona();
+  const { persona, isLoaded: personaLoaded, answerStep, completeFunnel } = usePersona();
+  // Retake mode (1.3): the same funnel mounted at the PersonaQuiz route — a calm REVIEW, not a
+  // replay of first-run: it opens on the first QUESTION (no promise marketing), answers pre-seed
+  // from the stored persona, there is NO router at the end, and every exit goBack()s to wherever
+  // the user launched it (never a stack reset, never a markSeen write).
+  const retake = route.name === 'PersonaQuiz';
 
   const [phase, setPhase] = useState<'quiz' | 'router'>('quiz');
-  const [step, setStep] = useState<QuizStep>('promise');
+  const [step, setStep] = useState<QuizStep>(retake ? 'goal' : 'promise');
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [name, setName] = useState('');
+  const [name, setName] = useState(() => (retake ? persona?.displayName ?? '' : ''));
   // Local mirror of this run's answers — synchronous source for analytics + router ordering.
-  const [answers, setAnswers] = useState<{ goal?: string; skill?: string; format?: string }>({});
+  const [answers, setAnswers] = useState<{ goal?: string; skill?: string; format?: string }>(() =>
+    retake && persona
+      ? {
+          ...(persona.goal ? { goal: persona.goal } : {}),
+          ...(persona.skill ? { skill: persona.skill } : {}),
+          ...(persona.format ? { format: persona.format } : {}),
+        }
+      : {},
+  );
   const beatTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const nameSubmitted = useRef(false); // double-tap guard — one completion, one event
+  const retakeSeeded = useRef(false);
+  // Every funnel event carries the retake tag (ids/flags only — first-run funnels stay clean).
+  const evRetake = retake ? { retake: true } : {};
+
+  // Retake pre-seed can race the store load on a cold mount (lazy useState saw persona=null):
+  // re-seed ONCE when the persona arrives, unless the user already started answering.
+  useEffect(() => {
+    if (!retake || !personaLoaded || retakeSeeded.current || !persona) return;
+    retakeSeeded.current = true;
+    setAnswers(prev =>
+      Object.keys(prev).length > 0
+        ? prev
+        : {
+            ...(persona.goal ? { goal: persona.goal } : {}),
+            ...(persona.skill ? { skill: persona.skill } : {}),
+            ...(persona.format ? { format: persona.format } : {}),
+          },
+    );
+    setName(prev => (prev.length > 0 ? prev : persona.displayName ?? ''));
+  }, [retake, personaLoaded, persona]);
 
   useEffect(() => {
-    track('onboarding_started');
+    if (retake) track('onboarding_started', { retake: true });
+    else track('onboarding_started');
     return () => { if (beatTimer.current) clearTimeout(beatTimer.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Announce each step's headline so the 250ms content swap isn't silent to screen readers.
@@ -102,7 +138,7 @@ export default function OnboardingV2Screen({ navigation }: Props) {
     setSelectedId(id);
     setAnswers(prev => ({ ...prev, [current]: id }));
     void answerStep(current, id);
-    track('funnel_step_answered', { step: current, answer: id });
+    track('funnel_step_answered', { step: current, answer: id, ...evRetake });
     if (reduced) { advanceFrom(current); return; }
     beatTimer.current = setTimeout(() => advanceFrom(current), SELECT_BEAT_MS);
   }
@@ -118,20 +154,30 @@ export default function OnboardingV2Screen({ navigation }: Props) {
     if (nameSubmitted.current) return;
     nameSubmitted.current = true;
     const trimmed = named ? name.trim() : '';
-    void answerStep('name', trimmed);
+    // Retake + "Skip this" = leave-unchanged: NEVER a destructive write over an existing name.
+    // (Deliberately clearing the field and pressing Continue still clears it.)
+    if (!retake || named) void answerStep('name', trimmed);
     void completeFunnel();
+    const namedFlag = retake && !named ? !!persona?.displayName : trimmed.length > 0;
     // IDs + flags only — the typed name itself never leaves the device via analytics.
     track('funnel_completed', {
       goal: answers.goal ?? null,
       skill: answers.skill ?? null,
       format: answers.format ?? null,
-      named: trimmed.length > 0,
+      named: namedFlag,
+      ...evRetake,
     });
+    if (retake) {
+      showToast('Setup updated.', 'success');
+      navigation.goBack();
+      return;
+    }
     setPhase('router');
   }
 
   async function skip() {
-    track('onboarding_skipped', { from: phase });
+    track('onboarding_skipped', { from: phase, ...evRetake });
+    if (retake) { navigation.goBack(); return; } // review cancelled — no reset, no markSeen
     await markSeen();
     navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
   }
@@ -184,9 +230,13 @@ export default function OnboardingV2Screen({ navigation }: Props) {
   const goalForOrder = (answers.goal ?? persona?.goal ?? null) as PersonaGoal | null;
   const orderedActions = orderActionsForGoal(actions.filter(a => a.show), goalForOrder);
 
-  // Progress: quiz steps + the router = 6 units; the bar never starts at zero.
-  const stepIndex = phase === 'router' ? FUNNEL_STEPS.length : FUNNEL_STEPS.indexOf(step);
-  const progressPct = ((stepIndex + 1) / (FUNNEL_STEPS.length + 1)) * 100;
+  // Progress: first-run = quiz steps + the router (6 units, never starts at zero); retake = the
+  // four question steps only (no promise, no router).
+  const totalUnits = retake ? FUNNEL_STEPS.length - 1 : FUNNEL_STEPS.length + 1;
+  const stepIndex = retake
+    ? FUNNEL_STEPS.indexOf(step) - 1
+    : phase === 'router' ? FUNNEL_STEPS.length : FUNNEL_STEPS.indexOf(step);
+  const progressPct = ((stepIndex + 1) / totalUnits) * 100;
 
   const enter = (i: number) => slideUpSequence({ reduced, delay: staggerIn(i, 60), duration: 280 });
 
@@ -197,8 +247,8 @@ export default function OnboardingV2Screen({ navigation }: Props) {
         style={styles.progressTrack}
         accessible
         accessibilityRole="progressbar"
-        accessibilityLabel={`Step ${stepIndex + 1} of ${FUNNEL_STEPS.length + 1}`}
-        accessibilityValue={{ min: 0, max: FUNNEL_STEPS.length + 1, now: stepIndex + 1 }}
+        accessibilityLabel={`Step ${stepIndex + 1} of ${totalUnits}`}
+        accessibilityValue={{ min: 0, max: totalUnits, now: stepIndex + 1 }}
       >
         <View style={[styles.progressFill, { width: `${progressPct}%` }]} />
       </View>
@@ -341,8 +391,8 @@ export default function OnboardingV2Screen({ navigation }: Props) {
         </MotiView>
       )}
 
-      {/* Back — quiz question steps only (the promise has nothing to go back to) */}
-      {phase === 'quiz' && step !== 'promise' && (
+      {/* Back — quiz question steps only (nothing behind the promise, or behind retake's first question) */}
+      {phase === 'quiz' && step !== 'promise' && !(retake && step === 'goal') && (
         <PressableScale
           style={styles.backBtn}
           onPress={goBack}
