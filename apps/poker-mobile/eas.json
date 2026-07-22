@@ -15,7 +15,8 @@
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://poker-home-games-production.up.railway.app",
-        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "12435044751-eruvq9uduc9sk5mietg9eiab2epddsp6.apps.googleusercontent.com"
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "12435044751-eruvq9uduc9sk5mietg9eiab2epddsp6.apps.googleusercontent.com",
+        "EXPO_PUBLIC_POSTHOG_KEY": "phc_ytAYWrn5KKXshYPA3WyJguSDvDY5MDM6YiSgVAWqFgrz"
       }
     },
     "beta": {
@@ -25,14 +26,16 @@
       "env": {
         "EXPO_PUBLIC_APP_VARIANT": "beta",
         "EXPO_PUBLIC_API_URL": "https://poker-home-games-production.up.railway.app",
-        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "12435044751-eruvq9uduc9sk5mietg9eiab2epddsp6.apps.googleusercontent.com"
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "12435044751-eruvq9uduc9sk5mietg9eiab2epddsp6.apps.googleusercontent.com",
+        "EXPO_PUBLIC_POSTHOG_KEY": "phc_ytAYWrn5KKXshYPA3WyJguSDvDY5MDM6YiSgVAWqFgrz"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_API_URL": "https://poker-home-games-production.up.railway.app",
-        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "12435044751-eruvq9uduc9sk5mietg9eiab2epddsp6.apps.googleusercontent.com"
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "12435044751-eruvq9uduc9sk5mietg9eiab2epddsp6.apps.googleusercontent.com",
+        "EXPO_PUBLIC_POSTHOG_KEY": "phc_ytAYWrn5KKXshYPA3WyJguSDvDY5MDM6YiSgVAWqFgrz"
       }
     }
   },

@@ -10,6 +10,13 @@
 # 2. src/PokerApp.Tests/TestInfra.cs:18 — the self-describing fake JWT signing
 #    key used only by the in-memory test infrastructure
 #    ("test-secret-key-at-least-32-characters-long-000"). Never a real key.
+#
+# Verified 2026-07-22 (Wave 0.2 analytics activation):
+#
+# 3. apps/poker-mobile/eas.json — the PostHog PROJECT API key ("phc_…"). PostHog
+#    project keys are client-side/public by design (they ship inside the app
+#    binary and every web bundle; they can only ingest events, never read data).
+#    Same class as the Google OAuth client IDs already committed beside it.
 
 title = "T Poker gitleaks config"
 
@@ -21,4 +28,5 @@ description = "Verified non-secrets — exact literals only (see header comments
 regexes = [
   '''test_7d279f61a3499fed520f7cd8c08''',
   '''test-secret-key-at-least-32-characters-long-000''',
+  '''phc_ytAYWrn5KKXshYPA3WyJguSDvDY5MDM6YiSgVAWqFgrz''',
 ]
