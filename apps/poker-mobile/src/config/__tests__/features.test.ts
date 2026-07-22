@@ -57,6 +57,10 @@ describe('feature flags — production resolution', () => {
       // sends are additionally gated on the user's explicit Welcome-choice consent + a build-time
       // PostHog key; see utils/analytics.ts + utils/__tests__/analyticsDispatch.test.ts.
       'analytics',
+      // Wave 0.3 — streak/daily-study reminders (native-only, contextual permission ask). The
+      // free_ai reminder was removed FIRST; reminderLogic.test.ts pins that no reminder ever
+      // promises an unavailable feature.
+      'reminders',
     ]);
     for (const [flag, value] of Object.entries(featureFlags)) {
       expect(value).toBe(expectedOn.has(flag));

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { localDayKey } from '../../study/logic/localDay';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Screen from '../../../components/Screen';
@@ -39,7 +40,8 @@ function toCount(input: string): number {
   const n = parseInt(input.trim() || '0', 10);
   return Number.isFinite(n) && n >= 0 ? n : 0;
 }
-const todayStr = () => new Date().toISOString().slice(0, 10);
+// LOCAL day — the UTC shortcut pre-filled yesterday's date after midnight in UTC+ timezones.
+const todayStr = () => localDayKey();
 
 export default function LogSessionScreen() {
   const navigation = useNavigation<Nav>();
@@ -184,7 +186,7 @@ export default function LogSessionScreen() {
                   maximumDate={new Date()}
                   onChange={(_, d) => {
                     setShowDatePicker(Platform.OS === 'ios');
-                    if (d) setDate(d.toISOString().slice(0, 10));
+                    if (d) setDate(localDayKey(d)); // picker returns a LOCAL date — keep it local
                   }}
                 />
               )}

@@ -24,6 +24,7 @@ import CrossPillarCTA from '../../../components/CrossPillarCTA';
 import { isFeatureEnabled } from '../../../config/features';
 import { useStudy } from '../state/StudyContext';
 import { track } from '../../../utils/analytics';
+import { requestReminderPermissionOnce } from '../../../utils/reminders';
 import { useEntitlements } from '../../../context/EntitlementsContext';
 import LockNudge from './LockNudge';
 import Chip from '../../../components/Chip';
@@ -129,6 +130,9 @@ export default function SpotTrainerScreen() {
     const acc = answered > 0 ? Math.round((correctCount / answered) * 100) : 0;
     track('study_trainer_finished', { mode, score_band: acc >= 80 ? '80-100' : acc >= 50 ? '50-79' : '0-49' });
     setDone(true);
+    // Contextual permission moment (0.3): the FIRST completed drill — the OS prompt fires at most
+    // once ever (persisted marker inside), native-only, and only while reminders are enabled.
+    if (isFeatureEnabled('reminders') && answered > 0) void requestReminderPermissionOnce();
   }
 
   async function choose(action: RangeAction) {
