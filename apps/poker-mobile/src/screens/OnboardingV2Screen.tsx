@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Image, StyleSheet, Platform, TextInput } from 'react-native';
+import { View, Text, Image, StyleSheet, Platform, TextInput, KeyboardAvoidingView, AccessibilityInfo } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
@@ -34,10 +34,12 @@ type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 type ActionKey = 'play' | 'track' | 'study' | 'improve';
 
 /** Copy per question step — headlines are chapters (DM Serif), subs stay quiet. */
+// Copy is PURPOSE-TRUE for what ships today (critique 2026-07-22): goal drives the router order
+// now; skill/format personalization arrives in slice 1.3 — the subs promise nothing until it does.
 const STEP_COPY: Record<Exclude<QuizStep, 'promise' | 'name'>, { headline: string; sub: string }> = {
   goal: { headline: 'What brings you to the table?', sub: 'We tune your first screen around this.' },
-  skill: { headline: 'How sharp is your game?', sub: 'Honest answer, better drills.' },
-  format: { headline: 'What do you play?', sub: 'Your study feed follows your game.' },
+  skill: { headline: 'How sharp is your game?', sub: 'No wrong answers.' },
+  format: { headline: 'What do you play?', sub: 'Cash and tournaments play differently.' },
 };
 
 const STEP_OPTIONS: Record<Exclude<QuizStep, 'promise' | 'name'>, FunnelOption[]> = {
@@ -67,11 +69,22 @@ export default function OnboardingV2Screen({ navigation }: Props) {
   // Local mirror of this run's answers — synchronous source for analytics + router ordering.
   const [answers, setAnswers] = useState<{ goal?: string; skill?: string; format?: string }>({});
   const beatTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const nameSubmitted = useRef(false); // double-tap guard — one completion, one event
 
   useEffect(() => {
     track('onboarding_started');
     return () => { if (beatTimer.current) clearTimeout(beatTimer.current); };
   }, []);
+
+  // Announce each step's headline so the 250ms content swap isn't silent to screen readers.
+  useEffect(() => {
+    const headline =
+      phase === 'router' ? 'Where do you want to start?' :
+      step === 'promise' ? 'Win your home game.' :
+      step === 'name' ? 'What should we call you?' :
+      STEP_COPY[step].headline;
+    AccessibilityInfo.announceForAccessibility?.(headline);
+  }, [phase, step]);
 
   async function markSeen() {
     try { await storage.setItemAsync('hasSeenOnboarding', 'true'); } catch { /* best-effort */ }
@@ -102,6 +115,8 @@ export default function OnboardingV2Screen({ navigation }: Props) {
   }
 
   async function finishName(named: boolean) {
+    if (nameSubmitted.current) return;
+    nameSubmitted.current = true;
     const trimmed = named ? name.trim() : '';
     void answerStep('name', trimmed);
     void completeFunnel();
@@ -117,6 +132,14 @@ export default function OnboardingV2Screen({ navigation }: Props) {
 
   async function skip() {
     track('onboarding_skipped', { from: phase });
+    await markSeen();
+    navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
+  }
+
+  // Router's quiet exit is a COMPLETION, not a skip — the user finished the quiz and simply
+  // declined a starting action (critique: skip() here undercounted completion metrics).
+  async function exploreOnOwn() {
+    track('onboarding_completed', { via: 'explore' });
     await markSeen();
     navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
   }
@@ -152,7 +175,8 @@ export default function OnboardingV2Screen({ navigation }: Props) {
       onPress: () => enterAction('study', 'StudyTrainer', { mode: 'spot' }), show: isFeatureEnabled('study'),
     },
     {
-      key: 'improve', icon: 'sparkles', title: 'Try the AI Coach', sub: 'AI hand coaching — coming soon',
+      // Expectation-true copy (critique): the tap leads to sign-in for first access, not a trial.
+      key: 'improve', icon: 'sparkles', title: 'AI Coach', sub: 'Hand coaching — coming soon. Get first access.',
       onPress: chooseImprove, show: isFeatureEnabled('coach'), teaser: true,
     },
   ];
@@ -168,10 +192,13 @@ export default function OnboardingV2Screen({ navigation }: Props) {
 
   return (
     <Screen style={styles.container}>
-      {/* Quiet progress — always present, never at zero */}
+      {/* Quiet progress — always present, never at zero; a real progressbar to screen readers */}
       <View
         style={styles.progressTrack}
+        accessible
+        accessibilityRole="progressbar"
         accessibilityLabel={`Step ${stepIndex + 1} of ${FUNNEL_STEPS.length + 1}`}
+        accessibilityValue={{ min: 0, max: FUNNEL_STEPS.length + 1, now: stepIndex + 1 }}
       >
         <View style={[styles.progressFill, { width: `${progressPct}%` }]} />
       </View>
@@ -201,7 +228,7 @@ export default function OnboardingV2Screen({ navigation }: Props) {
               label="Let's set you up"
               onPress={() => advanceFrom('promise')}
             />
-            <Text style={styles.promiseFootnote}>Five quick questions — under a minute.</Text>
+            <Text style={styles.promiseFootnote}>A few quick questions — under a minute.</Text>
           </View>
         </MotiView>
       )}
@@ -212,7 +239,8 @@ export default function OnboardingV2Screen({ navigation }: Props) {
           <Text style={styles.stepSub}>{STEP_COPY[step].sub}</Text>
           <View style={styles.options}>
             {STEP_OPTIONS[step].map((o, i) => {
-              const selected = selectedId === o.id;
+              // Selection survives Back: the ephemeral beat selection OR the recorded answer.
+              const selected = selectedId === o.id || (!selectedId && answers[step] === o.id);
               return (
                 <MotiView key={o.id} {...enter(i + 1)}>
                   <PressableScale
@@ -227,6 +255,8 @@ export default function OnboardingV2Screen({ navigation }: Props) {
                       <Text style={[styles.optionLabel, selected && styles.optionLabelSelected]}>{o.label}</Text>
                       {!!o.sub && <Text style={styles.optionSub}>{o.sub}</Text>}
                     </View>
+                    {/* Non-color selection affordance (never color alone) */}
+                    {selected && <Ionicons name="checkmark-circle" size={20} color={colors.gold} />}
                   </PressableScale>
                 </MotiView>
               );
@@ -236,9 +266,13 @@ export default function OnboardingV2Screen({ navigation }: Props) {
       )}
 
       {phase === 'quiz' && step === 'name' && (
+        <KeyboardAvoidingView
+          style={styles.kavWrap}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
         <MotiView key="name" {...enter(0)} style={styles.stepWrap}>
           <Text style={styles.stepHeadline} accessibilityRole="header">What should we call you?</Text>
-          <Text style={styles.stepSub}>Just for your greeting — never shared.</Text>
+          <Text style={styles.stepSub}>Optional — stays on this device.</Text>
           <TextInput
             style={styles.nameInput}
             placeholder="Your name (optional)"
@@ -263,6 +297,7 @@ export default function OnboardingV2Screen({ navigation }: Props) {
             </PressableScale>
           </View>
         </MotiView>
+        </KeyboardAvoidingView>
       )}
 
       {phase === 'router' && (
@@ -297,7 +332,7 @@ export default function OnboardingV2Screen({ navigation }: Props) {
 
           <PressableScale
             style={styles.quietBtn}
-            onPress={skip}
+            onPress={exploreOnOwn}
             accessibilityRole="button"
             accessibilityLabel="Explore on my own"
           >
@@ -333,15 +368,17 @@ const styles = StyleSheet.create({
 
   progressTrack: {
     height: 3, borderRadius: 2, backgroundColor: colors.surfaceHigh,
-    marginTop: spacing.sm, marginBottom: spacing.md, overflow: 'hidden',
+    marginTop: spacing.sm, marginBottom: spacing.md, marginRight: 72, // clear of the floating Skip
+    overflow: 'hidden',
   },
   progressFill: { height: 3, borderRadius: 2, backgroundColor: colors.gold },
+  kavWrap: { flex: 1 },
 
   skipBtn: { position: 'absolute', top: Platform.OS === 'ios' ? 56 : 36, right: 24, zIndex: 10, paddingHorizontal: 12, paddingVertical: 6, minHeight: 44, justifyContent: 'center' },
   skipText: { ...typography.bodySmall, color: colors.textMuted, fontWeight: '600' },
 
-  // Promise
-  promiseWrap: { flex: 1, justifyContent: 'center', gap: spacing.md },
+  // Promise (maxWidth keeps web/desktop composed — cards never stretch full-bleed)
+  promiseWrap: { flex: 1, justifyContent: 'center', gap: spacing.md, width: '100%', maxWidth: 480, alignSelf: 'center' },
   brandRow: { alignItems: 'center', marginBottom: spacing.lg },
   brandLogoRing: {
     width: 64, height: 64, borderRadius: 20, backgroundColor: colors.surface,
@@ -351,20 +388,21 @@ const styles = StyleSheet.create({
   promiseHeadline: { ...typography.displaySerif, fontSize: 34, lineHeight: 42, color: colors.text, textAlign: 'center' },
   promiseSub: { ...typography.body, color: colors.textMuted, textAlign: 'center', lineHeight: 24 },
   promiseCtaWrap: { marginTop: spacing.xl, gap: spacing.md, alignItems: 'center' },
-  promiseFootnote: { ...typography.caption, color: colors.textDim },
+  // textMuted, not textDim: this is informational copy, not a placeholder (WCAG AA on background).
+  promiseFootnote: { ...typography.caption, color: colors.textMuted },
 
   // Question steps
-  stepWrap: { flex: 1, justifyContent: 'center', gap: spacing.sm },
+  stepWrap: { flex: 1, justifyContent: 'center', gap: spacing.sm, width: '100%', maxWidth: 480, alignSelf: 'center' },
   stepHeadline: { ...typography.displaySerif, fontSize: 26, lineHeight: 34, color: colors.text },
   stepSub: { ...typography.bodySmall, color: colors.textMuted, marginBottom: spacing.lg },
   options: { gap: spacing.md },
   option: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
     borderRadius: radii.lg, paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, minHeight: 64,
-    justifyContent: 'center',
   },
   optionSelected: { borderColor: colors.gold, backgroundColor: colors.goldFaint },
-  optionText: { gap: 2 },
+  optionText: { flex: 1, gap: 2 },
   optionLabel: { ...typography.label, color: colors.text },
   optionLabelSelected: { color: colors.goldLight },
   optionSub: { ...typography.bodySmall, color: colors.textMuted },
@@ -378,7 +416,7 @@ const styles = StyleSheet.create({
   nameActions: { marginTop: spacing.lg, gap: spacing.sm },
 
   // Router
-  routerWrap: { flex: 1, justifyContent: 'center', gap: spacing.xl },
+  routerWrap: { flex: 1, justifyContent: 'center', gap: spacing.xl, width: '100%', maxWidth: 480, alignSelf: 'center' },
   routerHead: { gap: spacing.xs, alignItems: 'center' },
   routerTitle: { ...typography.h1, color: colors.text, textAlign: 'center' },
   routerSub: { ...typography.body, color: colors.textMuted, textAlign: 'center' },

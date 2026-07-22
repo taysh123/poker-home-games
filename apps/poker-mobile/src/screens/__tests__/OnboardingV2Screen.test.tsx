@@ -193,6 +193,30 @@ describe('Quiet Luxury funnel', () => {
     expect(start).toBeTruthy();
   });
 
+  it('Back shows the recorded answer as selected (with a non-color checkmark)', async () => {
+    renderFunnel();
+    await act(async () => { fireEvent.press(screen.getByText("Let's set you up")); });
+    await answerThrough(['I host the game']);
+    await act(async () => { fireEvent.press(screen.getByLabelText('Back')); });
+    // The goal step re-renders with the committed choice visibly selected — not three blank cards.
+    const host = screen.getByRole('button', { name: /I host the game/i });
+    expect(host.props.accessibilityState?.selected).toBe(true);
+    expect(screen.getByTestId('icon-checkmark-circle')).toBeTruthy();
+  });
+
+  it("router's quiet exit counts as COMPLETION, never as a skip", async () => {
+    const nav = renderFunnel();
+    await act(async () => { fireEvent.press(screen.getByText("Let's set you up")); });
+    await answerThrough(['I host the game', 'Newer to poker', 'Cash games']);
+    await act(async () => { fireEvent.press(screen.getByText('Skip this')); });
+
+    await act(async () => { fireEvent.press(screen.getByText("I'll explore on my own")); });
+    expect(mockTrack).toHaveBeenCalledWith('onboarding_completed', { via: 'explore' });
+    const skips = mockTrack.mock.calls.filter(c => c[0] === 'onboarding_skipped');
+    expect(skips).toHaveLength(0);
+    await waitFor(() => expect(nav.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'MainTabs' }] }));
+  });
+
   it('a11y: every option card exposes a button role with an accessible name', async () => {
     renderFunnel();
     await act(async () => { fireEvent.press(screen.getByText("Let's set you up")); });
