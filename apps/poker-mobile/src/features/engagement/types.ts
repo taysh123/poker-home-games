@@ -7,7 +7,10 @@
 /** Aggregate counts read from the local pillars; the single input to all engagement math. */
 export interface EngagementSignals {
   spotsAnswered: number;
+  /** CURRENT consecutive-day streak — volatile (drops to 0 on a break). Achievements only; carries NO XP. */
   studyStreak: number;
+  /** Cumulative distinct active study days — MONOTONIC (never decreases). This is what earns XP. */
+  studyDays: number;
   bankrollSessions: number;
   bankrollPositiveMonth: boolean;
   coachAnalyses: number;

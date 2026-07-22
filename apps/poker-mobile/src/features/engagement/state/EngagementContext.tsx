@@ -66,6 +66,11 @@ export function EngagementProvider({ children }: { children: React.ReactNode }) 
   // ── Derive signals from the local pillars ──
   const spotsAnswered = progress.totalAnswered;
   const studyStreak = progress.currentStreak;
+  // MONOTONIC study-day credit (0.4): distinct days with ≥1 answer — never shrinks, unlike the streak.
+  const studyDays = useMemo(
+    () => Object.values(progress.dailyCounts).filter(c => c > 0).length,
+    [progress.dailyCounts],
+  );
   const quizzesCompleted = progress.quizzesCompleted ?? 0;
   const lessonsCompleted = progress.lessonsCompleted ?? 0;
   const bankrollSessions = sessions.length;
@@ -78,9 +83,9 @@ export function EngagementProvider({ children }: { children: React.ReactNode }) 
   }, [sessions]);
 
   const signals: EngagementSignals = useMemo(() => ({
-    spotsAnswered, studyStreak, bankrollSessions, bankrollPositiveMonth, coachAnalyses, localGamesFinished,
+    spotsAnswered, studyStreak, studyDays, bankrollSessions, bankrollPositiveMonth, coachAnalyses, localGamesFinished,
     quizzesCompleted, lessonsCompleted,
-  }), [spotsAnswered, studyStreak, bankrollSessions, bankrollPositiveMonth, coachAnalyses, localGamesFinished, quizzesCompleted, lessonsCompleted]);
+  }), [spotsAnswered, studyStreak, studyDays, bankrollSessions, bankrollPositiveMonth, coachAnalyses, localGamesFinished, quizzesCompleted, lessonsCompleted]);
 
   const eligibleCount = useMemo(() => eligibleKeys(signals).length, [signals]);
   const xpTotal = useMemo(() => computeXp(signals, eligibleCount), [signals, eligibleCount]);
@@ -171,7 +176,7 @@ export function useEngagement(): EngagementContextType {
     return {
       enabled: false, isLoaded: false, xpTotal: 0,
       rank: rankForXp(0), signals: {
-        spotsAnswered: 0, studyStreak: 0, bankrollSessions: 0,
+        spotsAnswered: 0, studyStreak: 0, studyDays: 0, bankrollSessions: 0,
         bankrollPositiveMonth: false, coachAnalyses: 0, localGamesFinished: 0,
         quizzesCompleted: 0, lessonsCompleted: 0,
       },

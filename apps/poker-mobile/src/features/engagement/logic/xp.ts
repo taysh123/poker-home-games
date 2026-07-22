@@ -1,4 +1,12 @@
-/** XP + rank math — pure, testable. XP is DERIVED from local signals; ranks are cosmetic. */
+/**
+ * XP + rank math — pure, testable. XP is DERIVED from local signals; ranks are cosmetic.
+ *
+ * MONOTONIC (Wave 0.4): every input is a lifetime counter that only grows — the streak term rides
+ * `studyDays` (cumulative distinct active days), NOT the volatile current streak, so XP never
+ * decreases. A dropping XP number is a retention anti-pattern and would break additive
+ * league/season math (Wave 3). Since studyDays ≥ currentStreak always, no existing user's XP
+ * went down in this change either.
+ */
 import type { EngagementSignals } from '../types';
 
 export const XP_WEIGHTS = {
@@ -6,7 +14,7 @@ export const XP_WEIGHTS = {
   bankrollSession: 10,
   localGame: 15,
   coachAnalysis: 20,
-  streakDay: 5,
+  studyDay: 5,
   achievement: 25,
   quizCompleted: 8,
   lessonCompleted: 6,
@@ -18,7 +26,7 @@ export function computeXp(s: EngagementSignals, achievementsUnlocked: number): n
     s.bankrollSessions * XP_WEIGHTS.bankrollSession +
     s.localGamesFinished * XP_WEIGHTS.localGame +
     s.coachAnalyses * XP_WEIGHTS.coachAnalysis +
-    s.studyStreak * XP_WEIGHTS.streakDay +
+    s.studyDays * XP_WEIGHTS.studyDay +
     s.quizzesCompleted * XP_WEIGHTS.quizCompleted +
     s.lessonsCompleted * XP_WEIGHTS.lessonCompleted +
     Math.max(0, achievementsUnlocked) * XP_WEIGHTS.achievement
