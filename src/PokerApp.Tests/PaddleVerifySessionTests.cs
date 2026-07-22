@@ -6,6 +6,7 @@ using PokerApp.Application.Common.Exceptions;
 using PokerApp.Application.Common.Interfaces;
 using PokerApp.Application.Features.Billing.Commands.VerifySession;
 using PokerApp.Domain.Enums;
+using PokerApp.Infrastructure.Billing;
 using PokerApp.Infrastructure.Services;
 using Xunit;
 
@@ -19,6 +20,9 @@ namespace PokerApp.Tests;
 /// </summary>
 public class PaddleVerifySessionTests
 {
+    // The stubbed transactions are sandbox (IsSandbox: true) — entitlement checks need the explicit dev-seam opt-in.
+    private static readonly BillingSettings AcceptSandbox = new() { AcceptSandbox = true };
+
     private sealed class StubVerifier(VerifiedSubscription? result) : IBillingVerifier
     {
         public Task<VerifiedSubscription?> VerifyAsync(SubscriptionStore store, string token, CancellationToken ct = default)
@@ -35,7 +39,7 @@ public class PaddleVerifySessionTests
         using var ctx = TestInfra.NewContext();
         var uid = Guid.NewGuid();
         var handler = new VerifyCheckoutSessionCommandHandler(
-            new StubVerifier(Paid()), ctx, new EntitlementService(ctx), new CapturingAuditLog(), new FakeCurrentUser(uid));
+            new StubVerifier(Paid()), ctx, new EntitlementService(ctx, AcceptSandbox), new CapturingAuditLog(), new FakeCurrentUser(uid));
 
         var ent = await handler.Handle(new VerifyCheckoutSessionCommand("txn_abc"), default);
 
@@ -55,7 +59,7 @@ public class PaddleVerifySessionTests
         await ctx.SaveChangesAsync();
 
         var handler = new VerifyCheckoutSessionCommandHandler(
-            new StubVerifier(Paid()), ctx, new EntitlementService(ctx), new CapturingAuditLog(), new FakeCurrentUser(uid));
+            new StubVerifier(Paid()), ctx, new EntitlementService(ctx, AcceptSandbox), new CapturingAuditLog(), new FakeCurrentUser(uid));
         var ent = await handler.Handle(new VerifyCheckoutSessionCommand("txn_abc"), default);
 
         Assert.True(ent.IsPremium);

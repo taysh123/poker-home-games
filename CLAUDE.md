@@ -453,6 +453,13 @@ AppSettings__WebBaseUrl=https://<your-vercel-domain>.vercel.app
 ```
 All of these override the empty values in `appsettings.Production.json` at runtime.
 
+**Billing is fail-closed in production** (no Railway vars needed): `BillingVerifierSelection` disables any
+non-`direct` verifier in Production (the mock verifier — which grants premium for any receipt — is
+dev/test-only), `appsettings.Production.json` pins `BillingSettings` to `direct` + `AcceptSandbox=false`,
+and `AcceptSandbox` defaults to `false` in code. Pinned by `BillingFailClosedProdTests`. At app-store
+billing launch, supply real store credentials via env (`AppleStoreSettings__*`, `GooglePlaySettings__*`, …) —
+do NOT set `BillingSettings__Provider=mock` in production.
+
 **`IWebSettings` — invite link base URL:**
 `IWebSettings` is defined in `Application/Common/Interfaces/IWebSettings.cs` and implemented by `Infrastructure/Settings/WebSettings.cs` (bound from `AppSettings:WebBaseUrl`). It is injected into `GenerateGroupInviteLinkCommandHandler` and `GenerateSessionInviteTokenCommandHandler`. When `WebBaseUrl` is empty (local dev, Expo Go), invite URLs use the `tpoker://` deep-link scheme. When set, they use `https://<WebBaseUrl>/join/group/:token` and `https://<WebBaseUrl>/join/session/:token`.
 

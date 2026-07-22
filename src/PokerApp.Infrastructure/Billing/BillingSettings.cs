@@ -6,9 +6,10 @@ public class BillingSettings
     /// <summary>"mock" (dev/tests) or "direct" (real Apple/Google verification).</summary>
     public string Provider { get; init; } = "mock";
 
-    /// <summary>Accept sandbox/TestFlight receipts + notifications. MUST be false in production
-    /// so sandbox can never grant production entitlements (fail-closed separation).</summary>
-    public bool AcceptSandbox { get; init; } = true;
+    /// <summary>Accept sandbox/TestFlight receipts + notifications. Fail-closed default: sandbox is
+    /// OPT-IN (dev appsettings.json sets true explicitly) so a missing config section can never let
+    /// sandbox receipts grant production entitlements.</summary>
+    public bool AcceptSandbox { get; init; } = false;
 }
 
 public class AppleStoreSettings

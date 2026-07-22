@@ -5,6 +5,7 @@ using PokerApp.Application.Features.Billing.Commands;
 using PokerApp.Application.Features.Coach.Commands;
 using PokerApp.Domain.Entities;
 using PokerApp.Domain.Enums;
+using PokerApp.Infrastructure.Billing;
 using PokerApp.Infrastructure.Identity;
 using PokerApp.Infrastructure.Persistence;
 using PokerApp.Infrastructure.Services;
@@ -48,11 +49,12 @@ public class EntitlementServiceTests
             DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(20), true, true, DateTime.UtcNow);
         ctx.Subscriptions.Add(sub);
         await ctx.SaveChangesAsync();
-        Assert.True((await new EntitlementService(ctx).GetAsync(uid)).IsPremium);
+        var accept = new BillingSettings { AcceptSandbox = true }; // sub above is sandbox — explicit dev-seam opt-in
+        Assert.True((await new EntitlementService(ctx, accept).GetAsync(uid)).IsPremium);
 
         sub.MarkRefunded(DateTime.UtcNow.AddMinutes(1));
         await ctx.SaveChangesAsync();
-        Assert.False((await new EntitlementService(ctx).GetAsync(uid)).IsPremium);
+        Assert.False((await new EntitlementService(ctx, accept).GetAsync(uid)).IsPremium);
     }
 }
 
@@ -197,7 +199,9 @@ public class BillingFlowTests
         using var ctx = TestInfra.NewContext();
         var uid = Guid.NewGuid();
         var handler = new ValidatePurchaseCommandHandler(
-            new MockBillingVerifier(), ctx, new EntitlementService(ctx), new CapturingAuditLog(), new FakeCurrentUser(uid));
+            new MockBillingVerifier(), ctx,
+            new EntitlementService(ctx, new BillingSettings { AcceptSandbox = true }), // mock receipts are sandbox
+            new CapturingAuditLog(), new FakeCurrentUser(uid));
 
         var ent = await handler.Handle(new ValidatePurchaseCommand("apple", "receipt-xyz"), default);
         Assert.True(ent.IsPremium);

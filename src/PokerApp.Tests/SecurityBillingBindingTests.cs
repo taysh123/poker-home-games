@@ -60,7 +60,8 @@ public class SecurityBillingBindingTests
         AutoRenew: true, IsSandbox: true, Status: SubscriptionStatus.Active, AppUserId: appUserId);
 
     private static VerifyCheckoutSessionCommandHandler Handler(AppDbContext ctx, IBillingVerifier verifier, Guid caller) =>
-        new(verifier, ctx, new EntitlementService(ctx), new CapturingAuditLog(), new FakeCurrentUser(caller));
+        new(verifier, ctx, new EntitlementService(ctx, new BillingSettings { AcceptSandbox = true }),
+            new CapturingAuditLog(), new FakeCurrentUser(caller));
 
     [Fact]
     public async Task Rejects_a_transaction_belonging_to_another_user()

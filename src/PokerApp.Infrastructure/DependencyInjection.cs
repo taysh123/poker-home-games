@@ -16,7 +16,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        bool isProduction = false)
     {
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
@@ -115,18 +116,25 @@ public static class DependencyInjection
         services.AddScoped<IGooglePlaySubscriptionsClient, GooglePlaySubscriptionsClient>();
         services.AddScoped<IStoreNotificationVerifier, StoreNotificationVerifier>();
 
-        if (string.Equals(billingSettings.Provider, "direct", StringComparison.OrdinalIgnoreCase))
+        // Fail-closed selection (pure, test-pinned in BillingVerifierSelection): "direct" ⇒ real store
+        // verification; anything else ⇒ mock in dev/test, DISABLED in Production — the mock grants premium
+        // for ANY non-empty receipt and must be unreachable in prod no matter what the env vars say.
+        switch (BillingVerifierSelection.Resolve(billingSettings.Provider, isProduction))
         {
-            services.AddScoped<AppleBillingVerifier>();
-            services.AddScoped<GooglePlayBillingVerifier>();
-            services.AddScoped(sp => new StripeBillingVerifier(stripeSettings, billingSettings, sp.GetRequiredService<IHttpClientFactory>().CreateClient()));
-            services.AddScoped(sp => new RevenueCatBillingVerifier(revenueCatSettings, billingSettings, sp.GetRequiredService<IHttpClientFactory>().CreateClient()));
-            services.AddScoped(sp => new PaddleBillingVerifier(paddleSettings, billingSettings, sp.GetRequiredService<IHttpClientFactory>().CreateClient()));
-            services.AddScoped<IBillingVerifier, DirectBillingVerifier>();
-        }
-        else
-        {
-            services.AddScoped<IBillingVerifier, MockBillingVerifier>();
+            case BillingVerifierKind.Direct:
+                services.AddScoped<AppleBillingVerifier>();
+                services.AddScoped<GooglePlayBillingVerifier>();
+                services.AddScoped(sp => new StripeBillingVerifier(stripeSettings, billingSettings, sp.GetRequiredService<IHttpClientFactory>().CreateClient()));
+                services.AddScoped(sp => new RevenueCatBillingVerifier(revenueCatSettings, billingSettings, sp.GetRequiredService<IHttpClientFactory>().CreateClient()));
+                services.AddScoped(sp => new PaddleBillingVerifier(paddleSettings, billingSettings, sp.GetRequiredService<IHttpClientFactory>().CreateClient()));
+                services.AddScoped<IBillingVerifier, DirectBillingVerifier>();
+                break;
+            case BillingVerifierKind.Disabled:
+                services.AddScoped<IBillingVerifier, DisabledBillingVerifier>();
+                break;
+            default:
+                services.AddScoped<IBillingVerifier, MockBillingVerifier>();
+                break;
         }
 
         // B5 — fraud/abuse + observability + top-ups (safe defaults: blocking off, top-ups disabled).
