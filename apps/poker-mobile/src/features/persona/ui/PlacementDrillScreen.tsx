@@ -1,0 +1,243 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
+import Screen from '../../../components/Screen';
+import BrandHeader from '../../../components/BrandHeader';
+import Card from '../../../components/Card';
+import StateView from '../../../components/StateView';
+import EmptyState from '../../../components/EmptyState';
+import PrimaryButton from '../../../components/PrimaryButton';
+import ProgressBar from '../../../components/ProgressBar';
+import PressableScale from '../../../components/motion/PressableScale';
+import { MotiView, slideUpSequence, staggerIn } from '../../../components/motion';
+import { useReducedMotion } from '../../../hooks/useReducedMotion';
+import { colors } from '../../../theme/colors';
+import { typography } from '../../../theme/typography';
+import { spacing } from '../../../theme/spacing';
+import { radii } from '../../../theme/radii';
+import type { RootStackParamList } from '../../../navigation/AppNavigator';
+import { useContent } from '../../../context/ContentContext';
+import { track } from '../../../utils/analytics';
+import { normalizeQuestions, gradeAnswer, type QuizQuestion, type QuizChoice } from '../../study/logic/quiz';
+import { localDayKey } from '../../study/logic/localDay';
+import { usePersona } from '../state/PersonaContext';
+import {
+  PLACEMENT_SIZE,
+  placementQuestions,
+  skillFromPlacement,
+  placementLevelCopy,
+} from '../logic/placement';
+
+type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Phase = 'intro' | 'run' | 'result';
+
+/**
+ * Placement drill (slice 1.4) — five questions that calibrate the persona's skill level.
+ *
+ * ASSESSMENT, NOT PRACTICE: no answer is revealed and no explanation is shown during the run, so
+ * the user gains a level and nothing else. That is precisely what makes it fair to leave it
+ * OUT of the daily quiz / practice meters — it never touches StudyContext. It is also strictly
+ * one-time (entry points check `persona.placement`), so it cannot be farmed for free questions.
+ */
+export default function PlacementDrillScreen() {
+  const navigation = useNavigation<Nav>();
+  const reduced = useReducedMotion();
+  const { enabled, isLoaded, query } = useContent();
+  const { recordPlacement } = usePersona();
+
+  const [all, setAll] = useState<QuizQuestion[] | null>(null);
+  const [error, setError] = useState(false);
+  const [phase, setPhase] = useState<Phase>('intro');
+  const [idx, setIdx] = useState(0);
+  const [correct, setCorrect] = useState(0);
+
+  useEffect(() => {
+    if (!isLoaded || !query) return;
+    let cancelled = false;
+    query.all('quiz_bank')
+      .then(rows => { if (!cancelled) setAll(normalizeQuestions(rows)); })
+      .catch(() => { if (!cancelled) setError(true); });
+    return () => { cancelled = true; };
+  }, [isLoaded, query]);
+
+  const run = useMemo(
+    () => (all ? placementQuestions(all, localDayKey()) : []),
+    [all],
+  );
+
+  const loading = enabled && !error && all === null;
+  const question = run[idx];
+
+  function start() {
+    track('placement_started');
+    setPhase('run');
+  }
+
+  function answer(choice: QuizChoice) {
+    // No feedback, no explanation — the next question replaces this one immediately.
+    const hit = gradeAnswer(question, choice).correct;
+    const nextCorrect = correct + (hit ? 1 : 0);
+    const nextIdx = idx + 1;
+    setCorrect(nextCorrect);
+    if (nextIdx >= run.length) {
+      const skill = skillFromPlacement(nextCorrect);
+      void recordPlacement(nextCorrect, run.length);
+      track('placement_completed', { score: nextCorrect, total: run.length, skill });
+      setPhase('result');
+      return;
+    }
+    setIdx(nextIdx);
+  }
+
+  const enter = (i: number) => slideUpSequence({ reduced, delay: staggerIn(i, 60), duration: 280 });
+
+  return (
+    <Screen>
+      <BrandHeader
+        variant="screen"
+        title="Find your level"
+        subtitle="A quick calibration"
+        onBack={() => navigation.goBack()}
+      />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <StateView
+          loading={loading}
+          error={error}
+          isEmpty={!enabled || run.length === 0}
+          empty={
+            <EmptyState
+              ionicon="help-circle-outline"
+              title="No questions yet"
+              subtitle="The question bank arrives with the next content update."
+            />
+          }
+          onRetry={() => setError(false)}
+        >
+          {phase === 'intro' && (
+            <MotiView {...enter(0)} style={styles.block}>
+              <Text style={styles.headline} accessibilityRole="header">Find your level</Text>
+              <Text style={styles.body}>
+                {`Answer five quick questions and we'll set your starting level — it takes about a minute.`}
+              </Text>
+              <Card style={styles.noteCard}>
+                <View style={styles.noteRow}>
+                  <Ionicons name="eye-off-outline" size={16} color={colors.gold} />
+                  <Text style={styles.noteText}>
+                    {`We won't show the answers — this one only measures where to start you. It doesn't use any of your free daily questions.`}
+                  </Text>
+                </View>
+              </Card>
+              <View style={styles.actions}>
+                <PrimaryButton variant="gradient" label="Start" onPress={start} />
+                <PressableScale
+                  style={styles.quietBtn}
+                  onPress={() => navigation.goBack()}
+                  accessibilityRole="button"
+                  accessibilityLabel="Not now"
+                >
+                  <Text style={styles.quietText}>Not now</Text>
+                </PressableScale>
+              </View>
+            </MotiView>
+          )}
+
+          {phase === 'run' && !!question && (
+            <MotiView key={question.id} {...enter(0)} style={styles.block}>
+              <ProgressBar
+                value={(idx + 1) / Math.max(run.length, 1)}
+                height={6}
+                accessibilityLabel={`Question ${idx + 1} of ${run.length}`}
+              />
+              <Text style={styles.progressText}>{`Question ${idx + 1} of ${run.length}`}</Text>
+              <Card style={styles.questionCard}>
+                <Text style={styles.questionText}>{question.prompt}</Text>
+              </Card>
+              <View style={styles.options}>
+                {question.options.map((o, i) => (
+                  <MotiView key={o.key} {...enter(i + 1)}>
+                    <PressableScale
+                      style={styles.option}
+                      onPress={() => answer(o.key)}
+                      haptic="light"
+                      accessibilityRole="button"
+                      accessibilityLabel={`Option ${o.key}: ${o.text}`}
+                    >
+                      <View style={styles.optionKey}>
+                        <Text style={styles.optionKeyText}>{o.key}</Text>
+                      </View>
+                      <Text style={styles.optionText}>{o.text}</Text>
+                    </PressableScale>
+                  </MotiView>
+                ))}
+              </View>
+            </MotiView>
+          )}
+
+          {phase === 'result' && (
+            <MotiView {...enter(0)} style={styles.block}>
+              <Text style={styles.kicker}>YOUR LEVEL</Text>
+              <Text style={styles.headline} accessibilityRole="header">
+                {placementLevelCopy(skillFromPlacement(correct)).title}
+              </Text>
+              <Text style={styles.body}>{placementLevelCopy(skillFromPlacement(correct)).body}</Text>
+              <Card style={styles.noteCard}>
+                <View style={styles.noteRow}>
+                  <Ionicons name="options-outline" size={16} color={colors.gold} />
+                  <Text style={styles.noteText}>
+                    {`${correct} of ${run.length} — a quick calibration, not a rating. You can change it anytime by retaking the setup quiz.`}
+                  </Text>
+                </View>
+              </Card>
+              <View style={styles.actions}>
+                <PrimaryButton
+                  variant="gradient"
+                  label="Start drilling"
+                  onPress={() => navigation.navigate('StudyTrainer', { mode: 'spot' })}
+                />
+                <PressableScale
+                  style={styles.quietBtn}
+                  onPress={() => navigation.goBack()}
+                  accessibilityRole="button"
+                  accessibilityLabel="Done"
+                >
+                  <Text style={styles.quietText}>Done</Text>
+                </PressableScale>
+              </View>
+            </MotiView>
+          )}
+        </StateView>
+      </ScrollView>
+    </Screen>
+  );
+}
+
+const styles = StyleSheet.create({
+  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: 60, gap: spacing.md },
+  block: { gap: spacing.md, width: '100%', maxWidth: 480, alignSelf: 'center' },
+  kicker: { ...typography.caps, color: colors.gold },
+  headline: { ...typography.displaySerif, fontSize: 26, lineHeight: 34, color: colors.text },
+  body: { ...typography.body, color: colors.textMuted, lineHeight: 24 },
+  noteCard: { paddingVertical: spacing.md },
+  noteRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
+  noteText: { ...typography.bodySmall, color: colors.textMuted, flex: 1, lineHeight: 20 },
+  actions: { marginTop: spacing.md, gap: spacing.sm },
+  quietBtn: { alignItems: 'center', justifyContent: 'center', minHeight: 44, paddingVertical: spacing.sm },
+  quietText: { ...typography.label, color: colors.textMuted },
+  progressText: { ...typography.bodySmall, color: colors.textMuted },
+  questionCard: { paddingVertical: spacing.lg },
+  questionText: { ...typography.h4, color: colors.text, lineHeight: 26 },
+  options: { gap: spacing.md },
+  option: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    borderRadius: radii.lg, paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, minHeight: 64,
+  },
+  optionKey: {
+    width: 28, height: 28, borderRadius: radii.sm, backgroundColor: colors.surfaceHigh,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  optionKeyText: { ...typography.label, color: colors.textMuted },
+  optionText: { ...typography.body, color: colors.textHigh, flex: 1 },
+});

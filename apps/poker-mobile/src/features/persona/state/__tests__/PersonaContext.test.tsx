@@ -72,6 +72,31 @@ describe('PersonaContext', () => {
     expect(ctx.persona?.completedAt).toBe(first); // idempotent
   });
 
+  it('recordPlacement stores the result AND sets the measured skill in ONE commit', async () => {
+    await renderPersona();
+    await act(async () => { await ctx.recordPlacement(4, 5); });
+    expect(ctx.persona?.placement).toMatchObject({ score: 4, total: 5 });
+    expect(ctx.persona?.placement?.at).toBeTruthy();
+    expect(ctx.persona?.skill).toBe('grinder'); // measured skill overrides the self-report
+  });
+
+  it('a low placement lands on "new" and still records the score', async () => {
+    await renderPersona();
+    await act(async () => { await ctx.recordPlacement(1, 5); });
+    expect(ctx.persona?.skill).toBe('new');
+    expect(ctx.persona?.placement?.score).toBe(1);
+  });
+
+  it('placement survives a remount (it is one-time, so it must persist)', async () => {
+    const { unmount } = await renderPersona();
+    await act(async () => { await ctx.recordPlacement(3, 5); });
+    unmount();
+
+    await renderPersona();
+    expect(ctx.persona?.placement?.score).toBe(3);
+    expect(ctx.persona?.skill).toBe('solid');
+  });
+
   it('persists across a remount (storage survives)', async () => {
     const { unmount } = await renderPersona();
     await act(async () => { await ctx.answerStep('format', 'tournament'); });

@@ -45,6 +45,7 @@ import JoinGroupScreen from '../screens/JoinGroupScreen';
 import PlayerProfileScreen from '../screens/PlayerProfileScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import OnboardingV2Screen from '../screens/OnboardingV2Screen';
+import PlacementDrillScreen from '../features/persona/ui/PlacementDrillScreen';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import LocalNewGameScreen from '../screens/LocalNewGameScreen';
@@ -112,6 +113,8 @@ export type RootStackParamList = {
   StudyTrainer: { mode: 'spot' | 'decision' };
   // Wave 1.3 — retake the setup quiz (same funnel screen, retake mode; BOTH trees)
   PersonaQuiz: undefined;
+  // Wave 1.4 — one-time placement drill that calibrates the persona's skill (BOTH trees)
+  PlacementDrill: undefined;
   // Web-first flagship — solver workspace (solver flag)
   SolverWorkspace: undefined;
   // V2.2 — Content platform (Lessons; content flag)
@@ -618,6 +621,7 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
             <Stack.Screen name="LogSession" component={LogSessionScreen} options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="StudyTrainer" component={SpotTrainerScreen} options={{ headerShown: false }} />
             <Stack.Screen name="PersonaQuiz" component={OnboardingV2Screen} options={{ headerShown: false, gestureEnabled: false }} />
+            <Stack.Screen name="PlacementDrill" component={PlacementDrillScreen} options={{ headerShown: false }} />
             {isFeatureEnabled('solver') && (
               <Stack.Screen name="SolverWorkspace" component={SolverWorkspaceScreen} options={{ headerShown: false }} />
             )}
@@ -660,6 +664,7 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
             <Stack.Screen name="LogSession" component={LogSessionScreen} options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="StudyTrainer" component={SpotTrainerScreen} options={{ headerShown: false }} />
             <Stack.Screen name="PersonaQuiz" component={OnboardingV2Screen} options={{ headerShown: false, gestureEnabled: false }} />
+            <Stack.Screen name="PlacementDrill" component={PlacementDrillScreen} options={{ headerShown: false }} />
             {isFeatureEnabled('solver') && (
               <Stack.Screen name="SolverWorkspace" component={SolverWorkspaceScreen} options={{ headerShown: false }} />
             )}
