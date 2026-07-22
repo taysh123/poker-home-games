@@ -90,6 +90,9 @@ export function PersonaProvider({ children }: { children: React.ReactNode }) {
     const now = new Date().toISOString();
     await commit(f => {
       const current = store.personaFor(f, accountKey) ?? emptyPersona(now);
+      // WRITE-ONCE: the drill is a one-time calibration, and that invariant is what justifies
+      // leaving it out of the study meters — so the STORE enforces it, not just the UI gates.
+      if (current.placement) return f;
       return store.withPersona(f, accountKey, {
         ...current,
         // The measured level replaces the self-report — both land in one commit.

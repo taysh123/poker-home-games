@@ -20,8 +20,10 @@ import { radii } from '../../../theme/radii';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
 import { useContent } from '../../../context/ContentContext';
 import { track } from '../../../utils/analytics';
-import { normalizeQuestions, gradeAnswer, type QuizQuestion, type QuizChoice } from '../../study/logic/quiz';
+import { normalizeQuestions, selectQuestions, gradeAnswer, type QuizQuestion, type QuizChoice } from '../../study/logic/quiz';
 import { localDayKey } from '../../study/logic/localDay';
+import { useEntitlements } from '../../../context/EntitlementsContext';
+import { useStudy } from '../../study/state/StudyContext';
 import { usePersona } from '../state/PersonaContext';
 import {
   PLACEMENT_SIZE,
@@ -29,6 +31,7 @@ import {
   skillFromPlacement,
   placementLevelCopy,
 } from '../logic/placement';
+import { AccessibilityInfo } from 'react-native';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Phase = 'intro' | 'run' | 'result';
@@ -45,10 +48,13 @@ export default function PlacementDrillScreen() {
   const navigation = useNavigation<Nav>();
   const reduced = useReducedMotion();
   const { enabled, isLoaded, query } = useContent();
+  const { isPremium } = useEntitlements();
+  const { limitFor } = useStudy(); // READ-ONLY: the drill never consumes a meter, it only respects one
   const { recordPlacement } = usePersona();
 
   const [all, setAll] = useState<QuizQuestion[] | null>(null);
   const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [phase, setPhase] = useState<Phase>('intro');
   const [idx, setIdx] = useState(0);
   const [correct, setCorrect] = useState(0);
@@ -59,18 +65,27 @@ export default function PlacementDrillScreen() {
   useEffect(() => {
     if (!isLoaded || !query) return;
     let cancelled = false;
+    setError(false);
+    setAll(null);
     query.all('quiz_bank')
-      .then(rows => { if (!cancelled) setAll(normalizeQuestions(rows)); })
+      // FREE questions only — this is the one unmetered quiz surface, so a future premium pack
+      // ingesting into `quiz_bank` must never leak through it.
+      .then(rows => { if (!cancelled) setAll(selectQuestions(normalizeQuestions(rows), { freeOnly: !isPremium })); })
       .catch(() => { if (!cancelled) setError(true); });
     return () => { cancelled = true; };
-  }, [isLoaded, query]);
+  }, [isLoaded, query, isPremium, reloadKey]);
 
   const run = useMemo(
     () => (all ? placementQuestions(all, localDayKey()) : []),
     [all],
   );
 
-  const loading = enabled && !error && all === null;
+  // Pre-bootstrap (ContentContext starts DISABLED while it ingests) counts as LOADING — otherwise
+  // the first-run lead card would flash a dead-end "No questions yet" during the very first launch.
+  const loading = !isLoaded || (enabled && !error && all === null);
+  // The copy promises five questions, so a bank that can't fill a run shows the empty state
+  // instead of silently scoring a short run against five-question bands.
+  const canRun = run.length >= PLACEMENT_SIZE;
   const question = run[idx];
 
   function start() {
@@ -96,7 +111,21 @@ export default function PlacementDrillScreen() {
     setIdx(nextIdx);
   }
 
+  // The run's ONLY feedback channel is content swapping — announce it, or the drill is silent
+  // to VoiceOver/TalkBack users.
+  useEffect(() => {
+    if (phase === 'run' && question) {
+      AccessibilityInfo.announceForAccessibility?.(
+        `Question ${idx + 1} of ${run.length}. ${question.prompt}`,
+      );
+    } else if (phase === 'result') {
+      AccessibilityInfo.announceForAccessibility?.(placementLevelCopy(skillFromPlacement(correct)).title);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, idx]);
+
   const enter = (i: number) => slideUpSequence({ reduced, delay: staggerIn(i, 60), duration: 280 });
+  const practiceLeft = limitFor('practiceQuestion').remaining;
 
   return (
     <Screen>
@@ -110,27 +139,27 @@ export default function PlacementDrillScreen() {
         <StateView
           loading={loading}
           error={error}
-          isEmpty={!enabled || run.length === 0}
+          isEmpty={!enabled || !canRun}
           empty={
             <EmptyState
               ionicon="help-circle-outline"
               title="No questions yet"
               subtitle="The question bank arrives with the next content update."
+              action={{ label: 'Try the Spot Trainer', onPress: () => navigation.navigate('StudyTrainer', { mode: 'spot' }) }}
             />
           }
-          onRetry={() => setError(false)}
+          onRetry={() => setReloadKey(k => k + 1)}
         >
           {phase === 'intro' && (
             <MotiView {...enter(0)} style={styles.block}>
-              <Text style={styles.headline} accessibilityRole="header">Find your level</Text>
               <Text style={styles.body}>
-                {`Answer five quick questions and we'll set your starting level — it takes about a minute.`}
+                {`Answer five quick questions and we'll set your starting level. No timer — take your time.`}
               </Text>
               <Card style={styles.noteCard}>
                 <View style={styles.noteRow}>
                   <Ionicons name="eye-off-outline" size={16} color={colors.gold} />
                   <Text style={styles.noteText}>
-                    {`We won't show the answers — this one only measures where to start you. It doesn't use any of your free daily questions.`}
+                    {`We won't show the answers — this one only measures where to start you. It doesn't use any of your free daily questions, and it doesn't count toward your streak either. Pure calibration.`}
                   </Text>
                 </View>
               </Card>
@@ -186,29 +215,38 @@ export default function PlacementDrillScreen() {
               <Text style={styles.headline} accessibilityRole="header">
                 {placementLevelCopy(skillFromPlacement(correct)).title}
               </Text>
+              {/* The score is a quiet caption, not a verdict headline. */}
+              <Text style={styles.scoreCaption}>{`${correct} of ${run.length} correct`}</Text>
               <Text style={styles.body}>{placementLevelCopy(skillFromPlacement(correct)).body}</Text>
               <Card style={styles.noteCard}>
                 <View style={styles.noteRow}>
-                  <Ionicons name="options-outline" size={16} color={colors.gold} />
+                  <Ionicons name="speedometer-outline" size={16} color={colors.gold} />
                   <Text style={styles.noteText}>
-                    {`${correct} of ${run.length} — a quick calibration, not a rating. You can change it anytime by retaking the setup quiz.`}
+                    {`A quick calibration, not a rating. You can change it anytime by retaking the setup quiz.`}
                   </Text>
                 </View>
               </Card>
               <View style={styles.actions}>
-                <PrimaryButton
-                  variant="gradient"
-                  label="Start drilling"
-                  onPress={() => navigation.navigate('StudyTrainer', { mode: 'spot' })}
-                />
-                <PressableScale
-                  style={styles.quietBtn}
-                  onPress={() => navigation.goBack()}
-                  accessibilityRole="button"
-                  accessibilityLabel="Done"
-                >
-                  <Text style={styles.quietText}>Done</Text>
-                </PressableScale>
+                {/* Never send the user into a spent pool — the drill CTA yields to Done. */}
+                {practiceLeft > 0 ? (
+                  <>
+                    <PrimaryButton
+                      variant="gradient"
+                      label="Start the Spot Trainer"
+                      onPress={() => navigation.navigate('StudyTrainer', { mode: 'spot' })}
+                    />
+                    <PressableScale
+                      style={styles.quietBtn}
+                      onPress={() => navigation.goBack()}
+                      accessibilityRole="button"
+                      accessibilityLabel="Done"
+                    >
+                      <Text style={styles.quietText}>Done</Text>
+                    </PressableScale>
+                  </>
+                ) : (
+                  <PrimaryButton variant="gradient" label="Done" onPress={() => navigation.goBack()} />
+                )}
               </View>
             </MotiView>
           )}
@@ -222,6 +260,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: 60, gap: spacing.md },
   block: { gap: spacing.md, width: '100%', maxWidth: 480, alignSelf: 'center' },
   kicker: { ...typography.caps, color: colors.gold },
+  scoreCaption: { ...typography.bodySmall, color: colors.textMuted },
   headline: { ...typography.displaySerif, fontSize: 26, lineHeight: 34, color: colors.text },
   body: { ...typography.body, color: colors.textMuted, lineHeight: 24 },
   noteCard: { paddingVertical: spacing.md },

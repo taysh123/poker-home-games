@@ -229,21 +229,24 @@ export default function OnboardingV2Screen({ navigation, route }: Props) {
 
   const goalForOrder = (answers.goal ?? persona?.goal ?? null) as PersonaGoal | null;
   const orderedActions = orderActionsForGoal(actions.filter(a => a.show), goalForOrder);
-  // 1.4 — the placement drill LEADS the router the first time (one-time; hidden once taken).
-  const showPlacement = isFeatureEnabled('study') && !persona?.placement;
-  const routerActions = showPlacement
-    ? [
-        {
-          key: 'placement' as ActionKey,
-          icon: 'speedometer-outline' as IoniconsName,
-          title: 'Find your level',
-          sub: "5 questions — we'll set your starting point",
-          onPress: () => enterAction('placement', 'PlacementDrill'),
-          show: true,
-        },
-        ...orderedActions,
-      ]
-    : orderedActions;
+  // 1.4 — the placement drill (one-time; hidden once taken). It defers to the user's STATED goal:
+  // improvers/both lead with it, but a host asked to run game night — for them it sits second, not
+  // above the thing they came for.
+  const showPlacement = isFeatureEnabled('study') && personaLoaded && !persona?.placement;
+  const placementCard = {
+    key: 'placement' as ActionKey,
+    icon: 'speedometer-outline' as IoniconsName,
+    title: 'Find your level',
+    sub: "5 questions — we'll set your starting point",
+    onPress: () => enterAction('placement', 'PlacementDrill'),
+    show: true,
+    teaser: false,
+  };
+  const routerActions = !showPlacement
+    ? orderedActions
+    : goalForOrder === 'host'
+      ? [orderedActions[0], placementCard, ...orderedActions.slice(1)].filter(Boolean)
+      : [placementCard, ...orderedActions];
 
   // Progress: first-run = quiz steps + the router (6 units, never starts at zero); retake = the
   // four question steps only (no promise, no router).

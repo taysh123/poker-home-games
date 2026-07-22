@@ -80,6 +80,14 @@ describe('PersonaContext', () => {
     expect(ctx.persona?.skill).toBe('grinder'); // measured skill overrides the self-report
   });
 
+  it('placement is WRITE-ONCE — a second run can never overwrite the stored calibration', async () => {
+    await renderPersona();
+    await act(async () => { await ctx.recordPlacement(4, 5); });
+    await act(async () => { await ctx.recordPlacement(0, 5); }); // a re-run must not downgrade
+    expect(ctx.persona?.placement?.score).toBe(4);
+    expect(ctx.persona?.skill).toBe('grinder');
+  });
+
   it('a low placement lands on "new" and still records the score', async () => {
     await renderPersona();
     await act(async () => { await ctx.recordPlacement(1, 5); });

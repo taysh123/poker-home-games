@@ -24,19 +24,25 @@ const mockRows = [
 // STABLE query identity (the real ContentContext memoizes it — a fresh object per render would
 // re-fire the load effect forever).
 const mockQuery = { all: jest.fn().mockResolvedValue(mockRows) };
+const mockContent = { enabled: true, isLoaded: true, query: mockQuery as any };
 jest.mock('../../../../context/ContentContext', () => ({
-  useContent: () => ({ enabled: true, isLoaded: true, query: mockQuery }),
+  useContent: () => mockContent,
 }));
 
 // A study-meter spy: the drill must NEVER consume quiz/practice allowance.
 const mockRecordQuizFinished = jest.fn();
 const mockRecordPracticeAnswer = jest.fn();
+let mockPracticeRemaining = 10;
 jest.mock('../../../study/state/StudyContext', () => ({
   useStudy: () => ({
-    limitFor: () => ({ allowed: true, remaining: 10 }),
+    limitFor: () => ({ allowed: mockPracticeRemaining > 0, remaining: mockPracticeRemaining }),
     recordQuizFinished: mockRecordQuizFinished,
     recordPracticeAnswer: mockRecordPracticeAnswer,
   }),
+}));
+
+jest.mock('../../../../context/EntitlementsContext', () => ({
+  useEntitlements: () => ({ isPremium: false }),
 }));
 
 jest.mock('react-native-safe-area-context', () => ({
@@ -89,6 +95,9 @@ describe('PlacementDrillScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockQuery.all.mockResolvedValue(mockRows); // re-arm after clearAllMocks
+    mockContent.enabled = true;
+    mockContent.isLoaded = true;
+    mockPracticeRemaining = 10;
   });
 
   it('opens on an honest intro: five questions, no answers shown, skippable', async () => {
@@ -146,7 +155,7 @@ describe('PlacementDrillScreen', () => {
 
     expect(screen.getByText('Starting with the fundamentals')).toBeTruthy();
     expect(screen.getByText(/change it anytime/i)).toBeTruthy();
-    await act(async () => { fireEvent.press(screen.getByText('Start drilling')); });
+    await act(async () => { fireEvent.press(screen.getByText('Start the Spot Trainer')); });
     expect(mockNavigate).toHaveBeenCalledWith('StudyTrainer', { mode: 'spot' });
   });
 
@@ -155,6 +164,53 @@ describe('PlacementDrillScreen', () => {
     await act(async () => { fireEvent.press(screen.getByLabelText('Not now')); });
     expect(mockGoBack).toHaveBeenCalled();
     expect(mockRecordPlacement).not.toHaveBeenCalled();
+  });
+
+  it('while content is still bootstrapping it shows LOADING, never a dead-end empty state', async () => {
+    mockContent.enabled = false; // ContentContext starts DISABLED until bootstrapContent resolves
+    mockContent.isLoaded = false;
+    await renderDrill();
+    expect(screen.queryByText('No questions yet')).toBeNull();
+    expect(screen.queryByText('Start')).toBeNull(); // still loading, not offering a broken run
+  });
+
+  it('Retry actually refetches after a load failure (not a permanent skeleton)', async () => {
+    mockQuery.all.mockRejectedValueOnce(new Error('ingest failed'));
+    await renderDrill();
+    expect(mockQuery.all).toHaveBeenCalledTimes(1);
+
+    await act(async () => { fireEvent.press(screen.getByText('Retry')); });
+    expect(mockQuery.all).toHaveBeenCalledTimes(2); // the query really re-fired
+    expect(screen.getByText('Start')).toBeTruthy();  // and the intro recovered
+  });
+
+  it('serves FREE questions only — a premium row can never leak into this unmetered surface', async () => {
+    mockQuery.all.mockResolvedValue([
+      ...mockRows,
+      { QuizID: 'prem', Category: 'RFI', Difficulty: 'Beginner', Question: 'PREMIUM ONLY?', OptionA: 'x', OptionB: 'y', CorrectAnswer: 'A', Explanation: 'e', FreeOrPremium: 'Premium' },
+    ]);
+    await renderDrill();
+    await start();
+    for (let i = 0; i < 5; i++) {
+      expect(screen.queryByText('PREMIUM ONLY?')).toBeNull();
+      if (i < 4) await act(async () => { fireEvent.press(screen.getByText('Right')); });
+    }
+  });
+
+  it('refuses to start when the bank cannot fill a full run (the copy promises five)', async () => {
+    mockQuery.all.mockResolvedValue(mockRows.slice(0, 3));
+    await renderDrill();
+    expect(screen.getByText('No questions yet')).toBeTruthy();
+    expect(screen.queryByText('Start')).toBeNull();
+  });
+
+  it('with the practice pool spent, the result leads with Done instead of a dead-end drill CTA', async () => {
+    mockPracticeRemaining = 0;
+    await renderDrill();
+    await start();
+    await answerAll(5);
+    expect(screen.queryByText('Start the Spot Trainer')).toBeNull();
+    expect(screen.getByText('Done')).toBeTruthy();
   });
 
   it('tracks start and completion with the score only (no question content)', async () => {
