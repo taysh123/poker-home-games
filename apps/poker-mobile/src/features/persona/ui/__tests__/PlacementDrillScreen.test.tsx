@@ -123,6 +123,22 @@ describe('PlacementDrillScreen', () => {
     expect(mockRecordPracticeAnswer).not.toHaveBeenCalled();
   });
 
+  it('a double-tap on the FINAL option records exactly one placement (stale-closure guard)', async () => {
+    await renderDrill();
+    await start();
+    for (let i = 0; i < 4; i++) {
+      await act(async () => { fireEvent.press(screen.getByText('Right')); });
+    }
+    // Question 5: two presses inside one act tick read the same closure state — the guard holds.
+    await act(async () => {
+      const option = screen.getByText('Right');
+      fireEvent.press(option);
+      fireEvent.press(option);
+    });
+    expect(mockRecordPlacement).toHaveBeenCalledTimes(1);
+    expect(mockTrack.mock.calls.filter(c => c[0] === 'placement_completed')).toHaveLength(1);
+  });
+
   it('the result is encouraging, states the level is changeable, and offers a real next step', async () => {
     await renderDrill();
     await start();

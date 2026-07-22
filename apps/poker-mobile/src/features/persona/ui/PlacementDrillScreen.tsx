@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -52,6 +52,9 @@ export default function PlacementDrillScreen() {
   const [phase, setPhase] = useState<Phase>('intro');
   const [idx, setIdx] = useState(0);
   const [correct, setCorrect] = useState(0);
+  // Two presses in one tick read the same closure state — without this the final answer would
+  // record the placement (and fire the event) twice. Same guard class as the funnel's name step.
+  const finished = useRef(false);
 
   useEffect(() => {
     if (!isLoaded || !query) return;
@@ -76,12 +79,14 @@ export default function PlacementDrillScreen() {
   }
 
   function answer(choice: QuizChoice) {
+    if (finished.current) return;
     // No feedback, no explanation — the next question replaces this one immediately.
     const hit = gradeAnswer(question, choice).correct;
     const nextCorrect = correct + (hit ? 1 : 0);
     const nextIdx = idx + 1;
     setCorrect(nextCorrect);
     if (nextIdx >= run.length) {
+      finished.current = true;
       const skill = skillFromPlacement(nextCorrect);
       void recordPlacement(nextCorrect, run.length);
       track('placement_completed', { score: nextCorrect, total: run.length, skill });
