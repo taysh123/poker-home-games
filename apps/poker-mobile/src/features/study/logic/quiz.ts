@@ -138,6 +138,23 @@ export function selectQuestions(questions: QuizQuestion[], filter: QuizFilter = 
   return out;
 }
 
+/**
+ * Skill-seeded selection with a pool-size fallback (slice 1.3). Applies the base filter, then
+ * the seeded difficulty ONLY when the seeded pool still holds a full run (`minPool`) — an
+ * exact-string mismatch or a thin difficulty band must never starve the daily rotation. Pure.
+ */
+export function selectSeeded(
+  questions: QuizQuestion[],
+  filter: QuizFilter,
+  seededDifficulty: string | null,
+  minPool: number,
+): QuizQuestion[] {
+  const base = selectQuestions(questions, filter);
+  if (!seededDifficulty) return base;
+  const seeded = base.filter(q => q.difficulty === seededDifficulty);
+  return seeded.length >= minPool ? seeded : base;
+}
+
 /** Grade a single answer against its question. */
 export function gradeAnswer(question: QuizQuestion, chosen: QuizChoice): GradeResult {
   return {
