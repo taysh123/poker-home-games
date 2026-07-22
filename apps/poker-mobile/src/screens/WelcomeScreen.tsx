@@ -13,7 +13,7 @@ import { MotiView, slideUpSequence, staggerIn } from '../components/motion';
 import { useSplashDone } from '../components/brand/SplashGate';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useLocalGames } from '../context/LocalGamesContext';
-import { track, markSignupIntent } from '../utils/analytics';
+import { track, markSignupIntent, grantAnalyticsConsent } from '../utils/analytics';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Welcome'>;
 
@@ -38,6 +38,9 @@ export default function WelcomeScreen({ navigation, route }: Props) {
 
   function continueAsGuest() {
     track('welcome_guest', { firstRun, hasLocalGames });
+    // The explicit choice IS the analytics consent boundary (Wave 0.2, spec decision 5) —
+    // an analytics-only marker, not guest data. Anonymous device id; opt-out in Profile.
+    void grantAnalyticsConsent();
     // First-run guests get the onboarding funnel; returners land on their app.
     navigation.reset({ index: 0, routes: [{ name: guestContinueTarget(!firstRun) }] });
   }
@@ -46,6 +49,7 @@ export default function WelcomeScreen({ navigation, route }: Props) {
     track('welcome_signin', { firstRun });
     // Analytics-only intent marker (attribution for account_created) — not guest data.
     void markSignupIntent();
+    void grantAnalyticsConsent();
     navigation.navigate('Login');
   }
 

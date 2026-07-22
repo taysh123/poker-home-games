@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Linking, Platform } from 'react-native';
+import { initAnalytics } from './src/utils/analytics';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { DMSerifDisplay_400Regular } from '@expo-google-fonts/dm-serif-display';
@@ -103,6 +104,12 @@ export default function App() {
     Linking.getInitialURL().then(url => { if (url) handleUrl(url); });
     const sub = Linking.addEventListener('url', ({ url }) => handleUrl(url));
     return () => sub.remove();
+  }, []);
+
+  // Wave 0.2 — consent-gated analytics: loads the persisted Welcome-choice consent and starts
+  // PostHog only when the full gate passes (flag + consent + not opted out + build-time key).
+  useEffect(() => {
+    void initAnalytics();
   }, []);
 
   // Brief gate while the display font loads; proceed on error (system fallback).

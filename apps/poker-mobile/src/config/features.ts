@@ -26,7 +26,8 @@ export type FeatureFlag =
   | 'solver'    // Web-first flagship — solver workspace + range-table hover inspector (prod OFF)
   | 'publicSpots' // Future — shared/public spot library (design-only; prod OFF everywhere)
   | 'v2Splash'  // branded launch splash (BrandSplash overlay on cold start)
-  | 'welcome';  // entry chooser — signed-out users pick "Continue as guest" / "Sign in" (no silent guest)
+  | 'welcome'   // entry chooser — signed-out users pick "Continue as guest" / "Sign in" (no silent guest)
+  | 'analytics'; // Wave 0.2 — PostHog EU dispatch (kill-switch; consent-gated inside utils/analytics)
 
 /** Production defaults — nav5 + onboardingV2 ON (Subsystem 1 launch); study/content/retention ON (Phase 1 free-training-taste); immersive ON (felt surfaces — launch decision). */
 export const PROD_FLAGS: Record<FeatureFlag, boolean> = {
@@ -51,6 +52,10 @@ export const PROD_FLAGS: Record<FeatureFlag, boolean> = {
   // welcome:false restores the legacy silent-guest entry (see navigation/entryRouting.ts).
   v2Splash: true,
   welcome: true,
+  // Wave 0.2 — analytics dispatch ships ON as a kill-switch only: nothing sends unless the user
+  // has made their explicit Welcome choice (consent latch in utils/analytics) AND a PostHog key
+  // is configured at build time. Flag OFF ⇒ dispatch is a no-op regardless of consent.
+  analytics: true,
 };
 
 /**
@@ -76,6 +81,7 @@ const BETA_FLAGS: Partial<Record<FeatureFlag, boolean>> = {
   welcome: true,
   paywall: false,         // OFF in beta — no production paywall
   coachScreenshot: false, // OFF — partial upload not exposed
+  analytics: true,        // Wave 0.2 — same consent-gated dispatch as prod
 };
 
 /** Dev-only previews. Does not affect production builds (`__DEV__ === false`). */
@@ -96,6 +102,7 @@ const DEV_OVERRIDES: Partial<Record<FeatureFlag, boolean>> = {
   content: true,   // V2.2 — preview the content platform in dev (prod stays OFF)
   mastery: true,   // V2.2 — preview mastery in dev (prod stays OFF)
   solver: true,    // Web-first — preview the solver workspace in dev (prod stays OFF)
+  analytics: true, // Wave 0.2 — dev preview (sends still require consent + an EXPO_PUBLIC_POSTHOG_KEY)
   // coachScreenshot + publicSpots intentionally OFF in dev too (image pipeline / public sharing not built).
 
 };

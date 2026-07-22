@@ -27,6 +27,7 @@ import { useContent } from '../../../context/ContentContext';
 import { useEntitlements } from '../../../context/EntitlementsContext';
 import { toModules, lessonAvailability, type LessonModule } from '../logic/lessons';
 import { isFeatureEnabled } from '../../../config/features';
+import { track } from '../../../utils/analytics';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -54,6 +55,14 @@ export default function LessonModulesScreen() {
 
   // Free-first: FREE_LESSON_MODULE_IDS (config) is the single gate — see lessonAvailability.
   const availabilityForModule = (moduleId: string) => lessonAvailability(moduleId, isPremium);
+
+  // Impression (0.2): the locked library was SEEN — once per visit, only when locked rows render.
+  const lockedCount = (modules ?? []).filter(m => availabilityForModule(m.moduleId) === 'locked').length;
+  useEffect(() => {
+    if (lockedCount > 0) track('nudge_impression', { trigger: 'lesson_locked', paywallOn: isFeatureEnabled('paywall'), lockedCount });
+    // Fire when the list first resolves with locked rows (lockedCount 0 → n), not on re-renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lockedCount > 0]);
 
   return (
     <Screen animated>

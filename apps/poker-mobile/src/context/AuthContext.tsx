@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import * as SecureStore from '../utils/storage';
 import { loginApi, registerApi, logoutApi, googleLoginApi, appleLoginApi, AuthUser, AuthResponse } from '../api/authApi';
+import { identifyAnalyticsUser, resetAnalyticsIdentity } from '../utils/analytics';
 import { registerUnauthenticatedCallback } from '../api/apiClient';
 import { registerForPushAsync, unregisterPushAsync } from '../hooks/usePushNotifications';
 import { track, consumeSignupIntent } from '../utils/analytics';
@@ -72,6 +73,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     // Best-effort push registration (native only; no-op on web)
     registerForPushAsync(accessToken);
+    // Analytics identity: signed-in users count as real players (guests stay anonymous).
+    identifyAnalyticsUser(userData.userId);
     // Funnel: account_created fires for a definite new account (email register) or when the
     // user entered sign-in with onboarding signup intent (social — no isNewUser flag yet).
     const hadIntent = await consumeSignupIntent();
@@ -85,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       SecureStore.deleteItemAsync(KEY_REFRESH),
       SecureStore.deleteItemAsync(KEY_USER),
     ]);
+    resetAnalyticsIdentity(); // back to an anonymous device id
     setUser(null);
   }
 

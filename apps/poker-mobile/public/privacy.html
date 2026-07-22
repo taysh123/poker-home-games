@@ -33,7 +33,7 @@
   <div class="wrap">
     <div class="brand">T POKER</div>
     <h1>Privacy Policy</h1>
-    <div class="updated">Last updated: July 2, 2026</div>
+    <div class="updated">Last updated: July 22, 2026</div>
 
     <p>
       T Poker is a private home-game poker management app, operated by
@@ -41,15 +41,40 @@
       handles, where it lives, and what control you have over it.
     </p>
 
-    <h2>Guest mode — your data stays on your device</h2>
+    <h2>Guest mode — your game data stays on your device</h2>
     <div class="card">
       <p>
-        You can use T Poker without creating an account. Games you run in guest mode
-        (players, buy-ins, cash-outs, settlements) are stored <strong>only on your
-        device</strong> and are never sent to our servers. Deleting the app deletes
-        this data. Player names you enter in guest games refer to people at your
-        table and exist only in your device's local storage.
+        You can use T Poker without creating an account. <strong>Your game data</strong> —
+        games you run in guest mode (players, buy-ins, cash-outs, settlements), your study
+        progress, and your streaks — is stored <strong>only on your device</strong> and is
+        never sent to our servers. Deleting the app deletes this data. Player names you enter
+        in guest games refer to people at your table and exist only in your device's local
+        storage.
       </p>
+      <p>
+        Separately from your game data, after you choose how to start the app (guest or
+        sign-in) we collect <strong>anonymous usage analytics</strong> — see the next section.
+        You can turn this off any time in Profile → Privacy.
+      </p>
+    </div>
+
+    <h2>Anonymous usage analytics</h2>
+    <div class="card">
+      <p>
+        To understand which features help players and which need work, we collect anonymous
+        usage events — for example "a quiz was completed" or "a game night was started" —
+        using <strong>PostHog</strong>, processed and stored on servers in the
+        <strong>European Union</strong>. Collection begins only after you make your explicit
+        choice on the welcome screen, and you can switch it off any time in
+        <strong>Profile → Privacy → "Share anonymous usage analytics"</strong>.
+      </p>
+      <p><strong>What these events include:</strong> the feature used, screen flow, app version,
+        platform (iOS/Android/web), and coarse device type.</p>
+      <p><strong>What they never include:</strong> your game amounts, buy-ins or settlements,
+        player names, hand contents, or messages. Guest analytics use a random identifier that
+        is not linked to your name or email; if you sign in, events are associated with your
+        account id so we can count active players. We do not sell this data or use it for
+        advertising.</p>
     </div>
 
     <h2>Account data</h2>
@@ -70,20 +95,22 @@
     <h2>Service providers we use</h2>
     <p>
       To run T Poker we rely on a few service providers that process data on our behalf, only to provide
-      their service to us: payment processors (<strong>Paddle</strong> for the web; Apple, Google and
-      RevenueCat for mobile), hosting providers (Railway for the database, Vercel for the web app), and
-      Google for optional sign-in. We do not sell your data to any of them or allow them to use it for
-      their own purposes.
+      their service to us: hosting providers (Railway for the database, Vercel for the web app),
+      <strong>PostHog</strong> for anonymous usage analytics (EU servers), and Google and Apple for
+      optional sign-in. We do not sell your data to any of them or allow them to use it for their own
+      purposes.
     </p>
 
     <h2>Payments &amp; subscriptions</h2>
     <div class="card">
       <p>
-        If you buy a premium subscription, payments are processed by the app stores (Apple App Store /
-        Google Play, via RevenueCat) on mobile and by <strong>Paddle</strong>, our Merchant of Record, on the
-        web. We do not see or store your card or payment details — Paddle (or the app store) handles the
-        transaction, and we receive only a record of your entitlement (whether your subscription is active).
-        This is separate from poker buy-ins and settlements, which T Poker only tracks and never processes.
+        <strong>Nothing in T Poker is currently purchasable.</strong> Premium features are shown as
+        "Coming soon" and cannot be bought anywhere in the app or on the web. When premium launches,
+        payments will be processed by the app stores (<strong>Apple App Store</strong> /
+        <strong>Google Play</strong>) — we will not see or store your card details, and this policy will
+        be updated before anything goes on sale. This is separate from poker buy-ins and settlements,
+        which T Poker only tracks and never processes — settling up happens between you and your
+        friends, outside the app.
       </p>
     </div>
 
@@ -108,8 +135,10 @@
         We verify ownership and delete the account within 30 days, with confirmation.
       </p>
       <p>
-        Guest-mode data never reaches our servers — remove it by deleting games in the
-        app or uninstalling.
+        Guest-mode game data never reaches our servers — remove it by deleting games in
+        the app or uninstalling. Anonymous analytics can be switched off in Profile →
+        Privacy; to request deletion of analytics data, email us with your approximate
+        usage dates.
       </p>
     </div>
 
@@ -117,7 +146,9 @@
     <p>
       Account data is stored in a PostgreSQL database hosted on Railway. The web app is
       served via Vercel. Depending on those providers' regions, your data may be processed or stored on
-      servers located in the United States or elsewhere. Local guest data never leaves your device.
+      servers located in the United States or elsewhere. Anonymous usage analytics are processed by
+      PostHog on servers in the <strong>European Union</strong>. Local guest game data never leaves
+      your device.
     </p>
 
     <h2>Your rights &amp; data retention</h2>
