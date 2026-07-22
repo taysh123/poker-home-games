@@ -539,7 +539,7 @@ export default function ProfileScreen({ navigation }: Props) {
             accessibilityRole="button"
             accessibilityLabel="Retake the setup quiz"
           >
-            <Ionicons name="sparkles-outline" size={16} color={colors.textMuted} />
+            <Ionicons name="options-outline" size={16} color={colors.textMuted} />
             <Text style={styles.aboutRowText}>Retake the setup quiz</Text>
             <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
           </PressableScale>

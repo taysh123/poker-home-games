@@ -34,7 +34,9 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { goToSessions, goToStats } from '../navigation/navHelpers';
 import RankBadge from '../components/RankBadge';
 import { usePersona } from '../features/persona/state/PersonaContext';
-import { heroVariantForGoal } from '../features/persona/logic/recommendations';
+import { heroVariantForGoal, drillCardSub } from '../features/persona/logic/recommendations';
+import { useStudy } from '../features/study/state/StudyContext';
+import { isFeatureEnabled } from '../config/features';
 import SkeletonCard from '../components/SkeletonCard';
 import StatWidget from '../components/StatWidget';
 import SessionListItem from '../components/SessionListItem';
@@ -63,8 +65,15 @@ const ACTIVITY_ICON_CFG: Record<string, { icon: React.ComponentProps<typeof Ioni
 export default function HomeScreen() {
   const { user, logout } = useAuth();
   const { persona } = usePersona();
+  const { limitFor } = useStudy();
   const navigation = useNavigation<HomeNav>();
   const insets = useSafeAreaInsets();
+  // Honest drill hero (1.3): sub reflects the shared pool's actual remainder; spent pool ⇒ hidden.
+  const drillSub = drillCardSub(limitFor('practiceQuestion').remaining);
+  const showDrill =
+    heroVariantForGoal(persona?.goal ?? null) === 'improver' &&
+    isFeatureEnabled('study') &&
+    drillSub !== null;
   const { refresh: refreshActiveSession } = useActiveSession();
   const reducedMotion = useReducedMotion();
 
@@ -489,14 +498,14 @@ export default function HomeScreen() {
           </TouchableOpacity>
         )}
 
-        {/* ── Today's drill — improvers lead with study (1.3; goal-led hero) ── */}
-        {heroVariantForGoal(persona?.goal ?? null) === 'improver' && (
+        {/* ── Today's drill — improvers lead with study (1.3; goal-led, pool-honest) ── */}
+        {showDrill && (
           <TouchableOpacity
             style={styles.drillCard}
             onPress={() => navigation.navigate('StudyTrainer', { mode: 'spot' })}
             activeOpacity={0.85}
             accessibilityRole="button"
-            accessibilityLabel="Today's drill. Ten free questions — build your edge."
+            accessibilityLabel={`Today's drill. ${drillSub}.`}
           >
             <View style={styles.newGameLeft}>
               <View style={styles.drillIconWrap}>
@@ -504,7 +513,7 @@ export default function HomeScreen() {
               </View>
               <View>
                 <Text style={styles.drillTitle}>Today's drill</Text>
-                <Text style={styles.drillSub}>Ten free questions — build your edge</Text>
+                <Text style={styles.drillSub}>{drillSub}</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.gold} />
@@ -1103,7 +1112,9 @@ const styles = StyleSheet.create({
   drillCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
+    // goldFaint tint (the teaser/featured treatment) — the scan reads study-then-play instead
+    // of three sibling game CTAs.
+    backgroundColor: colors.goldFaint,
     borderRadius: 16,
     borderWidth: 1.5,
     borderColor: colors.goldMuted,

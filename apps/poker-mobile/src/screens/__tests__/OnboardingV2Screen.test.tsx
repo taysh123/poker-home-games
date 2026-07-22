@@ -28,15 +28,18 @@ jest.mock('../../utils/analytics', () => ({
 
 const mockAnswerStep = jest.fn().mockResolvedValue(undefined);
 const mockCompleteFunnel = jest.fn().mockResolvedValue(undefined);
-let mockPersonaGoal: string | null = null;
+let mockPersona: Record<string, unknown> | null = null;
 jest.mock('../../features/persona/state/PersonaContext', () => ({
   usePersona: () => ({
-    persona: mockPersonaGoal ? { goal: mockPersonaGoal } : null,
+    persona: mockPersona,
     isLoaded: true,
     answerStep: (...args: unknown[]) => mockAnswerStep(...args),
     completeFunnel: (...args: unknown[]) => mockCompleteFunnel(...args),
   }),
 }));
+
+const mockShowToast = jest.fn();
+jest.mock('../../utils/toast', () => ({ showToast: (...args: unknown[]) => mockShowToast(...args) }));
 
 // Prod-like flags: study ON, bankroll/coach OFF (router shows Play + Study cards only).
 jest.mock('../../config/features', () => ({
@@ -70,10 +73,14 @@ jest.mock('@expo/vector-icons', () => {
 import OnboardingV2Screen from '../OnboardingV2Screen';
 
 function makeNavigation() {
-  return { reset: jest.fn(), navigate: jest.fn(), canGoBack: jest.fn().mockReturnValue(false) } as any;
+  return { reset: jest.fn(), navigate: jest.fn(), goBack: jest.fn(), canGoBack: jest.fn().mockReturnValue(true) } as any;
 }
 function renderFunnel(navigation = makeNavigation()) {
   render(<OnboardingV2Screen navigation={navigation} route={{ key: 'o', name: 'Onboarding' } as any} />);
+  return navigation;
+}
+function renderRetake(navigation = makeNavigation()) {
+  render(<OnboardingV2Screen navigation={navigation} route={{ key: 'p', name: 'PersonaQuiz' } as any} />);
   return navigation;
 }
 const answerThrough = async (labels: string[]) => {
@@ -85,7 +92,7 @@ const answerThrough = async (labels: string[]) => {
 describe('Quiet Luxury funnel', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockPersonaGoal = null;
+    mockPersona = null;
   });
 
   it('opens on the promise screen — headline, pillar sub-lines, CTA, quiet skip', () => {
@@ -178,7 +185,7 @@ describe('Quiet Luxury funnel', () => {
   });
 
   it('router leads with the goal: improvers see Drill a spot first, hosts see Start a game first', async () => {
-    mockPersonaGoal = 'improve';
+    mockPersona = { goal: 'improve' };
     renderFunnel();
     await act(async () => { fireEvent.press(screen.getByText("Let's set you up")); });
     await answerThrough(['I want to win more', 'I hold my own', 'Both']);
@@ -223,5 +230,73 @@ describe('Quiet Luxury funnel', () => {
     expect(screen.getByRole('button', { name: /I host the game/i })).toBeTruthy();
     expect(screen.getByRole('button', { name: /I want to win more/i })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Both, honestly/i })).toBeTruthy();
+  });
+});
+
+describe('Retake mode (PersonaQuiz) — review, not a replay of first-run', () => {
+  const storedPersona = {
+    schemaVersion: 1, goal: 'improve', skill: 'solid', format: 'both',
+    displayName: 'Tay', completedAt: 't0', updatedAt: 't0',
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockPersona = { ...storedPersona };
+  });
+
+  it('opens on the goal question with the stored answer selected — no promise marketing, no Back', () => {
+    renderRetake();
+    expect(screen.queryByText('Win your home game.')).toBeNull();
+    expect(screen.getByText('What brings you to the table?')).toBeTruthy();
+    const current = screen.getByRole('button', { name: /I want to win more/i });
+    expect(current.props.accessibilityState?.selected).toBe(true);
+    expect(screen.queryByLabelText('Back')).toBeNull(); // nothing to go back to in retake
+  });
+
+  it('completes WITHOUT the router: toasts and returns whence it came', async () => {
+    const nav = renderRetake();
+    await answerThrough(['I want to win more', 'I hold my own', 'Both']);
+    await act(async () => { fireEvent.press(screen.getByText('Continue')); });
+
+    expect(screen.queryByText('Where do you want to start?')).toBeNull();
+    expect(mockCompleteFunnel).toHaveBeenCalled();
+    expect(mockShowToast).toHaveBeenCalledWith('Setup updated.', 'success');
+    expect(nav.goBack).toHaveBeenCalled();
+    expect(nav.reset).not.toHaveBeenCalled();
+  });
+
+  it('"Skip this" on the name step PRESERVES the stored name (no destructive write)', async () => {
+    const nav = renderRetake();
+    await answerThrough(['I want to win more', 'I hold my own', 'Both']);
+    await act(async () => { fireEvent.press(screen.getByText('Skip this')); });
+
+    const nameWrites = mockAnswerStep.mock.calls.filter(c => c[0] === 'name');
+    expect(nameWrites).toHaveLength(0); // leave-unchanged, never a wipe
+    expect(mockTrack).toHaveBeenCalledWith('funnel_completed', expect.objectContaining({ named: true, retake: true }));
+    expect(nav.goBack).toHaveBeenCalled();
+  });
+
+  it('a deliberately changed name IS written', async () => {
+    renderRetake();
+    await answerThrough(['I want to win more', 'I hold my own', 'Both']);
+    fireEvent.changeText(screen.getByPlaceholderText('Your name (optional)'), 'Rounder');
+    await act(async () => { fireEvent.press(screen.getByText('Continue')); });
+    expect(mockAnswerStep).toHaveBeenCalledWith('name', 'Rounder');
+  });
+
+  it('Skip goes back — no stack reset, no hasSeenOnboarding write, tagged retake', async () => {
+    const nav = renderRetake();
+    await act(async () => { fireEvent.press(screen.getByLabelText('Skip onboarding')); });
+    expect(nav.goBack).toHaveBeenCalled();
+    expect(nav.reset).not.toHaveBeenCalled();
+    expect(mockSetItemAsync).not.toHaveBeenCalled();
+    expect(mockTrack).toHaveBeenCalledWith('onboarding_skipped', expect.objectContaining({ retake: true }));
+  });
+
+  it('every retake funnel event is tagged retake: true', async () => {
+    renderRetake();
+    await answerThrough(['I host the game']);
+    expect(mockTrack).toHaveBeenCalledWith('funnel_step_answered', expect.objectContaining({ step: 'goal', answer: 'host', retake: true }));
+    expect(mockTrack).toHaveBeenCalledWith('onboarding_started', { retake: true });
   });
 });

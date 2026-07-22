@@ -30,7 +30,9 @@ import { formatCents } from '../utils/money';
 import { timeAgo } from '../utils/formatters';
 import { markSignupIntent } from '../utils/analytics';
 import { usePersona } from '../features/persona/state/PersonaContext';
-import { heroVariantForGoal } from '../features/persona/logic/recommendations';
+import { heroVariantForGoal, drillCardSub } from '../features/persona/logic/recommendations';
+import { useStudy } from '../features/study/state/StudyContext';
+import { isFeatureEnabled } from '../config/features';
 
 /** Time-of-day salutation (local clock; display-only). */
 function greetingWord(hour = new Date().getHours()): string {
@@ -49,8 +51,15 @@ export default function GuestHomeScreen() {
   const splashDone = useSplashDone();
   const { games, activeGame } = useLocalGames();
   const { persona } = usePersona();
-  const heroVariant = heroVariantForGoal(persona?.goal ?? null);
+  const { limitFor } = useStudy();
   const greetName = persona?.displayName ?? null;
+  // The drill hero is honest against the SHARED daily pool: sub reflects what's actually left,
+  // and a spent pool hides the card entirely (no dead-end tap into the limit nudge).
+  const drillSub = drillCardSub(limitFor('practiceQuestion').remaining);
+  const showDrill =
+    heroVariantForGoal(persona?.goal ?? null) === 'improver' &&
+    isFeatureEnabled('study') &&
+    drillSub !== null;
 
   const recentFinished = games.filter(g => g.status === 'Finished').slice(0, 5);
 
@@ -119,27 +128,27 @@ export default function GuestHomeScreen() {
           {!!greetName && (
             <Text style={styles.greeting}>{`${greetingWord()}, ${greetName}.`}</Text>
           )}
-          {heroVariant === 'improver' && (
+          {showDrill && (
             <PressableScale
               style={styles.drillCard}
               onPress={() => navigation.navigate('StudyTrainer', { mode: 'spot' })}
               haptic="medium"
               accessibilityRole="button"
-              accessibilityLabel="Today's drill. Ten free questions — build your edge."
+              accessibilityLabel={`Today's drill. ${drillSub}.`}
             >
               <View style={styles.drillIconWrap}>
                 <Ionicons name="flash" size={iconSize.sm} color={colors.background} />
               </View>
               <View style={styles.drillText}>
                 <Text style={styles.drillTitle}>Today's drill</Text>
-                <Text style={styles.drillSub}>Ten free questions — build your edge</Text>
+                <Text style={styles.drillSub}>{drillSub}</Text>
               </View>
               <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.gold} />
             </PressableScale>
           )}
           <Text style={styles.heroLead}>
-            {heroVariant === 'improver'
-              ? "Or run tonight's game."
+            {showDrill
+              ? 'Or run your game night.'
               : 'Start a game — right now, no account needed.'}
           </Text>
           <View style={styles.heroRow}>
@@ -289,8 +298,10 @@ const styles = StyleSheet.create({
   greeting: { ...typography.displaySerif, fontSize: 22, lineHeight: 28, color: colors.text, marginBottom: spacing.xs },
   drillCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.goldMuted,
-    borderRadius: radii.lg, paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, minHeight: 64,
+    // goldFaint tint = the established "today's featured action" treatment — reads as the hero,
+    // distinct from the plain-surface game cards below it.
+    backgroundColor: colors.goldFaint, borderWidth: 1, borderColor: colors.goldMuted,
+    borderRadius: radii.lg, paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, minHeight: 72,
     ...shadows.md,
   },
   drillIconWrap: {

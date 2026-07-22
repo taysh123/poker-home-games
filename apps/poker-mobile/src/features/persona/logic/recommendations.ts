@@ -23,6 +23,18 @@ export function trainOrderForFormat(format: PersonaFormat | null | undefined): r
 }
 
 /**
+ * Drill-card sub-line, honest against the SHARED daily practice pool (never overpromise):
+ * full pool ⇒ the ten-questions promise; partial ⇒ the real remaining count; spent ⇒ null
+ * (callers HIDE the card — no dead-end tap into a limit nudge); Infinity ⇒ unlimited copy.
+ */
+export function drillCardSub(remaining: number): string | null {
+  if (remaining === Infinity) return 'Unlimited practice — build your edge';
+  if (remaining <= 0) return null;
+  if (remaining >= 10) return 'Ten free questions — build your edge';
+  return `${remaining} free question${remaining === 1 ? '' : 's'} left today`;
+}
+
+/**
  * The bank's EXACT Difficulty strings (708 Beginner / 445 Intermediate / 307 Advanced rows) —
  * selectQuestions matches them verbatim, so any drift here silently empties the pool
  * (selectSeeded's fallback guards the run regardless).

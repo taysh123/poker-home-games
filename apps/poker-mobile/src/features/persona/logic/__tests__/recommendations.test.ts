@@ -3,7 +3,7 @@
  * order, and the quiz difficulty seed. Difficulty strings must EXACTLY match the bank's
  * Difficulty column (Beginner/Intermediate/Advanced) — a mismatch silently empties the pool.
  */
-import { heroVariantForGoal, trainOrderForFormat, difficultyForSkill, TRAIN_KEYS } from '../recommendations';
+import { heroVariantForGoal, trainOrderForFormat, difficultyForSkill, drillCardSub, TRAIN_KEYS } from '../recommendations';
 
 describe('heroVariantForGoal', () => {
   it('improvers get the drill-first hero; hosts, both, and the un-personalized get the game hero', () => {
@@ -31,6 +31,26 @@ describe('trainOrderForFormat', () => {
       expect([...order].sort()).toEqual([...TRAIN_KEYS].sort());
       expect(new Set(order).size).toBe(TRAIN_KEYS.length);
     }
+  });
+});
+
+describe('drillCardSub — the drill card never overpromises the shared daily pool', () => {
+  it('full pool ⇒ the ten-questions promise', () => {
+    expect(drillCardSub(10)).toBe('Ten free questions — build your edge');
+    expect(drillCardSub(14)).toBe('Ten free questions — build your edge');
+  });
+
+  it('partial pool ⇒ the honest remaining count', () => {
+    expect(drillCardSub(3)).toBe('3 free questions left today');
+    expect(drillCardSub(1)).toBe('1 free question left today');
+  });
+
+  it('spent pool ⇒ null (the card hides — no dead-end tap)', () => {
+    expect(drillCardSub(0)).toBeNull();
+  });
+
+  it('premium/unlimited ⇒ unlimited copy', () => {
+    expect(drillCardSub(Infinity)).toBe('Unlimited practice — build your edge');
   });
 });
 
