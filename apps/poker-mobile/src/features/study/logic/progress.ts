@@ -197,6 +197,17 @@ export function recordQuizCompleted(p: StudyProgress): StudyProgress {
   return { ...p, quizzesCompleted: (p.quizzesCompleted ?? 0) + 1 };
 }
 
+/**
+ * Record one FINISHED quiz: bump the lifetime counter AND consume one 'quiz' unit from today's daily
+ * limit — composed into ONE new progress so a single context commit carries both mutations. Same fix
+ * class as recordPracticeAnswer: the shipped QuizRunner chained consumeLimit + recordQuizCompleted as
+ * two commits and the second clobbered the first, so FREE_QUIZ_PER_DAY was never enforced. Pure.
+ */
+export function recordQuizFinished(p: StudyProgress, dayKey: string): StudyProgress {
+  const done = recordQuizCompleted(p);
+  return { ...done, dailyLimitCounters: consumeToday(dailyCountersOf(done), 'quiz', dayKey) };
+}
+
 /** Record one completed/read lesson (lifetime counter; feeds XP). Pure. */
 export function recordLessonCompleted(p: StudyProgress): StudyProgress {
   return { ...p, lessonsCompleted: (p.lessonsCompleted ?? 0) + 1 };
