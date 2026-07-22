@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pricing â€” T Poker</title>
-  <meta name="description" content="T Poker pricing. Every home-game management tool is free. Premium is $8.99/month or $79.99/year for the full strategy study library." />
+  <title>Pricing — T Poker</title>
+  <meta name="description" content="T Poker pricing. Every home-game management tool — and daily poker study — is free. Premium is coming soon; nothing is currently purchasable." />
   <style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
@@ -46,17 +46,15 @@
     .price { display: flex; align-items: flex-end; gap: 8px; margin: 8px 0 2px; }
     .price .amount { color: #FFFFFF; font-size: 46px; font-weight: 800; line-height: 1; }
     .price .cadence { color: #7A8A99; font-size: 15px; padding-bottom: 6px; }
-    .price-alt { color: #B8C4CF; font-size: 14px; margin: 6px 0 0; }
-    .save { color: #E8C97A; font-weight: 700; }
+    .price .amount.soon { font-size: 30px; color: #B8C4CF; padding-bottom: 4px; }
     ul.features { list-style: none; padding: 0; margin: 22px 0 0; }
     ul.features li { color: #E8EDF2; font-size: 15px; padding: 7px 0 7px 28px; position: relative; }
     ul.features li::before {
-      content: "âœ“"; position: absolute; left: 0; top: 6px;
+      content: "✓"; position: absolute; left: 0; top: 6px;
       color: #27AE60; font-weight: 700;
     }
-    ul.features li.premium-live::before { color: #C9A84C; }
     ul.features li.soon { color: #7A8A99; }
-    ul.features li.soon::before { content: "â—·"; color: #7A8A99; }
+    ul.features li.soon::before { content: "◷"; color: #7A8A99; }
     .soon-chip {
       display: inline-block; margin-left: 8px; font-size: 11px; font-weight: 600;
       color: #B8C4CF; background: #1E2D3D; border: 1px solid #243447;
@@ -84,10 +82,11 @@
     <div class="brand">T POKER</div>
     <h1>Simple, honest pricing</h1>
     <p class="subhead">
-      Every tool for running your home game â€” cash games, tournaments, settlements,
-      groups, and stats â€” is free. Upgrade for the full strategy study library.
+      Every tool for running your home game — cash games, tournaments, settlements,
+      groups, and stats — is free, along with daily poker study: a daily quiz, starter
+      lessons, and free practice questions every day.
     </p>
-    <p class="billing-note">All prices in USD. Your exact, localized price (including any tax) is always shown at checkout.</p>
+    <p class="billing-note"><strong>Nothing is currently purchasable.</strong> Premium is in development and shown honestly as "Coming soon".</p>
 
     <div class="plans">
 
@@ -95,7 +94,7 @@
       <section class="plan free" aria-labelledby="free-heading">
         <span class="badge free">Always free</span>
         <h2 id="free-heading">Free</h2>
-        <p class="tagline">Everything you need to run any game, at no cost.</p>
+        <p class="tagline">Everything you need to run any game — and study every day — at no cost.</p>
         <div class="price">
           <span class="amount">$0</span>
           <span class="cadence">forever</span>
@@ -105,46 +104,42 @@
           <li>Buy-ins, cash-outs &amp; one-tap settlements</li>
           <li>Blind clock &amp; prize-pool payouts</li>
           <li>Groups, lifetime stats &amp; leaderboards</li>
+          <li>Daily quiz, starter lessons &amp; free practice every day</li>
           <li>No account needed to start</li>
         </ul>
         <a class="cta secondary" href="https://app.tpoker.app">Start a free game</a>
       </section>
 
-      <!-- PREMIUM -->
+      <!-- PREMIUM (coming soon — not purchasable) -->
       <section class="plan premium" aria-labelledby="premium-heading">
         <span class="badge prem">Premium</span>
         <h2 id="premium-heading">Premium</h2>
-        <p class="tagline">The full strategy library for players who want to improve.</p>
+        <p class="tagline">A deeper study experience for players who want to improve.</p>
         <div class="price">
-          <span class="amount">$8.99</span>
-          <span class="cadence">/ month</span>
+          <span class="amount soon">Coming soon</span>
         </div>
-        <p class="price-alt">
-          or <strong>$79.99 / year</strong> â€” that's $6.67/mo,
-          <span class="save">save 25%</span>
-        </p>
         <ul class="features">
-          <li class="premium-live">Premium Study â€” full lesson library, every study pack, all quizzes &amp; unlimited Spot Trainer</li>
-          <li class="soon">AI Coach â€” 100 hand analyses / month<span class="soon-chip">Coming soon</span></li>
-          <li class="soon">Cloud sync across all your devices<span class="soon-chip">Coming soon</span></li>
+          <li class="soon">Full lesson library &amp; every study pack<span class="soon-chip">Coming soon</span></li>
+          <li class="soon">Unlimited daily practice<span class="soon-chip">Coming soon</span></li>
+          <li class="soon">AI Coach hand analyses<span class="soon-chip">Coming soon</span></li>
+          <li class="soon">Cloud sync across devices<span class="soon-chip">Coming soon</span></li>
           <li class="soon">Advanced bankroll analytics<span class="soon-chip">Coming soon</span></li>
         </ul>
         <p class="tagline" style="margin-top:14px;">
-          Today, Premium unlocks Premium Study. Features marked "Coming soon" are in development, are not
-          part of what you pay for now, and their details may change before launch.
+          Premium cannot be purchased yet — there is no checkout anywhere. Feature details and
+          pricing will be announced when it launches.
         </p>
-        <a class="cta primary" href="https://app.tpoker.app">Get Premium</a>
+        <a class="cta secondary" href="https://app.tpoker.app">Study free today</a>
       </section>
 
     </div>
 
     <p class="fineprint">
-      Premium is an auto-renewing subscription: it renews for the same period at the then-current
-      price until you cancel, and you can cancel anytime. On the web, payments are processed by
-      <strong>Paddle</strong>, our authorized reseller and Merchant of Record. On mobile, purchases
-      are handled by the Apple App Store or Google Play (via RevenueCat). Features marked
-      "Coming soon" are never charged for until they ship. See our
-      <a href="/terms.html">Terms of Service</a> and <a href="/refund.html">Refund Policy</a> for full details.
+      When Premium launches, it will be offered as a subscription through the
+      <strong>Apple App Store</strong> and <strong>Google Play</strong>, with the exact price (and any
+      tax) shown at the point of purchase and the stores' standard subscription controls. Until then,
+      no charges of any kind exist in T Poker. See our <a href="/terms.html">Terms of Service</a> and
+      <a href="/refund.html">Refund Policy</a> for details.
     </p>
 
     <footer class="footer">
@@ -154,7 +149,7 @@
         <a href="/privacy.html">Privacy Policy</a>
         <a href="/refund.html">Refund Policy</a>
       </nav>
-      <div class="copyright">Â© 2026 True Story Labs Â· T Poker</div>
+      <div class="copyright">© 2026 True Story Labs · T Poker</div>
     </footer>
   </div>
 </body>

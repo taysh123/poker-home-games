@@ -1,9 +1,9 @@
 /**
- * Legal-surface guards — keep the commercial/legal surfaces present, honest, and consistent
- * with the live billing setup (Paddle is the web Merchant of Record; RevenueCat/App Store/
- * Google Play on mobile). The four public pages — pricing, terms, privacy, refund — must exist,
- * carry the required subscription disclosures, drop the old counsel-owned DRAFT scaffolding, and
- * cross-link each other from a footer so Paddle's reviewer (and users) can find them.
+ * Legal-surface guards — keep the four public pages (pricing, terms, privacy, refund) present,
+ * HONEST, and consistent with the free-first reality (slice 0.6, owner decision 2026-07-22):
+ * nothing is purchasable anywhere, premium is "Coming soon", and when it launches payments run
+ * through the app stores. Dead web-billing processors (Paddle as Merchant of Record, Stripe,
+ * RevenueCat) must not be presented as live on ANY page. Cross-links + contact stay pinned.
  * Reads files directly (no React render) so it is fast and deterministic.
  *
  * NOTE: These pages are reasonable working drafts based on standard SaaS practice — they are
@@ -37,20 +37,24 @@ describe('terms.html — binding Terms of Service (no draft scaffolding)', () =>
     expect(terms).not.toMatch(/supersedes this draft/i);
   });
 
-  it('names Paddle as the web Merchant of Record and does NOT mention Stripe', () => {
-    expect(terms).toMatch(/Paddle/);
-    expect(terms).toMatch(/Merchant of Record/i);
+  it('free-first honest: nothing purchasable, no dead web processors, no hardcoded prices', () => {
+    expect(terms).toMatch(/nothing can be purchased|nothing is (currently )?purchasable/i);
+    expect(terms).toMatch(/Coming soon/);
+    expect(terms).not.toMatch(/\bPaddle\b/);
     expect(terms).not.toMatch(/\bStripe\b/i);
+    expect(terms).not.toMatch(/\bRevenueCat\b/);
+    expect(terms).not.toMatch(/Merchant of Record/i);
+    expect(terms).not.toMatch(/\$\d+\.\d{2}/); // prices are announced at launch, not pinned here
   });
 
-  it('keeps the $8.99 / $79.99 prices', () => {
-    expect(terms).toMatch(/\$8\.99/);
-    expect(terms).toMatch(/\$79\.99/);
-  });
-
-  it('carries the subscription / auto-renew / eligibility / contact disclosures', () => {
+  it('names the future app-store billing path with the platform disclosures', () => {
+    expect(terms).toMatch(/Apple App Store/);
+    expect(terms).toMatch(/Google Play/);
     expect(terms).toMatch(/auto-renew/i);
     expect(terms).toMatch(/cancel/i);
+  });
+
+  it('carries the eligibility + contact disclosures', () => {
     expect(terms).toMatch(/18 and older/i);
     expect(terms).toMatch(/truestorylabs@gmail\.com/);
   });
@@ -105,35 +109,44 @@ describe('privacy.html — free-first honest + consent-scoped analytics (Wave 0.
   });
 });
 
-describe('pricing.html — public prices Paddle can verify', () => {
-  it('shows both plan prices and the yearly savings', () => {
-    expect(pricing).toMatch(/\$8\.99/);
-    expect(pricing).toMatch(/\$79\.99/);
-    expect(pricing).toMatch(/\$6\.67/);
-    expect(pricing).toMatch(/save 25%/i);
+describe('pricing.html — free-first honest (nothing purchasable)', () => {
+  it('free plan is $0 and the premium plan shows NO price and NO purchase CTA', () => {
+    expect(pricing).toMatch(/\$0/);
+    expect(pricing).toMatch(/Coming soon/);
+    expect(pricing).toMatch(/cannot be purchased|Nothing is currently purchasable/i);
+    // The only dollar amount on the page is the free plan's $0 — no premium pricing exists yet.
+    expect(pricing).not.toMatch(/\$\d+\.\d{2}/);
+    expect(pricing).not.toMatch(/Get Premium/i);
+    expect(pricing).toMatch(/no checkout/i); // the page states the absence explicitly
   });
 
-  it('names Paddle as the web processor and does NOT mention Stripe', () => {
-    expect(pricing).toMatch(/Paddle/);
+  it('names no dead web processor and no Merchant of Record', () => {
+    expect(pricing).not.toMatch(/\bPaddle\b/);
     expect(pricing).not.toMatch(/\bStripe\b/i);
+    expect(pricing).not.toMatch(/\bRevenueCat\b/);
+    expect(pricing).not.toMatch(/Merchant of Record/i);
   });
 
-  it('cross-links all four pages', () => {
+  it('names the future app-store path and cross-links all four pages', () => {
+    expect(pricing).toMatch(/Apple App Store/);
+    expect(pricing).toMatch(/Google Play/);
     expectLinksAllFourPages(pricing);
   });
 });
 
-describe('refund.html — refund/cancellation policy present', () => {
-  it('describes refunds and cancellation', () => {
+describe('refund.html — free-first honest refund/cancellation policy', () => {
+  it('states nothing is purchasable today and still describes future refunds/cancellation', () => {
+    expect(refund).toMatch(/nothing can be bought|Nothing is currently purchasable/i);
     expect(refund).toMatch(/refund/i);
     expect(refund).toMatch(/cancel/i);
   });
 
-  it('routes web refunds through Paddle and mobile through the stores, no Stripe', () => {
-    expect(refund).toMatch(/Paddle/);
+  it('routes future purchases through the stores only — no dead web processors', () => {
     expect(refund).toMatch(/Apple|App Store/);
     expect(refund).toMatch(/Google Play/);
+    expect(refund).not.toMatch(/\bPaddle\b/);
     expect(refund).not.toMatch(/\bStripe\b/i);
+    expect(refund).not.toMatch(/\bRevenueCat\b/);
   });
 
   it('cross-links all four pages', () => {
