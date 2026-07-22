@@ -33,6 +33,8 @@ import { getWeeklyDigest, WeeklyDigestDto } from '../api/digestApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { goToSessions, goToStats } from '../navigation/navHelpers';
 import RankBadge from '../components/RankBadge';
+import { usePersona } from '../features/persona/state/PersonaContext';
+import { heroVariantForGoal } from '../features/persona/logic/recommendations';
 import SkeletonCard from '../components/SkeletonCard';
 import StatWidget from '../components/StatWidget';
 import SessionListItem from '../components/SessionListItem';
@@ -60,6 +62,7 @@ const ACTIVITY_ICON_CFG: Record<string, { icon: React.ComponentProps<typeof Ioni
 
 export default function HomeScreen() {
   const { user, logout } = useAuth();
+  const { persona } = usePersona();
   const navigation = useNavigation<HomeNav>();
   const insets = useSafeAreaInsets();
   const { refresh: refreshActiveSession } = useActiveSession();
@@ -483,6 +486,28 @@ export default function HomeScreen() {
               <Text style={styles.alertSub}>Tap to view and respond</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
+          </TouchableOpacity>
+        )}
+
+        {/* ── Today's drill — improvers lead with study (1.3; goal-led hero) ── */}
+        {heroVariantForGoal(persona?.goal ?? null) === 'improver' && (
+          <TouchableOpacity
+            style={styles.drillCard}
+            onPress={() => navigation.navigate('StudyTrainer', { mode: 'spot' })}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Today's drill. Ten free questions — build your edge."
+          >
+            <View style={styles.newGameLeft}>
+              <View style={styles.drillIconWrap}>
+                <Ionicons name="flash" size={16} color={colors.background} />
+              </View>
+              <View>
+                <Text style={styles.drillTitle}>Today's drill</Text>
+                <Text style={styles.drillSub}>Ten free questions — build your edge</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.gold} />
           </TouchableOpacity>
         )}
 
@@ -1075,6 +1100,27 @@ const styles = StyleSheet.create({
   },
   tournamentTitle: { ...typography.h4, color: colors.text },
   tournamentSub: { ...typography.caption, color: colors.textMuted, marginTop: 1 },
+  drillCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: colors.goldMuted,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    marginBottom: 12,
+  },
+  drillIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 9,
+    backgroundColor: colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  drillTitle: { ...typography.h4, color: colors.text },
+  drillSub: { ...typography.caption, color: colors.textMuted, marginTop: 1 },
   newGameLeft: {
     flex: 1,
     flexDirection: 'row',

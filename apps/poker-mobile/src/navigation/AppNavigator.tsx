@@ -110,6 +110,8 @@ export type RootStackParamList = {
   LogSession: { sessionId?: string } | undefined;
   // V2 — Study (Study pillar)
   StudyTrainer: { mode: 'spot' | 'decision' };
+  // Wave 1.3 — retake the setup quiz (same funnel screen, retake mode; BOTH trees)
+  PersonaQuiz: undefined;
   // Web-first flagship — solver workspace (solver flag)
   SolverWorkspace: undefined;
   // V2.2 — Content platform (Lessons; content flag)
@@ -615,6 +617,7 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
             <Stack.Screen name="LocalSessionSummary" component={LocalSessionSummaryScreen} options={{ headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="LogSession" component={LogSessionScreen} options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="StudyTrainer" component={SpotTrainerScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="PersonaQuiz" component={OnboardingV2Screen} options={{ headerShown: false, gestureEnabled: false }} />
             {isFeatureEnabled('solver') && (
               <Stack.Screen name="SolverWorkspace" component={SolverWorkspaceScreen} options={{ headerShown: false }} />
             )}
@@ -656,6 +659,7 @@ export default function AppNavigator({ navigationRef }: AppNavigatorProps) {
             <Stack.Screen name="LocalSessionSummary" component={LocalSessionSummaryScreen} options={{ headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="LogSession" component={LogSessionScreen} options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="StudyTrainer" component={SpotTrainerScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="PersonaQuiz" component={OnboardingV2Screen} options={{ headerShown: false, gestureEnabled: false }} />
             {isFeatureEnabled('solver') && (
               <Stack.Screen name="SolverWorkspace" component={SolverWorkspaceScreen} options={{ headerShown: false }} />
             )}

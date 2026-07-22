@@ -521,6 +521,31 @@ export default function ProfileScreen({ navigation }: Props) {
           </MotiView>
         )}
 
+        {/* ── Personalization — retake the setup quiz (1.3) ── */}
+        <MotiView {...slideUpSequence({ reduced, delay: staggerIn(5) })}>
+        <View style={styles.section}>
+          <View style={[styles.sectionHeader, { marginBottom: 12 }]}>
+            <View style={styles.sectionTitleRow}>
+              <View style={styles.sectionIconWrap}>
+                <Ionicons name="options-outline" size={14} color={colors.gold} />
+              </View>
+              <Text style={styles.sectionTitle}>Personalization</Text>
+            </View>
+          </View>
+          <PressableScale
+            style={styles.aboutRow}
+            onPress={() => navigation.navigate('PersonaQuiz')}
+            haptic="light"
+            accessibilityRole="button"
+            accessibilityLabel="Retake the setup quiz"
+          >
+            <Ionicons name="sparkles-outline" size={16} color={colors.textMuted} />
+            <Text style={styles.aboutRowText}>Retake the setup quiz</Text>
+            <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
+          </PressableScale>
+        </View>
+        </MotiView>
+
         {/* ── Privacy — anonymous usage analytics (Wave 0.2, opt-out any time) ── */}
         {isFeatureEnabled('analytics') && (
           <MotiView {...slideUpSequence({ reduced, delay: staggerIn(5) })}>

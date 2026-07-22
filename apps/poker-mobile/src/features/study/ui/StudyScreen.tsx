@@ -25,8 +25,22 @@ import { useContent } from '../../../context/ContentContext';
 import { useEntitlements } from '../../../context/EntitlementsContext';
 import { buildPackCatalog, availabilityOf, type Pack } from '../../premium/logic/marketableLabel';
 import LockNudge from './LockNudge';
+import { usePersona } from '../../persona/state/PersonaContext';
+import { trainOrderForFormat, type TrainKey } from '../../persona/logic/recommendations';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
+type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
+
+/** The TRAIN catalog — keyed so the persona's format can order it (1.3). */
+const TRAIN_CARDS: Record<TrainKey, {
+  icon: IoniconsName; title: string; sub: string; contentGated: boolean; navigate: (nav: Nav) => void;
+}> = {
+  spot: { icon: 'flash', title: 'Spot Trainer', sub: 'A 10-spot quiz — score your reads', contentGated: false, navigate: nav => nav.navigate('StudyTrainer', { mode: 'spot' }) },
+  decision: { icon: 'repeat', title: 'Decision Trainer', sub: 'Continuous drilling — build instinct', contentGated: false, navigate: nav => nav.navigate('StudyTrainer', { mode: 'decision' }) },
+  lessons: { icon: 'book', title: 'Lessons', sub: 'Read study modules', contentGated: true, navigate: nav => nav.navigate('LessonModules') },
+  quizzes: { icon: 'help-circle', title: 'Quizzes', sub: 'Multiple-choice — test your reads', contentGated: true, navigate: nav => nav.navigate('QuizRunner') },
+  packs: { icon: 'cube', title: 'Content Packs', sub: 'Browse the curriculum', contentGated: true, navigate: nav => nav.navigate('PackCatalog') },
+};
 
 export default function StudyScreen() {
   const navigation = useNavigation<Nav>();
@@ -38,6 +52,7 @@ export default function StudyScreen() {
 
   const { isLoaded: contentLoaded, query } = useContent();
   const { isPremium } = useEntitlements();
+  const { persona } = usePersona();
   const [packs, setPacks] = useState<Pack[] | null>(null);
 
   useEffect(() => {
@@ -173,50 +188,23 @@ export default function StudyScreen() {
           </View>
         )}
 
-        {/* Train CTAs */}
+        {/* Train CTAs — ordered by the persona's format (1.3): tournament players see Quizzes
+            (the bank's ICM/push-fold depth) first; everyone else keeps the current order. */}
         <View style={styles.section}>
           <SectionTitle>TRAIN</SectionTitle>
-          <TrainCard
-            icon="flash"
-            title="Spot Trainer"
-            sub="A 10-spot quiz — score your reads"
-            index={0}
-            onPress={() => navigation.navigate('StudyTrainer', { mode: 'spot' })}
-          />
-          <TrainCard
-            icon="repeat"
-            title="Decision Trainer"
-            sub="Continuous drilling — build instinct"
-            index={1}
-            onPress={() => navigation.navigate('StudyTrainer', { mode: 'decision' })}
-          />
-          {isFeatureEnabled('content') && (
-            <TrainCard
-              icon="book"
-              title="Lessons"
-              sub="Read study modules"
-              index={2}
-              onPress={() => navigation.navigate('LessonModules')}
-            />
-          )}
-          {isFeatureEnabled('content') && (
-            <TrainCard
-              icon="help-circle"
-              title="Quizzes"
-              sub="Multiple-choice — test your reads"
-              index={3}
-              onPress={() => navigation.navigate('QuizRunner')}
-            />
-          )}
-          {isFeatureEnabled('content') && (
-            <TrainCard
-              icon="cube"
-              title="Content Packs"
-              sub="Browse the curriculum"
-              index={4}
-              onPress={() => navigation.navigate('PackCatalog')}
-            />
-          )}
+          {trainOrderForFormat(persona?.format ?? null)
+            .map(key => TRAIN_CARDS[key])
+            .filter(card => !card.contentGated || isFeatureEnabled('content'))
+            .map((card, i) => (
+              <TrainCard
+                key={card.title}
+                icon={card.icon}
+                title={card.title}
+                sub={card.sub}
+                index={i}
+                onPress={() => card.navigate(navigation)}
+              />
+            ))}
         </View>
 
         <View style={styles.noteRow}>
@@ -225,6 +213,17 @@ export default function StudyScreen() {
             {dataset.name} — illustrative training ranges, not solver output. Real solver data can be imported later.
           </Text>
         </View>
+
+        {/* Retake the setup quiz — both trees, so guests have a re-entry too (1.3). */}
+        <PressableScale
+          style={styles.retakeRow}
+          onPress={() => navigation.navigate('PersonaQuiz')}
+          accessibilityRole="button"
+          accessibilityLabel="Retake the setup quiz"
+        >
+          <Ionicons name="options-outline" size={15} color={colors.textMuted} />
+          <Text style={styles.retakeText}>Retake the setup quiz</Text>
+        </PressableScale>
       </ScrollView>
     </Screen>
   );
@@ -294,6 +293,8 @@ const styles = StyleSheet.create({
   trainSub: { ...typography.bodySmall, color: colors.textMuted },
   noteRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start', paddingHorizontal: spacing.xs },
   note: { ...typography.bodySmall, color: colors.textMuted, flex: 1 },
+  retakeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 44, marginTop: spacing.sm },
+  retakeText: { ...typography.bodySmall, color: colors.textMuted, fontWeight: '600' },
   libRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs },
   libText: { ...typography.body, color: colors.textHigh },
 });

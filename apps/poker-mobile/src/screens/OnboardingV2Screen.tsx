@@ -29,7 +29,7 @@ import {
 import type { PersonaGoal } from '../features/persona/types';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding' | 'PersonaQuiz'>;
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 type ActionKey = 'play' | 'track' | 'study' | 'improve';
 
@@ -58,22 +58,35 @@ const SELECT_BEAT_MS = 250;
  * persona store immediately (skip keeps partials). Exit contract everywhere: await markSeen()
  * THEN navigation.reset. The typed name is display-only — NEVER in analytics (test-pinned).
  */
-export default function OnboardingV2Screen({ navigation }: Props) {
+export default function OnboardingV2Screen({ navigation, route }: Props) {
   const reduced = useReducedMotion();
   const { persona, answerStep, completeFunnel } = usePersona();
+  // Retake mode (1.3): the same funnel mounted at the PersonaQuiz route — answers pre-seed from
+  // the stored persona so the user reviews current choices instead of facing blank cards.
+  const retake = route.name === 'PersonaQuiz';
 
   const [phase, setPhase] = useState<'quiz' | 'router'>('quiz');
   const [step, setStep] = useState<QuizStep>('promise');
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [name, setName] = useState('');
+  const [name, setName] = useState(() => (retake ? persona?.displayName ?? '' : ''));
   // Local mirror of this run's answers — synchronous source for analytics + router ordering.
-  const [answers, setAnswers] = useState<{ goal?: string; skill?: string; format?: string }>({});
+  const [answers, setAnswers] = useState<{ goal?: string; skill?: string; format?: string }>(() =>
+    retake && persona
+      ? {
+          ...(persona.goal ? { goal: persona.goal } : {}),
+          ...(persona.skill ? { skill: persona.skill } : {}),
+          ...(persona.format ? { format: persona.format } : {}),
+        }
+      : {},
+  );
   const beatTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const nameSubmitted = useRef(false); // double-tap guard — one completion, one event
 
   useEffect(() => {
-    track('onboarding_started');
+    if (retake) track('onboarding_started', { retake: true });
+    else track('onboarding_started');
     return () => { if (beatTimer.current) clearTimeout(beatTimer.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Announce each step's headline so the 250ms content swap isn't silent to screen readers.

@@ -43,7 +43,7 @@ import { localDayKey } from '../logic/localDay';
 import { showToast } from '../../../utils/toast';
 import {
   normalizeQuestions,
-  selectQuestions,
+  selectSeeded,
   gradeAnswer,
   scoreQuiz,
   categoriesOf,
@@ -51,6 +51,8 @@ import {
   type QuizQuestion,
   type QuizChoice,
 } from '../logic/quiz';
+import { usePersona } from '../../persona/state/PersonaContext';
+import { difficultyForSkill } from '../../persona/logic/recommendations';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type R = RouteProp<RootStackParamList, 'QuizRunner'>;
@@ -78,6 +80,7 @@ export default function QuizRunnerScreen() {
   const mastery = useMastery();
   const { isPremium } = useEntitlements();
   const { limitFor, recordQuizFinished } = useStudy();
+  const { persona } = usePersona();
   const quizLimit = limitFor('quiz');
   const grounding = useCoachGrounding();
 
@@ -114,9 +117,14 @@ export default function QuizRunnerScreen() {
   const loading = enabled && !error && (!isLoaded || all === null);
 
   const startRun = (cat: string | null) => {
-    // Daily rotation (0.1): filter the pool, then take today's window of the seeded cycle — fresh
-    // questions each local day, stable within a day, no repeats until the pool cycles.
-    const pool = selectQuestions(all ?? [], { category: cat ?? undefined, freeOnly: !isPremium });
+    // Daily rotation (0.1) + skill seeding (1.3): base filter → seeded difficulty (with the
+    // full-run fallback so seeding never starves the rotation) → today's window of the cycle.
+    const pool = selectSeeded(
+      all ?? [],
+      { category: cat ?? undefined, freeOnly: !isPremium },
+      difficultyForSkill(persona?.skill ?? null),
+      RUN_LIMIT,
+    );
     const todaysRun = dailyRotation(pool, localDayKey(), RUN_LIMIT);
     if (todaysRun.length === 0) return;
     setCategory(cat);
