@@ -12,6 +12,18 @@ T Poker is a premium live poker home-game management platform for private friend
 
 **Launch status (2026-07-19):** shipping **free-first** to the app stores. Web payments are dead (Paddle rejects poker); app-store billing comes later behind the existing `IBillingVerifier` seam. All frozen launch PRs (#4→#5→#6→#14→#11) and the free-first split (#20) are merged to `main`. Free = home-game manager + groups/stats + daily quiz + 3 starter lessons + **10 shared practice questions/day** (`FREE_PRACTICE_QUESTIONS_PER_DAY` in `apps/poker-mobile/src/features/study/config.ts`; both trainers share one pool via `recordPracticeAnswer`). Premium (full lessons, unlimited practice, AI Coach, Cloud Sync, advanced bankroll) is **"Coming soon", not purchasable** — a CI-pinned honesty config (`features/premium/config.ts`, all `comingSoon: true`) keeps zero live features; AI Coach makes **zero** API calls. Design of record: `docs/superpowers/specs/2026-07-18-free-first-split-design.md`. The Paddle-gated plan in `docs/release/RESUME-HERE.md` §1–§7 is **superseded/historical**.
 
+**Evolution status (2026-07-22, Wave 0 of the product-evolution plan —
+`docs/superpowers/specs/2026-07-22-product-evolution-master-plan.md` is the plan of record):**
+billing is fail-closed in production (PR #24); the daily-quiz cap enforces and ALL StudyContext
+writes are updater-based composed operations — never chain raw writes (PR #25); Sign in with
+Apple ships on iOS (PR #26); the FULL 1,460-question free bank is bundled with date-seeded
+daily rotation via `dailyRotation` (PR #27 — `quiz_sample` is gone; never re-add it, both map
+to table `quiz_bank`); analytics is consent-gated PostHog EU behind the `analytics` flag +
+Welcome-choice consent + `EXPO_PUBLIC_POSTHOG_KEY` (PR #28 — no key set ⇒ fully dark); streak
+reminders are ON with the `free_ai` kind removed (PR #29); XP is MONOTONIC — the streak term
+rides cumulative `studyDays`, never `currentStreak` (PR #30). Upgrade-trigger ids are typed in
+`features/premium/triggers.ts` — never mint ad-hoc trigger strings.
+
 ---
 
 ## Commands
@@ -90,11 +102,12 @@ Exception → HTTP mapping is in `ExceptionHandlingMiddleware`:
 
 Each screen owns its own state, token read, and API call. No global data store. Screens refresh on focus via `useFocusEffect`.
 
-There are **two Axios patterns** in use:
-- `api/apiClient.ts` — a shared Axios instance with a 401 interceptor that automatically refreshes the token and retries the request. Use this for any API call that should trigger auto-logout on refresh failure.
-- Individual API files (`sessionsApi.ts`, `groupsApi.ts`, etc.) — each creates its own Axios instance per call, taking an explicit `token` argument. Most screens use this pattern.
-
-Both read tokens from `utils/storage.ts`, never from context.
+**Axios (converged):** all API modules in `src/api/` share `api/apiClient.ts` (one instance; 401
+interceptor refreshes the token behind a mutex and retries; refresh failure → `onUnauthenticated`
+→ logout). The single exception is `deviceTokensApi.ts` (own instance — push-token calls bypass
+refresh). Token plumbing is still MANUAL: API functions take an explicit `token` argument and
+screens read it from `utils/storage.ts` (never from context) before each call — there is no
+request interceptor attaching it.
 
 ---
 
@@ -163,11 +176,13 @@ daily quiz, then game-night shots). Regenerate the study screens via the Playwri
 harness `store-assets/store-shots.mjs` after visual changes (see that dir's README).
 Release process: docs/store-release.md.
 
-## Local games schema v3 + tournaments
+## Local games schema v4 + tournaments
 
-`src/local/types.ts` is at **schemaVersion 3** (`mode: 'cash' | 'tournament'` +
-`tournament` config; v1→v2→v3 chained auto-migration in `loadFile`, quarantine
-preserved; all tournament fields additive so cash games migrate no-op).
+`src/local/types.ts` is at **schemaVersion 4** (v3 added `mode: 'cash' | 'tournament'` +
+`tournament` config; v4 added `updatedAt` — bumped on every mutation — and `deletedAt`
+tombstones for cloud sync, LIVE in prod: `deleteGame` soft-deletes and
+`LocalGamesContext` filters through `liveGames()`. Chained v1→v4 auto-migration in
+`loadFile`, quarantine preserved; all fields additive so older files migrate no-op).
 
 `LocalTournamentConfig` (v3): `entryFeeCents`, `payouts: number[]` (percentages,
 length = paid places — any winner count / custom distribution), editable
@@ -213,6 +228,15 @@ inside `NotificationService` after the DB write, wrapped in try/catch — push m
 NEVER fail a command. Client: `src/hooks/usePushNotifications.ts` (registration in
 AuthContext.saveSession, unregistration on logout, tap → Notifications screen).
 Delivery testing: Android works in Expo Go; iOS needs an EAS dev build.
+
+Local reminders (Wave 0.3, flag `reminders` ON, native-only): two kinds ONLY —
+`daily_study` (opt-in, user-picked hour) and `streak_risk` (20:00 when the streak is
+alive + goal unmet). Pure gating in `utils/reminderLogic.ts`; scheduling in
+`utils/reminders.ts`; prefs at NotificationPreferencesScreen. The OS permission prompt
+fires at most ONCE ever, after the first completed drill (`requestReminderPermissionOnce`).
+HONESTY PIN: no reminder may promise an unavailable feature (the old `free_ai` kind was
+removed for this) — `utils/__tests__/reminderLogic.test.ts`. Day keys are LOCAL
+(`localDayKey`); `toISOString().slice(0, 10)` is banned by `dayKeyBan.test.ts`.
 
 ## Motion System — `src/components/motion/`
 
@@ -296,13 +320,14 @@ All colors in `apps/poker-mobile/src/theme/colors.ts`. Never hardcode hex values
 Gold accents are used **sparingly** — only on primary CTAs, live indicators, and key financial numbers. Overusing gold degrades the premium feel.
 
 Typography: `apps/poker-mobile/src/theme/typography.ts` — never hardcode font sizes.
-**Inter** is the app-wide UI/body typeface; `displaySerif`/`amountHero` (DM Serif
-Display) are reserved for screen titles and hero money numerals ONLY. Both load in
-App.tsx. Inter ships as separate per-weight families, so a global `Text`/`TextInput`
-render patch (`theme/fonts.ts`, applied once in App.tsx) maps each `fontWeight` to the
-right Inter face and pins `fontWeight: normal` (avoids web faux-bold). An explicit
-`fontFamily` (DM Serif, ionicons) is always respected. Amount tokens carry an explicit
-`lineHeight` so Inter's tall ascent isn't clipped on web.
+THREE font families: **Inter** (body/base text), **Sora** (UI chrome — headings, tab
+labels, buttons), and **DM Serif Display** (`displaySerif`/`amountHero` — screen titles
+and hero money numerals ONLY). All load in App.tsx. Inter/Sora ship as separate
+per-weight families, so a global `Text`/`TextInput` render patch (`theme/fonts.ts`,
+applied once in App.tsx) maps each `fontWeight` to the right face and pins
+`fontWeight: normal` (avoids web faux-bold). An explicit `fontFamily` (DM Serif,
+ionicons) is always respected. Amount tokens carry an explicit `lineHeight` so the
+tall ascent isn't clipped on web.
 Spacing/radii: `theme/spacing.ts` (4pt scale) and `theme/radii.ts` — use tokens in new code.
 Icons: Ionicons via `@expo/vector-icons`. No emoji as icons in new/redesigned surfaces.
 Animations: legacy screens use RN `Animated` (`useNativeDriver: true`); new motion goes
@@ -518,10 +543,21 @@ do NOT set `BillingSettings__Provider=mock` in production.
 
 - `EmptyState` component now supports an optional `ionicon` prop (`React.ComponentProps<typeof Ionicons>['name']`). When provided, renders an Ionicons icon in a styled circle instead of an emoji. Falls back to the original `icon: string` prop if no `ionicon` is passed.
 
-### Onboarding First-Run (B5)
+### Entry experience (supersedes the old B5 onboarding — reality as of PR #14 + free-first)
 
-- `OnboardingScreen` (`screens/OnboardingScreen.tsx`) — 3-slide horizontal carousel shown to new users on first launch. Slides: "Track Every Game" / "Play With Your Crew" / "Know Your Numbers". Skip button on slides 0–1. On complete, stores `hasSeenOnboarding = 'true'` in `utils/storage` and navigates to Login.
-- `AppNavigator` reads `hasSeenOnboarding` on startup and renders `<Stack.Screen name="Onboarding">` first if not set. Delays all rendering until both `isLoading === false` AND `hasSeenOnboarding !== undefined`.
+The prod cold-start flow is a three-stage funnel, all flag-gated in `src/config/features.ts`
+(`v2Splash` / `welcome` / `onboardingV2`, all ON):
+
+1. **BrandSplash** overlay (~1.2s, tap-to-skip, reduced-motion safe; mounted in App.tsx).
+2. **WelcomeScreen** chooser — explicit "Continue as guest" / "Sign in", ZERO guest-data writes
+   (test-pinned). The choice is also the ANALYTICS CONSENT boundary (Wave 0.2).
+3. **OnboardingV2Screen** (first run only) — 4 pillar slides (Learn → Practice → Play → Track) +
+   a "Where do you want to start?" action router that `navigation.reset`s into a real flow.
+
+Routing decisions are pure + Jest-pinned in `navigation/entryRouting.ts`; `AppNavigator` gates
+the Onboarding route on the single storage boolean `hasSeenOnboarding`. The legacy 3-slide
+`OnboardingScreen` still exists only as the `onboardingV2`-off fallback (never renders — the
+flag is ON everywhere).
 
 ### Response Compression (D3)
 
@@ -589,6 +625,16 @@ do NOT set `BillingSettings__Provider=mock` in production.
 - `statsApi.ts` `getMyStats(token, period?)` accepts an optional period param.
 - `StatsScreen` has a 3-tab period picker (This Week / This Month / All Time) at the top. Tabs trigger a re-fetch; hero label updates to match the period. All stat cards, the chart, and session list reflect the selected period.
 - `HomeScreen` computes "this week" P&L client-side from already-loaded `recentSessions` and displays it as a color-coded chip below the hero P&L when sessions exist in the last 7 days.
+
+### Weekly digest (undocumented until 2026-07-22 — live, unflagged)
+
+- `GET /api/users/me/weekly-digest` → `WeeklyDigestDto { sessionsPlayed, netProfitLoss, bestNight,
+  totalMinutesPlayed, mostActiveGroup, currentStreak }` — rolling UTC last-7-days window computed
+  on-demand from the user's full history (`GetWeeklyDigestQueryHandler`; no persisted snapshots,
+  no calendar-week bucketing — NOT a weekly-cadence primitive).
+- Client: `api/digestApi.ts`; HomeScreen fetches it on every focus and renders the
+  "Your Week at the Club" hero card (or a quiet-week prompt). Extend THIS card for weekly-crew
+  surfaces (master plan 2.5) — do not add a parallel weekly card.
 
 ### In-App Notifications (D1 / Phase 40)
 

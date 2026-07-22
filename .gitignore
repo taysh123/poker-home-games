@@ -24,7 +24,7 @@ appsettings.Development.json
 
 ## Build outputs
 publish/
-out/
+out*/
 
 ## Stray editor/OS junk
 **/New Text Document*.txt
