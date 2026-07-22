@@ -26,8 +26,8 @@ export interface FunnelOption<Id extends string = string> {
 
 export const GOAL_OPTIONS: FunnelOption<PersonaGoal>[] = [
   { id: 'host', label: 'I host the game', sub: 'Run the nights, settle up clean' },
-  { id: 'improve', label: 'I want to win more', sub: 'Study, drill, plug the leaks' },
-  { id: 'both', label: 'Both, honestly', sub: 'Run the table and beat it' },
+  { id: 'improve', label: 'I want to play better', sub: 'Study, drill, plug the leaks' },
+  { id: 'both', label: 'Both, honestly', sub: 'Run the night and sharpen my game' },
 ];
 
 export const SKILL_OPTIONS: FunnelOption<PersonaSkill>[] = [

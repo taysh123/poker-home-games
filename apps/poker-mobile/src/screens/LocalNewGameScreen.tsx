@@ -334,7 +334,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                   keyboardType="decimal-pad"
                   prefix={sym}
                   error={entryFeeError}
-                  hint="everyone pays this into the prize pool"
+                  hint="what each player puts in at the table — recorded here, never collected in the app"
                 />
 
                 {/* ── Payouts ── */}
@@ -525,7 +525,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                     placeholder="50"
                     keyboardType="decimal-pad"
                     prefix={sym}
-                    hint="added to the prize pool"
+                    hint="recorded in the pool total"
                   />
                 )}
               </>
@@ -603,7 +603,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
         {/* ── Step 3: Review ── */}
         {step === 3 && (
           <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>Ready to Play?</Text>
+            <Text style={styles.stepTitle}>Ready to start?</Text>
 
             <MotiView {...entrance({ reduced })} style={styles.reviewCard}>
               <View style={styles.reviewAccent} />
@@ -653,7 +653,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
             <View style={styles.actionRow}>
               <PrimaryButton label="Back" onPress={() => goToStep(2)} variant="outline" fullWidth={false} style={styles.stepBackBtn} />
               <PrimaryButton
-                label="Deal 'Em In"
+                label="Start Tracking"
                 onPress={handleStartGame}
                 loading={starting}
                 fullWidth={false}

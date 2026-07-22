@@ -292,8 +292,12 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
           </>
         )}
 
-        {/* Cash settlements */}
+        {/* Cash settlements — the one screen a reviewer (or a new user) is most likely to
+            misread as the app moving money. Say plainly, on-screen, that it never does. */}
         <Text style={styles.sectionTitle}>CASH SETTLEMENTS</Text>
+        <Text style={styles.settleNote}>
+          Settle in person — T Poker records who owes what and never moves, holds, or processes money.
+        </Text>
         {transfers.length === 0 ? (
           <View style={styles.evenCard}>
             <Ionicons name="checkmark-circle-outline" size={iconSize.sm} color={colors.success} />
@@ -416,6 +420,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   sectionTitleFirst: { marginTop: 0 },
+  settleNote: { ...typography.bodySmall, color: colors.textMuted, marginBottom: spacing.sm, lineHeight: 18 },
 
   resultRow: {
     flexDirection: 'row',

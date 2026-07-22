@@ -1,7 +1,7 @@
-/**
- * Quiet Luxury funnel engine (Wave 1, slice 1.1) — PURE. Step order, answer application,
+﻿/**
+ * Quiet Luxury funnel engine (Wave 1, slice 1.1) â€” PURE. Step order, answer application,
  * option catalogs (copy lives here, not in the screen), and goal-driven router ordering.
- * The caller passes `now` — no Date.now inside logic.
+ * The caller passes `now` â€” no Date.now inside logic.
  */
 import { emptyPersona } from '../../types';
 import {
@@ -19,7 +19,7 @@ const T0 = '2026-07-22T10:00:00.000Z';
 const T1 = '2026-07-22T10:01:00.000Z';
 
 describe('funnel steps', () => {
-  it('runs promise → goal → skill → format → name → router', () => {
+  it('runs promise â†’ goal â†’ skill â†’ format â†’ name â†’ router', () => {
     expect(FUNNEL_STEPS).toEqual(['promise', 'goal', 'skill', 'format', 'name']);
     expect(nextStep('promise')).toBe('goal');
     expect(nextStep('goal')).toBe('skill');
@@ -69,12 +69,12 @@ describe('applyAnswer', () => {
     expect(p.goal).toBeNull();
   });
 
-  it('name: trims; empty or whitespace ⇒ null (skipped name)', () => {
+  it('name: trims; empty or whitespace â‡’ null (skipped name)', () => {
     expect(applyAnswer(emptyPersona(T0), 'name', '  Tay  ', T1).displayName).toBe('Tay');
     expect(applyAnswer(emptyPersona(T0), 'name', '   ', T1).displayName).toBeNull();
   });
 
-  it('promise has no answer — persona is unchanged', () => {
+  it('promise has no answer â€” persona is unchanged', () => {
     const p = emptyPersona(T0);
     expect(applyAnswer(p, 'promise', 'anything', T1)).toEqual(p);
   });
@@ -86,19 +86,19 @@ describe('applyAnswer', () => {
   });
 });
 
-describe('orderActionsForGoal — the router leads with what the user came for', () => {
+describe('orderActionsForGoal â€” the router leads with what the user came for', () => {
   const actions = [{ key: 'play' }, { key: 'track' }, { key: 'study' }, { key: 'improve' }];
 
-  it('host ⇒ play first (original order otherwise)', () => {
+  it('host â‡’ play first (original order otherwise)', () => {
     expect(orderActionsForGoal(actions, 'host').map(a => a.key)).toEqual(['play', 'track', 'study', 'improve']);
   });
 
-  it('improve/both ⇒ study first, rest in original order', () => {
+  it('improve/both â‡’ study first, rest in original order', () => {
     expect(orderActionsForGoal(actions, 'improve').map(a => a.key)).toEqual(['study', 'play', 'track', 'improve']);
     expect(orderActionsForGoal(actions, 'both').map(a => a.key)).toEqual(['study', 'play', 'track', 'improve']);
   });
 
-  it('no goal ⇒ untouched (skippers see the default)', () => {
+  it('no goal â‡’ untouched (skippers see the default)', () => {
     expect(orderActionsForGoal(actions, null)).toEqual(actions);
   });
 
@@ -108,3 +108,4 @@ describe('orderActionsForGoal — the router leads with what the user came for',
     expect(actions).toEqual(copy);
   });
 });
+

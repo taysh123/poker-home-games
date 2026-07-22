@@ -7,6 +7,27 @@
 > billing comes later behind the existing `IBillingVerifier` seam. Current design of record:
 > [`docs/superpowers/specs/2026-07-18-free-first-split-design.md`](../superpowers/specs/2026-07-18-free-first-split-design.md).
 
+## 🚨 STANDING SUBMISSION PRINCIPLE (2026-07-23) — education-first, never a "game"
+
+We submit under the owner's **existing individual Apple Developer account**. Gambling /
+real-money-gaming classification requires an **organization** account, and simulated-gambling
+apps draw heightened scrutiny — so the **education + utility classification must be
+unmistakable**, and nothing store-facing may read as a poker *game*.
+
+T Poker is: a poker **strategy-education** app (lessons, daily quiz, decision drills, placement
+test) **plus a scorekeeping utility** (buy-in ledger + settlement calculator) for private home
+games. Money is only *recorded* between friends who settle in person — the app never moves,
+holds, wagers, or pays out anything.
+
+Apply everywhere: screenshots lead with learning; listing copy leads with lessons/drills and
+calls the manager a ledger; iOS primary category **Education** (secondary Reference), Play type
+**App** (never Games ▸ Card/Casino); 18+ and "not a gambling product" stated prominently;
+reviewer notes state it explicitly with a guest-mode walkthrough.
+
+👉 **Checklist of what's done vs. what you still need to do:
+[`store-submission-readiness.md`](store-submission-readiness.md)** — start there when you work
+the submission track.
+
 ## ✅ Where we actually are (2026-07-19)
 
 Everything below is **merged to `main`, deployed, and production-verified healthy** (Railway API + Vercel web/landing).

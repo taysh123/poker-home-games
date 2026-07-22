@@ -36,12 +36,13 @@ export default function DealInOverlay({ onDone }: { onDone: () => void }) {
   const translateX = sweep.interpolate({ inputRange: [0, 1], outputRange: [-130, 130] });
 
   return (
-    <Pressable style={styles.overlay} onPress={finish} accessibilityLabel="Dealing you in">
+    <Pressable style={styles.overlay} onPress={finish} accessibilityLabel="Setting the table">
       <Animated.View style={[styles.center, { opacity, transform: [{ scale }] }]}>
         <View style={styles.logoRing}>
           <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
         </View>
-        <Text style={styles.title}>Dealing you in…</Text>
+        <Text style={styles.title}>Setting the table…</Text>
+        <Text style={styles.subtitle}>You deal the cards — we keep the books.</Text>
         <View style={styles.track}>
           <Animated.View style={[styles.sweepWrap, { transform: [{ translateX }] }]}>
             <LinearGradient
@@ -77,6 +78,8 @@ const styles = StyleSheet.create({
   },
   logo: { width: 92, height: 92, borderRadius: 26 },
   title: { fontFamily: Sora['700'], fontSize: 18, color: colors.text, letterSpacing: 0.5 },
+  // States plainly what the app does — the app keeps the ledger; the players deal the cards.
+  subtitle: { fontFamily: Sora['500'], fontSize: 12, color: colors.textMuted, marginTop: 4 },
   track: { width: 140, height: 3, borderRadius: 2, backgroundColor: colors.border, overflow: 'hidden' },
   sweepWrap: { width: 80, height: 3 },
   sweep: { flex: 1, height: 3 },

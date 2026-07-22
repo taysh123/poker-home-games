@@ -288,7 +288,7 @@ export default function OnboardingV2Screen({ navigation, route }: Props) {
               <Image source={require('../../assets/logo.png')} style={styles.brandLogo} resizeMode="contain" />
             </View>
           </View>
-          <Text style={styles.promiseHeadline} accessibilityRole="header">Win your home game.</Text>
+          <Text style={styles.promiseHeadline} accessibilityRole="header">Master your home game.</Text>
           <Text style={styles.promiseSub}>Study daily. Run the night. Know your numbers.</Text>
           <View style={styles.promiseCtaWrap}>
             <PrimaryButton
