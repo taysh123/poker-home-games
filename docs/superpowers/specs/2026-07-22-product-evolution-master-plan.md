@@ -20,6 +20,37 @@ all premium is "Coming soon"; guests keep the full free experience; honesty CI p
 never weakened; the store-launch track is never blocked; nothing irreversible depends on the
 publisher entity (still provisional).
 
+## 1b. STANDING PRINCIPLE — education-first store posture (owner, 2026-07-23)
+
+We submit under the owner's **existing individual Apple Developer account**. Apple requires an
+**organization** account for gambling / real-money-gaming classification, and simulated-gambling
+apps draw heightened scrutiny. T Poker is neither: it is a poker **strategy-education** app plus a
+**scorekeeping utility** (buy-in ledger + settlement calculator) for private home games — money is
+only recorded between friends settling in person; the app never moves, holds, wagers, or pays out
+anything.
+
+**Therefore every store-facing decision leads with education and never lets anything read as a
+poker game:** screenshots lead with learning (placement → lessons → quiz → trainer → study hub)
+and game-night shots are framed as a ledger; listing title/subtitle/description lead with lessons
+and drills; primary category **Education** (Reference secondary; Play type "App", never
+Games ▸ Card/Casino); 18+ and "not a gambling product — no real money, no wagering, no payouts"
+stated prominently; reviewer notes state the position explicitly with a guest-mode walkthrough.
+In-app, anything that reads as casino/gameplay-for-money gets softened without losing the product.
+
+Operational docs: `docs/release/store-submission-readiness.md` (checklist + what's left),
+`docs/store-release.md` (verbatim listing copy + reviewer note),
+`apps/poker-mobile/store-assets/README.md` (asset rules).
+
+**Queued follow-up slices from the 2026-07-23 classification audit:**
+- **G.1 (pre-submission): landing-site education-first pass** — the site opens on a felt table
+  with a live pot, per-seat money and a spinning casino chip, shows only game-night screenshots,
+  and advertises $8.99/$79.99 for something unpurchasable. Rework hero + showcase + pricing to
+  match the app's honesty posture.
+- **1.6: remaining in-app softenings + re-capture** — "Money on the Table" stat label, PRIZE
+  POOL/TOTAL POT hero captions, ShareCard footer line, "Your Week at the Club"; re-capture
+  screenshots 09 and 10 in the same PR so nothing ships stale.
+- **Play feature graphic** — education-led tagline, de-emphasised chip art (icon stays for v1).
+
 ## 2. Owner decisions (locked)
 
 1. **Engagement architecture — Hybrid:** client-first mechanics now; a thin server engagement

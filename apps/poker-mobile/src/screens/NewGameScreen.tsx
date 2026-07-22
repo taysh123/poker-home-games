@@ -417,7 +417,7 @@ export default function NewGameScreen({ route, navigation }: Props) {
         {/* ── Step 3: Review ── */}
         {step === 3 && (
           <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>Ready to Play?</Text>
+            <Text style={styles.stepTitle}>Ready to start?</Text>
 
             <Animated.View style={[styles.reviewCard, {
               opacity: reviewAnim,
@@ -458,7 +458,7 @@ export default function NewGameScreen({ route, navigation }: Props) {
             <View style={styles.actionRow}>
               <PrimaryButton label="Back" onPress={() => goToStep(2)} variant="outline" fullWidth={false} style={styles.stepBackBtn} />
               <PrimaryButton
-                label="Deal 'Em In 🃏"
+                label="Start Tracking"
                 onPress={handleStartGame}
                 loading={starting}
                 fullWidth={false}

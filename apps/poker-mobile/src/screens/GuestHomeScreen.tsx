@@ -148,8 +148,8 @@ export default function GuestHomeScreen() {
           )}
           <Text style={styles.heroLead}>
             {showDrill
-              ? 'Or run your game night.'
-              : 'Start a game — right now, no account needed.'}
+              ? 'Or keep score for tonight’s game.'
+              : 'Set up tonight’s game — no account needed.'}
           </Text>
           <View style={styles.heroRow}>
             <PressableScale
@@ -159,8 +159,10 @@ export default function GuestHomeScreen() {
               accessibilityRole="button"
               accessibilityLabel="Start a cash game. Buy-ins, cash-outs, settle up."
             >
+              {/* A ledger glyph, not a ▶ play button: this opens a scoresheet, it does not
+                  start a game of poker (store-classification principle). */}
               <View style={styles.heroIconWrap}>
-                <Ionicons name="play" size={iconSize.sm} color={colors.background} style={styles.playGlyph} />
+                <Ionicons name="clipboard-outline" size={iconSize.sm} color={colors.background} />
               </View>
               <Text style={styles.heroTitle}>Cash Game</Text>
               <Text style={styles.heroSubtitle}>Buy-ins, cash-outs, settle up</Text>

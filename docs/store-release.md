@@ -74,15 +74,44 @@ replace them later; they're submission-valid now.
 | Screenshots | phone 1080×1920 — 2–8 of them | 6.7" 1290×2796 (required) + 5.5" 1242×2208 |
 | Feature graphic | 1024×500 (required, in store-assets) | — |
 
-**Suggested copy — education-first (free-first launch, 2026-07-19; edit to taste):**
-- *Subtitle (iOS, 30):* "Learn poker · Run game night"
-- *Short description (80):* "Learn real poker strategy with daily drills and lessons — and run game night."
-- *Long description:* LEAD with the study pillar — free daily lessons, the daily quiz, and Spot Trainer drills
-  (5 free questions every day) — then the home-game manager: guest mode (works instantly, no account),
-  settlements ("Bob pays Alice ₪40"), tournament mode (blind clock, podium payouts), groups/stats for regulars.
-  Avoid gambling language — this is a study + scorekeeping tool. Close with a one-line responsible-play note (see below).
-- *Screenshot order:* lead with the education set — Spot Trainer → Lessons → daily quiz — then the game-night
-  set (tournament clock, Final Count, settlements, stats). Regenerate via the store-assets harness.
+**LISTING COPY — paste verbatim (2026-07-23; education-first, individual-account posture).**
+Do not improvise on submission day. Rules: never use *play / host / bet / wager / stake / casino /
+chips / real money / win money* in the title, subtitle, short description, or keywords — use
+*learn, study, drills, log, track, keep score, ledger*.
+
+- *App Store name / Play title (≤30):* **`T Poker: Poker Trainer`**
+- *Subtitle (iOS, ≤30):* **`Lessons, drills, game ledger`**
+- *Short description (Play, ≤80):* **`Poker strategy lessons and daily drills, plus a buy-in ledger for home games.`**
+- *Keywords (iOS, ≤100, comma-separated, no spaces):*
+  `poker trainer,poker strategy,lessons,quiz,drills,study,preflop,ranges,home game,ledger,tally`
+  **Never:** casino, bet, betting, wager, gamble, gambling, stakes, real money, win money, chips, slots, odds.
+- *Long description (both stores) — verbatim:*
+
+  > T Poker is a poker strategy trainer — and a simple, honest way to keep score at your home game.
+  >
+  > **LEARN THE STRATEGY**
+  > • Lessons — short written study modules: preflop opening ranges, blind defense, tournament basics, bankroll and mindset.
+  > • Daily Quiz — a new set of strategy questions every day, with a written explanation after every answer.
+  > • Spot Trainer — decision drills. You get a spot, you choose the line, and you find out why it was right or wrong. 10 free practice questions every day.
+  > • Placement test — five questions to set your starting level.
+  > • Track your accuracy and your streak as you improve.
+  >
+  > **KEEP SCORE AT GAME NIGHT**
+  > T Poker also replaces the notepad your group already uses. It is a ledger and a calculator — nothing more.
+  > • Record what each player put in and what they finished with.
+  > • The settlement calculator reduces the whole night to the fewest hand-offs: "Jordan pays Dana $100."
+  > • Tournament tools: a blind-level timer, entries and knockouts, and a payout split your group defines by percentage.
+  > • Groups and lifetime stats for the regulars — sessions played, results over time, head-to-head.
+  > • Works with no account and no internet: tap "Continue as guest" and start.
+  >
+  > **WHAT T POKER IS NOT**
+  > T Poker is not a gambling app. There is no wagering, no deposits, no withdrawals, no payouts and no prizes. Nothing is ever played for money inside the app — the amounts you see are numbers you entered yourself to keep score, and any cash is settled between friends in person, away from your phone.
+  >
+  > For adults (18+). T Poker is a study and scorekeeping tool, not a gambling product — please play responsibly and within your local laws.
+
+- *Screenshot order (education-first, ten shots):* placement test → lessons → daily quiz → Spot
+  Trainer → study hub → home → Final Count → settlements → stats → tournament clock. Play uses
+  01–08. Captions and regeneration: `apps/poker-mobile/store-assets/README.md`.
 
 **Positioning & responsible play (keep this framing consistent everywhere):**
 T Poker is a **private home-game management and scorekeeping tool for adults
@@ -97,18 +126,51 @@ Login footer, the Profile → About & Support card, and the privacy policy.
 
 ## Step 6 — Category, rating, privacy forms
 
-- **Category:** Lifestyle or Utilities/Tools primary; **Education as the iOS secondary
-  category** (the study pillar — lessons, daily quiz, trainer — strengthens the
-  non-gambling case). **NOT Casino/Card games.** Add a reviewer note on both stores:
-  *"T Poker is a poker STUDY app (lessons, quizzes, decision drills) with a
-  scorekeeping and expense-settlement tool for private home games. It contains no
-  wagering, no real-money play, no chips/odds simulation, and no payouts — it only
-  records what players track themselves, like a spreadsheet."*
-- **Age rating questionnaires:** answer "no" to gambling/simulated gambling
-  (nothing is wagered in-app). The app is positioned for **adults (18+)** — set the
-  content/target-audience to an adult audience (not children), consistent with the
-  privacy policy's "Responsible play & age" section. Do not select a children's
-  audience or family program.
+- **Category:** iOS **primary Education**, secondary **Reference**. Play: app type
+  **App (not Game)**, category **Education**. **Never** Games ▸ Casino or Games ▸ Card.
+  If Education is ever challenged, fall back to Utilities/Reference — never Lifestyle,
+  which pairs badly with a poker name. (Individual-account posture: the education
+  classification must be unmistakable — see `release/store-submission-readiness.md`.)
+
+- **Reviewer notes — paste verbatim into App Review Notes and Play's declarations:**
+
+  > Thank you for reviewing T Poker.
+  >
+  > **WHAT THE APP IS**
+  > T Poker is an educational poker-strategy app for adults (18+), plus a scorekeeping utility for private home games.
+  > 1) STUDY (the primary experience): written lessons, a daily strategy quiz, a five-question placement test, and decision drills ("Spot Trainer") that present a pre-authored scenario, ask the user to choose the strategically correct action, and then explain why. Progress is scored as correct/incorrect answers, like a flashcard or language-learning app.
+  > 2) SCOREKEEPING (the utility): a shared ledger for a friendly home game. One person types in what each player agreed to put in and what they had at the end; the app subtracts and shows who should hand cash to whom in person ("Jordan pays Dana $100"). It is arithmetic on numbers the user types, the same as a split-the-bill app.
+  >
+  > **WHAT THE APP IS NOT — no real-money gambling of any kind**
+  > • No wagering, betting or staking inside the app. Nothing is ever at risk in the app.
+  > • No deposits, withdrawals, payouts, prizes or transfers. There is no payment processing, no wallet, no balance, and no connection to any payment provider or bank.
+  > • No simulated gambling: no slots/roulette/casino games, no virtual chips to bet, no chance-based outcomes, no random rewards or loot boxes. The Spot Trainer presents a fixed, pre-authored study scenario — it is a quiz question, not a hand of poker.
+  > • No in-app purchases and no virtual currency in this version; every feature listed is free.
+  > • The dollar figures on the home-game screens are numbers the user typed in to keep score. They record cash that friends settle between themselves, in person, after the app is closed. The app never moves, holds, or processes money — the settlement screen says so on-screen.
+  > • No connection to, or affiliation with, any online poker or casino operator.
+  >
+  > **AUDIENCE**
+  > Intended for adults 18+. Not directed at children; no children's/family programme participation, no ads, no third-party ad tracking.
+  >
+  > **HOW TO REVIEW WITHOUT AN ACCOUNT**
+  > Tap "Continue as guest" on launch — no sign-up needed. All of this works offline:
+  > • Study ▸ Lessons: open "Preflop Opening Ranges".
+  > • Study ▸ Find your level: a five-question placement test.
+  > • Study ▸ Daily Quiz: answer a few questions; each shows a written explanation.
+  > • Study ▸ Spot Trainer: pick Fold/Call/Raise and read the coaching feedback.
+  > • Home ▸ set up a cash game: add 2–3 players, enter buy-ins, tap End Game, enter final chip counts, and see the settlement list ("A pays B $20"). Nothing leaves the device.
+  >
+  > Privacy policy: https://poker-home-games-three.vercel.app/privacy.html
+  > Support: truestorylabs@gmail.com
+
+- **Age rating questionnaires — explicit answers:** Apple — Gambling: **No**; Simulated
+  Gambling: **No** (no chance-based play, no virtual chips wagered, outcomes are
+  pre-authored quiz scenarios); Contests: **No**; Unrestricted web access: **No**.
+  Play — answer **No** to every IARC gambling/simulated-gambling question; Target
+  Audience: **18+ band only**; Families Policy: **No**. Expect a LOW computed content
+  rating — that is correct and not a contradiction: **18+ is our stated audience, not a
+  claimed content rating**, and it appears in the description, the in-app Login footer,
+  Profile → About, and the privacy policy.
 - **Play Data Safety / Apple Privacy Nutrition:** derived from [PRIVACY.md](../PRIVACY.md):
   - Collected (account users only): email address, username (account management);
     app activity = game records the user enters. All optional — guest mode collects nothing.

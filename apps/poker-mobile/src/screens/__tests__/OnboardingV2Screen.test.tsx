@@ -1,9 +1,9 @@
-/**
- * Quiet Luxury funnel (Wave 1, slices 1.1+1.2) — the behavioral contract of the FIRST
- * IMPRESSION screen. Pins: promise → goal → skill → format → name → router flow; every answer
+﻿/**
+ * Quiet Luxury funnel (Wave 1, slices 1.1+1.2) â€” the behavioral contract of the FIRST
+ * IMPRESSION screen. Pins: promise â†’ goal â†’ skill â†’ format â†’ name â†’ router flow; every answer
  * commits via PersonaContext + emits a typed funnel event; the exit contract (markSeen THEN
  * navigation.reset) on every path; Skip preserves already-answered steps; the router leads with
- * the user's goal; a11y roles on every option; and the PRIVACY rule — the typed name NEVER
+ * the user's goal; a11y roles on every option; and the PRIVACY rule â€” the typed name NEVER
  * appears in any analytics call.
  */
 import React from 'react';
@@ -46,7 +46,7 @@ jest.mock('../../config/features', () => ({
   isFeatureEnabled: (flag: string) => flag === 'study',
 }));
 
-jest.mock('../../hooks/useReducedMotion', () => ({ useReducedMotion: () => true })); // instant advance — no beat timers in tests
+jest.mock('../../hooks/useReducedMotion', () => ({ useReducedMotion: () => true })); // instant advance â€” no beat timers in tests
 jest.mock('../../components/motion/PressableScale', () => {
   const { Pressable } = require('react-native');
   return { __esModule: true, default: (props: any) => <Pressable {...props} /> };
@@ -95,21 +95,21 @@ describe('Quiet Luxury funnel', () => {
     mockPersona = null;
   });
 
-  it('opens on the promise screen — headline, pillar sub-lines, CTA, quiet skip', () => {
+  it('opens on the promise screen â€” headline, pillar sub-lines, CTA, quiet skip', () => {
     renderFunnel();
-    expect(screen.getByText('Win your home game.')).toBeTruthy();
+    expect(screen.getByText('Master your home game.')).toBeTruthy();
     expect(screen.getByText(/Study daily\. Run the night\. Know your numbers\./)).toBeTruthy();
     expect(screen.getByText("Let's set you up")).toBeTruthy();
     expect(screen.getByLabelText('Skip onboarding')).toBeTruthy();
     expect(mockTrack).toHaveBeenCalledWith('onboarding_started');
   });
 
-  it('walks promise → goal → skill → format → name, committing + tracking each answer (ids only)', async () => {
+  it('walks promise â†’ goal â†’ skill â†’ format â†’ name, committing + tracking each answer (ids only)', async () => {
     renderFunnel();
     await act(async () => { fireEvent.press(screen.getByText("Let's set you up")); });
     expect(screen.getByText('What brings you to the table?')).toBeTruthy();
 
-    await answerThrough(['I want to win more']);
+    await answerThrough(['I want to play better']);
     expect(mockAnswerStep).toHaveBeenCalledWith('goal', 'improve');
     expect(mockTrack).toHaveBeenCalledWith('funnel_step_answered', { step: 'goal', answer: 'improve' });
     expect(screen.getByText('How sharp is your game?')).toBeTruthy();
@@ -126,12 +126,12 @@ describe('Quiet Luxury funnel', () => {
   it('name step: typing + continue records the name locally but NEVER sends it to analytics', async () => {
     renderFunnel();
     await act(async () => { fireEvent.press(screen.getByText("Let's set you up")); });
-    await answerThrough(['I want to win more', 'I hold my own', 'Tournaments']);
+    await answerThrough(['I want to play better', 'I hold my own', 'Tournaments']);
 
     fireEvent.changeText(screen.getByPlaceholderText('Your name (optional)'), 'Tay Shofer');
     await act(async () => { fireEvent.press(screen.getByText('Continue')); });
 
-    expect(mockAnswerStep).toHaveBeenCalledWith('name', 'Tay Shofer'); // local store — allowed
+    expect(mockAnswerStep).toHaveBeenCalledWith('name', 'Tay Shofer'); // local store â€” allowed
     expect(mockCompleteFunnel).toHaveBeenCalled();
     expect(mockTrack).toHaveBeenCalledWith('funnel_completed', expect.objectContaining({ named: true }));
     // THE privacy pin: the typed name appears in NO analytics call, ever.
@@ -161,7 +161,7 @@ describe('Quiet Luxury funnel', () => {
   it('Skip mid-quiz keeps answered steps, marks seen, and resets to MainTabs', async () => {
     const nav = renderFunnel();
     await act(async () => { fireEvent.press(screen.getByText("Let's set you up")); });
-    await answerThrough(['I want to win more']); // one answer committed already
+    await answerThrough(['I want to play better']); // one answer committed already
     await act(async () => { fireEvent.press(screen.getByLabelText('Skip onboarding')); });
 
     expect(mockAnswerStep).toHaveBeenCalledWith('goal', 'improve'); // partial persona retained
@@ -188,7 +188,7 @@ describe('Quiet Luxury funnel', () => {
     mockPersona = { goal: 'improve' };
     renderFunnel();
     await act(async () => { fireEvent.press(screen.getByText("Let's set you up")); });
-    await answerThrough(['I want to win more', 'I hold my own', 'Both']);
+    await answerThrough(['I want to play better', 'I hold my own', 'Both']);
     await act(async () => { fireEvent.press(screen.getByText('Skip this')); });
 
     const drill = screen.getByText('Drill a spot');
@@ -205,7 +205,7 @@ describe('Quiet Luxury funnel', () => {
     await act(async () => { fireEvent.press(screen.getByText("Let's set you up")); });
     await answerThrough(['I host the game']);
     await act(async () => { fireEvent.press(screen.getByLabelText('Back')); });
-    // The goal step re-renders with the committed choice visibly selected — not three blank cards.
+    // The goal step re-renders with the committed choice visibly selected â€” not three blank cards.
     const host = screen.getByRole('button', { name: /I host the game/i });
     expect(host.props.accessibilityState?.selected).toBe(true);
     expect(screen.getByTestId('icon-checkmark-circle')).toBeTruthy();
@@ -228,12 +228,12 @@ describe('Quiet Luxury funnel', () => {
     renderFunnel();
     await act(async () => { fireEvent.press(screen.getByText("Let's set you up")); });
     expect(screen.getByRole('button', { name: /I host the game/i })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /I want to win more/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /I want to play better/i })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Both, honestly/i })).toBeTruthy();
   });
 });
 
-describe('Retake mode (PersonaQuiz) — review, not a replay of first-run', () => {
+describe('Retake mode (PersonaQuiz) â€” review, not a replay of first-run', () => {
   const storedPersona = {
     schemaVersion: 1, goal: 'improve', skill: 'solid', format: 'both',
     displayName: 'Tay', completedAt: 't0', updatedAt: 't0',
@@ -244,18 +244,18 @@ describe('Retake mode (PersonaQuiz) — review, not a replay of first-run', () =
     mockPersona = { ...storedPersona };
   });
 
-  it('opens on the goal question with the stored answer selected — no promise marketing, no Back', () => {
+  it('opens on the goal question with the stored answer selected â€” no promise marketing, no Back', () => {
     renderRetake();
-    expect(screen.queryByText('Win your home game.')).toBeNull();
+    expect(screen.queryByText('Master your home game.')).toBeNull();
     expect(screen.getByText('What brings you to the table?')).toBeTruthy();
-    const current = screen.getByRole('button', { name: /I want to win more/i });
+    const current = screen.getByRole('button', { name: /I want to play better/i });
     expect(current.props.accessibilityState?.selected).toBe(true);
     expect(screen.queryByLabelText('Back')).toBeNull(); // nothing to go back to in retake
   });
 
   it('completes WITHOUT the router: toasts and returns whence it came', async () => {
     const nav = renderRetake();
-    await answerThrough(['I want to win more', 'I hold my own', 'Both']);
+    await answerThrough(['I want to play better', 'I hold my own', 'Both']);
     await act(async () => { fireEvent.press(screen.getByText('Continue')); });
 
     expect(screen.queryByText('Where do you want to start?')).toBeNull();
@@ -267,7 +267,7 @@ describe('Retake mode (PersonaQuiz) — review, not a replay of first-run', () =
 
   it('"Skip this" on the name step PRESERVES the stored name (no destructive write)', async () => {
     const nav = renderRetake();
-    await answerThrough(['I want to win more', 'I hold my own', 'Both']);
+    await answerThrough(['I want to play better', 'I hold my own', 'Both']);
     await act(async () => { fireEvent.press(screen.getByText('Skip this')); });
 
     const nameWrites = mockAnswerStep.mock.calls.filter(c => c[0] === 'name');
@@ -278,13 +278,13 @@ describe('Retake mode (PersonaQuiz) — review, not a replay of first-run', () =
 
   it('a deliberately changed name IS written', async () => {
     renderRetake();
-    await answerThrough(['I want to win more', 'I hold my own', 'Both']);
+    await answerThrough(['I want to play better', 'I hold my own', 'Both']);
     fireEvent.changeText(screen.getByPlaceholderText('Your name (optional)'), 'Rounder');
     await act(async () => { fireEvent.press(screen.getByText('Continue')); });
     expect(mockAnswerStep).toHaveBeenCalledWith('name', 'Rounder');
   });
 
-  it('Skip goes back — no stack reset, no hasSeenOnboarding write, tagged retake', async () => {
+  it('Skip goes back â€” no stack reset, no hasSeenOnboarding write, tagged retake', async () => {
     const nav = renderRetake();
     await act(async () => { fireEvent.press(screen.getByLabelText('Skip onboarding')); });
     expect(nav.goBack).toHaveBeenCalled();
@@ -300,3 +300,4 @@ describe('Retake mode (PersonaQuiz) — review, not a replay of first-run', () =
     expect(mockTrack).toHaveBeenCalledWith('onboarding_started', { retake: true });
   });
 });
+
