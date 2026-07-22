@@ -11,6 +11,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { accountKeyFor } from '../../auth/identity';
 import { emptyPersona, type Persona } from '../types';
 import { applyAnswer, type QuizStep } from '../logic/funnel';
+import { skillFromPlacement } from '../logic/placement';
 import * as store from '../data/personaStore';
 
 type PersonaContextType = {
@@ -21,6 +22,8 @@ type PersonaContextType = {
   answerStep: (step: QuizStep, answerId: string) => Promise<void>;
   /** Stamp completion (idempotent). */
   completeFunnel: () => Promise<void>;
+  /** Record a finished placement drill AND set the measured skill — ONE composed commit. */
+  recordPlacement: (score: number, total: number) => Promise<void>;
 };
 
 const PersonaContext = createContext<PersonaContextType>({
@@ -28,6 +31,7 @@ const PersonaContext = createContext<PersonaContextType>({
   isLoaded: false,
   answerStep: async () => {},
   completeFunnel: async () => {},
+  recordPlacement: async () => {},
 });
 
 export function PersonaProvider({ children }: { children: React.ReactNode }) {
@@ -82,10 +86,27 @@ export function PersonaProvider({ children }: { children: React.ReactNode }) {
     });
   }, [commit, accountKey]);
 
+  const recordPlacement = useCallback(async (score: number, total: number) => {
+    const now = new Date().toISOString();
+    await commit(f => {
+      const current = store.personaFor(f, accountKey) ?? emptyPersona(now);
+      // WRITE-ONCE: the drill is a one-time calibration, and that invariant is what justifies
+      // leaving it out of the study meters — so the STORE enforces it, not just the UI gates.
+      if (current.placement) return f;
+      return store.withPersona(f, accountKey, {
+        ...current,
+        // The measured level replaces the self-report — both land in one commit.
+        skill: skillFromPlacement(score),
+        placement: { score, total, at: now },
+        updatedAt: now,
+      });
+    });
+  }, [commit, accountKey]);
+
   const persona = useMemo(() => store.personaFor(file, accountKey), [file, accountKey]);
 
   return (
-    <PersonaContext.Provider value={{ persona, isLoaded, answerStep, completeFunnel }}>
+    <PersonaContext.Provider value={{ persona, isLoaded, answerStep, completeFunnel, recordPlacement }}>
       {children}
     </PersonaContext.Provider>
   );

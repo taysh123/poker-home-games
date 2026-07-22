@@ -52,7 +52,7 @@ export default function StudyScreen() {
 
   const { isLoaded: contentLoaded, query } = useContent();
   const { isPremium } = useEntitlements();
-  const { persona } = usePersona();
+  const { persona, isLoaded: personaLoaded } = usePersona();
   const [packs, setPacks] = useState<Pack[] | null>(null);
 
   useEffect(() => {
@@ -188,6 +188,27 @@ export default function StudyScreen() {
           </View>
         )}
 
+        {/* Find your level — one-time placement (1.4). It sits ABOVE the training list because
+            it changes what that list recommends; it disappears once taken. */}
+        {isFeatureEnabled('study') && personaLoaded && !persona?.placement && (
+          <PressableScale
+            style={styles.placementRow}
+            onPress={() => navigation.navigate('PlacementDrill')}
+            haptic="light"
+            accessibilityRole="button"
+            accessibilityLabel="Find your level. Five questions to set your starting point."
+          >
+            <View style={styles.placementIcon}>
+              <Ionicons name="speedometer-outline" size={18} color={colors.gold} />
+            </View>
+            <View style={styles.placementText}>
+              <Text style={styles.placementTitle}>Find your level</Text>
+              <Text style={styles.placementSub}>5 questions — we'll set your starting point</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </PressableScale>
+        )}
+
         {/* Train CTAs — ordered by the persona's format (1.3): tournament players see Quizzes
             (the bank's ICM/push-fold depth) first; everyone else keeps the current order. */}
         <View style={styles.section}>
@@ -293,6 +314,20 @@ const styles = StyleSheet.create({
   trainSub: { ...typography.bodySmall, color: colors.textMuted },
   noteRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start', paddingHorizontal: spacing.xs },
   note: { ...typography.bodySmall, color: colors.textMuted, flex: 1 },
+  // A normal surface card with a gold icon — prominent by POSITION (above TRAIN), not by shouting.
+  placementRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    borderRadius: radii.lg, paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    minHeight: 64,
+  },
+  placementIcon: {
+    width: 36, height: 36, borderRadius: radii.sm, backgroundColor: colors.goldFaint,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  placementText: { flex: 1, gap: 2 },
+  placementTitle: { ...typography.label, color: colors.text },
+  placementSub: { ...typography.bodySmall, color: colors.textMuted },
   retakeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 44, marginTop: spacing.sm },
   retakeText: { ...typography.bodySmall, color: colors.textMuted, fontWeight: '600' },
   libRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs },

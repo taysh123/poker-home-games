@@ -31,6 +31,9 @@ export type AnalyticsEvent =
   // name is display-only and must NEVER appear in an event (screen-test pinned).
   | 'funnel_step_answered'
   | 'funnel_completed'
+  // Wave 1.4 — placement drill (score/level only; never question content)
+  | 'placement_started'
+  | 'placement_completed'
   | 'account_created'
   // Entry chooser (Welcome)
   | 'welcome_shown'
