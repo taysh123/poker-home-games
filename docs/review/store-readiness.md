@@ -7,7 +7,7 @@ before charging). Everything else outstanding is **external setup** (store accou
 key) or gated on real billing.
 
 ## Config (READY)
-`app.json`: name "T Poker", version 1.1.0, iOS `com.tpoker.app` + Android `com.tpoker.app`, scheme `tpoker`,
+`app.json`: name "T Poker", version 1.1.1, iOS `com.tpoker.app` + Android `com.tpoker.app`, scheme `tpoker`,
 icons/splash/adaptive-icon present, `userInterfaceStyle: dark`, `supportsTablet`. Plugins: web-browser,
 secure-store, font, notifications, sqlite. `eas.json`: dev/preview/beta/production profiles, iOS submit
 (`appleTeamId`, `ascAppId`), Android submit (internal track), remote build-number auto-increment. No missing

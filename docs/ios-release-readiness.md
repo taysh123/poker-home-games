@@ -14,7 +14,7 @@ The app builds into a production `.ipa` today. No code or config defects remain.
 |---|---|---|
 | App name | `T Poker` | ✅ |
 | Slug / owner / projectId | `t-poker` / `taysh` / `8380f2f3-8dbb-478e-b92f-c39e3ebb3d8b` | ✅ |
-| Marketing version | `1.1.0` | ✅ |
+| Marketing version | `1.1.1` | ✅ |
 | Build number | managed remotely (`appVersionSource: remote` + `autoIncrement`) | ✅ |
 | iOS bundle identifier | `com.tpoker.app` | ✅ |
 | Scheme / deep links | `tpoker` + `applinks:poker-home-games-three.vercel.app` | ✅ |
