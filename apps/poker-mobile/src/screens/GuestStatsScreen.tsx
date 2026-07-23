@@ -66,7 +66,7 @@ export default function GuestStatsScreen({ embedded = false }: { embedded?: bool
       <View style={styles.grid}>
         <StatWidget label="Games Played" value={String(stats.gamesPlayed)} ionicon="layers-outline" delay={0} />
         <StatWidget
-          label="Money on the Table"
+          label="Total Buy-ins"
           value={formatCents(stats.totalMoneyMovedCents)}
           ionicon="cash-outline"
           delay={60}
@@ -92,12 +92,12 @@ export default function GuestStatsScreen({ embedded = false }: { embedded?: bool
                   onPress={() => navigation.navigate('LocalSessionSummary', { gameId: result.gameId })}
                   haptic="light"
                   accessibilityRole="button"
-                  accessibilityLabel={`${result.name}, ${result.playerCount} players, ${formatCents(result.totalPotCents)} pot${result.winnerName ? `, won by ${result.winnerName}` : ''}`}
+                  accessibilityLabel={`${result.name}, ${result.playerCount} players, ${formatCents(result.totalPotCents)} total${result.winnerName ? `, won by ${result.winnerName}` : ''}`}
                 >
                   <View style={styles.resultInfo}>
                     <Text style={styles.resultName} numberOfLines={1}>{result.name}</Text>
                     <Text style={styles.resultMeta}>
-                      {result.playerCount} players · {formatCents(result.totalPotCents)} pot · {timeAgo(result.endedAt)}
+                      {result.playerCount} players · {formatCents(result.totalPotCents)} total · {timeAgo(result.endedAt)}
                     </Text>
                   </View>
                   {result.winnerName ? (

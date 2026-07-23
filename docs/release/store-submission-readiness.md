@@ -90,7 +90,12 @@ Roughly in order. Nothing here is blocked by the feature waves.
 - **Feature graphic + app icon** are the most casino-coded assets we have (gold chip +
   fanned cards). The icon is brand equity — leave for v1 — but the Play feature graphic
   should get an education-led tagline and de-emphasised chip art.
-- **Remaining softenings not yet applied** (deferred so committed screenshots stay
-  accurate): "Money on the Table" stat label, "PRIZE POOL / TOTAL POT" hero captions,
-  the ShareCard footer line, and "Your Week at the Club". Apply them together with a
-  re-capture of shots 09 and 10.
+- ~~Remaining in-app softenings~~ — **DONE (slice 1.6).** "Money on the Table" →
+  "Total Buy-ins", "PRIZE POOL / TOTAL POT" → "TOTAL BUY-INS", the "$X pot" session
+  meta on guest-home / sessions / stats → "$X total", the ShareCard footer gained a
+  "settled in cash, in person" line, "Your Week at the Club" → "Your Poker Week", and
+  "play responsibly" left the Login / Welcome / Profile legal blocks. Pinned by
+  `classification.test.ts`. The softened shots (06 / 08 / 09 / 10) were re-captured across
+  all phone profiles **plus a new study-led iPad-13 set (2048×2732)** — the 9 harness-automated
+  shots per profile (07-final-count stays a manual, iPhone-only capture, unchanged). The landing
+  site's settle-up shot was refreshed from the new 08.

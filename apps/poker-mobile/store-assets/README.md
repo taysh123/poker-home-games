@@ -24,10 +24,12 @@ Full submission guidance: `docs/store-release.md` · `docs/release/store-submiss
 ## Regenerating screenshots
 
 The harness is [`store-shots.mjs`](store-shots.mjs) (Playwright; deliberately **not** a
-repo dependency — install it locally). It captures **7 of the 10 shots** fully
-automatically by seeding guest state (`hasSeenOnboarding`, a fixed persona, and one
-finished demo game) via `addInitScript`, so regeneration is deterministic and no longer
-depends on hand-built device state.
+repo dependency — install it locally). It captures **9 of the 10 shots** fully
+automatically by seeding guest state (`hasSeenOnboarding`, a fixed persona, two finished
+demo games, and — for the tournament shot only — one active tournament) via
+`addInitScript`. Seeding is **per-screen**: each screen gets its own context, so the
+active game's LiveGameBar never leaks into the study/ledger shots. Only 07-final-count
+stays manual (it needs a live mid-count cash game).
 
 ```bash
 # 1) build + serve the web bundle (from the repo)
@@ -43,10 +45,10 @@ node store-shots.mjs --base http://localhost:8799 \
   --out <repo>/apps/poker-mobile/store-assets/screenshots
 ```
 
-It renders each profile at a phone CSS viewport × deviceScaleFactor to hit the exact
-store pixel size (1080×1920 / 1290×2796 / 1242×2208). `--only <id>` captures a single
-screen (`placement | lessons | daily-quiz | spot-trainer | study-home | home |
-cash-summary`).
+It renders each profile at a CSS viewport × deviceScaleFactor to hit the exact store
+pixel size (1080×1920 / 1290×2796 / 1242×2208 / 2048×2732). `--only <id>` captures a
+single screen (`placement | lessons | daily-quiz | spot-trainer | study-home | home |
+cash-summary | stats | tournament-live`); `--profile <dir>` captures one profile.
 
 | File | Store slot |
 |------|-----------|
@@ -56,6 +58,7 @@ cash-summary`).
 | `screenshots/play-phone/*` | Play phone screenshots — 1080×1920 |
 | `screenshots/ios-6.7/*` | App Store 6.7" — 1290×2796 (required slot) |
 | `screenshots/ios-5.5/*` | App Store 5.5" — 1242×2208 |
+| `screenshots/ipad-13/*` | App Store iPad 13" — 2048×2732 (required when tablet support is declared) |
 
 ## Screenshot set — education-first order
 
@@ -72,14 +75,13 @@ tournament shot is intentionally the one dropped); **App Store uses all ten**.
 | 06 | `06-home` | Guest home — set up a game, recent games | yes | No account needed — start keeping score |
 | 07 | `07-final-count` | The Final Count balance check | manual | Count the chips, balance the night |
 | 08 | `08-cash-summary` | Results + settlement list | yes | Who owes whom — settled in cash, between friends |
-| 09 | `09-stats` | Table stats over time | manual | Your results over time |
-| 10 | `10-tournament-live` | Blind timer + pool total | manual | Blind timer for your home game — the app keeps time, not money |
+| 09 | `09-stats` | Session stats over time (total buy-ins) | yes | Your results over time |
+| 10 | `10-tournament-live` | Blind timer + total buy-ins | yes | Blind timer for your home game — the app keeps time, not money |
 
-Manual shots (07, 09, 10) are prior captures from seeded device state and are still
-accurate — no copy on them has changed. To automate them, extend the `SEED_GAME`
-fixture in `store-shots.mjs` with an active cash game (07), more finished games (09),
-and an active tournament (10).
+Only 07-final-count is still manual (a prior capture; its copy is unchanged). To
+automate it, extend `store-shots.mjs` with an active cash game paused at the Final Count
+step.
 
-The iPad captures in `ipad-screenshots/` are **pre-education-first** game-management
-shots. Either capture a study-led iPad set before submitting with tablet support, or
-ship iPhone-only (see the readiness checklist).
+The **`ipad-13/`** set (2048×2732) is a study-led capture from the same harness — it uses
+the same education-first order as the phone sets. It replaces the old pre-education-first
+iPad shots; submit it when declaring tablet support (`supportsTablet: true`).

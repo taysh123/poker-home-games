@@ -52,7 +52,7 @@ export const LANDING_HERO = {
 
 /**
  * Always visible directly under the hero CTAs — truthful positioning is part of
- * the brand (and of the Paddle/store review posture). Never bury or remove it.
+ * the brand (and of the store-review posture). Never bury or remove it.
  */
 export const LANDING_TRUST_LINE = 'Free for your home game · 18+ · Not a gambling product.';
 
@@ -65,9 +65,9 @@ export const LANDING_SECTIONS: LandingSection[] = [
     key: 'live',
     eyebrow: 'LIVE GAME',
     heading: 'Run the table in real time.',
-    body: 'Buy-ins, cash-outs, and the pot — tracked as they happen. No spreadsheets.',
+    body: 'Buy-ins, cash-outs, and the running total — tracked as they happen. No spreadsheets.',
     image: 'liveCash',
-    imageAlt: 'Live cash game screen: felt table with four seated players, their stacks, and a ₪250 pot',
+    imageAlt: 'Live cash game screen: four players with their buy-in totals and the session running total',
     accent: 'felt',
   },
   {
@@ -83,9 +83,9 @@ export const LANDING_SECTIONS: LandingSection[] = [
     key: 'tournament',
     eyebrow: 'TOURNAMENT MODE',
     heading: 'Host it like a tournament director.',
-    body: 'Blind clock, prize pool, payouts, podium — the full tournament on one phone.',
+    body: 'Blind clock, buy-in tracking, and a podium finish — run the whole tournament on one phone.',
     image: 'tournament',
-    imageAlt: 'Live tournament dashboard: prize pool, level 1 blinds 25/50, countdown clock, players left and average stack',
+    imageAlt: 'Live tournament dashboard: total buy-ins, level 1 blinds 25/50, countdown clock, players left and average stack',
     accent: 'gold',
   },
   {
@@ -94,7 +94,7 @@ export const LANDING_SECTIONS: LandingSection[] = [
     heading: 'Your poker story, in numbers.',
     body: 'Results, streaks and stats for every game — free on this device, lifetime with a free account.',
     image: 'stats',
-    imageAlt: 'Stats screen: games played, money on the table, biggest win, and recent results with winners',
+    imageAlt: 'Stats screen: games played, total buy-ins, biggest win, and recent results with winners',
     accent: 'teal',
   },
   {
@@ -113,7 +113,7 @@ export const LANDING_SECTIONS: LandingSection[] = [
     heading: "Drill it until it's automatic.",
     body: 'Real preflop spots on a real table — instant feedback, honest ranges.',
     image: 'spotTrainer',
-    imageAlt: 'Spot Trainer: a poker table scene asking button first-in open or fold, with hole cards and a correct-answer feedback card',
+    imageAlt: 'Spot Trainer: a preflop practice question — button, first in, open or fold — with a correct-answer feedback card',
     accent: 'felt',
   },
   {

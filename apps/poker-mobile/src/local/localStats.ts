@@ -1,7 +1,7 @@
 /**
  * Stats derived from finished local games. Per-player attribution is
- * impossible locally (no accounts), so local stats describe the TABLE:
- * games played, total money on the table, and the biggest single win.
+ * impossible locally (no accounts), so local stats describe the SESSION:
+ * games played, total buy-ins across them, and the biggest single win.
  * Used by the guest Stats tab.
  */
 

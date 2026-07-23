@@ -359,7 +359,7 @@ export default function HomeScreen() {
           <SkeletonCard height={120} style={styles.digestSkeleton} />
         ) : digest && digest.sessionsPlayed > 0 ? (
           <Card variant="hero" style={styles.digestCard}>
-            <Text style={styles.digestTitle}>Your Week at the Club</Text>
+            <Text style={styles.digestTitle}>Your Poker Week</Text>
             <View style={styles.digestRow}>
               <Ionicons name="layers-outline" size={15} color={colors.gold} style={styles.digestIcon} />
               <Text style={styles.digestLabel}>Games played</Text>
@@ -550,7 +550,7 @@ export default function HomeScreen() {
             </View>
             <View>
               <Text style={styles.tournamentTitle}>Host a Tournament</Text>
-              <Text style={styles.tournamentSub}>Blind clock, prize pool, podium · runs on this device</Text>
+              <Text style={styles.tournamentSub}>Blind clock, buy-in tracking, podium · runs on this device</Text>
             </View>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.gold} />

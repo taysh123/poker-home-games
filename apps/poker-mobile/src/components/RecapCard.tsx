@@ -73,7 +73,7 @@ export default function RecapCard({ recap, loading, onShare, sharing }: Props) {
           {recap.duration ? (
             <StatChip label="Duration" value={recap.duration} />
           ) : null}
-          <StatChip label="Total Pot" value={fmtMoney(recap.totalPot)} gold />
+          <StatChip label="Total Buy-ins" value={fmtMoney(recap.totalPot)} gold />
           <StatChip label="Players" value={String(recap.playerCount)} />
           {recap.handCount > 0 ? (
             <StatChip label="Hands" value={String(recap.handCount)} />

@@ -19,7 +19,7 @@ export type ShareCardRow = {
 export type ShareCardData = {
   title: string;
   heading: string; // 'GAME OVER' | 'TOURNAMENT COMPLETE'
-  potLabel: string; // 'TOTAL POT' | 'PRIZE POOL'
+  potLabel: string; // e.g. 'TOTAL BUY-INS'
   potCents: number;
   dateText: string;
   rows: ShareCardRow[]; // top 3
@@ -70,6 +70,9 @@ const ShareCard = forwardRef<View, { data: ShareCardData }>(({ data }, ref) => {
       ))}
 
       <Text style={styles.footer}>{data.dateText} · tracked with T Poker</Text>
+      {/* This card gets shared OUTSIDE the app, so it states plainly that no money moved through
+          T Poker — a bare "GAME OVER / ₪100 / wins" card could otherwise read as a gambling win. */}
+      <Text style={styles.footerNote}>Friendly home game · settled in cash, in person</Text>
     </View>
   );
 });
@@ -123,4 +126,5 @@ const styles = StyleSheet.create({
   rowName: { flex: 1, fontSize: 15, fontWeight: '700', color: colors.text },
   rowValue: { fontSize: 15, fontWeight: '800', fontVariant: ['tabular-nums'] },
   footer: { fontSize: 11, color: colors.textMuted, textAlign: 'center', marginTop: 6 },
+  footerNote: { fontSize: 10, color: colors.textMuted, textAlign: 'center', marginTop: 2 },
 });

@@ -172,13 +172,13 @@ export default function GuestHomeScreen() {
               onPress={() => navigation.navigate('LocalNewGame', { mode: 'tournament' })}
               haptic="medium"
               accessibilityRole="button"
-              accessibilityLabel="Start a tournament. Blind clock, prize pool, podium."
+              accessibilityLabel="Start a tournament. Blind clock, buy-in tracking, podium."
             >
               <View style={[styles.heroIconWrap, styles.heroIconWrapAlt]}>
                 <Ionicons name="trophy" size={iconSize.sm} color={colors.gold} />
               </View>
               <Text style={styles.heroTitle}>Tournament</Text>
-              <Text style={styles.heroSubtitle}>Blind clock, prize pool, podium</Text>
+              <Text style={styles.heroSubtitle}>Blind clock, buy-in tracking, podium</Text>
             </PressableScale>
           </View>
         </MotiView>
@@ -195,7 +195,7 @@ export default function GuestHomeScreen() {
                 <MotiView key={game.id} {...slideUpSequence({ reduced, delay: staggerIn(i, 40, 140), play: splashDone })}>
                   <SessionListItem
                     name={game.name}
-                    meta={`${result.playerCount} players · ${formatCents(result.totalPotCents)} pot · ${timeAgo(result.endedAt)}`}
+                    meta={`${result.playerCount} players · ${formatCents(result.totalPotCents)} total · ${timeAgo(result.endedAt)}`}
                     onPress={() => navigation.navigate('LocalSessionSummary', { gameId: game.id })}
                     isFirst={i === 0}
                   />
