@@ -75,6 +75,7 @@ import { successNotification, errorNotification, lightTap } from '../utils/hapti
 import { showToast } from '../utils/toast';
 import { confirmDialog } from '../utils/confirm';
 import { formatMoney, formatPL } from '../utils/formatters';
+import { computeFinalCount, decimalFinalCountModel } from '../local/finalCount';
 import { currencySymbol } from '../utils/currency';
 import ShareCard, { canShareImages, shareCardImage } from '../components/ShareCard';
 import { useActiveSession } from '../context/ActiveSessionContext';
@@ -1727,22 +1728,26 @@ export default function SessionScreen({ route, navigation }: Props) {
 
             {/* Live chip/money validation */}
             {(() => {
+              // Balance math delegated to the shared, tested core (behavior-preserving — same
+              // decimal/chips model, |diff| < 0.5 tolerance, empty-allowance). See local/finalCount.ts.
+              // The presentation (fmt / unitLabel) stays screen-local for now; the shared
+              // FinalCountSheet component that unifies the markup is a queued follow-up.
               const totalCashedOut = balances.reduce((s, b) => s + b.totalCashOut, 0);
               const expectedRemaining = totalPot - totalCashedOut;
               const expectedInUnits = session.chipRatio && useChips
                 ? expectedRemaining * session.chipRatio
                 : expectedRemaining;
-              const totalEntered = Object.entries(finalStacks)
-                .filter(([, v]) => v.trim() !== '' && !isNaN(parseFloat(v)) && parseFloat(v) >= 0)
-                .reduce((sum, [, v]) => sum + parseFloat(v), 0);
-              const hasAnyEntered = Object.values(finalStacks).some(v => v.trim() !== '');
-              const diff = totalEntered - expectedInUnits;
-              const isBalanced = !hasAnyEntered || Math.abs(diff) < 0.5;
-              const unitLabel = session.chipRatio && useChips ? 'chips' : sym;
-              const fmt = (n: number) => session.chipRatio && useChips
-                ? Math.round(n).toLocaleString()
-                : formatMoney(n);
-              const blocked = hasAnyEntered && !isBalanced && !overrideBalance;
+              const useChipsUnit = !!(session.chipRatio && useChips);
+              const count = computeFinalCount(
+                finalStacks,
+                decimalFinalCountModel({ expectedRemainingUnits: expectedInUnits, useChips: useChipsUnit }),
+              );
+              const { totalEntered, hasAnyEntered, diff, isBalanced } = count;
+              const unitLabel = useChipsUnit ? 'chips' : sym;
+              const fmt = (n: number) => useChipsUnit ? Math.round(n).toLocaleString() : formatMoney(n);
+              // ≡ old `hasAnyEntered && !isBalanced && !overrideBalance` — `!isBalanced` already
+              // implies `hasAnyEntered` (isBalanced = !hasAnyEntered || within), so the guard is redundant.
+              const blocked = !isBalanced && !overrideBalance;
 
               return (
                 <>
