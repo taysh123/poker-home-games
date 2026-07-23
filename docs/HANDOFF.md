@@ -123,7 +123,7 @@ EAS builds native; PostgreSQL is the system of record. Guest data never leaves t
 ## 6. Deployment
 
 **Production URLs**
-- Web: `https://poker-home-games-three.vercel.app` · Privacy: `…/privacy.html` (+ `#delete`)
+- Web: `https://poker-home-games-three.vercel.app` · Privacy: `https://app.tpoker.app/privacy.html` (+ `#delete`)
 - API: `https://poker-home-games-production.up.railway.app` (health: `/health`)
 
 **Railway (API).** Root `Dockerfile` (explicit restore+publish of `PokerApp.API.csproj` —

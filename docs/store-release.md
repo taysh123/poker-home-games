@@ -40,7 +40,7 @@ pipeline with store packaging.
 | Bundle IDs `com.tpoker.app`, scheme, deep links | Create the store accounts |
 | Icons/splash/notification color config | Play service-account key; Apple Team/ASC IDs |
 | v1.1.1 + auto-incrementing build numbers | Push credentials (FCM v1, APNs) via `eas credentials` |
-| Privacy policy at poker-home-games-three.vercel.app/privacy.html | Google OAuth iOS/Android clients (see google-oauth-fix.md) |
+| Privacy policy at app.tpoker.app/privacy.html | Google OAuth iOS/Android clients (see google-oauth-fix.md) |
 | In-app account deletion (Profile) | Store listings: text, screenshots upload, data-safety forms |
 | Guest mode (reviewers need no account) | Final manual device test + submit clicks |
 | Store screenshots + feature graphic (store-assets/) | Optional: designer pass on those assets |
@@ -191,7 +191,7 @@ Login footer, the Profile → About & Support card, and the privacy policy.
   > • Study ▸ Spot Trainer: pick Fold/Call/Raise and read the coaching feedback.
   > • Home ▸ set up a cash game: add 2–3 players, enter buy-ins, tap End Game, enter final chip counts, and see the settlement list ("A pays B $20"). Nothing leaves the device.
   >
-  > Privacy policy: https://poker-home-games-three.vercel.app/privacy.html
+  > Privacy policy: https://app.tpoker.app/privacy.html
   > Support: truestorylabs@gmail.com
 
 - **Age rating — COMPLETED on Apple (2026-07-23); this is the direct fix for the 2.3.6 rating
@@ -224,7 +224,7 @@ Login footer, the Profile → About & Support card, and the privacy policy.
     networks, no cross-app linking, IDFA never read ⇒ answer Apple's *Tracking* question **No**
     (no ATT prompt). Not collected: location, contacts, advertising IDs.
   - Data deletion: in-app (Profile → Delete Account) + privacy policy URL
-    `https://poker-home-games-three.vercel.app/privacy.html`.
+    `https://app.tpoker.app/privacy.html`.
 
 ## Step 7 — Submit
 
@@ -239,12 +239,14 @@ TestFlight (test it!) → add the build to the version page → Submit for Revie
 ## Step 8 — Final pre-submission checklist
 
 - [ ] **Privacy URL is the RIGHT domain and serves the policy**: open
-      `https://poker-home-games-three.vercel.app/privacy.html` in an incognito tab
-      — you must see the styled T Poker policy. NOTE: `t-poker.vercel.app` is a
-      DIFFERENT, third-party site (a Japanese GTO poker app) that we do not own —
-      never use it anywhere. Our deployment is `poker-home-games-three.vercel.app`
-      (it auto-deploys `main`). Data-safety deletion URL:
-      `https://poker-home-games-three.vercel.app/privacy.html#delete`.
+      `https://app.tpoker.app/privacy.html` in an incognito tab
+      — you must see the styled T Poker policy. This is the **canonical URL entered in App
+      Store Connect**. Our web app auto-deploys `main` and is also reachable at
+      `poker-home-games-three.vercel.app`, which **307-redirects** to `app.tpoker.app` — always
+      declare the `app.tpoker.app` URL on the stores. NOTE: `t-poker.vercel.app` is a DIFFERENT,
+      third-party site (a Japanese GTO poker app) that we do not own — never use it anywhere.
+      Data-safety deletion URL:
+      `https://app.tpoker.app/privacy.html#delete`.
 - [ ] **APK networking**: install the newest preview APK and SIGN IN on a phone —
       builds before `aaf473f` shipped a dead LAN API fallback (fixed via eas.json
       env); any build from `99e9d17e` onward has the production URL baked in.

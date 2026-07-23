@@ -112,7 +112,7 @@ Plain-text passwords are never stored or logged. `PRIVACY.md`, `public/privacy.h
 - *Is all of the user data collected by your app encrypted in transit?* → **Yes**
 - *Do you provide a way for users to request that their data be deleted?* → **Yes**
   - In-app: **Profile → Delete Account** (immediate)
-  - Deletion-request URL: `https://poker-home-games-three.vercel.app/privacy.html#delete`
+  - Deletion-request URL: `https://app.tpoker.app/privacy.html#delete`
 
 **Data types — tick exactly these four, leave all others unticked**
 - Personal info → ✅ Name, ✅ Email address, ✅ User IDs
