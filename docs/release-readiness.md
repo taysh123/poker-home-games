@@ -1,6 +1,6 @@
 # T Poker — Store Release Readiness (Google Play + Apple App Store)
 
-_Last updated: June 16, 2026 · Publisher (seller of record): **Tay Shofer** · App version: 1.1.0_
+_Last updated: June 16, 2026 · Publisher (seller of record): **Tay Shofer** · App version: 1.1.1 (resubmission)_
 
 > **Premium redesign merged + live (June 16, 2026).** PR #1 (typography v2 with Sora,
 > app-wide BrandHeader logo home anchor, per-screen cinematic depth, 5 wow moments)

@@ -1,7 +1,7 @@
 # T Poker — App Store Release Guide (Android + iOS)
 
 A complete, ordered, follow-along guide from today's state to published apps.
-Everything code-side is DONE (v1.1.0, expo-doctor 18/18, working preview APKs,
+Everything code-side is DONE (v1.1.1, expo-doctor 18/18, working preview APKs,
 notifications plugin, privacy policy live, in-app account deletion). What remains
 is accounts, credentials, listings — things only you can do.
 
@@ -11,13 +11,35 @@ pipeline with store packaging.
 
 ---
 
+> **⚠️ RESUBMISSION TRACK (2026-07-23).** T Poker was submitted once and **rejected** on two
+> guidelines — **4.8.0 (Login Services)** and **2.3.6 (Accurate Metadata)** — so the app record
+> already exists in App Store Connect (`ascAppId 6781109023`). Both causes are fixed in code:
+> **Sign in with Apple** is implemented (`components/AppleAuthButton.tsx` + `hooks/useAppleAuth.ts`,
+> offered on the sign-in screen alongside Google; verified on a physical iPhone alongside Google + Guest),
+> and the listing/screenshots are **education-first** (1.6 in-app classification softening + G.1
+> landing). To resubmit:
+> 1. **Build number** auto-increments via EAS remote versioning (`eas.json` →
+>    `appVersionSource: "remote"` + `autoIncrement: true`) — do NOT hand-edit it. app.json's
+>    `versionCode` is IGNORED under remote versioning. Before building, confirm the counter is
+>    ahead of the rejected build: `eas build:version:get --platform ios` (if it isn't, bump with
+>    `eas build:version:set`).
+> 2. **Marketing version** is bumped to **1.1.1** (app.json) as a clean resubmission record. (You
+>    *could* reuse the rejected 1.1.0 record instead; a fresh version is the lower-risk path for a
+>    metadata rejection.)
+> 3. In App Store Connect: upload the new build, **REPLACE the old pre-education screenshots** with
+>    the current education-first set (Step 5), **re-answer the age-rating questionnaire** (Step 6),
+>    and paste the updated **reviewer notes** (Step 6) — they now address BOTH rejected guidelines
+>    explicitly.
+
+---
+
 ## Step 0 — What's in-code vs outside VS Code
 
 | Done in-code (✅ shipped) | You must do outside VS Code |
 |---|---|
 | Bundle IDs `com.tpoker.app`, scheme, deep links | Create the store accounts |
 | Icons/splash/notification color config | Play service-account key; Apple Team/ASC IDs |
-| v1.1.0 + auto-incrementing build numbers | Push credentials (FCM v1, APNs) via `eas credentials` |
+| v1.1.1 + auto-incrementing build numbers | Push credentials (FCM v1, APNs) via `eas credentials` |
 | Privacy policy at poker-home-games-three.vercel.app/privacy.html | Google OAuth iOS/Android clients (see google-oauth-fix.md) |
 | In-app account deletion (Profile) | Store listings: text, screenshots upload, data-safety forms |
 | Guest mode (reviewers need no account) | Final manual device test + submit clicks |
@@ -55,7 +77,7 @@ pipeline with store packaging.
 - **Push delivery credentials** (needed for push notifications in store builds):
   - Android: Firebase console → add project → link app `com.tpoker.app` → Project settings → Cloud Messaging → ensure FCM v1 → Service accounts → generate key → upload via `eas credentials` → Android → Google Service Account Key (FCM).
   - iOS: `eas credentials` → iOS → Push Notifications → let EAS create the APNs key.
-- **Google sign-in — REQUIRED for native builds (web already works):** Google sign-in is **verified working on web**; the **native app needs its own OAuth setup**. Follow [google-oauth-fix.md](google-oauth-fix.md) **§4** (a ready-to-apply 5-part step): (1) create **iOS + Android OAuth clients** for `com.tpoker.app` (Android needs the **release SHA-1** from `eas credentials` → Android → Keystore); (2) set `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` / `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` in the EAS env; (3) append both IDs to the backend `GoogleSettings:ClientIds`; (4) **add the reversed-client-ID `CFBundleURLTypes` scheme to `app.json` → `ios.infoPlist`** — currently MISSING; iOS Google sign-in won't resolve the redirect without it (don't commit it until this build); (5) build with EAS (not Expo Go). ⚠️ Expo Go can never do Google sign-in (SDK-54 limitation) — not a blocker.
+- **Google sign-in — native OAuth wired + verified on a physical iPhone (2026-07-23):** all five parts of [google-oauth-fix.md](google-oauth-fix.md) **§4** are DONE — (1) iOS + Android OAuth clients created for `com.tpoker.app` (Android release SHA-1 registered); (2) `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` / `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` set in the EAS env (`eas.json`); (3) both IDs on the backend `GoogleSettings:ClientIds` (end-to-end sign-in succeeds on device, which proves the backend accepts them); (4) the reversed-client-ID `CFBundleURLTypes` scheme is committed to `app.json` → `ios.infoPlist`; (5) built with EAS and tested on-device. ⚠️ Expo Go can never do Google sign-in (SDK-54 limitation) — not a blocker; the store build is unaffected.
 
 ## Step 4 — Production builds
 
@@ -141,6 +163,10 @@ Login footer, the Profile → About & Support card, and the privacy policy.
 
   > Thank you for reviewing T Poker.
   >
+  > **RESUBMISSION — what changed since the previous review.** This build resolves both items from the prior rejection:
+  > • **Guideline 4.8.0 (Login Services):** Sign in with Apple is now implemented. It is offered on the sign-in screen in the "or continue with" section, alongside Continue with Google, and the app is additionally usable with NO login at all via "Continue as guest" on the same screen. Users who choose to sign in may use Apple, Google, or email. Sign in with Apple requests only name and email, supports Hide My Email, and is not used for advertising — it meets the 4.8.0 requirements. Verified on a physical iPhone: Guest, Google, and Apple sign-in all work.
+  > • **Guideline 2.3.6 (Accurate Metadata):** the app name, subtitle, screenshots, and description now lead with the app's primary purpose — poker STRATEGY EDUCATION (written lessons, a daily strategy quiz, a five-question placement test, and decision drills) — with the private home-game SCOREKEEPING ledger as the secondary utility. The age-rating answers below are accurate: there is no gambling and no simulated gambling of any kind in the app. Full detail follows.
+  >
   > **WHAT THE APP IS**
   > T Poker is an educational poker-strategy app for adults (18+), plus a scorekeeping utility for private home games.
   > 1) STUDY (the primary experience): written lessons, a daily strategy quiz, a five-question placement test, and decision drills ("Spot Trainer") that present a pre-authored scenario, ask the user to choose the strategically correct action, and then explain why. Progress is scored as correct/incorrect answers, like a flashcard or language-learning app.
@@ -210,10 +236,12 @@ TestFlight (test it!) → add the build to the version page → Submit for Revie
 - [ ] Manual pass on a real device from the latest preview build: guest cash game
       end-to-end · tournament end-to-end · sign-in (email + Google after the
       OAuth external steps) · push permission prompt
-- [ ] **Google sign-in — web** ✅ verified working. **Native (this build):** iOS + Android OAuth clients
-      created for `com.tpoker.app`; `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` + `_ANDROID_CLIENT_ID` set; both IDs
-      added to the backend list; **`app.json` iOS `CFBundleURLTypes` reversed-client-ID scheme applied**
-      (google-oauth-fix.md §4); then Google sign-in tested on the installed **native** build (NOT Expo Go)
+- [x] **Sign-in verified on a physical iPhone (2026-07-23):** Guest, Google, AND Apple sign-in all work
+      from the preview build. Native Google OAuth is fully wired (iOS + Android clients for `com.tpoker.app`,
+      env client IDs in `eas.json`, backend `GoogleSettings:ClientIds`, and the reversed-client-ID
+      `CFBundleURLTypes` scheme in `app.json`); Sign in with Apple is implemented (`usesAppleSignIn` +
+      `expo-apple-authentication`, `AppleAuthButton`/`useAppleAuth`). Web Google sign-in also verified.
+      (Expo Go can't do Google — store build unaffected.)
 - [ ] Push credentials uploaded (Step 3) if you want push live at launch
       (optional — app degrades gracefully to in-app inbox)
 - [ ] Production backend healthy (Railway `/health`), Vercel privacy.html live
