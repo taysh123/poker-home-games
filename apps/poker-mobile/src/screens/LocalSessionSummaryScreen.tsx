@@ -22,8 +22,7 @@ import EmptyState from '../components/EmptyState';
 import Screen from '../components/Screen';
 import Chip from '../components/Chip';
 import { useLocalGames } from '../context/LocalGamesContext';
-import { settleGame } from '../local/settlements';
-import { contributionCents, tournamentResult } from '../local/tournament';
+import { buildGameResults } from '../local/gameResults';
 import ShareCard, { canShareImages, shareCardImage, ShareCardData } from '../components/ShareCard';
 import CrossPillarCTA from '../components/CrossPillarCTA';
 import ContentContainer from '../components/ContentContainer';
@@ -62,37 +61,12 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
   const isTournament = game?.mode === 'tournament';
   const shareRef = React.useRef<View>(null);
 
-  const { results, transfers, totalPotCents, podium } = useMemo(() => {
-    if (!game) return { results: [], transfers: [], totalPotCents: 0, podium: null };
-
-    if (game.mode === 'tournament' && game.tournament) {
-      const result = tournamentResult(game);
-      const podium = result.standings.map(s => ({
-        player: game.players.find(p => p.id === s.playerId)!,
-        position: s.position,
-        payoutCents: s.payoutCents,
-        netCents: s.payoutCents - contributionCents(game, s.playerId),
-      }));
-      return {
-        results: [],
-        transfers: result.transfers,
-        totalPotCents: result.poolCents,
-        podium,
-      };
-    }
-
-    const { balances, transfers } = settleGame(game);
-    const results = game.players
-      .map(player => ({
-        player,
-        netCents: balances.find(b => b.playerId === player.id)?.netCents ?? 0,
-      }))
-      .sort((a, b) => b.netCents - a.netCents);
-    const totalPotCents = game.txns
-      .filter(t => t.kind === 'buyin')
-      .reduce((s, t) => s + t.amountCents, 0);
-    return { results, transfers, totalPotCents, podium: null };
-  }, [game]);
+  // Results/settlements are computed by the shared, tested normalizer (local/gameResults.ts) — the
+  // same data the branded Results Card 2.0 will read. Rendering below is unchanged.
+  const { results, transfers, totalPotCents, podium } = useMemo(
+    () => (game ? buildGameResults(game) : { results: [], transfers: [], totalPotCents: 0, podium: null }),
+    [game],
+  );
 
   if (!game) {
     return (

@@ -180,16 +180,32 @@ Operational docs: `docs/release/store-submission-readiness.md` (checklist + what
   trigger-ID union; migrate LockNudge / locked lessons / profile teaser; new honest surfaces:
   3rd-free-lesson nudge, Track advanced-analytics teaser, `coachTeaser` card (decision 7);
   "trigger visible but nothing purchasable" honesty-test shape.
-- **2.1b (queued — separate decision + slice, do NOT fold into 2.1): Final Count tolerance
-  convergence.** 2.1 is deliberately behavior-preserving, so it PRESERVES the server session's
-  `Math.abs(diff) < 0.5` balance tolerance verbatim. That 0.5 is in the TOGGLED unit — i.e. 0.5
-  **chips** in chips-mode, which is far looser than 0.5 in money terms — while local games demand an
-  exact integer-cent match. Revisit deliberately later: decide the right money-terms tolerance,
-  converge both `FinalCountModel`s (`local/finalCount.ts`), and pin the new behavior with its own
-  tests. Also fold in a pre-existing quirk surfaced by PR A's review: a literal `'0'` stack entry
-  passes the balance gate (`parseAmountToCents('0')` is null, so it's ignored) but `confirmEndGame`
-  then refuses it with "Invalid stack" — the gate and the settle validator disagree on `'0'`.
-  Converge them (canonical UX: busted = *empty*, not `'0'`). Owner decision 2026-07-23.
+### Deferred post-launch — the "Final Count / results convergence" cluster (owner, 2026-07-23; none store-blocking)
+
+Wave 2.1 shipped the money-critical wins (PR A #44 + PR B #45): both end-game gates now compute on
+one tested core (`local/finalCount.ts`), behavior-preserving. The remaining convergence is internal
+tidiness with no user-facing value, deliberately deferred so it can't invalidate the just-captured
+store screenshots or the tested-on-device submission build. Each gets its own design moment later.
+
+- **B2 — shared `FinalCountSheet` component.** PR B unified the end-game GATE math but left each
+  screen's Final Count MARKUP as-is. One shared sheet means converging the server's bottom-sheet
+  look (chips/money toggle + "Cashed …" rows) with the local centered card — visual churn on a money
+  screen. Copy deltas already found: unify the totals-match line to "everything is accounted for"
+  (local says "every shekel"); the server money-mode indicator's redundant trailing currency symbol
+  was already dropped in `decimalFinalCountModel`.
+- **2.1b — Final Count tolerance + `'0'`-stack quirk.** 2.1 PRESERVES the server's `Math.abs(diff)
+  < 0.5` tolerance verbatim; that 0.5 is in the TOGGLED unit (0.5 **chips** in chips-mode — far
+  looser than 0.5 in money terms) while local demands exact integer cents. Decide the right
+  money-terms tolerance, converge both `FinalCountModel`s, pin it with tests. Also fold in a
+  pre-existing quirk (PR A review): a literal `'0'` stack passes the balance gate
+  (`parseAmountToCents('0')` is null → ignored) but `confirmEndGame` refuses it with "Invalid stack"
+  — the gate and the settle validator disagree on `'0'`. Converge them (canonical UX: busted =
+  *empty*, not `'0'`).
+- **Results-screen convergence.** The server Game-Over (inline "Mark Paid" buttons + winner/loser
+  highlights + stats row) and the local summary (buy-ins hero + "never moves money" line) are
+  STRUCTURALLY different. Unifying them is folded into **2.2 Results Card 2.0**'s design pass
+  (ui-ux-pro-max leads), NOT a pre-2.2 faithful extraction. PR C (churn-free) extracts only the
+  shared results DATA (`local/gameResults.ts`), leaving both screens visually untouched.
 
 ## 6. Wave 3 — C: Retention engine (~2–3 weeks)
 
