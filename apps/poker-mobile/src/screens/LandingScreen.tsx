@@ -569,7 +569,7 @@ function FloatingDevice({ reduced, source }: { reduced: boolean; source: number 
         source={source}
         style={styles.screenshot}
         resizeMode="cover"
-        accessibilityLabel="Live cash game screen floating in a phone frame: felt table, players, and the pot"
+        accessibilityLabel="Live cash game screen floating in a phone frame: players and the running total"
       />
     </View>
   );

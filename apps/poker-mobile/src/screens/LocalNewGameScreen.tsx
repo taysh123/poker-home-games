@@ -185,7 +185,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
         return;
       }
       if (isTournament && !payoutValid) {
-        infoDialog('Payouts must total 100%', `Your payout split currently adds up to ${payoutSum}%. Adjust the places so they total 100%.`);
+        infoDialog('Prize splits must total 100%', `Your splits currently add up to ${payoutSum}%. Adjust the places so they total 100%.`);
         return;
       }
       if (!isTournament && defaultBuyIn.trim() && parseAmountToCents(defaultBuyIn) === null) {
@@ -290,7 +290,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                   value: 'tournament' as const,
                   icon: 'trophy-outline' as const,
                   title: 'Tournament',
-                  blurb: 'Entry fee, blind clock, podium payouts.',
+                  blurb: 'Entry fee, blind clock, podium finishes.',
                 },
               ]).map(option => {
                 const selected = mode === option.value;
@@ -337,10 +337,10 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                   hint="what each player puts in at the table — recorded here, never collected in the app"
                 />
 
-                {/* ── Payouts ── */}
+                {/* ── Prize splits ── */}
                 <View style={styles.setupCard}>
                   <View style={styles.setupCardHead}>
-                    <Text style={styles.fieldLabel}>Payouts</Text>
+                    <Text style={styles.fieldLabel}>Prize splits</Text>
                     <View style={styles.stepper}>
                       <PressableScale style={styles.stepperBtn} onPress={() => setWinnerCount(winners - 1)} disabled={winners <= 1} hitSlop={8} accessibilityRole="button" accessibilityLabel="Fewer paid places" accessibilityState={{ disabled: winners <= 1 }}>
                         <Ionicons name="remove" size={iconSize.xs} color={winners <= 1 ? colors.textDim : colors.gold} />
@@ -378,7 +378,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                   <View style={[styles.sumPill, payoutValid ? styles.sumPillOk : styles.sumPillWarn]} accessibilityLiveRegion="polite">
                     <Ionicons name={payoutValid ? 'checkmark-circle' : 'alert-circle'} size={iconSize.xs} color={payoutValid ? colors.success : colors.warning} />
                     <Text style={[styles.sumText, { color: payoutValid ? colors.success : colors.warning }]}>
-                      {payoutValid ? 'Payouts total 100%' : `Payouts total ${payoutSum}% — must be 100%`}
+                      {payoutValid ? 'Splits total 100%' : `Splits total ${payoutSum}% — must be 100%`}
                     </Text>
                   </View>
                 </View>
@@ -621,7 +621,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
                       {parseAmountToCents(entryFee) !== null && (
                         <Chip tone="gold" label={`${formatCents(parseAmountToCents(entryFee)!)} entry`} />
                       )}
-                      <Chip tone="gold" label={`${winners}-place payout`} />
+                      <Chip tone="gold" label={`${winners} paid places`} />
                       <Chip tone="gold" label={customBlinds ? `${blindLevels.length} custom levels` : `${blindPreset} blinds`} />
                       {rebuysAllowed && <Chip tone="gold" label="rebuys" />}
                       {addOnsAllowed && <Chip tone="gold" label="add-ons" />}
