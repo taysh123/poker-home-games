@@ -14,7 +14,10 @@ export const SITE = {
   /** This marketing site's own canonical origin (separate Vercel project; set NEXT_PUBLIC_SITE_URL in prod). */
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'https://tpoker.app',
   contact: 'truestorylabs@gmail.com',
-  company: 'True Story Labs',
+  // Legal rights-holder for the footer copyright. The app ships under the owner's individual
+  // Apple Developer account, so the seller/copyright entity is the legal name, Tay Shofer —
+  // NOT the "True Story Labs" brand (which stays as a studio byline inside the app).
+  company: 'Tay Shofer',
   privacyUrl: 'https://app.tpoker.app/privacy.html',
   termsUrl: 'https://app.tpoker.app/terms.html',
 } as const;

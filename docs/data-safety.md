@@ -1,6 +1,6 @@
 # T Poker — Google Play Data Safety (submission record)
 
-_Last verified: June 17, 2026 against the live codebase. Publisher: **True Story Labs**._
+_Last verified: June 17, 2026 against the live codebase. Publisher (seller of record): **Tay Shofer**._
 
 This is the authoritative, code-grounded source for the Google Play **Data Safety**
 form. It is derived from the actual implementation, not boilerplate. Re-verify before

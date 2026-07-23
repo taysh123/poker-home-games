@@ -38,44 +38,52 @@ misread.
 | Landing site reworked education-first — felt/chip hero gone, study screenshots, no prices, positioning section, regenerated og card | `apps/landing`, PR "landing education-first pass" |
 | Landing posture pinned by tests (no chip, no felt, no price, gambling FAQ first + open) | `apps/landing/__tests__/positioning.test.ts` |
 
+## ✅ Decisions locked (2026-07-23)
+
+- **`eas login` — DONE** on the owner's machine. Builds are unblocked.
+- **Publisher identity = LEGAL NAME "Tay Shofer"** (individual account; not a trade
+  name). The seller / developer name on both stores is Tay Shofer; the policy pages,
+  the marketing-site copyright, and the in-app © now all name Tay Shofer (trading as
+  True Story Labs). "True Story Labs" survives ONLY as the in-app studio byline
+  (splash / Welcome / Login) and as the brand on the contact address — never as the
+  store seller or the legal entity. Reconciled across every surface in the
+  "publisher identity" PR; guarded by `legalSurfaces.test.ts`.
+- **iPad = SUPPORTED in v1.** `app.json` keeps `"supportsTablet": true`. A study-led
+  iPad screenshot set is regenerated in education-first order in slice 1.6 (the old
+  committed iPad shots were pre-education-first game captures — replaced, not submitted).
+  **Submission dependency:** App Store Connect *requires* a 13" iPad screenshot set once a
+  build declares tablet support, so the 1.6 iPad captures must be uploaded — they are not
+  optional polish.
+
 ## 🔲 Yours to do (the submission track)
 
 Roughly in order. Nothing here is blocked by the feature waves.
 
-1. **`eas login`** on this machine (`npx eas-cli login` from `apps/poker-mobile`) —
-   credentials didn't travel with the machine; required before any build.
-2. **Publisher identity.** An individual account displays your **legal name** as the
-   seller unless Apple approves a trade name with documentation. Decide whether to
-   pursue "True Story Labs" as a DBA/trade name or ship under your legal name.
-   `docs/store-release.md` currently assumes the trade name — reconcile before creating
-   the listing.
-3. **Native Google OAuth** — create the iOS + Android OAuth clients for
+1. **Native Google OAuth** — create the iOS + Android OAuth clients for
    `com.tpoker.app` (Android needs the release SHA-1 from `eas credentials`), set
    `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` / `..._ANDROID_CLIENT_ID` in EAS, append both IDs
    to the backend `GoogleSettings:ClientIds`, and add the iOS reversed-client-ID URL
    scheme to `app.json` (`docs/google-oauth-fix.md` §4 — snippet ready, not applied).
-4. **Apple Sign-In device test** — the code ships, but Expo Go can't prove it. Build
+   **A click-by-click walkthrough was provided 2026-07-23 — follow that.**
+2. **Apple Sign-In device test** — the code ships, but Expo Go can't prove it. Build
    `--profile preview`, install on a real iPhone, and verify the button appears and
    completes sign-in. (Guideline 4.8 requires it wherever Google sign-in is offered.)
-5. **Decide iPad support.** Either capture a study-led iPad screenshot set or set
-   `"supportsTablet": false` in `app.json` and ship iPhone-only for v1. The committed
-   iPad shots are pre-education-first game-management captures — do not submit them.
-6. **Listing copy** — paste the education-led title / subtitle / short + long
+3. **Listing copy** — paste the education-led title / subtitle / short + long
    description / keywords from `docs/store-release.md` (§ Suggested copy). Do not
    improvise on submission day.
-7. **Categories** — iOS primary **Education**, secondary **Reference**. Play: type
+4. **Categories** — iOS primary **Education**, secondary **Reference**. Play: type
    **App (not Game)**, category **Education**. Never Games ▸ Card or Games ▸ Casino.
-8. **Age rating** — answer **No** to gambling, simulated gambling, and contests on both
+5. **Age rating** — answer **No** to gambling, simulated gambling, and contests on both
    questionnaires; select the **18+** target-audience band on Play; expect a low
    computed content rating (that's correct — 18+ is our stated audience, not a content
    rating).
-9. **Reviewer notes** — paste the verbatim note from `docs/store-release.md`, including
+6. **Reviewer notes** — paste the verbatim note from `docs/store-release.md`, including
    the guest-mode walkthrough so the reviewer never needs an account.
-10. **Data-safety forms** — file per `docs/release/store-data-safety.md`. If the
-    submitted build has no `EXPO_PUBLIC_POSTHOG_KEY`, declare "no data collected" and
-    re-file with the first analytics build.
-11. **Build + submit** — `eas build --profile production`, then TestFlight → App Store
-    review; Play's first `.aab` must be uploaded manually in the console.
+7. **Data-safety forms** — file per `docs/release/store-data-safety.md`. If the
+   submitted build has no `EXPO_PUBLIC_POSTHOG_KEY`, declare "no data collected" and
+   re-file with the first analytics build.
+8. **Build + submit** — `eas build --profile production`, then TestFlight → App Store
+   review; Play's first `.aab` must be uploaded manually in the console.
 
 ## ⚠️ Known gaps worth a decision before submitting
 

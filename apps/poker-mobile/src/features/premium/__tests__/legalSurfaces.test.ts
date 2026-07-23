@@ -154,6 +154,43 @@ describe('refund.html — free-first honest refund/cancellation policy', () => {
   });
 });
 
+describe('publisher identity — legal name Tay Shofer, not the trade name (locked 2026-07-23)', () => {
+  // We submit under the owner's INDIVIDUAL developer account, so the seller / operator / copyright
+  // entity on every legal surface is the legal name "Tay Shofer". "True Story Labs" may appear only
+  // as the studio brand ("trading as True Story Labs", or in a contact label) — never as the party
+  // you contract with or the copyright holder. See docs/release/store-submission-readiness.md.
+  const legalPages: Record<string, string> = { terms, privacy, refund, pricing };
+
+  it('every legal page copyright names Tay Shofer, never the trade name', () => {
+    for (const html of Object.values(legalPages)) {
+      expect(html).toMatch(/©\s*2026\s*Tay Shofer\s*·\s*T Poker/);
+      expect(html).not.toMatch(/©\s*2026\s*True Story Labs/);
+    }
+  });
+
+  it('terms / privacy / refund name Tay Shofer as the operator (first party, not the trade name)', () => {
+    for (const html of [terms, privacy, refund]) {
+      // Anchored so Tay Shofer must be the FIRST named party after "operated by" (only markup /
+      // whitespace may sit between). A revert to "operated by True Story Labs…" fails this, while
+      // the legitimate trailing "…, trading as True Story Labs" still passes.
+      expect(html).toMatch(/operated by\s*(?:<strong>)?\s*Tay Shofer/);
+    }
+  });
+
+  it('the binding clauses in the Terms bind you to Tay Shofer, not the trade name', () => {
+    expect(terms).toMatch(/between you and Tay Shofer/);
+    expect(terms).not.toMatch(/between you and True Story Labs/);
+    expect(terms).not.toMatch(/True Story Labs will not be liable/);
+    expect(terms).not.toMatch(/True Story Labs' principal place of business/);
+  });
+
+  it('the in-app © names Tay Shofer, not the trade name', () => {
+    const profile = read('../src/screens/ProfileScreen.tsx');
+    expect(profile).toMatch(/©\s*Tay Shofer/);
+    expect(profile).not.toMatch(/©\s*True Story Labs/);
+  });
+});
+
 describe('Terms link presence in-app', () => {
   it('is linked from the Paywall screen', () => {
     expect(read('../src/features/premium/ui/PaywallScreen.tsx')).toMatch(/terms\.html/);
