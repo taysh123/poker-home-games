@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
@@ -11,12 +11,13 @@ import PressableScale from './motion/PressableScale';
 type Props = {
   onPress: () => void;
   disabled?: boolean;
+  style?: StyleProp<ViewStyle>;
 };
 
-export default function GoogleAuthButton({ onPress, disabled }: Props) {
+export default function GoogleAuthButton({ onPress, disabled, style }: Props) {
   return (
     <PressableScale
-      style={[styles.button, disabled && styles.disabled]}
+      style={[styles.button, disabled && styles.disabled, style]}
       onPress={onPress}
       haptic="light"
       disabled={disabled}

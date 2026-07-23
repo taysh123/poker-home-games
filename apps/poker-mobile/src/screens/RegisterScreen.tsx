@@ -164,14 +164,15 @@ export default function RegisterScreen({ navigation }: Props) {
                 <Text style={styles.dividerText}>or continue with</Text>
                 <View style={styles.dividerLine} />
               </View>
-              {googleReady !== false && (
-                <GoogleAuthButton onPress={promptGoogle} disabled={!googleReady || loading} />
-              )}
+              {/* Sign in with Apple ABOVE Google — 4.8.0 prominence on iOS. */}
               {appleAvailable && (
-                <AppleAuthButton
-                  onPress={promptApple}
-                  disabled={loading}
-                  style={googleReady !== false ? styles.appleButton : undefined}
+                <AppleAuthButton onPress={promptApple} disabled={loading} />
+              )}
+              {googleReady !== false && (
+                <GoogleAuthButton
+                  onPress={promptGoogle}
+                  disabled={!googleReady || loading}
+                  style={appleAvailable ? styles.googleButton : undefined}
                 />
               )}
             </>
@@ -259,7 +260,7 @@ const styles = StyleSheet.create({
   dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
   // textMuted (not textDim): 12px caption on the surface card must clear WCAG AA contrast.
   dividerText: { ...typography.caption, color: colors.textMuted },
-  appleButton: { marginTop: 12 },
+  googleButton: { marginTop: 12 },
   footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 28 },
   footerText: { ...typography.body, color: colors.textMuted },
   link: { ...typography.label, color: colors.gold },
