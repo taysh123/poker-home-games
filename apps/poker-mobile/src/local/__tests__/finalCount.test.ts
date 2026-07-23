@@ -1,5 +1,6 @@
-import { computeFinalCount, centsFinalCountModel, type FinalCountModel } from '../finalCount';
+import { computeFinalCount, centsFinalCountModel, decimalFinalCountModel, type FinalCountModel } from '../finalCount';
 import { formatCents } from '../../utils/money';
+import { formatMoney } from '../../utils/formatters';
 
 /** Minimal exact-integer model for exercising the core directly (mirrors the cents model's rules). */
 const exact = (expectedRemaining: number, over: Partial<FinalCountModel> = {}): FinalCountModel => ({
@@ -38,10 +39,14 @@ describe('computeFinalCount', () => {
     expect(s.isBalanced).toBe(false);
   });
 
-  it('skips blank and invalid entries (they do not count toward the total or hasAnyEntered)', () => {
+  it('does not add blank or invalid entries to the total', () => {
     const s = computeFinalCount({ a: '', b: '  ', c: 'abc', d: '-5' }, exact(1000));
     expect(s.totalEntered).toBe(0);
-    expect(s.hasAnyEntered).toBe(false);
+  });
+
+  it('hasAnyEntered is trim-based: a non-empty-but-invalid field still counts as entered', () => {
+    expect(computeFinalCount({ a: 'abc' }, exact(1000)).hasAnyEntered).toBe(true);
+    expect(computeFinalCount({ a: '', b: '  ' }, exact(1000)).hasAnyEntered).toBe(false);
   });
 
   it('with allowEmpty=false, no entries is NOT balanced (local semantics)', () => {
@@ -80,13 +85,48 @@ describe('centsFinalCountModel (local integer-cents, exact) — behavior-preserv
     expect(computeFinalCount({}, centsFinalCountModel(10000)).isBalanced).toBe(false);
   });
 
-  it('rejects negative / zero / junk via parseAmountToCents (ignored, not counted)', () => {
+  it('rejects negative / zero / junk via parseAmountToCents (not added to the total)', () => {
     const s = computeFinalCount({ a: '-1', b: 'x', c: '0' }, centsFinalCountModel(5000));
-    expect(s.hasAnyEntered).toBe(false);
     expect(s.totalEntered).toBe(0);
+    expect(s.hasAnyEntered).toBe(true); // trim-based: non-empty, just invalid
   });
 
   it('formats through the shared formatCents helper', () => {
     expect(centsFinalCountModel(0).format(4000)).toBe(formatCents(4000));
+  });
+});
+
+describe('decimalFinalCountModel (server decimal + chips, |diff| < 0.5) — behavior-preserving for SessionScreen', () => {
+  it('balances within 0.5 of the expected remaining (money mode)', () => {
+    const m = decimalFinalCountModel({ expectedRemainingUnits: 100, useChips: false });
+    expect(computeFinalCount({ a: '50', b: '50.3' }, m).isBalanced).toBe(true);  // diff 0.3 < 0.5
+    expect(computeFinalCount({ a: '50', b: '50.9' }, m).isBalanced).toBe(false); // diff 0.9
+    expect(computeFinalCount({ a: '50', b: '40' }, m).short).toBe(true);         // diff -10
+  });
+
+  it('no entries is balanced (allowEmpty — matches the server !hasAnyEntered)', () => {
+    const m = decimalFinalCountModel({ expectedRemainingUnits: 100, useChips: false });
+    expect(computeFinalCount({}, m).isBalanced).toBe(true);
+  });
+
+  it('an all-invalid entry is NOT balanced (trim-based hasAnyEntered blocks it, exactly like the server)', () => {
+    const m = decimalFinalCountModel({ expectedRemainingUnits: 100, useChips: false });
+    const s = computeFinalCount({ a: 'abc' }, m);
+    expect(s.hasAnyEntered).toBe(true);
+    expect(s.totalEntered).toBe(0);
+    expect(s.isBalanced).toBe(false); // hasAny=true ⇒ falls through to |−100| < 0.5 = false
+  });
+
+  it('chips mode: rounds + comma-formats and labels "chips"', () => {
+    const m = decimalFinalCountModel({ expectedRemainingUnits: 12000, useChips: true });
+    expect(m.format(1000.4)).toBe((1000).toLocaleString());
+    expect(m.unitLabel).toBe('chips');
+    expect(computeFinalCount({ a: '6000', b: '6000' }, m).isBalanced).toBe(true);
+  });
+
+  it('money mode: formats via formatMoney with no trailing unit label', () => {
+    const m = decimalFinalCountModel({ expectedRemainingUnits: 100, useChips: false });
+    expect(m.format(40)).toBe(formatMoney(40));
+    expect(m.unitLabel).toBe('');
   });
 });
