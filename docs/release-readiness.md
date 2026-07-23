@@ -54,7 +54,7 @@ All code, assets, privacy, and compliance are in place. The remaining points are
   new tournament dashboard + podium. In `apps/poker-mobile/store-assets/`.
 - ✅ **Icon / adaptive icon / feature graphic** present and valid (adaptive icon in
   the Android safe zone).
-- ✅ **Privacy policy** live at `https://poker-home-games-three.vercel.app/privacy.html`
+- ✅ **Privacy policy** live at `https://app.tpoker.app/privacy.html`
   (+ `#delete` anchor) — operated by Tay Shofer, 18+, not-a-gambling-product, data +
   deletion sections.
 - ✅ **Compliance posture** — non-gambling scorekeeping positioning, adults (18+),

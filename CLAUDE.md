@@ -451,7 +451,9 @@ and the join resumes after auth via the pending-invite stash.
 
 Production domain is **`poker-home-games-three.vercel.app`** (NOT `t-poker.vercel.app`
 — that subdomain belongs to an unrelated third-party site we do not own). The
-privacy policy is served at `https://poker-home-games-three.vercel.app/privacy.html`.
+privacy policy is served at the canonical `https://app.tpoker.app/privacy.html` (the
+`poker-home-games-three.vercel.app/privacy.html` deployment 307-redirects to it; declare the
+`app.tpoker.app` URL on the stores).
 
 Set `EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` in Vercel environment settings.
 
