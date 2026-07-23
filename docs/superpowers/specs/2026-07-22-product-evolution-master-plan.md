@@ -186,7 +186,10 @@ Operational docs: `docs/release/store-submission-readiness.md` (checklist + what
   **chips** in chips-mode, which is far looser than 0.5 in money terms — while local games demand an
   exact integer-cent match. Revisit deliberately later: decide the right money-terms tolerance,
   converge both `FinalCountModel`s (`local/finalCount.ts`), and pin the new behavior with its own
-  tests. Owner decision 2026-07-23.
+  tests. Also fold in a pre-existing quirk surfaced by PR A's review: a literal `'0'` stack entry
+  passes the balance gate (`parseAmountToCents('0')` is null, so it's ignored) but `confirmEndGame`
+  then refuses it with "Invalid stack" — the gate and the settle validator disagree on `'0'`.
+  Converge them (canonical UX: busted = *empty*, not `'0'`). Owner decision 2026-07-23.
 
 ## 6. Wave 3 — C: Retention engine (~2–3 weeks)
 

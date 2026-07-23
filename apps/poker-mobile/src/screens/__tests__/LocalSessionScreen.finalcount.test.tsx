@@ -99,6 +99,9 @@ function renderScreen(nav = makeNav()) {
   return nav;
 }
 
+/** The "End Game & Settle" button element (re-queried each time — the tree re-renders on input). */
+const settleBtn = () => screen.getByRole('button', { name: 'End Game & Settle' });
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockGames = [activeCashGame()];
@@ -110,14 +113,17 @@ describe('LocalSessionScreen — The Final Count gate (money-critical)', () => {
     fireEvent.press(screen.getByText('End Game'));
     expect(screen.getByText('The Final Count')).toBeTruthy();
 
-    // No stacks entered → unbalanced (local requires an exact count) → settling is a no-op.
-    fireEvent.press(screen.getByRole('button', { name: 'End Game & Settle' }));
+    // No stacks entered → unbalanced (local requires an exact count): the button is disabled
+    // (affordance) AND settling is a defensive no-op.
+    expect(settleBtn().props.accessibilityState?.disabled).toBe(true);
+    fireEvent.press(settleBtn());
     expect(mockEndGame).not.toHaveBeenCalled();
 
-    // Under-count (₪30 of ₪40) stays blocked.
+    // Under-count (₪30 of ₪40) stays disabled + blocked.
     const inputs = screen.getAllByPlaceholderText('0');
     fireEvent.changeText(inputs[0], '30');
-    fireEvent.press(screen.getByRole('button', { name: 'End Game & Settle' }));
+    expect(settleBtn().props.accessibilityState?.disabled).toBe(true);
+    fireEvent.press(settleBtn());
     expect(mockEndGame).not.toHaveBeenCalled();
     expect(screen.getByText(/unaccounted for/)).toBeTruthy();
   });
@@ -130,6 +136,7 @@ describe('LocalSessionScreen — The Final Count gate (money-critical)', () => {
     fireEvent.changeText(inputs[0], '30'); // Alex ₪30 → 3000
     fireEvent.changeText(inputs[1], '10'); // Dana ₪10 → 1000  (== ₪40 remaining)
     expect(screen.getByText(/Totals match/)).toBeTruthy();
+    expect(settleBtn().props.accessibilityState?.disabled).toBeFalsy(); // enabled
 
     await act(async () => {
       fireEvent.press(screen.getByRole('button', { name: 'End Game & Settle' }));
