@@ -131,7 +131,7 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
   const shareData: ShareCardData = {
     title: game.name,
     heading: isTournament ? 'TOURNAMENT COMPLETE' : 'GAME OVER',
-    potLabel: isTournament ? 'PRIZE POOL' : 'TOTAL POT',
+    potLabel: 'TOTAL BUY-INS',
     potCents: totalPotCents,
     dateText: formatDate(game.endedAt ?? game.createdAt),
     rows: podium
@@ -239,7 +239,7 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
             maxFontSizeMultiplier={1.3}
           />
           <Text style={styles.heroMeta}>
-            {isTournament ? 'prize pool' : 'total pot'} · {game.players.length} players
+            total buy-ins · {game.players.length} players
             {game.endedAt ? ` · ${formatDuration(game.createdAt, game.endedAt)}` : ''}
           </Text>
           {isTournament && game.tournament && (

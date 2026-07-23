@@ -100,8 +100,8 @@ export default function WelcomeScreen({ navigation, route }: Props) {
 
         <MotiView {...group(3)} style={styles.legal}>
           <Text style={styles.legalText}>
-            A private home-game scorekeeping app for adults (18+). Not a gambling
-            product — play responsibly.
+            A poker study app with a home-game scorekeeping tool, for adults (18+).
+            Not a gambling product — no wagering, no money in the app.
           </Text>
           <Text style={styles.byline}>BY TRUE STORY LABS</Text>
         </MotiView>

@@ -109,7 +109,7 @@ export default function LocalSessionsScreen({ embedded = false }: { embedded?: b
                   >
                     <SessionListItem
                       name={game.name}
-                      meta={`${result.playerCount} players · ${formatCents(result.totalPotCents)} pot · ${timeAgo(result.endedAt)}`}
+                      meta={`${result.playerCount} players · ${formatCents(result.totalPotCents)} total · ${timeAgo(result.endedAt)}`}
                       onPress={() => navigation.navigate('LocalSessionSummary', { gameId: game.id })}
                       isFirst={i === 0}
                     />

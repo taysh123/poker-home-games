@@ -53,11 +53,14 @@ Operational docs: `docs/release/store-submission-readiness.md` (checklist + what
   unpurchasable product, a `WhatItIs` positioning section sits under the fold, the gambling FAQ is
   first and open by default, and `og.png` is regenerated education-led from a committed script
   (`apps/landing/scripts/og.mjs`). Pinned by `apps/landing/__tests__/positioning.test.ts`.
-- **1.6: remaining in-app softenings + re-capture** — "Money on the Table" stat label, PRIZE
-  POOL/TOTAL POT hero captions, ShareCard footer line, "Your Week at the Club"; re-capture
-  screenshots 09 and 10 in the same PR so nothing ships stale. **Also re-copy
-  `08-cash-summary.png` → `apps/landing/public/screenshots/05-settle-up.png`** — the landing site
-  serves its own copy of that shot and will go stale when the in-app caption changes.
+- ~~**1.6: remaining in-app softenings + re-capture**~~ — **SHIPPED.** All session-total captions
+  moved off casino idiom to "Total Buy-ins" (stat label, PRIZE POOL/TOTAL POT hero, the "$X pot"
+  session meta on home/sessions/stats), the ShareCard gained a "settled in cash, in person"
+  footer, "Your Week at the Club" → "Your Poker Week", and "play responsibly" left Login/Welcome/
+  Profile. The paywall-gated in-app landing carousel was cleaned too. Pinned by
+  `apps/poker-mobile/src/features/premium/__tests__/classification.test.ts`. The harness now
+  auto-captures 09-stats + 10-tournament-live (seeded active tournament) and a study-led **iPad-13
+  (2048×2732)** profile; the landing settle-up shot was refreshed from the new 08-cash-summary.
 - **Play feature graphic** — education-led tagline, de-emphasised chip art (icon stays for v1).
 
 ## 2. Owner decisions (locked)

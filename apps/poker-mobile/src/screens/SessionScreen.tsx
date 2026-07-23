@@ -870,7 +870,7 @@ export default function SessionScreen({ route, navigation }: Props) {
             <MetaChip label={formatDuration(session.startedAt, session.endedAt)} />
           )}
           {(isActive || isFinished) && (
-            <MetaChip label={`Pot: ${formatMoney(totalPot)}`} gold />
+            <MetaChip label={`Buy-ins: ${formatMoney(totalPot)}`} gold />
           )}
         </View>
 
@@ -1612,7 +1612,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                 <Text style={styles.endInfoValue}>{session.players.length}</Text>
               </View>
               <View style={styles.endInfoRow}>
-                <Text style={styles.endInfoLabel}>Total pot</Text>
+                <Text style={styles.endInfoLabel}>Total buy-ins</Text>
                 <Text style={[styles.endInfoValue, { color: colors.gold }]}>{formatMoney(totalPot)}</Text>
               </View>
               {session.startedAt && (
@@ -1848,7 +1848,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                   format={(c) => formatMoney(c / 100)}
                   style={[styles.summaryStatValue, { color: colors.gold }]}
                 />
-                <Text style={styles.summaryStatLabel}>Pot</Text>
+                <Text style={styles.summaryStatLabel}>Buy-ins</Text>
               </View>
               <View style={styles.summaryStat}>
                 <Text style={styles.summaryStatValue}>{endSummary?.players.length ?? 0}</Text>
@@ -1984,7 +1984,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                 data={{
                   title: session.name,
                   heading: 'GAME OVER',
-                  potLabel: 'TOTAL POT',
+                  potLabel: 'TOTAL BUY-INS',
                   potCents: Math.round(totalPot * 100),
                   dateText: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
                   rows: [...endSummary.players]

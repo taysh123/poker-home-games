@@ -354,7 +354,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
             style={styles.potGlow}
             pointerEvents="none"
           />
-          <Text style={styles.potLabel}>{isTournament ? 'PRIZE POOL' : 'TOTAL POT'}</Text>
+          <Text style={styles.potLabel}>TOTAL BUY-INS</Text>
           <AnimatedNumber
             value={isTournament ? prizePoolCents(game) : totalPotCents}
             format={formatCents}
@@ -600,7 +600,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
               <Text style={styles.finalCountTitle} maxFontSizeMultiplier={1.3}>Final Ranking</Text>
             </View>
             <Text style={styles.modalSubtitle}>
-              Order the players still in — top finishes first. Payouts apply by your structure.
+              Order the players still in — top finishes first. Prize splits apply by your structure.
             </Text>
 
             <ScrollView style={{ maxHeight: Math.min(320, Dimensions.get('window').height * 0.4) }}>
@@ -625,7 +625,7 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
             </ScrollView>
 
             <Text style={styles.finalityFooter}>
-              This ends the tournament and pays out the prize pool. It can't be reopened.
+              This ends the tournament and settles the final standings. It can't be reopened.
             </Text>
             <View style={styles.modalActions}>
               <PrimaryButton label="Cancel" onPress={() => setRankOrder(null)} variant="outline" fullWidth={false} style={styles.modalBtn} />

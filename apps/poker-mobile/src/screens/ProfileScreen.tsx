@@ -624,8 +624,8 @@ export default function ProfileScreen({ navigation }: Props) {
           </PressableScale>
 
           <Text style={styles.aboutResponsible}>
-            T Poker is a private home-game scorekeeping app for adults (18+). It is not
-            a gambling product — play responsibly and within the law.
+            T Poker is a poker study app with a home-game scorekeeping tool, for adults
+            (18+). It is not a gambling product — no wagering, and no money in the app.
           </Text>
           <Text style={styles.aboutMeta}>
             v{Constants.expoConfig?.version ?? '1.1.0'} · © Tay Shofer

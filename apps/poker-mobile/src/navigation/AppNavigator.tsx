@@ -246,7 +246,13 @@ function LiveGameBar() {
         barStyle,
       ]}
     >
-      <TouchableOpacity style={liveBarStyles.bar} onPress={entry.onPress} activeOpacity={0.9}>
+      <TouchableOpacity
+        style={liveBarStyles.bar}
+        onPress={entry.onPress}
+        activeOpacity={0.9}
+        accessibilityRole="button"
+        accessibilityLabel={`Return to ${entry.title}`}
+      >
         <View style={liveBarStyles.dotWrapper}>
           <Reanimated.View style={[liveBarStyles.dot, dotStyle]} />
         </View>
