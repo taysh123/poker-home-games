@@ -19,11 +19,12 @@
 
 ## Slice shape — three PRs, stop for owner review + merge between each
 
-- **PR A** (this plan, Tasks 1–4): the pure core + **cents** adapter + wire `LocalSessionScreen` + the first end-game *screen* test. Lowest risk (local integer-cents already has pure siblings). Ships working on its own.
-- **PR B** (Tasks 5–8): the **decimal/chips** adapter + shared `FinalCountSheet` component + adopt it in BOTH `LocalSessionScreen` and `SessionScreen`. Kills the copy/markup duplication. Highest risk (server tolerance/units).
-- **PR C** (Tasks 9–11): extract the shared **results** rendering (server inline "Game Over" step + `LocalSessionSummaryScreen`) into `components/GameResults.tsx`. Sets up 2.2 (Results Card 2.0), which depends on it.
+- **PR A** (Tasks 1–4) — **SHIPPED (#44).** Pure core + **cents** adapter + wire `LocalSessionScreen` + first end-game screen test.
+- **PR B** (Task 5 + server wiring) — **SHIPPED (#45).** **decimal/chips** adapter + wire `SessionScreen`'s gate to the shared core. Behavior-preserving MATH unification (both gates on one tested `computeFinalCount`), verified by the adversarial before/after truth-table. Server presentation untouched.
+- **PR B2 — shared `FinalCountSheet` component — DEFERRED post-launch** (owner, 2026-07-23). Converging the two Final Count *markups* is visual churn on a money screen; deferred so it can't invalidate the store screenshots / tested submission build. See the master-plan "Deferred post-launch" cluster.
+- **PR C — churn-free results DATA extraction** (owner decision, 2026-07-23). Extract only the shared results **data** (`local/gameResults.ts` — the pure normalizer currently inline in `LocalSessionSummaryScreen`), consumed by that screen with ZERO visual change. Does NOT converge the two in-app results *renderings* (server Game-Over ↔ local summary are structurally different — Mark-Paid buttons vs buy-ins hero); that convergence is folded into **2.2 Results Card 2.0**'s design pass. The server-source normalizer is added there too (API-shaped; no independent consumer today).
 
-> Detail level: PR A is fully specified below. PR B/PR C tasks give exact files, interfaces, the test to write first, and the key code — the shared component's inner markup is **lifted verbatim** from the cited existing lines (single source of truth), so it is not re-invented here. Each is re-confirmed against the live code at execution time (read the cited lines first) because they are money-critical.
+> PR A is fully specified below (historical). PR C is a small faithful extraction of the local results `useMemo`; behavior-preserving, pinned by the existing settlement fixtures.
 
 ---
 
