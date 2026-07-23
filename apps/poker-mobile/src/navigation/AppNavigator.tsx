@@ -162,7 +162,7 @@ const Tab = createBottomTabNavigator<TabParamList>();
 // tree's JoinGroup/JoinSession screens stash a pending invite and resume after
 // sign-in (see consumePendingInvite below).
 const linking: LinkingOptions<RootStackParamList> = {
-  prefixes: ['https://poker-home-games-three.vercel.app', 'tpoker://'],
+  prefixes: ['https://app.tpoker.app', 'tpoker://'],
   config: {
     screens: {
       // Site root → Landing for logged-out web visitors. The /join/* paths below are
