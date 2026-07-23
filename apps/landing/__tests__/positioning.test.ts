@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import * as CONTENT from '../lib/content';
+import { SITE } from '../lib/site';
 
 /**
  * POSITIONING PINS.
@@ -144,6 +145,16 @@ describe('positioning — the free plan matches the app', () => {
     for (const item of CONTENT.PRICING.free.items) {
       expect(decoded, `not in pricing.html: "${item}"`).toContain(item);
     }
+  });
+});
+
+describe('publisher identity — footer copyright is the legal name', () => {
+  // The app ships under the owner's individual developer account, so the copyright rights-holder is
+  // the legal name (Tay Shofer), not the "True Story Labs" studio brand. The Footer renders
+  // `© {year} {SITE.company}`, so pinning the constant pins the rendered copyright.
+  it('SITE.company is the legal name, not the trade name', () => {
+    expect(SITE.company).toBe('Tay Shofer');
+    expect(SITE.company).not.toMatch(/True Story Labs/);
   });
 });
 

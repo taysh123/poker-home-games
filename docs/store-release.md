@@ -27,10 +27,15 @@ pipeline with store packaging.
 
 ## Step 1 — Accounts (one-time)
 
-> **Publisher identity:** the app is published under **True Story Labs**. Set the
-> Play Console / App Store Connect **developer (publisher) name** to "True Story
-> Labs" and the **support / contact email** to `truestorylabs@gmail.com`. This is
-> the brand and contact users will see on the store listing.
+> **Publisher identity (decided 2026-07-23):** the app ships under the owner's
+> **individual** Apple Developer / Play Console account, so the **seller / developer
+> (publisher) name is the legal name, "Tay Shofer"** — NOT a trade name. Apple shows
+> the individual account's legal name as the seller unless it approves a separate
+> trade name with documentation, which we are not pursuing. Set the Play Console /
+> App Store Connect developer name to **Tay Shofer** and the support / contact email
+> to `truestorylabs@gmail.com`. "True Story Labs" remains only as an in-app studio
+> **byline** (splash / Welcome / Login) and as the brand behind the contact address —
+> it must never appear as the store seller or as the legal entity on the policy pages.
 
 1. **Google Play Console** — [play.google.com/console/signup](https://play.google.com/console/signup) — $25 one-time. Personal account is fine to start.
 2. **Apple Developer Program** — [developer.apple.com/programs/enroll](https://developer.apple.com/programs/enroll) — $99/year. Required for ANY iOS distribution (even TestFlight). If you're Android-first, you can ship Play now and do iOS later.

@@ -1,6 +1,6 @@
 # T Poker — Store Release Readiness (Google Play + Apple App Store)
 
-_Last updated: June 16, 2026 · Publisher: **True Story Labs** · App version: 1.1.0_
+_Last updated: June 16, 2026 · Publisher (seller of record): **Tay Shofer** · App version: 1.1.0_
 
 > **Premium redesign merged + live (June 16, 2026).** PR #1 (typography v2 with Sora,
 > app-wide BrandHeader logo home anchor, per-screen cinematic depth, 5 wow moments)
@@ -55,8 +55,8 @@ All code, assets, privacy, and compliance are in place. The remaining points are
 - ✅ **Icon / adaptive icon / feature graphic** present and valid (adaptive icon in
   the Android safe zone).
 - ✅ **Privacy policy** live at `https://poker-home-games-three.vercel.app/privacy.html`
-  (+ `#delete` anchor) — True Story Labs, 18+, responsible-play, data + deletion
-  sections.
+  (+ `#delete` anchor) — operated by Tay Shofer, 18+, not-a-gambling-product, data +
+  deletion sections.
 - ✅ **Compliance posture** — non-gambling scorekeeping positioning, adults (18+),
   contact `truestorylabs@gmail.com`. Category guidance: Lifestyle/Tools, **not
   Casino**.
@@ -67,7 +67,7 @@ All code, assets, privacy, and compliance are in place. The remaining points are
 ## Google Play — remaining steps (in order)
 
 1. **Create Play Console account** ($25 one-time). Developer (publisher) name =
-   **True Story Labs**; support email = `truestorylabs@gmail.com`.
+   **Tay Shofer** (legal name — individual account); support email = `truestorylabs@gmail.com`.
 2. **Create the app** → "T Poker", App (not Game), Free.
 3. **Upload the AAB** (already built): download
    `https://expo.dev/artifacts/eas/LoSevqnl6wrnJD3KlzUo-CYhusn16GHpa8ds8TqwYi0.aab`

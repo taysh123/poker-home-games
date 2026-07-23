@@ -3,11 +3,11 @@
 > Source of truth for `apps/poker-mobile/public/privacy.html` (served at
 > https://poker-home-games-three.vercel.app/privacy.html). Keep both in sync.
 
-_Last updated: June 13, 2026_
+_Last updated: July 23, 2026_
 
-T Poker is a private home-game poker management app, operated by **True Story Labs**.
-This policy explains what data the app handles, where it lives, and what control you
-have over it.
+T Poker is a poker strategy-study app with a home-game scorekeeping tool, operated by
+**Tay Shofer** (trading as True Story Labs). This policy explains what data the app handles,
+where it lives, and what control you have over it.
 
 ## Guest mode — your data stays on your device
 
@@ -54,7 +54,7 @@ the device.
 
 ## Responsible play & age
 
-T Poker is a private home-game management and scorekeeping tool, intended for adults
+T Poker is a poker strategy-study app with a home-game scorekeeping tool, intended for adults
 **18 and older**. It is not directed at or intended for children. T Poker does not
 offer, host, or encourage real-money gambling — it only records the buy-ins,
 cash-outs, and settlements that players track among themselves, like a shared
@@ -63,8 +63,8 @@ play responsibly and within the laws of your jurisdiction.
 
 ## Contact
 
-True Story Labs · truestorylabs@gmail.com
+Tay Shofer (True Story Labs) · truestorylabs@gmail.com
 
 ---
 
-© 2026 True Story Labs · T Poker
+© 2026 Tay Shofer · T Poker

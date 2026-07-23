@@ -628,7 +628,7 @@ export default function ProfileScreen({ navigation }: Props) {
             a gambling product — play responsibly and within the law.
           </Text>
           <Text style={styles.aboutMeta}>
-            v{Constants.expoConfig?.version ?? '1.1.0'} · © True Story Labs
+            v{Constants.expoConfig?.version ?? '1.1.0'} · © Tay Shofer
           </Text>
         </View>
         </MotiView>

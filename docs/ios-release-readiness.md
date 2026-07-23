@@ -1,6 +1,6 @@
 # T Poker — iOS Release Readiness
 
-_Last verified: June 17, 2026 against the live codebase. Publisher: **True Story Labs**._
+_Last verified: June 17, 2026 against the live codebase. Publisher (seller of record): **Tay Shofer**._
 
 ## Status: ✅ BUILD-READY · submission gated only by external Apple actions
 

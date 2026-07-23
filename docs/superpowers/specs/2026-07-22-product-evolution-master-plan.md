@@ -17,8 +17,13 @@ loop. Feel: premium, simple, confident — never casino-like. Velvet Table desig
 
 **Ship invariants (every merge):** nothing purchasable anywhere; AI Coach makes zero API calls;
 all premium is "Coming soon"; guests keep the full free experience; honesty CI pins are extended,
-never weakened; the store-launch track is never blocked; nothing irreversible depends on the
-publisher entity (still provisional).
+never weakened; the store-launch track is never blocked.
+
+**Publisher identity — LOCKED 2026-07-23:** ships under the owner's **individual** account as
+**Tay Shofer** (legal name, seller of record; NOT a trade name). "True Story Labs" survives only
+as an in-app studio byline and the contact-address brand. Reconciled across the legal pages,
+marketing-site copyright, and in-app © (guarded by `legalSurfaces.test.ts`). iPad is supported
+(`supportsTablet: true`); `eas login` is done.
 
 ## 1b. STANDING PRINCIPLE — education-first store posture (owner, 2026-07-23)
 
@@ -215,8 +220,8 @@ blind-timer-guide), sitemap/blog routing, hreflang plan for future Hebrew.
 - ui-ux-pro-max leads visual slices with taste options; superpowers:writing-plans for any slice
   that grows beyond a small PR; verification-before-completion gates before every "done".
 - Store parallel track: submission proceeds on current main (decision 4); only Wave 1 touches
-  onboarding (screenshot regen scheduled); nothing touches eas.json; nothing depends on
-  publisher identity.
+  onboarding (screenshot regen scheduled); nothing touches eas.json. Publisher identity is now
+  locked to the legal name Tay Shofer (2026-07-23) — see §1.
 - North Star instrumentation from 0.2: WAPP proxy, funnel completion, daily-quiz DAU,
   share-card sends, invite joins, D7 streak survival.
 
