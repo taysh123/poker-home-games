@@ -42,13 +42,17 @@ Operational docs: `docs/release/store-submission-readiness.md` (checklist + what
 `apps/poker-mobile/store-assets/README.md` (asset rules).
 
 **Queued follow-up slices from the 2026-07-23 classification audit:**
-- **G.1 (pre-submission): landing-site education-first pass** — the site opens on a felt table
-  with a live pot, per-seat money and a spinning casino chip, shows only game-night screenshots,
-  and advertises $8.99/$79.99 for something unpurchasable. Rework hero + showcase + pricing to
-  match the app's honesty posture.
+- ~~**G.1 (pre-submission): landing-site education-first pass**~~ — **SHIPPED.** The felt/pot/chip
+  hero became a study-drill + settle-up mock (three.js dropped entirely), the screenshot strip
+  leads with lessons and carries visible captions, prices and the billing toggle are gone from an
+  unpurchasable product, a `WhatItIs` positioning section sits under the fold, the gambling FAQ is
+  first and open by default, and `og.png` is regenerated education-led from a committed script
+  (`apps/landing/scripts/og.mjs`). Pinned by `apps/landing/__tests__/positioning.test.ts`.
 - **1.6: remaining in-app softenings + re-capture** — "Money on the Table" stat label, PRIZE
   POOL/TOTAL POT hero captions, ShareCard footer line, "Your Week at the Club"; re-capture
-  screenshots 09 and 10 in the same PR so nothing ships stale.
+  screenshots 09 and 10 in the same PR so nothing ships stale. **Also re-copy
+  `08-cash-summary.png` → `apps/landing/public/screenshots/05-settle-up.png`** — the landing site
+  serves its own copy of that shot and will go stale when the in-app caption changes.
 - **Play feature graphic** — education-led tagline, de-emphasised chip art (icon stays for v1).
 
 ## 2. Owner decisions (locked)

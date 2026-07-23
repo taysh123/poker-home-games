@@ -35,6 +35,8 @@ misread.
 | Sign in with Apple implemented (Guideline 4.8) | `hooks/useAppleAuth.ts` |
 | Billing fail-closed in production | `BillingVerifierSelection` |
 | Bundle IDs, EAS profiles, PostHog key wired | `app.json`, `eas.json` |
+| Landing site reworked education-first — felt/chip hero gone, study screenshots, no prices, positioning section, regenerated og card | `apps/landing`, PR "landing education-first pass" |
+| Landing posture pinned by tests (no chip, no felt, no price, gambling FAQ first + open) | `apps/landing/__tests__/positioning.test.ts` |
 
 ## 🔲 Yours to do (the submission track)
 
@@ -77,13 +79,6 @@ Roughly in order. Nothing here is blocked by the feature waves.
 
 ## ⚠️ Known gaps worth a decision before submitting
 
-- **Landing site still leads with a felt table and money.** `apps/landing` opens on a
-  green-felt poker table with a live "Pot ₪200", per-seat stacks, and a spinning gold
-  casino chip, and its screenshot strip is all game-night/money shots. A reviewer who
-  opens the marketing URL sees a poker client before the word "study". Queued as its own
-  slice (see the master plan) — worth doing before submission.
-- **Landing advertises $8.99/mo · $79.99/yr** for a product that isn't purchasable and
-  whose own pricing page says "Coming soon". Same slice.
 - **Feature graphic + app icon** are the most casino-coded assets we have (gold chip +
   fanned cards). The icon is brand equity — leave for v1 — but the Play feature graphic
   should get an education-led tagline and de-emphasised chip art.

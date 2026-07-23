@@ -4,7 +4,7 @@ import { Section } from '@/components/ui/Section';
 import { Card } from '@/components/ui/Card';
 import { Reveal } from '@/components/ui/Reveal';
 import { TiltCard } from '@/components/ui/TiltCard';
-import { BENEFITS } from '@/lib/content';
+import { BENEFITS, BENEFITS_INTRO } from '@/lib/content';
 
 /**
  * Three outcome-focused benefit cards.
@@ -12,8 +12,9 @@ import { BENEFITS } from '@/lib/content';
  * TiltCard is a no-op on touch (no hover) and on reduced-motion.
  */
 
-// Icons keyed by benefit index — presentation layer
-const ICONS = [Scale, BarChart2, BookOpen];
+// Named lookup, NOT an index-keyed array: each BENEFITS entry names its own icon, so reordering
+// the cards can no longer silently shuffle the icons out from under them.
+const ICONS = { Scale, BarChart2, BookOpen } as const;
 
 export function Benefits() {
   return (
@@ -21,16 +22,16 @@ export function Benefits() {
       <Container>
         <Reveal className="max-w-xl">
           <h2 id="benefits-heading" className="text-display">
-            More fun, less hassle.
+            {BENEFITS_INTRO.heading}
           </h2>
           <p className="mt-4 text-lg leading-relaxed text-textMuted">
-            The tools your game night has been missing.
+            {BENEFITS_INTRO.subhead}
           </p>
         </Reveal>
 
         <div className="mt-14 grid gap-6 sm:grid-cols-3">
           {BENEFITS.map((b, i) => {
-            const Icon = ICONS[i];
+            const Icon = ICONS[b.icon];
             return (
               <Reveal key={b.title} delay={0.1 + i * 0.12}>
                 <TiltCard max={4} className="h-full">

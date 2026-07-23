@@ -35,7 +35,8 @@ const config: Config = {
       fontSize: {
         // Modular scale (rem): 0.875 / 1 / 1.125 / 1.25 / 1.75 / 2.5 / 4
         hero: ['clamp(2.5rem, 6vw, 4rem)', { lineHeight: '1.04', letterSpacing: '-0.02em' }],
-        display: ['2.5rem', { lineHeight: '1.1', letterSpacing: '-0.01em' }],
+        // Fluid like `hero`. Fixed at 40px, a long h2 ran to four lines on a 375px screen.
+        display: ['clamp(1.875rem, 5vw, 2.5rem)', { lineHeight: '1.1', letterSpacing: '-0.01em' }],
         title: ['1.75rem', { lineHeight: '1.2', letterSpacing: '-0.01em' }],
       },
       maxWidth: {
@@ -44,12 +45,6 @@ const config: Config = {
       borderRadius: {
         '2xl': '1rem',
         '3xl': '1.5rem',
-      },
-      keyframes: {
-        floaty: {
-          '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-8px)' },
-        },
       },
     },
   },

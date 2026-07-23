@@ -1,92 +1,105 @@
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Check, GraduationCap } from 'lucide-react';
 import { Container } from '@/components/ui/Container';
 import { Button } from '@/components/ui/Button';
 import { AnimatedText } from '@/components/ui/AnimatedText';
 import { TiltCard } from '@/components/ui/TiltCard';
 import { StoreBadges } from '@/components/ui/StoreBadges';
-import { HeroChip } from '@/components/three/HeroChip';
 import { HERO } from '@/lib/content';
 import { SITE } from '@/lib/site';
 
-/** Five stylized seats around the felt — purely a visual mock, no real data. */
-const SEATS = [
-  { initials: 'TA', stack: '₪240', color: '#C9A84C', pos: 'left-1/2 top-0 -translate-x-1/2 -translate-y-1/2' },
-  { initials: 'MK', stack: '₪180', color: '#4EAADC', pos: 'left-0 top-1/2 -translate-x-1/2 -translate-y-1/2' },
-  { initials: 'JD', stack: '₪90', color: '#27AE60', pos: 'right-0 top-1/2 translate-x-1/2 -translate-y-1/2' },
-  { initials: 'AL', stack: '₪310', color: '#E8C97A', pos: 'bottom-0 left-[22%] -translate-x-1/2 translate-y-1/2' },
-  { initials: 'RS', stack: '₪50', color: '#E74C3C', pos: 'bottom-0 right-[22%] translate-x-1/2 translate-y-1/2' },
+/**
+ * Drill answers — a quiz question, not a hand being played.
+ *
+ * The real Spot Trainer offers exactly two actions and runs ten spots
+ * (`features/study/ui/SpotTrainerScreen.tsx`, `QUIZ_LENGTH = 10`). Keep this mock in step with it:
+ * an earlier draft advertised a 20-question run with three options, on the same page whose FAQ says
+ * the daily practice allowance is ten.
+ */
+const ANSWERS = [
+  { label: 'Fold', correct: false },
+  { label: 'Raise (open)', correct: true },
 ];
 
 /**
- * A lightweight, on-brand CSS mock of the live cash table inside an app-window
- * frame. No image asset. Includes the `data-chip-slot` placeholder where the
- * real three.js chip mounts in slice 3.
+ * Settlement rows — the ledger half. These are the real output for the demo game shown in
+ * `/screenshots/04-settle-up.png`: all three transfers, same names, same amounts, same currency.
+ * Do not trim a row for layout — "the fewest transfers" is the product claim, so a hero showing
+ * two where the screenshot below shows three makes the settlement engine look inconsistent.
  */
-function AppWindowMock() {
+const TRANSFERS = [
+  { from: 'Dana', to: 'Jordan', amount: '₪23' },
+  { from: 'Dana', to: 'Alex', amount: '₪2' },
+  { from: 'Sam', to: 'Alex', amount: '₪10' },
+];
+
+/**
+ * The hero mock: a study drill, with the settle-up ledger as an overlapping satellite card.
+ *
+ * Deliberately NOT a poker table. The previous version rendered green felt, a live pot, per-seat
+ * money stacks and a spinning casino chip, which read as a real-money poker client above the fold
+ * (see the 2026-07-23 classification audit). Nothing here depicts play for money.
+ *
+ * Shape notes: the drill is the primary card and uses the same phone-frame chrome as the Showcase
+ * strip below (`rounded-[2rem]`, gold hairline, white ring) so the page speaks one language. The
+ * ledger is a smaller card that overlaps the corner — it gives `TiltCard` a second depth plane to
+ * parallax against and breaks the rectangle's silhouette, which is the compositional job the
+ * deleted chip used to do. Answer rows are 44px so the mock reads at real touch scale.
+ */
+function StudyAndLedgerMock() {
   return (
-    <div className="relative">
-      <div className="rounded-2xl border border-gold/15 bg-surface/80 p-4 shadow-[0_40px_90px_-40px_rgba(0,0,0,0.9)] backdrop-blur-sm sm:p-5">
-        {/* Window title bar */}
-        <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-1.5" aria-hidden="true">
-            <span className="h-2.5 w-2.5 rounded-full bg-error/70" />
-            <span className="h-2.5 w-2.5 rounded-full bg-gold/70" />
-            <span className="h-2.5 w-2.5 rounded-full bg-success/70" />
-          </div>
-          <div className="flex items-center gap-1.5 text-[0.65rem] font-medium uppercase tracking-wider text-textMuted">
-            <span className="h-1.5 w-1.5 rounded-full bg-gold animate-pulse" />
-            Live · Cash Game
-          </div>
-          <span className="w-10" aria-hidden="true" />
+    // Decorative: this is a picture of the product, not content. Without aria-hidden a screen
+    // reader announces the whole fake UI ("Fold. Raise (open). Dana right-arrow Jordan…") as if it
+    // were real page copy.
+    <div className="relative" aria-hidden="true">
+      {/* Primary — the drill. The deep bottom padding is deliberate: it reserves the strip the
+          satellite card below overlaps into, so the ledger never covers an answer row. */}
+      <div className="rounded-[2rem] border border-gold/20 bg-surface/80 p-5 pb-28 shadow-[0_40px_90px_-40px_rgba(0,0,0,0.9)] ring-1 ring-white/[0.04] backdrop-blur-sm sm:p-6 sm:pb-32">
+        <div className="mb-5 flex items-center gap-2">
+          <GraduationCap className="h-4 w-4 text-gold" />
+          <span className="text-xs font-medium uppercase tracking-wider text-textMuted">
+            Spot Trainer
+          </span>
+          <span className="nums ml-auto text-xs text-textMuted">Spot 4 of 10</span>
         </div>
 
-        {/* Felt table */}
-        <div className="relative mx-auto aspect-[16/10] w-full">
-          <div className="absolute inset-0 rounded-[44%] border border-gold/25 bg-[radial-gradient(ellipse_at_center,#1A4B43_0%,#15413A_46%,#0C2A26_100%)] shadow-[inset_0_2px_36px_rgba(0,0,0,0.5)]">
-            <div className="absolute inset-3 rounded-[44%] border border-white/5" />
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-[0.6rem] uppercase tracking-[0.25em] text-white/45">Pot</span>
-              <span className="nums font-display text-2xl text-goldLight sm:text-3xl">₪200</span>
-            </div>
-          </div>
+        <p className="text-base leading-snug text-text sm:text-lg">
+          Button, 100bb, folded to you — what&apos;s the play?
+        </p>
 
-          {SEATS.map((seat) => (
-            <div key={seat.initials} className={`absolute ${seat.pos} flex flex-col items-center gap-1`}>
-              <span
-                className="flex h-9 w-9 items-center justify-center rounded-full text-[0.7rem] font-semibold text-background ring-2 ring-background"
-                style={{ backgroundColor: seat.color }}
-              >
-                {seat.initials}
-              </span>
-              <span className="nums rounded-full bg-background/75 px-1.5 py-0.5 text-[0.6rem] text-textHigh">
-                {seat.stack}
-              </span>
-            </div>
+        <div className="mt-5 flex flex-col gap-2.5">
+          {ANSWERS.map((a) => (
+            <span
+              key={a.label}
+              className={[
+                'flex min-h-[44px] items-center justify-between rounded-lg border px-4 text-sm font-medium',
+                a.correct
+                  ? 'border-gold/40 bg-gold/10 text-goldLight'
+                  // textHigh, not textMuted: #7A8A99 on surfaceHigh is 3.95:1, under the AA floor.
+                  : 'border-border bg-surfaceHigh text-textHigh',
+              ].join(' ')}
+            >
+              {a.label}
+              {a.correct && <Check className="h-4 w-4" />}
+            </span>
           ))}
         </div>
 
-        {/* Action row */}
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <span className="rounded-lg border border-gold/30 bg-gold/10 py-2 text-center text-xs font-medium text-goldLight">
-            Buy-in
-          </span>
-          <span className="rounded-lg border border-border bg-surfaceHigh py-2 text-center text-xs font-medium text-textHigh">
-            Cash-out
-          </span>
-        </div>
+        <p className="mt-4 text-sm leading-relaxed text-textMuted">
+          Correct — position lets you open wider here.
+        </p>
       </div>
 
-      {/*
-        Chip slot — placeholder for the three.js poker chip (slice 3 swaps the
-        inner CSS chip for a <canvas>). Fixed size so the swap causes no layout shift.
-      */}
-      <div
-        data-chip-slot
-        data-three-chip-mount
-        aria-hidden="true"
-        className="animate-floaty pointer-events-none absolute -bottom-7 -left-6 z-10 h-20 w-20 sm:-left-8 sm:h-24 sm:w-24"
-      >
-        <HeroChip />
+      {/* Satellite — the ledger half, hanging off the bottom-right corner */}
+      <div className="absolute -bottom-8 -right-3 z-10 w-[12.5rem] rounded-xl border border-border bg-surface/95 p-3 shadow-[0_20px_40px_-12px_rgba(0,0,0,0.9)] backdrop-blur sm:-right-8 sm:w-[14rem]">
+        <p className="text-xs uppercase tracking-wider text-textMuted">Settle up</p>
+        {TRANSFERS.map((t) => (
+          <p key={`${t.from}-${t.to}`} className="mt-1.5 flex justify-between text-sm text-textHigh">
+            <span>
+              {t.from} <span className="text-gold">&rarr;</span> {t.to}
+            </span>
+            <span className="nums">{t.amount}</span>
+          </p>
+        ))}
       </div>
     </div>
   );
@@ -125,7 +138,7 @@ export function Hero() {
               first screen; full size from lg up. */}
           <div className="order-last lg:pl-6">
             <TiltCard className="mx-auto max-w-[17rem] sm:max-w-sm lg:max-w-none">
-              <AppWindowMock />
+              <StudyAndLedgerMock />
             </TiltCard>
           </div>
         </div>
