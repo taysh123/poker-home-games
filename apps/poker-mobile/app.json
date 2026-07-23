@@ -19,7 +19,14 @@
       "bundleIdentifier": "com.tpoker.app",
       "usesAppleSignIn": true,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.12435044751-jap7j5prc6vm0eh0mj517nv0phrlu8mr"
+            ]
+          }
+        ]
       }
     },
     "android": {
