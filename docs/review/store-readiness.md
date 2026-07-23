@@ -16,7 +16,7 @@ required fields.
 ## iOS (READY pending external)
 Bundle id + versioning ✅; `ITSAppUsesNonExemptEncryption: false` ✅; **no special Info.plist permission strings
 needed** (no camera/location/mic — `coachScreenshot` is OFF) ✅; Expo 54 auto-generates the privacy manifest, no
-privacy-sensitive APIs detected ✅; ATT not required (no tracking SDK) ✅; live Privacy URL ✅; in-app account
+privacy-sensitive APIs detected ✅; ATT not required (first-party PostHog product analytics only — no ad/cross-app tracking SDK, IDFA never read) ✅; live Privacy URL ✅; in-app account
 deletion ✅; 18+/responsible-play disclosure on Login + Profile ✅. External: Apple Developer enrollment +
 `eas credentials` signing.
 

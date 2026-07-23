@@ -73,10 +73,11 @@ Roughly in order. Nothing here is blocked by the feature waves.
    improvise on submission day.
 4. **Categories** — iOS primary **Education**, secondary **Reference**. Play: type
    **App (not Game)**, category **Education**. Never Games ▸ Card or Games ▸ Casino.
-5. **Age rating** — answer **No** to gambling, simulated gambling, and contests on both
-   questionnaires; select the **18+** target-audience band on Play; expect a low
-   computed content rating (that's correct — 18+ is our stated audience, not a content
-   rating).
+5. **Age rating (Apple questionnaire COMPLETED 2026-07-23)** — Gambling **No**, Simulated
+   Gambling **None**, Loot Boxes **No**, Contests **Infrequent/Mild** (friendly leaderboards +
+   head-to-head, no prizes or sweepstakes); calculated 13+ **overridden to 18+**. Use the same
+   answers on Play/IARC; select the **18+** target-audience band. 18+ is our stated audience,
+   not a claimed content rating. Full detail: `docs/store-release.md` Step 6.
 6. **Reviewer notes** — paste the verbatim note from `docs/store-release.md`, including
    the guest-mode walkthrough so the reviewer never needs an account.
 7. **Data-safety forms** — file per `docs/release/store-data-safety.md`. If the
