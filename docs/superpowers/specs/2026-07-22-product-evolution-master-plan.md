@@ -174,12 +174,22 @@ Operational docs: `docs/release/store-submission-readiness.md` (checklist + what
   "Same crew next week?" creates a draft) **plus the pre-session moment**: "Next game" card on
   Home/GuestHome while a draft/scheduled game exists; local game-day notification scheduled at
   creation (no server infra); "Warm up: 10 hands before tonight" Study CTA on game day.
-- **2.5 Weekly-crew surfacing:** extend the EXISTING "Your Week at the Club" digest card
-  (top-movers row + leaderboard tap-through). No parallel weekly card.
+- **2.5 Weekly-crew surfacing:** extend the EXISTING "Your Poker Week" digest card (renamed from
+  "Your Week at the Club" in 1.6) — top-movers row + leaderboard tap-through. No parallel weekly card.
 - **E.1 Trigger registry:** central config (surface, copy, eligibility, cooldown) on the 0.2
   trigger-ID union; migrate LockNudge / locked lessons / profile teaser; new honest surfaces:
   3rd-free-lesson nudge, Track advanced-analytics teaser, `coachTeaser` card (decision 7);
   "trigger visible but nothing purchasable" honesty-test shape.
+- **2.1b (queued — separate decision + slice, do NOT fold into 2.1): Final Count tolerance
+  convergence.** 2.1 is deliberately behavior-preserving, so it PRESERVES the server session's
+  `Math.abs(diff) < 0.5` balance tolerance verbatim. That 0.5 is in the TOGGLED unit — i.e. 0.5
+  **chips** in chips-mode, which is far looser than 0.5 in money terms — while local games demand an
+  exact integer-cent match. Revisit deliberately later: decide the right money-terms tolerance,
+  converge both `FinalCountModel`s (`local/finalCount.ts`), and pin the new behavior with its own
+  tests. Also fold in a pre-existing quirk surfaced by PR A's review: a literal `'0'` stack entry
+  passes the balance gate (`parseAmountToCents('0')` is null, so it's ignored) but `confirmEndGame`
+  then refuses it with "Invalid stack" — the gate and the settle validator disagree on `'0'`.
+  Converge them (canonical UX: busted = *empty*, not `'0'`). Owner decision 2026-07-23.
 
 ## 6. Wave 3 — C: Retention engine (~2–3 weeks)
 

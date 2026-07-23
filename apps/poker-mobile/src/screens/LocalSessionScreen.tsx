@@ -26,6 +26,7 @@ import PrimaryButton from '../components/PrimaryButton';
 import EmptyState from '../components/EmptyState';
 import { useLocalGames } from '../context/LocalGamesContext';
 import { computeBalances } from '../local/settlements';
+import { computeFinalCount, centsFinalCountModel } from '../local/finalCount';
 import type { LocalPlayer } from '../local/types';
 import { formatCents, formatCentsSigned, parseAmountToCents } from '../utils/money';
 import { currencySymbol } from '../utils/currency';
@@ -147,14 +148,13 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
     }
   }, [game?.status, gameId, navigation]);
 
-  // Balance math for The Final Count (plain derivations — safe above the returns).
-  const stacksTotalCents = Object.values(finalStacks).reduce((sum, v) => {
-    const cents = parseAmountToCents(v);
-    return sum + (cents ?? 0);
-  }, 0);
+  // Balance math for The Final Count — delegated to the shared, tested core (behavior-preserving:
+  // exact integer-cent match, invalid entries ignored, no empty allowance). See local/finalCount.ts.
   const remainingCents = totalPotCents - standings.reduce((s, p) => s + p.cashOutCents, 0);
-  const stacksMismatch = stacksTotalCents !== remainingCents;
-  const mismatchCents = Math.abs(remainingCents - stacksTotalCents);
+  const finalCount = computeFinalCount(finalStacks, centsFinalCountModel(remainingCents));
+  const stacksTotalCents = finalCount.totalEntered;
+  const stacksMismatch = !finalCount.isBalanced;
+  const mismatchCents = Math.abs(finalCount.diff);
 
   // Disarm the override the moment the count balances again.
   // MUST stay above the early returns (hooks order).
