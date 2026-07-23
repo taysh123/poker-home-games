@@ -194,18 +194,32 @@ Login footer, the Profile → About & Support card, and the privacy policy.
   > Privacy policy: https://poker-home-games-three.vercel.app/privacy.html
   > Support: truestorylabs@gmail.com
 
-- **Age rating questionnaires — explicit answers:** Apple — Gambling: **No**; Simulated
-  Gambling: **No** (no chance-based play, no virtual chips wagered, outcomes are
-  pre-authored quiz scenarios); Contests: **No**; Unrestricted web access: **No**.
-  Play — answer **No** to every IARC gambling/simulated-gambling question; Target
-  Audience: **18+ band only**; Families Policy: **No**. Expect a LOW computed content
-  rating — that is correct and not a contradiction: **18+ is our stated audience, not a
-  claimed content rating**, and it appears in the description, the in-app Login footer,
-  Profile → About, and the privacy policy.
-- **Play Data Safety / Apple Privacy Nutrition:** derived from [PRIVACY.md](../PRIVACY.md):
-  - Collected (account users only): email address, username (account management);
-    app activity = game records the user enters. All optional — guest mode collects nothing.
-  - Not collected: location, contacts, identifiers for ads. No third-party sharing. No ads.
+- **Age rating — COMPLETED on Apple (2026-07-23); this is the direct fix for the 2.3.6 rating
+  concern.** The App Store Connect questionnaire was redone honestly: **Gambling: No**;
+  **Simulated Gambling: None** (no chance-based play, no virtual chips wagered — outcomes are
+  pre-authored quiz scenarios); **Loot Boxes: No**; **Contests: Infrequent/Mild** (friendly
+  leaderboards + head-to-head among group members). The calculated rating came back **13+** and
+  was deliberately **overridden to 18+** to match our stated audience everywhere else
+  (description, in-app Login footer, Profile → About, privacy policy) — 18+ is our declared
+  audience, not a claimed content level, so the override is consistent, not a contradiction.
+  For Play (IARC), use the same honest answers: **No** to every gambling/simulated-gambling
+  question; Target Audience **18+ band only**; Families Policy **No**.
+- **Play Data Safety / Apple App Privacy — the production build ships `EXPO_PUBLIC_POSTHOG_KEY`,
+  so usage analytics IS live (behind consent) and MUST be declared.** Mirror the live policy
+  (`privacy.html`) and [PRIVACY.md](../PRIVACY.md):
+  - **Collected (account users):** email address, username (account management); app activity =
+    the game records the user enters.
+  - **Collected (optional, consent-gated, all users):** *Product interaction / App activity* —
+    anonymous usage-analytics events (feature used, screen flow, app version, platform, coarse
+    device type) via **PostHog (EU servers), acting as our data processor under their DPA**.
+    Collection begins ONLY after the Welcome-screen consent choice and is switch-off-able in
+    Profile → Privacy. Never includes amounts, buy-ins/settlements, player names, hand contents,
+    or messages. **Purpose: Analytics only. NOT used for tracking or advertising** (answer "No"
+    to Apple's *Tracking* question and Play's advertising/tracking questions).
+  - **"No third-party sharing" still holds:** PostHog processes on our behalf only (DPA), never
+    for its own use; no ads, no ad trackers. Not collected: location, contacts, advertising IDs.
+  - Guest mode with analytics **declined** collects nothing; guest analytics (if consented) use a
+    random id not linked to name/email.
   - Data deletion: in-app (Profile → Delete Account) + privacy policy URL
     `https://poker-home-games-three.vercel.app/privacy.html`.
 

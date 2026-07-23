@@ -25,9 +25,32 @@ If you create an account, we store:
   session notes, and derived statistics (P&L, streaks, achievements).
 - **Social data:** group memberships, invitations, in-app notifications.
 
+## Anonymous usage analytics
+
+Separately from your game data, we collect **anonymous usage events** — for example
+"a quiz was completed" or "a game night was started" — using **PostHog**, processed and
+stored on servers in the **European Union**. Collection begins **only after** you make an
+explicit choice on the welcome screen, and you can switch it off any time in
+**Profile → Privacy → "Share anonymous usage analytics."**
+
+- **Included:** the feature used, screen flow, app version, platform (iOS/Android/web),
+  and coarse device type.
+- **Never included:** your game amounts, buy-ins or settlements, player names, hand
+  contents, or messages. Guest analytics use a random identifier not linked to your name
+  or email; if you sign in, events are associated with your account id so we can count
+  active players.
+- We do **not** sell this data or use it for advertising.
+
+## Service providers
+
+We rely on a few providers that process data **on our behalf only**, to provide their
+service to us: **Railway** (database hosting), **Vercel** (web app), **PostHog**
+(anonymous usage analytics, EU servers), and **Google / Apple** for optional sign-in. We
+do not sell your data to them or allow them to use it for their own purposes.
+
 ## What we don't do
 
-- No selling or sharing of data with third parties.
+- No selling your data, and no sharing it with third parties for their own marketing.
 - No ads or advertising trackers.
 - No real-money transactions — the app only records what you track.
 
