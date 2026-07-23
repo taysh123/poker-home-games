@@ -205,21 +205,24 @@ Login footer, the Profile → About & Support card, and the privacy policy.
   For Play (IARC), use the same honest answers: **No** to every gambling/simulated-gambling
   question; Target Audience **18+ band only**; Families Policy **No**.
 - **Play Data Safety / Apple App Privacy — the production build ships `EXPO_PUBLIC_POSTHOG_KEY`,
-  so usage analytics IS live (behind consent) and MUST be declared.** Mirror the live policy
-  (`privacy.html`) and [PRIVACY.md](../PRIVACY.md):
-  - **Collected (account users):** email address, username (account management); app activity =
-    the game records the user enters.
-  - **Collected (optional, consent-gated, all users):** *Product interaction / App activity* —
-    anonymous usage-analytics events (feature used, screen flow, app version, platform, coarse
-    device type) via **PostHog (EU servers), acting as our data processor under their DPA**.
-    Collection begins ONLY after the Welcome-screen consent choice and is switch-off-able in
-    Profile → Privacy. Never includes amounts, buy-ins/settlements, player names, hand contents,
-    or messages. **Purpose: Analytics only. NOT used for tracking or advertising** (answer "No"
-    to Apple's *Tracking* question and Play's advertising/tracking questions).
-  - **"No third-party sharing" still holds:** PostHog processes on our behalf only (DPA), never
-    for its own use; no ads, no ad trackers. Not collected: location, contacts, advertising IDs.
-  - Guest mode with analytics **declined** collects nothing; guest analytics (if consented) use a
-    random id not linked to name/email.
+  so consent-gated usage analytics IS live and MUST be declared.** The **authoritative,
+  code-grounded grid** for BOTH stores (Google Play Data Safety + Apple App Privacy) lives in
+  **[release/store-data-safety.md](release/store-data-safety.md)** — file from that, not the older
+  `data-safety.md` (now superseded). Summary:
+  - **Account data (account users):** email, username, user IDs, and app activity = the game
+    records the user enters. App functionality / account management.
+  - **Usage analytics (optional, consent-gated):** *Product interaction / App activity* — typed
+    usage events (feature used, screen flow, app version, platform, coarse device type) via
+    **PostHog (EU), our data processor under their DPA**. Purpose: **Analytics only.** Collection
+    starts after the Welcome choice; the **Profile → Privacy opt-out** stops it. Never includes
+    amounts, buy-ins/settlements, player names, hand contents, or messages.
+  - **The Data-Linked axis matters (Apple):** GUEST analytics use a random app-scoped id ⇒
+    **Data NOT Linked to You**; SIGNED-IN analytics call `identify(userId)` ⇒ **Data Linked to
+    You** (User ID, purpose Analytics). Declare both, per `store-data-safety.md` — do not blanket
+    it as "anonymous."
+  - **Tracking = No / "no third-party sharing" holds:** first-party PostHog as processor, no ad
+    networks, no cross-app linking, IDFA never read ⇒ answer Apple's *Tracking* question **No**
+    (no ATT prompt). Not collected: location, contacts, advertising IDs.
   - Data deletion: in-app (Profile → Delete Account) + privacy policy URL
     `https://poker-home-games-three.vercel.app/privacy.html`.
 

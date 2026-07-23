@@ -1,10 +1,20 @@
 # T Poker — Google Play Data Safety (submission record)
 
+> ⛔ **SUPERSEDED (2026-07-23) — do NOT file from this document.** It was verified June 17,
+> 2026, **before** consent-gated PostHog EU analytics shipped (PR #28), so its "no analytics
+> SDK" scoping (§1.3) and four-data-type answer set (§5) are now **incomplete** — filing from
+> it would UNDER-declare analytics and risk a repeat 2.3.6 rejection. File instead from
+> **[release/store-data-safety.md](release/store-data-safety.md)**, which is PostHog-aware and
+> carries the correct Google Play **and** Apple App Privacy grids, including the guest-vs-signed-in
+> Data-Linked split and the Tracking=No reasoning. This file is kept only for its security/
+> credential detail (§2); note also that the store category is now **Education**, not the
+> "Lifestyle / Utilities" that §6 still names.
+
 _Last verified: June 17, 2026 against the live codebase. Publisher (seller of record): **Tay Shofer**._
 
-This is the authoritative, code-grounded source for the Google Play **Data Safety**
-form. It is derived from the actual implementation, not boilerplate. Re-verify before
-each submission if auth, push, or third-party integrations change.
+This was the code-grounded source for the Google Play **Data Safety** form **as of June 2026**;
+it is now superseded (see banner above). Re-verify before each submission if auth, push, or
+third-party integrations change.
 
 ---
 
