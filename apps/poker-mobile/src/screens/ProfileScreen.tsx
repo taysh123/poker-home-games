@@ -601,7 +601,7 @@ export default function ProfileScreen({ navigation }: Props) {
 
           <PressableScale
             style={styles.aboutRow}
-            onPress={() => Linking.openURL('https://poker-home-games-three.vercel.app/privacy.html')}
+            onPress={() => Linking.openURL('https://app.tpoker.app/privacy.html')}
             haptic="light"
             accessibilityRole="button"
             accessibilityLabel="Open privacy policy"
@@ -613,7 +613,7 @@ export default function ProfileScreen({ navigation }: Props) {
 
           <PressableScale
             style={styles.aboutRow}
-            onPress={() => Linking.openURL('https://poker-home-games-three.vercel.app/terms.html')}
+            onPress={() => Linking.openURL('https://app.tpoker.app/terms.html')}
             haptic="light"
             accessibilityRole="button"
             accessibilityLabel="Open terms of service"
