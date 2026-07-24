@@ -74,6 +74,7 @@ import SkeletonCard from '../components/SkeletonCard';
 import { successNotification, errorNotification, lightTap } from '../utils/haptics';
 import { showToast } from '../utils/toast';
 import { confirmDialog } from '../utils/confirm';
+import InviteSheet from '../components/InviteSheet';
 import { formatMoney, formatPL } from '../utils/formatters';
 import { computeFinalCount, decimalFinalCountModel } from '../local/finalCount';
 import { currencySymbol } from '../utils/currency';
@@ -231,6 +232,8 @@ export default function SessionScreen({ route, navigation }: Props) {
   const [sharing, setSharing]     = useState(false);
   const [sharingSummary, setSharingSummary] = useState(false);
   const [sharingInvite, setSharingInvite] = useState(false);
+  const [qrInvite, setQrInvite] = useState<{ url: string; expiresAt?: string } | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
 
   // Session recap
   const [recap, setRecap] = useState<SessionRecapDto | null>(null);
@@ -681,6 +684,20 @@ export default function SessionScreen({ route, navigation }: Props) {
 
   // ── Invite Link ──
 
+  async function handleShowQr() {
+    setQrLoading(true);
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!token) return;
+      const result = await generateSessionInviteToken(token, sessionId);
+      setQrInvite({ url: result.deepLinkUrl, expiresAt: result.expiresAt });
+    } catch (e: any) {
+      showToast(e?.response?.data?.message ?? 'Failed to generate invite link.', 'error');
+    } finally {
+      setQrLoading(false);
+    }
+  }
+
   async function handleShareInvite() {
     setSharingInvite(true);
     try {
@@ -848,6 +865,13 @@ export default function SessionScreen({ route, navigation }: Props) {
               {sharingInvite
                 ? <ActivityIndicator color={colors.gold} size="small" />
                 : <Ionicons name="person-add-outline" size={iconSize.xs} color={colors.gold} />}
+            </PressableScale>
+          )}
+          {isAdminOrOwner && (isActive || isDraft) && (
+            <PressableScale onPress={handleShowQr} style={styles.exportBtn} disabled={qrLoading} hitSlop={8} haptic="light" accessibilityRole="button" accessibilityLabel="Show QR code to join">
+              {qrLoading
+                ? <ActivityIndicator color={colors.gold} size="small" />
+                : <Ionicons name="qr-code-outline" size={iconSize.xs} color={colors.gold} />}
             </PressableScale>
           )}
           {isAdminOrOwner && !isActive && (
@@ -1382,6 +1406,16 @@ export default function SessionScreen({ route, navigation }: Props) {
           </PressableScale>
         </View>
       )}
+
+      {/* Invite QR sheet (additive — the one-tap Share above is unchanged) */}
+      <InviteSheet
+        visible={!!qrInvite}
+        onClose={() => setQrInvite(null)}
+        kind="session"
+        title={session?.name ?? 'this session'}
+        url={qrInvite?.url ?? ''}
+        expiresAt={qrInvite?.expiresAt}
+      />
 
       {/* ── Transaction Modal ── */}
       <Modal visible={txModal.visible} transparent animationType="slide">

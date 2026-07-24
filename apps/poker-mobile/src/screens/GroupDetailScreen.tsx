@@ -54,6 +54,7 @@ import Avatar from '../components/Avatar';
 import Chip from '../components/Chip';
 import Segmented from '../components/Segmented';
 import ErrorState from '../components/ErrorState';
+import InviteSheet from '../components/InviteSheet';
 import { MotiView, slideUpSequence, staggerIn } from '../components/motion';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 
@@ -84,6 +85,8 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   const [searchLoading, setSearchLoading] = useState(false);
   const [rivals, setRivals] = useState<GroupRivalryDto[]>([]);
   const [shareLoading, setShareLoading] = useState(false);
+  const [qrInvite, setQrInvite] = useState<{ url: string; expiresAt?: string } | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [lbPeriod, setLbPeriod] = useState<'week' | 'month' | 'all'>('all');
   const [lbLoading, setLbLoading] = useState(false);
@@ -323,6 +326,20 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
     );
   };
 
+  const handleShowQr = async () => {
+    setQrLoading(true);
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!token) return;
+      const result = await generateGroupInviteLink(token, groupId);
+      setQrInvite({ url: result.deepLinkUrl, expiresAt: result.expiresAt });
+    } catch {
+      showToast('Failed to generate invite link. Please try again.', 'error');
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
   const handleShareInvite = async () => {
     setShareLoading(true);
     try {
@@ -507,6 +524,34 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                   </>
                 )}
               </PressableScale>
+
+              {/* Show QR — additive; the one-tap Share above is unchanged */}
+              <PressableScale
+                style={[styles.shareInviteBtn, { marginTop: 10 }]}
+                onPress={handleShowQr}
+                disabled={qrLoading}
+                haptic="light"
+                accessibilityRole="button"
+                accessibilityLabel="Show QR code to join"
+              >
+                {qrLoading ? (
+                  <ActivityIndicator size="small" color={colors.gold} />
+                ) : (
+                  <>
+                    <Ionicons name="qr-code-outline" size={17} color={colors.gold} />
+                    <Text style={styles.shareInviteText}>Show QR code</Text>
+                  </>
+                )}
+              </PressableScale>
+
+              <InviteSheet
+                visible={!!qrInvite}
+                onClose={() => setQrInvite(null)}
+                kind="group"
+                title={group?.name ?? groupName}
+                url={qrInvite?.url ?? ''}
+                expiresAt={qrInvite?.expiresAt}
+              />
 
               {/* Invite by username */}
               <View style={styles.inviteSection}>
