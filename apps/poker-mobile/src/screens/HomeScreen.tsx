@@ -25,7 +25,7 @@ import { radii } from '../theme/radii';
 import { pulse, fadeIn, slideUp } from '../theme/motion';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useAuth } from '../context/AuthContext';
-import { getMyGroups, getMyInvitations, getCrossGroupActivity, MyGroupDto, PendingInvitationDto, CrossGroupActivityDto } from '../api/groupsApi';
+import { getMyGroups, getMyInvitations, getCrossGroupActivity, getGroupLeaderboard, MyGroupDto, PendingInvitationDto, CrossGroupActivityDto, PlayerLeaderboardEntryDto } from '../api/groupsApi';
 import { getMyNotifications } from '../api/notificationsApi';
 import { getMyStats, MyStatsDto, RecentSessionDto } from '../api/statsApi';
 import { getMyPendingSettlements, MyPendingSettlementDto } from '../api/settlementsApi';
@@ -46,6 +46,7 @@ import { formatPL, formatMoney, formatDate, formatDuration, formatMinutes, timeA
 import AnimatedNumber from '../components/motion/AnimatedNumber';
 import Screen from '../components/Screen';
 import Avatar from '../components/Avatar';
+import { topWeeklyMovers } from '../utils/topMovers';
 import { useActiveSession } from '../context/ActiveSessionContext';
 
 type HomeNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -85,6 +86,7 @@ export default function HomeScreen() {
   const [pendingSettlements, setPendingSettlements] = useState<MyPendingSettlementDto[]>([]);
   const [crossGroupActivity, setCrossGroupActivity] = useState<CrossGroupActivityDto[]>([]);
   const [digest, setDigest] = useState<WeeklyDigestDto | null>(null);
+  const [topMovers, setTopMovers] = useState<PlayerLeaderboardEntryDto[]>([]);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -166,6 +168,23 @@ export default function HomeScreen() {
     setRefreshing(true);
     loadAll(true);
   }, [loadAll]);
+
+  // Top movers this week (2.5): fetched OUTSIDE loadAll so it never holds the Home skeleton (the
+  // block self-gates on topMovers.length). Guarded on actual MEMBERSHIP — a session-invite player
+  // may not be a group member, and the member-only leaderboard would 401 + churn a token refresh;
+  // skip that call and leave the row hidden. Cancellation-safe across rapid focuses.
+  useEffect(() => {
+    const mag = digest?.mostActiveGroup;
+    if (!mag || !groups.some(g => g.id === mag.groupId)) { setTopMovers([]); return; }
+    let cancelled = false;
+    (async () => {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!token) return;
+      const lb = await getGroupLeaderboard(token, mag.groupId, 'week').catch(() => [] as PlayerLeaderboardEntryDto[]);
+      if (!cancelled) setTopMovers(topWeeklyMovers(lb));
+    })();
+    return () => { cancelled = true; };
+  }, [digest, groups]);
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -416,6 +435,35 @@ export default function HomeScreen() {
                   {Math.abs(digest.currentStreak)}-game {digest.currentStreak > 0 ? 'win' : 'loss'} streak
                 </Text>
               </View>
+            )}
+            {digest.mostActiveGroup && topMovers.length > 0 && (
+              <TouchableOpacity
+                style={styles.moversBlock}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel={`Top movers this week in ${digest.mostActiveGroup.groupName}: ${topMovers.map((m, i) => `${i + 1} ${m.username} ${formatPL(m.totalProfitLoss)}`).join(', ')}. Opens the leaderboard.`}
+                onPress={() => navigation.navigate('GroupDetail', {
+                  groupId: digest.mostActiveGroup!.groupId,
+                  groupName: digest.mostActiveGroup!.groupName,
+                  focusLeaderboard: true,
+                })}
+              >
+                <View style={styles.moversHeader}>
+                  <Text style={styles.moversTitle}>Top movers this week</Text>
+                  <View style={styles.moversCta}>
+                    <Text style={styles.moversCtaText}>Leaderboard</Text>
+                    <Ionicons name="chevron-forward" size={13} color={colors.gold} />
+                  </View>
+                </View>
+                {topMovers.map((m, i) => (
+                  <View key={m.userId} style={styles.moverRow}>
+                    <Text style={styles.moverRank}>{i + 1}</Text>
+                    <Avatar name={m.username} size={26} />
+                    <Text style={styles.moverName} numberOfLines={1}>{m.username}</Text>
+                    <Text style={styles.moverPL}>{formatPL(m.totalProfitLoss)}</Text>
+                  </View>
+                ))}
+              </TouchableOpacity>
             )}
           </Card>
         ) : digest ? (
@@ -1354,6 +1402,25 @@ const styles = StyleSheet.create({
   },
   digestIcon: { width: 16, textAlign: 'center' },
   digestEmoji: { fontSize: 13, width: 16, textAlign: 'center' },
+  moversBlock: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  moversHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
+  moversTitle: { ...typography.caption, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
+  moversCta: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  moversCtaText: { ...typography.caption, color: colors.gold },
+  moverRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
+  moverRank: { ...typography.caption, color: colors.textDim, width: 14, textAlign: 'center' },
+  moverName: { ...typography.bodySmall, color: colors.text, flex: 1 },
+  moverPL: { ...typography.labelSmall, color: colors.success },
   digestLabel: { ...typography.caption, color: colors.textMuted },
   digestValue: {
     ...typography.labelSmall,

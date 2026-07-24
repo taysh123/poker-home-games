@@ -3,6 +3,7 @@ import {
   View,
   Text,
   FlatList,
+  findNodeHandle,
   ActivityIndicator,
   StyleSheet,
   TextInput,
@@ -68,7 +69,7 @@ const RANK_BRONZE = '#B87333';
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupDetail'>;
 
 export default function GroupDetailScreen({ route, navigation }: Props) {
-  const { groupId, groupName, showInviteOnLoad } = route.params;
+  const { groupId, groupName, showInviteOnLoad, focusLeaderboard } = route.params;
   const { user } = useAuth();
   const hasAutoInvited = React.useRef(false);
 
@@ -89,6 +90,13 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   const [qrLoading, setQrLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [lbPeriod, setLbPeriod] = useState<'week' | 'month' | 'all'>('all');
+  const listRef = useRef<FlatList>(null);
+  const lbSectionRef = useRef<View>(null);
+  const didFocusLb = useRef(false);
+  const didScrollLb = useRef(false);
+  // Mirrors lbPeriod for load()/useFocusEffect, whose useCallback([groupId]) would otherwise capture
+  // a stale lbPeriod — so a refocus refetches the SELECTED period, never all-time under a Week label.
+  const lbPeriodRef = useRef<'week' | 'month' | 'all'>('all');
   const [lbLoading, setLbLoading] = useState(false);
   const [activityHasMore, setActivityHasMore] = useState(false);
   const [activityLoadingMore, setActivityLoadingMore] = useState(false);
@@ -110,7 +118,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
       const [groupData, membersData, leaderboardData, activityData, rivalsData] = await Promise.all([
         getGroupById(token, groupId),
         getGroupMembers(token, groupId),
-        getGroupLeaderboard(token, groupId).catch(() => [] as PlayerLeaderboardEntryDto[]),
+        getGroupLeaderboard(token, groupId, lbPeriodRef.current).catch(() => [] as PlayerLeaderboardEntryDto[]),
         getGroupActivity(token, groupId).catch(() => [] as ActivityLogDto[]),
         getGroupRivals(token, groupId).catch(() => [] as GroupRivalryDto[]),
       ]);
@@ -176,6 +184,32 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   );
 
   const onRefresh = useCallback(() => { setRefreshing(true); void load(true); }, [load]);
+
+  // Focus-leaderboard deep link (2.5): preselect the Week period + load it, once the screen is ready.
+  React.useEffect(() => {
+    if (!focusLeaderboard || didFocusLb.current || loading || !group) return;
+    didFocusLb.current = true;
+    setLbPeriod('week');
+    lbPeriodRef.current = 'week';
+    loadLeaderboard('week');
+  }, [focusLeaderboard, loading, group, loadLeaderboard]);
+
+  // Then scroll the leaderboard section into view once its Week rows have rendered.
+  React.useEffect(() => {
+    if (!didFocusLb.current || didScrollLb.current || lbLoading || lbPeriod !== 'week') return;
+    didScrollLb.current = true;
+    const t = setTimeout(() => {
+      const scrollNode = findNodeHandle(listRef.current?.getScrollableNode?.() ?? null);
+      if (scrollNode != null && lbSectionRef.current) {
+        lbSectionRef.current.measureLayout(
+          scrollNode,
+          (_x, y) => listRef.current?.scrollToOffset({ offset: Math.max(0, y - 12), animated: true }),
+          () => {},
+        );
+      }
+    }, 250);
+    return () => clearTimeout(t);
+  }, [lbLoading, lbPeriod]);
 
   React.useEffect(() => {
     if (!showInviteOnLoad || hasAutoInvited.current || loading || !group) return;
@@ -410,6 +444,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
     {header}
     <Animated.View style={[styles.listWrap, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
     <FlatList
+      ref={listRef}
       style={styles.list}
       contentContainerStyle={styles.listContent}
       data={members}
@@ -633,7 +668,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
           )}
 
           {/* Leaderboard */}
-          <View style={styles.leaderboardSection}>
+          <View ref={lbSectionRef} style={styles.leaderboardSection}>
             <View style={styles.lbHeader}>
               <Text style={styles.sectionTitle}>Leaderboard</Text>
               {lbLoading && <ActivityIndicator size="small" color={colors.gold} />}
@@ -645,6 +680,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
               onChange={(i) => {
                 const p = LB_PERIODS[i];
                 setLbPeriod(p);
+                lbPeriodRef.current = p;
                 loadLeaderboard(p);
               }}
               accessibilityLabel="Leaderboard period"

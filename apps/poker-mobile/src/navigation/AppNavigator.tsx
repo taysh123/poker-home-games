@@ -92,7 +92,7 @@ export type RootStackParamList = {
   MainTabs: undefined;
   Profile: undefined;
   CreateGroup: undefined;
-  GroupDetail: { groupId: string; groupName: string; showInviteOnLoad?: boolean };
+  GroupDetail: { groupId: string; groupName: string; showInviteOnLoad?: boolean; focusLeaderboard?: boolean };
   Invitations: undefined;
   EditGroup: { groupId: string; groupName: string; description?: string };
   SessionsList: { groupId: string; groupName: string; userRole: string };
