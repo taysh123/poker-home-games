@@ -628,15 +628,21 @@ flag is ON everywhere).
 - `StatsScreen` has a 3-tab period picker (This Week / This Month / All Time) at the top. Tabs trigger a re-fetch; hero label updates to match the period. All stat cards, the chart, and session list reflect the selected period.
 - `HomeScreen` computes "this week" P&L client-side from already-loaded `recentSessions` and displays it as a color-coded chip below the hero P&L when sessions exist in the last 7 days.
 
-### Weekly digest (undocumented until 2026-07-22 — live, unflagged)
+### Weekly digest + top movers (undocumented until 2026-07-22 — live, unflagged)
 
-- `GET /api/users/me/weekly-digest` → `WeeklyDigestDto { sessionsPlayed, netProfitLoss, bestNight,
-  totalMinutesPlayed, mostActiveGroup, currentStreak }` — rolling UTC last-7-days window computed
-  on-demand from the user's full history (`GetWeeklyDigestQueryHandler`; no persisted snapshots,
-  no calendar-week bucketing — NOT a weekly-cadence primitive).
+- `GET /api/users/me/weekly-digest` → `WeeklyDigestDto { sessionsPlayed, netProfitLoss,
+  bestNight?: { sessionId, sessionName, profitLoss }, totalMinutesPlayed,
+  mostActiveGroup?: { groupId, groupName, gamesCount }, currentStreak }` — rolling UTC last-7-days
+  window computed on-demand from the caller's OWN history (`GetWeeklyDigestQueryHandler`; caller-only,
+  no persisted snapshots, no calendar-week bucketing — NOT a weekly-cadence primitive). `bestNight`
+  and `mostActiveGroup` are nested sub-records, not flat scalars.
 - Client: `api/digestApi.ts`; HomeScreen fetches it on every focus and renders the
-  "Your Week at the Club" hero card (or a quiet-week prompt). Extend THIS card for weekly-crew
-  surfaces (master plan 2.5) — do not add a parallel weekly card.
+  **"Your Poker Week"** hero card (renamed from "Your Week at the Club" in 1.6; or a quiet-week
+  prompt). Extend THIS card for weekly-crew surfaces — never add a parallel weekly card.
+- **Top movers (2.5):** the card shows a "Top movers this week" row — the most-active group's weekly
+  leaderboard WINNERS (reuses `getGroupLeaderboard(groupId,'week')` + pure `utils/topMovers.ts`;
+  no new backend). Tapping it opens that group via the `GroupDetail` route's new `focusLeaderboard`
+  param, which preselects the Week period and scrolls the leaderboard section into view.
 
 ### In-App Notifications (D1 / Phase 40)
 
