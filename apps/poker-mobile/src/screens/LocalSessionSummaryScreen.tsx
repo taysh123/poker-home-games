@@ -38,6 +38,11 @@ import AnimatedNumber from '../components/motion/AnimatedNumber';
 import Celebration from '../components/motion/Celebration';
 import { PressableScale, MotiView, slideUpSequence, staggerIn } from '../components/motion';
 import { useReducedMotion } from '../hooks/useReducedMotion';
+import { useNextGamePlan } from '../context/NextGamePlanContext';
+import { crewSummary } from '../features/engagement/logic/nextGamePlan';
+import { localDayKey } from '../features/study/logic/localDay';
+import { track } from '../utils/analytics';
+import { showToast } from '../utils/toast';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocalSessionSummary'>;
 
@@ -49,6 +54,9 @@ type Props = NativeStackScreenProps<RootStackParamList, 'LocalSessionSummary'>;
 const entrance = (opts?: Parameters<typeof slideUpSequence>[0]) =>
   slideUpSequence(opts) as unknown as React.ComponentProps<typeof MotiView>;
 
+/** Coarse player-count band for analytics (a counter — never exact amounts/names). */
+const playersBand = (n: number): string => (n <= 1 ? '1' : n <= 3 ? '2-3' : n <= 5 ? '4-5' : '6+');
+
 /** Results + cash settlements for a finished local game. */
 export default function LocalSessionSummaryScreen({ route, navigation }: Props) {
   const { gameId } = route.params;
@@ -56,6 +64,7 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
   const reduced = useReducedMotion();
   const { games, deleteGame } = useLocalGames();
   const { user } = useAuth();
+  const { plan: nextGamePlan, setNextGame } = useNextGamePlan();
 
   const game = games.find(g => g.id === gameId);
   const isTournament = game?.mode === 'tournament';
@@ -125,9 +134,21 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
   async function handleShareImage() {
     try {
       await shareCardImage(shareRef);
+      track('game_result_shared', { mode: game!.mode ?? 'cash', players_band: playersBand(game!.players.length) });
     } catch {
       // share sheet dismissed or capture failed — non-critical
     }
+  }
+
+  async function handlePlanNextGame() {
+    await setNextGame({
+      mode: game!.mode ?? 'cash',
+      crew: game!.players.map(p => p.name),
+      gameDay: localDayKey(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
+      createdDayKey: localDayKey(),
+    });
+    track('next_game_planned', { mode: game!.mode ?? 'cash', players_band: playersBand(game!.players.length) });
+    showToast("Next game planned — we'll nudge you on game day.", 'success');
   }
 
   function handleDelete() {
@@ -291,6 +312,30 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
         )}
 
         <View style={{ height: spacing.xxxl }} />
+        {/* Closed loop (2.4): plan the same crew for next week — creates an on-device next-game plan. */}
+        {!nextGamePlan ? (
+          <PressableScale
+            style={styles.saveCard}
+            onPress={handlePlanNextGame}
+            haptic="medium"
+            accessibilityRole="button"
+            accessibilityLabel={`Same crew next week — plan a next game with ${crewSummary(game.players.map(p => p.name))}`}
+          >
+            <View style={styles.saveIconWrap}>
+              <Ionicons name="calendar-outline" size={iconSize.sm} color={colors.gold} />
+            </View>
+            <View style={styles.saveText}>
+              <Text style={styles.saveTitle}>Same crew next week?</Text>
+              <Text style={styles.saveSub}>We'll line up {crewSummary(game.players.map(p => p.name))} and nudge you on game day.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={iconSize.xs} color={colors.textMuted} />
+          </PressableScale>
+        ) : (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md }}>
+            <Ionicons name="checkmark-circle" size={iconSize.sm} color={colors.success} />
+            <Text style={{ ...typography.bodySmall, color: colors.success }}>Next game planned · {crewSummary(nextGamePlan.crew)}</Text>
+          </View>
+        )}
         {user === null && (
           <PressableScale
             style={styles.saveCard}

@@ -26,6 +26,7 @@ import { AuthProvider } from './src/context/AuthContext';
 import { CurrencyProvider } from './src/context/CurrencyContext';
 import { ActiveSessionProvider } from './src/context/ActiveSessionContext';
 import { LocalGamesProvider } from './src/context/LocalGamesContext';
+import { NextGamePlanProvider } from './src/context/NextGamePlanContext';
 import { EntitlementsProvider } from './src/context/EntitlementsContext';
 import { ContentProvider } from './src/context/ContentContext';
 import { PremiumProvider } from './src/features/premium/state/PremiumContext';
@@ -127,6 +128,7 @@ export default function App() {
           <ContentProvider>
           <ActiveSessionProvider>
             <LocalGamesProvider>
+              <NextGamePlanProvider>
               <BankrollProvider>
                 <StudyProvider>
                   <MasteryProvider>
@@ -146,6 +148,7 @@ export default function App() {
                   </MasteryProvider>
                 </StudyProvider>
               </BankrollProvider>
+              </NextGamePlanProvider>
             </LocalGamesProvider>
           </ActiveSessionProvider>
           </ContentProvider>
