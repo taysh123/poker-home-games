@@ -14,3 +14,8 @@ export function topWeeklyMovers(
     .sort((a, b) => b.totalProfitLoss - a.totalProfitLoss) // never touches the caller's array
     .slice(0, Math.max(0, limit));
 }
+
+/** Display name for a mover row: "You" for the signed-in user, otherwise their username. */
+export function moverLabel(entry: PlayerLeaderboardEntryDto, currentUserId?: string): string {
+  return currentUserId && entry.userId === currentUserId ? 'You' : entry.username;
+}

@@ -1,4 +1,4 @@
-import { topWeeklyMovers } from '../topMovers';
+import { topWeeklyMovers, moverLabel } from '../topMovers';
 import type { PlayerLeaderboardEntryDto } from '../../api/groupsApi';
 
 // Minimal fixture — only the fields topWeeklyMovers reads matter.
@@ -52,5 +52,21 @@ describe('topWeeklyMovers — the week\'s winners, ranked, capped', () => {
     const snapshot = input.map(e => e.username);
     topWeeklyMovers(input);
     expect(input.map(e => e.username)).toEqual(snapshot);
+  });
+});
+
+describe('moverLabel — "You" for the signed-in user', () => {
+  const dana = { ...entry('Dana', 420), userId: 'u-dana' };
+
+  it('returns "You" when the entry is the current user', () => {
+    expect(moverLabel(dana, 'u-dana')).toBe('You');
+  });
+
+  it('returns the username for anyone else', () => {
+    expect(moverLabel(dana, 'u-someone-else')).toBe('Dana');
+  });
+
+  it('returns the username when there is no current user id (guest / unknown)', () => {
+    expect(moverLabel(dana, undefined)).toBe('Dana');
   });
 });

@@ -46,7 +46,7 @@ import { formatPL, formatMoney, formatDate, formatDuration, formatMinutes, timeA
 import AnimatedNumber from '../components/motion/AnimatedNumber';
 import Screen from '../components/Screen';
 import Avatar from '../components/Avatar';
-import { topWeeklyMovers } from '../utils/topMovers';
+import { topWeeklyMovers, moverLabel } from '../utils/topMovers';
 import { useActiveSession } from '../context/ActiveSessionContext';
 
 type HomeNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -441,7 +441,7 @@ export default function HomeScreen() {
                 style={styles.moversBlock}
                 activeOpacity={0.8}
                 accessibilityRole="button"
-                accessibilityLabel={`Top movers this week in ${digest.mostActiveGroup.groupName}: ${topMovers.map((m, i) => `${i + 1} ${m.username} ${formatPL(m.totalProfitLoss)}`).join(', ')}. Opens the leaderboard.`}
+                accessibilityLabel={`Top movers this week in ${digest.mostActiveGroup.groupName}: ${topMovers.map((m, i) => `${i + 1} ${moverLabel(m, user?.userId)} ${formatPL(m.totalProfitLoss)}`).join(', ')}. Opens the leaderboard.`}
                 onPress={() => navigation.navigate('GroupDetail', {
                   groupId: digest.mostActiveGroup!.groupId,
                   groupName: digest.mostActiveGroup!.groupName,
@@ -455,14 +455,19 @@ export default function HomeScreen() {
                     <Ionicons name="chevron-forward" size={13} color={colors.gold} />
                   </View>
                 </View>
-                {topMovers.map((m, i) => (
-                  <View key={m.userId} style={styles.moverRow}>
-                    <Text style={styles.moverRank}>{i + 1}</Text>
-                    <Avatar name={m.username} size={26} />
-                    <Text style={styles.moverName} numberOfLines={1}>{m.username}</Text>
-                    <Text style={styles.moverPL}>{formatPL(m.totalProfitLoss)}</Text>
-                  </View>
-                ))}
+                {topMovers.map((m, i) => {
+                  const self = !!user?.userId && m.userId === user.userId;
+                  return (
+                    <View key={m.userId} style={styles.moverRow}>
+                      <Text style={styles.moverRank}>{i + 1}</Text>
+                      <Avatar name={m.username} size={26} />
+                      <Text style={[styles.moverName, self && styles.moverNameSelf]} numberOfLines={1}>
+                        {moverLabel(m, user?.userId)}
+                      </Text>
+                      <Text style={styles.moverPL}>{formatPL(m.totalProfitLoss)}</Text>
+                    </View>
+                  );
+                })}
               </TouchableOpacity>
             )}
           </Card>
@@ -1420,6 +1425,7 @@ const styles = StyleSheet.create({
   moverRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   moverRank: { ...typography.caption, color: colors.textDim, width: 14, textAlign: 'center' },
   moverName: { ...typography.bodySmall, color: colors.text, flex: 1 },
+  moverNameSelf: { color: colors.gold, fontWeight: '700' },
   moverPL: { ...typography.labelSmall, color: colors.success },
   digestLabel: { ...typography.caption, color: colors.textMuted },
   digestValue: {
