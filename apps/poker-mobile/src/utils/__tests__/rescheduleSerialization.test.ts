@@ -8,7 +8,8 @@
 let mockScheduled: { title: string; body: string }[] = [];
 let mockCancelAllCalls = 0;
 
-jest.mock('react-native', () => ({ Platform: { OS: 'ios' } }));
+// No react-native mock needed — the jest-expo preset already provides Platform.OS 'ios',
+// and whole-module replacements are a cross-file leak hazard (see jestMockHygieneBan.test.ts).
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
   default: { getItem: jest.fn(() => Promise.resolve(null)), setItem: jest.fn(() => Promise.resolve()) },
@@ -25,7 +26,7 @@ jest.mock('expo-notifications', () => ({
   }),
   getPermissionsAsync: jest.fn(async () => ({ granted: true, canAskAgain: false })),
   requestPermissionsAsync: jest.fn(async () => ({ granted: true })),
-}), { virtual: true });
+}));
 
 import { rescheduleReminders } from '../reminders';
 import { DEFAULT_REMINDER_PREFS, type ReminderSignals } from '../reminderLogic';
