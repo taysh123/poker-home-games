@@ -1,4 +1,4 @@
-import { crewSummary, gameDayLabel, isGameDay, isPlanConsumed, isPlanStale, planNudgeLine, planToastText, type NextGamePlan } from '../nextGamePlan';
+import { crewSummary, gameDayLabel, isGameDay, isPlanConsumed, isPlanStale, planEquals, planNudgeLine, planToastText, type NextGamePlan } from '../nextGamePlan';
 
 const plan = (over: Partial<NextGamePlan> = {}): NextGamePlan => ({
   mode: 'cash',
@@ -45,12 +45,31 @@ describe('gameDayLabel', () => {
   });
 });
 
-describe('plan copy is platform-honest (web has no notifications — never promise a nudge there)', () => {
-  it('native copy promises the game-day nudge; web copy points at the Home card instead', () => {
-    expect(planNudgeLine('Alex, Dana', false)).toBe("We'll line up Alex, Dana and nudge you on game day.");
+describe('plan copy promises only what is delivered (critic finds C3/m0)', () => {
+  it('the "line up" promise names the Home card (which always shows the crew), never an undelivered wizard prefill', () => {
+    expect(planNudgeLine('Alex, Dana', false)).toBe("We'll line up Alex, Dana on your Home screen and nudge you on game day.");
+    expect(planNudgeLine('Alex, Dana', true)).toBe("We'll line up Alex, Dana on your Home screen for next week.");
     expect(planNudgeLine('Alex, Dana', true)).not.toMatch(/nudge/i);
+  });
+
+  it('the toast promises a nudge only when one can actually fire (native + permission granted)', () => {
     expect(planToastText(false)).toBe("Next game planned — we'll nudge you on game day.");
+    expect(planToastText(true)).toBe('Next game planned — find it on your Home screen.');
     expect(planToastText(true)).not.toMatch(/nudge/i);
+  });
+});
+
+describe('planEquals (identity-churn guard — critic find C1)', () => {
+  it('is true for content-equal plans and false for any field change', () => {
+    const a = plan({ gameDay: '2026-08-01', origin: 'local' as const });
+    expect(planEquals(a, { ...a, crew: [...a.crew] })).toBe(true);
+    expect(planEquals(a, { ...a, gameDay: '2026-08-02' })).toBe(false);
+    expect(planEquals(a, { ...a, crew: ['Alex'] })).toBe(false);
+    expect(planEquals(a, { ...a, mode: 'tournament' })).toBe(false);
+    expect(planEquals(a, { ...a, origin: 'server' })).toBe(false);
+    expect(planEquals(null, null)).toBe(true);
+    expect(planEquals(a, null)).toBe(false);
+    expect(planEquals(null, a)).toBe(false);
   });
 });
 

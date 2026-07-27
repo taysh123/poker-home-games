@@ -89,8 +89,9 @@ Guests get the full tree — every feature context works signed-out.
 - Streaks live in StudyContext (freeze tokens, weekly refill, auto-freeze — `retention` flag).
   Reminders: three kinds only (`daily_study`, `streak_risk`, and 2.4's one-shot `game_day`),
   honesty-pinned; ALL scheduling flows through `rescheduleReminders`' cancel-all funnel (an
-  out-of-band schedule gets silently wiped). OS permission asked once after the first completed
-  drill, plus contextually (idempotent) when a dated next-game plan is created.
+  out-of-band schedule gets silently wiped), which SERIALIZES concurrent calls (latest wins).
+  Permission: once-ever first-drill prompt, plus the idempotent `ensureReminderPermission`
+  from the prefs screen and the plan handlers (whose result picks the honest toast copy).
 
 ## screens/ — where the risk is
 

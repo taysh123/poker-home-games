@@ -64,10 +64,31 @@ export async function unregisterPushAsync(accessToken: string): Promise<void> {
   }
 }
 
+/** Route a tapped notification. LOCAL reminders carry `data.kind` and never live in the server
+ * inbox — game_day lands on the Home TAB explicitly (navigate('MainTabs') alone preserves the
+ * last-active tab — critic find C5), other reminder kinds land on MainTabs, and only kind-less
+ * (server push) taps go to the inbox, which exists in the authed tree alone — exactly who
+ * receives server push. */
+function routeNotificationTap(
+  navigation: NativeStackNavigationProp<RootStackParamList>,
+  kind: unknown,
+): void {
+  if (kind === 'game_day') {
+    navigation.navigate('MainTabs', { screen: 'Home' });
+    return;
+  }
+  if (typeof kind === 'string') {
+    navigation.navigate('MainTabs', undefined);
+    return;
+  }
+  navigation.navigate('Notifications');
+}
+
 /** Mount once (inside NavigationContainer): foreground display + tap routing. */
 export function usePushNotificationListeners() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const subs = useRef<{ remove: () => void }[]>([]);
+  const coldStartHandled = useRef(false);
 
   useEffect(() => {
     const Notifications = getNotifications();
@@ -84,17 +105,24 @@ export function usePushNotificationListeners() {
 
     subs.current.push(
       Notifications.addNotificationResponseReceivedListener(response => {
-        // The game-day heads-up (2.4) lands on Home, where the Next-game card lives — and 'MainTabs'
-        // exists in BOTH trees (guests plan local games; the guest tree has no 'Notifications' route).
-        const kind = response.notification.request.content.data?.kind;
-        if (kind === 'game_day') {
-          navigation.navigate('MainTabs');
-          return;
-        }
-        // All other notification types have their detail in the inbox.
-        navigation.navigate('Notifications');
+        routeNotificationTap(navigation, response.notification.request.content.data?.kind);
       }),
     );
+
+    // Cold start (critic find m6): a tap that LAUNCHES the app is delivered before the listener
+    // exists. Route the game-day kind only — other kinds keep their normal launch behavior.
+    if (!coldStartHandled.current) {
+      coldStartHandled.current = true;
+      (async () => {
+        try {
+          const last = await Notifications.getLastNotificationResponseAsync?.();
+          const kind = last?.notification.request.content.data?.kind;
+          if (kind === 'game_day') navigation.navigate('MainTabs', { screen: 'Home' });
+        } catch {
+          // best-effort
+        }
+      })();
+    }
 
     return () => {
       subs.current.forEach(s => s.remove());

@@ -1,9 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { NextGamePlan } from '../features/engagement/logic/nextGamePlan';
-import { isPlanStale } from '../features/engagement/logic/nextGamePlan';
+import { isPlanStale, planEquals } from '../features/engagement/logic/nextGamePlan';
 import { loadNextGamePlan, saveNextGamePlan, clearNextGamePlan } from '../features/engagement/data/nextGamePlanStore';
 import { localDayKey } from '../features/study/logic/localDay';
-import { ensureReminderPermission } from '../utils/reminders';
 
 /**
  * The single on-device "next game plan" (slice 2.4), shared by guests and signed-in users. Loads on
@@ -29,7 +28,10 @@ export function NextGamePlanProvider({ children }: { children: React.ReactNode }
       setPlan(null);
       return;
     }
-    setPlan(loaded);
+    // Keep the previous reference when content is unchanged — the store parses a fresh object
+    // every load, and an identity change here churns every downstream effect dep (the reminder
+    // scheduler would cancel-all + reschedule on every Home focus). Critic find C1.
+    setPlan(prev => (planEquals(prev, loaded) ? prev : loaded));
   }, []);
 
   useEffect(() => { void refresh(); }, [refresh]);
@@ -37,10 +39,9 @@ export function NextGamePlanProvider({ children }: { children: React.ReactNode }
   const setNextGame = useCallback(async (next: NextGamePlan) => {
     await saveNextGamePlan(next);
     setPlan(next);
-    // A dated plan wants its game-day heads-up: the explicit "plan it" gesture is the contextual
-    // moment to ask (idempotent; native-only no-op elsewhere). The scheduler picks the plan up
-    // via its `plan` dep — never schedule imperatively here (the cancel-all funnel would race).
-    if (next.gameDay) void ensureReminderPermission().catch(() => {});
+    // Pure storage on purpose: the notification permission ask lives in the two "Same crew next
+    // week?" handlers (they need the outcome for honest toast copy), and scheduling flows from
+    // the reminder scheduler's plan dep — never imperatively from here.
   }, []);
 
   const clearNextGame = useCallback(async () => {

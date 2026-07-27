@@ -80,7 +80,7 @@ export default function HomeScreen() {
     isFeatureEnabled('study') &&
     drillSub !== null;
   const { refresh: refreshActiveSession } = useActiveSession();
-  const { activeGame } = useLocalGames();
+  const { activeGame, isLoaded: localGamesLoaded } = useLocalGames();
   const { refresh: refreshNextGamePlan } = useNextGamePlan();
   const reducedMotion = useReducedMotion();
 
@@ -202,10 +202,11 @@ export default function HomeScreen() {
     navigation.navigate('Session', { sessionId: s.sessionId, groupId: s.groupId ?? '' });
   }
 
-  // Server-made plans start a server session; local (and legacy origin-less) plans open the wizard.
+  // Server-made plans start a server session; local (and legacy origin-less) plans open the
+  // wizard with the planned crew pre-filled and consume the plan once the game starts.
   const startPlannedGame = useCallback((plan: NextGamePlan) => {
     if (plan.origin === 'server') navigation.navigate('NewGame', {});
-    else navigation.navigate('LocalNewGame', { mode: plan.mode });
+    else navigation.navigate('LocalNewGame', { mode: plan.mode, prefillNames: plan.crew, fromPlan: true });
   }, [navigation]);
 
   const activeSessions = stats?.recentSessions.filter(s => s.status === 'Active') ?? [];
@@ -515,8 +516,10 @@ export default function HomeScreen() {
           </TouchableOpacity>
         ))}
 
-        {/* ── Next game (2.4 pre-session moment) — hidden while any game is LIVE ── */}
-        {activeSessions.length === 0 && !activeGame && (
+        {/* ── Next game (2.4 pre-session moment) — only once liveness is KNOWN (stats + local
+            games hydrated), and never while any game is live. On cold start the card used to
+            flash before the LIVE banner replaced it — a mis-tap started a second game (C2). ── */}
+        {!statsLoading && localGamesLoaded && activeSessions.length === 0 && !activeGame && (
           <NextGameCard
             onStart={startPlannedGame}
             onWarmUp={() => navigation.navigate('StudyTrainer', { mode: 'spot' })}

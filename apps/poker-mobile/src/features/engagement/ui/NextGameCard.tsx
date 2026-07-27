@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, AppState, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PressableScale } from '../../../components/motion';
 import { colors } from '../../../theme/colors';
@@ -36,6 +36,14 @@ interface Props {
 export default function NextGameCard({ onStart, onWarmUp }: Props) {
   const { plan, clearNextGame } = useNextGamePlan();
   const { limitFor } = useStudy();
+  // Re-evaluate "today" on every foreground: tab screens stay mounted (GuestHome especially has
+  // no focus-refresh), so without this an app left open across midnight would miss the GAME DAY
+  // escalation and keep a stale card (critic find m17).
+  const [, setDayTick] = useState(0);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', s => { if (s === 'active') setDayTick(t => t + 1); });
+    return () => sub.remove();
+  }, []);
 
   const today = localDayKey();
   if (!plan || isPlanStale(plan, today)) return null;
@@ -50,8 +58,18 @@ export default function NextGameCard({ onStart, onWarmUp }: Props) {
   const crew = crewSummary(plan.crew);
   const dayLabel = gameDayLabel(plan.gameDay, today);
   const modeLabel = plan.mode === 'tournament' ? 'Tournament' : 'Cash game';
-  const sub = [dayLabel || modeLabel, crew].filter(Boolean).join(' · ');
+  // Dated tournament plans keep their mode visible (critic find m10).
+  const sub = [dayLabel || modeLabel, dayLabel && plan.mode === 'tournament' ? 'Tournament' : '', crew]
+    .filter(Boolean)
+    .join(' · ');
   const band = playersBand(plan.crew.length);
+  const startLabel = [
+    gameDay ? 'Game night —' : 'Next game',
+    !gameDay && dayLabel ? `on ${dayLabel}` : '',
+    gameDay ? `start tonight's ${modeLabel.toLowerCase()}` : '',
+    `with ${crew || 'your crew'}`,
+    gameDay ? '' : '— start it',
+  ].filter(Boolean).join(' ');
 
   function handleStart() {
     track('next_game_started', { mode: plan!.mode, players_band: band, is_game_day: gameDay });
@@ -66,7 +84,9 @@ export default function NextGameCard({ onStart, onWarmUp }: Props) {
   function handleDismiss() {
     confirmDialog(
       'Clear this plan?',
-      "The next-game reminder goes with it. You can plan again from any finished game.",
+      Platform.OS === 'web'
+        ? 'You can plan again from any finished game.'
+        : 'The game-day reminder goes with it. You can plan again from any finished game.',
       'Clear',
       async () => {
         await clearNextGame();
@@ -86,11 +106,7 @@ export default function NextGameCard({ onStart, onWarmUp }: Props) {
           onPress={handleStart}
           haptic="medium"
           accessibilityRole="button"
-          accessibilityLabel={
-            gameDay
-              ? `Game night — start tonight's ${modeLabel.toLowerCase()} with ${crew || 'your crew'}`
-              : `Next game ${dayLabel ? `on ${dayLabel}` : ''} with ${crew || 'your crew'} — start it`
-          }
+          accessibilityLabel={startLabel}
         >
           <View style={[styles.iconWrap, gameDay && styles.iconWrapGameDay]}>
             <Ionicons name="calendar-outline" size={iconSize.sm} color={gameDay ? colors.background : colors.gold} />
@@ -110,7 +126,6 @@ export default function NextGameCard({ onStart, onWarmUp }: Props) {
         <PressableScale
           style={styles.dismissBtn}
           onPress={handleDismiss}
-          hitSlop={10}
           haptic="light"
           accessibilityRole="button"
           accessibilityLabel="Clear the next game plan"
@@ -153,7 +168,7 @@ const styles = StyleSheet.create({
   mainRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingRight: spacing.md,
+    paddingRight: spacing.xs,
   },
   mainPress: {
     flex: 1,
@@ -186,9 +201,11 @@ const styles = StyleSheet.create({
   },
   pillText: { fontSize: 10, fontWeight: '800', color: colors.gold, letterSpacing: 1.5 },
   sub: { ...typography.bodySmall, color: colors.textMuted },
+  // A real ≥44pt box, not hitSlop — react-native-web's Pressable silently drops hitSlop, which
+  // left a 28px ✕ flush against the start-game pressable on web (critic find C4).
   dismissBtn: {
-    width: 28,
-    height: 28,
+    width: 44,
+    height: 44,
     borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',

@@ -41,19 +41,37 @@ export function gameDayLabel(gameDay: string | undefined, todayKey: string): str
   return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
-/** "Same crew next week?" sub-line — platform-honest: the game-day nudge is a NATIVE local
- * notification; web has none, so web copy points at the Home card instead of promising a nudge. */
-export function planNudgeLine(crewLine: string, isWeb: boolean): string {
-  return isWeb
-    ? `We'll line up ${crewLine} — your next game will be waiting on Home.`
-    : `We'll line up ${crewLine} and nudge you on game day.`;
+/** "Same crew next week?" sub-line. Honesty rules (critic finds C3/m0): the "line up" promise
+ * names the HOME CARD — the one surface that always shows the crew — and the nudge is promised
+ * only where a notification can exist (native). */
+export function planNudgeLine(crewLine: string, noNudge: boolean): string {
+  return noNudge
+    ? `We'll line up ${crewLine} on your Home screen for next week.`
+    : `We'll line up ${crewLine} on your Home screen and nudge you on game day.`;
 }
 
-/** Post-plan success toast — same platform-honesty rule as `planNudgeLine`. */
-export function planToastText(isWeb: boolean): string {
-  return isWeb
+/** Post-plan success toast. Pass `noNudge` when no nudge can actually fire — web, notification
+ * permission denied, or the Game-day pref off — so the toast never promises an impossible nudge. */
+export function planToastText(noNudge: boolean): string {
+  return noNudge
     ? 'Next game planned — find it on your Home screen.'
     : "Next game planned — we'll nudge you on game day.";
+}
+
+/** Content equality for plans (critic find C1): the store returns a fresh object on every load,
+ * so state setters must compare CONTENT or every refresh churns downstream effect deps (each
+ * churn used to cancel-all + reschedule every OS notification). */
+export function planEquals(a: NextGamePlan | null, b: NextGamePlan | null): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return (
+    a.mode === b.mode &&
+    a.gameDay === b.gameDay &&
+    a.createdDayKey === b.createdDayKey &&
+    a.origin === b.origin &&
+    a.crew.length === b.crew.length &&
+    a.crew.every((n, i) => n === b.crew[i])
+  );
 }
 
 /** True when a dated plan lands on `todayKey` — drives the game-day CTA + notification. */

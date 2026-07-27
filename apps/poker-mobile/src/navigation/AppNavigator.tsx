@@ -89,7 +89,9 @@ export type RootStackParamList = {
   Onboarding: undefined;
   Login: undefined;
   Register: undefined;
-  MainTabs: undefined;
+  // `screen` targets a tab by name on notification taps (navigate('MainTabs') alone keeps the
+  // last-active tab). 'Home' exists in BOTH trees.
+  MainTabs: { screen?: 'Home' } | undefined;
   Profile: undefined;
   CreateGroup: undefined;
   GroupDetail: { groupId: string; groupName: string; showInviteOnLoad?: boolean; focusLeaderboard?: boolean };
@@ -104,7 +106,9 @@ export type RootStackParamList = {
   PlayerProfile: { userId: string; username: string };
   Notifications: undefined;
   // Local (on-device) games — available to guests and logged-in users
-  LocalNewGame: { mode?: 'cash' | 'tournament' } | undefined;
+  // prefillNames/fromPlan: the Next-game card (2.4) delivers the planned crew into the wizard
+  // and consumes the plan once the game actually starts.
+  LocalNewGame: { mode?: 'cash' | 'tournament'; prefillNames?: string[]; fromPlan?: boolean } | undefined;
   LocalSession: { gameId: string };
   LocalSessionSummary: { gameId: string };
   // V2 — Bankroll tracker (Track pillar)

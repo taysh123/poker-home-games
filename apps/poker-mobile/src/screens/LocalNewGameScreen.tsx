@@ -32,6 +32,7 @@ import { getRecentGuests, recordGuestName } from '../utils/guestHistory';
 import { parseAmountToCents, formatCents } from '../utils/money';
 import { currencySymbol } from '../utils/currency';
 import { useLocalGames } from '../context/LocalGamesContext';
+import { useNextGamePlan } from '../context/NextGamePlanContext';
 import { showToast } from '../utils/toast';
 import { infoDialog } from '../utils/confirm';
 import { PAYOUT_PRESET_LABELS, PAYOUT_PRESETS, defaultPayoutSplit } from '../local/tournament';
@@ -68,6 +69,7 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
   const sym = currencySymbol();
   const { startGame, activeGame } = useLocalGames();
+  const { clearNextGame } = useNextGamePlan();
 
   const [step, setStep] = useState(1);
   const STEP_LABELS = ['Details', 'Players', 'Review'];
@@ -139,7 +141,18 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
   const [lateRegLevels, setLateRegLevels] = useState(0);
 
   const [playerInput, setPlayerInput] = useState('');
-  const [playerNames, setPlayerNames] = useState<string[]>([]);
+  // Next-game plans (2.4) deliver their crew straight into the wizard — dedupe defensively,
+  // the same case-insensitive rule handleAddPlayer enforces.
+  const [playerNames, setPlayerNames] = useState<string[]>(() => {
+    const seen = new Set<string>();
+    return (route.params?.prefillNames ?? [])
+      .map(n => n.trim())
+      .filter(n => {
+        if (!n || seen.has(n.toLowerCase())) return false;
+        seen.add(n.toLowerCase());
+        return true;
+      });
+  });
   const [playersError, setPlayersError] = useState('');
   const [recentGuests, setRecentGuests] = useState<string[]>([]);
 
@@ -239,6 +252,10 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
       for (const name of playerNames) {
         await recordGuestName(name);
       }
+
+      // The plan's job ends when its game actually starts — clearing here also cancels the
+      // 17:00 one-shot via the scheduler's plan dep (critic find m13).
+      if (route.params?.fromPlan) void clearNextGame();
 
       showToast('Game started!', 'success');
       // wow #5: brief branded "Deal 'Em In" beat, then into the live table.

@@ -81,7 +81,8 @@ import { currencySymbol } from '../utils/currency';
 import ShareCard, { canShareImages, shareCardImage } from '../components/ShareCard';
 import { useActiveSession } from '../context/ActiveSessionContext';
 import { useNextGamePlan } from '../context/NextGamePlanContext';
-import { crewSummary, isPlanConsumed, planNudgeLine, planToastText } from '../features/engagement/logic/nextGamePlan';
+import { crewSummary, isGameDay, isPlanConsumed, planNudgeLine, planToastText } from '../features/engagement/logic/nextGamePlan';
+import { ensureReminderPermission } from '../utils/reminders';
 import { localDayKey } from '../features/study/logic/localDay';
 import { track } from '../utils/analytics';
 
@@ -276,16 +277,35 @@ export default function SessionScreen({ route, navigation }: Props) {
   // Closed loop (2.4, mirrors LocalSessionSummaryScreen): server sessions are cash-only, and the
   // crew is display names only (guests are already folded into `username` server-side).
   async function handlePlanNextGame() {
-    const crew = (session?.players ?? []).map(p => p.username);
-    await setNextGame({
-      mode: 'cash',
-      crew,
-      gameDay: localDayKey(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
-      createdDayKey: localDayKey(),
-      origin: 'server',
-    });
-    track('next_game_planned', { mode: 'cash', players_band: playersBand(crew.length) });
-    showToast(planToastText(Platform.OS === 'web'), 'success');
+    const doPlan = async () => {
+      const crew = (session?.players ?? []).map(p => p.username);
+      const gd = new Date();
+      gd.setDate(gd.getDate() + 7); // calendar-day add — DST-safe, unlike +7*24h epoch math
+      await setNextGame({
+        mode: 'cash',
+        crew,
+        gameDay: localDayKey(gd),
+        createdDayKey: localDayKey(),
+        origin: 'server',
+      });
+      track('next_game_planned', { mode: 'cash', players_band: playersBand(crew.length) });
+      // Promise the nudge only when one can fire: native AND permission granted (this is also
+      // the contextual permission-ask moment — idempotent, prompts only while the OS allows).
+      const canNudge = Platform.OS !== 'web' && await ensureReminderPermission();
+      showToast(planToastText(!canNudge), 'success');
+    };
+    // A consumed plan re-offers all game day — but overwriting TONIGHT's still-upcoming plan
+    // silently would also cancel its 17:00 reminder. Confirm first.
+    if (nextGamePlan && isGameDay(nextGamePlan, localDayKey())) {
+      confirmDialog(
+        "Replace tonight's plan?",
+        `You already have a game planned for tonight (${crewSummary(nextGamePlan.crew)}). Planning a new one replaces it.`,
+        'Replace',
+        () => void doPlan(),
+      );
+      return;
+    }
+    await doPlan();
   }
   const isAdminOrOwner = myRole === 'Admin' || myRole === 'Owner'
     || (session?.groupId == null && session?.creatorId === user?.userId);
@@ -1310,7 +1330,7 @@ export default function SessionScreen({ route, navigation }: Props) {
             ) : (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md }}>
                 <Ionicons name="checkmark-circle" size={iconSize.sm} color={colors.success} />
-                <Text style={{ ...typography.bodySmall, color: colors.success }}>
+                <Text style={{ ...typography.bodySmall, color: colors.success, flexShrink: 1 }} numberOfLines={1}>
                   Next game planned · {crewSummary(nextGamePlan.crew)}
                 </Text>
               </View>
