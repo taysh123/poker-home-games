@@ -3,6 +3,7 @@ import type { NextGamePlan } from '../features/engagement/logic/nextGamePlan';
 import { isPlanStale } from '../features/engagement/logic/nextGamePlan';
 import { loadNextGamePlan, saveNextGamePlan, clearNextGamePlan } from '../features/engagement/data/nextGamePlanStore';
 import { localDayKey } from '../features/study/logic/localDay';
+import { ensureReminderPermission } from '../utils/reminders';
 
 /**
  * The single on-device "next game plan" (slice 2.4), shared by guests and signed-in users. Loads on
@@ -36,6 +37,10 @@ export function NextGamePlanProvider({ children }: { children: React.ReactNode }
   const setNextGame = useCallback(async (next: NextGamePlan) => {
     await saveNextGamePlan(next);
     setPlan(next);
+    // A dated plan wants its game-day heads-up: the explicit "plan it" gesture is the contextual
+    // moment to ask (idempotent; native-only no-op elsewhere). The scheduler picks the plan up
+    // via its `plan` dep — never schedule imperatively here (the cancel-all funnel would race).
+    if (next.gameDay) void ensureReminderPermission().catch(() => {});
   }, []);
 
   const clearNextGame = useCallback(async () => {

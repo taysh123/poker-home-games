@@ -61,8 +61,11 @@ export async function rescheduleReminders(prefs: ReminderPrefs, signals: Reminde
     const specs = eligibleReminders(prefs, signals);
     for (const spec of specs) {
       await N.scheduleNotificationAsync({
-        content: { title: spec.title, body: spec.body },
-        trigger: { hour: spec.hour, minute: 0, repeats: true } as never,
+        // data.kind lets the tap listener route game_day to Home instead of the notifications inbox.
+        content: { title: spec.title, body: spec.body, data: { kind: spec.kind } },
+        trigger: spec.fireAtMs != null
+          ? ({ type: 'date', date: spec.fireAtMs } as never) // one-shot (game_day)
+          : ({ hour: spec.hour, minute: 0, repeats: true } as never), // repeating daily
       });
     }
   } catch {

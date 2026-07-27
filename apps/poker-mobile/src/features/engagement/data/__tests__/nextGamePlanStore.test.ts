@@ -11,7 +11,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 import { loadNextGamePlan, saveNextGamePlan, clearNextGamePlan } from '../nextGamePlanStore';
 import type { NextGamePlan } from '../../logic/nextGamePlan';
 
-const plan: NextGamePlan = { mode: 'tournament', crew: ['Alex', 'Dana'], gameDay: '2026-08-01', createdDayKey: '2026-07-25' };
+const plan: NextGamePlan = { mode: 'tournament', crew: ['Alex', 'Dana'], gameDay: '2026-08-01', createdDayKey: '2026-07-25', origin: 'local' };
 
 beforeEach(() => { mockStore = {}; jest.clearAllMocks(); });
 
@@ -40,6 +40,13 @@ describe('nextGamePlanStore', () => {
     mockStore['tpoker.nextGamePlan.v1'] = JSON.stringify({ mode: 'poker', crew: ['A'], createdDayKey: 'x' });
     expect(await loadNextGamePlan()).toBeNull(); // bad mode
     mockStore['tpoker.nextGamePlan.v1'] = JSON.stringify({ mode: 'cash', crew: ['A', 5, 'B'], createdDayKey: '2026-07-25' });
-    expect(await loadNextGamePlan()).toEqual({ mode: 'cash', crew: ['A', 'B'], gameDay: undefined, createdDayKey: '2026-07-25' });
+    expect(await loadNextGamePlan()).toEqual({ mode: 'cash', crew: ['A', 'B'], gameDay: undefined, createdDayKey: '2026-07-25', origin: undefined });
+  });
+
+  it('preserves a valid origin and drops an unknown one (older payloads load origin-less)', async () => {
+    await saveNextGamePlan({ ...plan, origin: 'server' });
+    expect((await loadNextGamePlan())?.origin).toBe('server');
+    mockStore['tpoker.nextGamePlan.v1'] = JSON.stringify({ mode: 'cash', crew: ['A'], createdDayKey: '2026-07-25', origin: 'cloud' });
+    expect((await loadNextGamePlan())?.origin).toBeUndefined();
   });
 });

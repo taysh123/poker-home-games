@@ -10,12 +10,15 @@ import { isFeatureEnabled } from '../config/features';
 import { useStudy } from '../features/study/state/StudyContext';
 import { studyStats } from '../features/study/logic/progress';
 import { localDayKey } from '../features/study/logic/localDay';
+import { useNextGamePlan } from '../context/NextGamePlanContext';
+import { crewSummary } from '../features/engagement/logic/nextGamePlan';
 import { loadReminderPrefs } from '../utils/reminderPrefs';
 import { rescheduleReminders } from '../utils/reminders';
 
 export function useReminderScheduler(): void {
   const enabled = isFeatureEnabled('reminders');
   const { progress } = useStudy();
+  const { plan } = useNextGamePlan();
 
   useEffect(() => {
     if (!enabled) return;
@@ -27,6 +30,8 @@ export function useReminderScheduler(): void {
       const signals = {
         goalMetToday: stats.goalMetToday,
         streakAlive: progress.currentStreak > 0,
+        nextGame: plan?.gameDay ? { gameDay: plan.gameDay, crewLine: crewSummary(plan.crew) } : null,
+        nowMs: Date.now(),
       };
       if (!cancelled) await rescheduleReminders(prefs, signals);
     };
@@ -34,7 +39,9 @@ export function useReminderScheduler(): void {
     run();
     const sub = AppState.addEventListener('change', s => { if (s === 'active') run(); });
     return () => { cancelled = true; sub.remove(); };
-  }, [enabled, progress.currentStreak, progress.totalAnswered, progress.dailyGoal]);
+    // `plan` identity changes on set/clear/stale-auto-clear — this dep IS the "schedule on create,
+    // cancel on clear" mechanism (the funnel re-runs and emits / omits the game_day spec).
+  }, [enabled, progress.currentStreak, progress.totalAnswered, progress.dailyGoal, plan]);
 }
 
 /** Mountable wrapper (renders nothing) so the hook can live inside the provider tree. */

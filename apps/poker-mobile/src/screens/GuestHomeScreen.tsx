@@ -33,6 +33,7 @@ import { usePersona } from '../features/persona/state/PersonaContext';
 import { heroVariantForGoal, drillCardSub } from '../features/persona/logic/recommendations';
 import { useStudy } from '../features/study/state/StudyContext';
 import { isFeatureEnabled } from '../config/features';
+import NextGameCard from '../features/engagement/ui/NextGameCard';
 
 /** Time-of-day salutation (local clock; display-only). */
 function greetingWord(hour = new Date().getHours()): string {
@@ -181,6 +182,16 @@ export default function GuestHomeScreen() {
               <Text style={styles.heroSubtitle}>Blind clock, buy-in tracking, podium</Text>
             </PressableScale>
           </View>
+        </MotiView>
+      )}
+
+      {/* ── Next game (2.4 pre-session moment) — hidden while a game is live ── */}
+      {!activeGame && (
+        <MotiView {...entrance(2)}>
+          <NextGameCard
+            onStart={plan => navigation.navigate('LocalNewGame', { mode: plan.mode })}
+            onWarmUp={() => navigation.navigate('StudyTrainer', { mode: 'spot' })}
+          />
         </MotiView>
       )}
 

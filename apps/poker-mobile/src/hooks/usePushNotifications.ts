@@ -83,8 +83,15 @@ export function usePushNotificationListeners() {
     });
 
     subs.current.push(
-      Notifications.addNotificationResponseReceivedListener(() => {
-        // All current notification types have their detail in the inbox.
+      Notifications.addNotificationResponseReceivedListener(response => {
+        // The game-day heads-up (2.4) lands on Home, where the Next-game card lives — and 'MainTabs'
+        // exists in BOTH trees (guests plan local games; the guest tree has no 'Notifications' route).
+        const kind = response.notification.request.content.data?.kind;
+        if (kind === 'game_day') {
+          navigation.navigate('MainTabs');
+          return;
+        }
+        // All other notification types have their detail in the inbox.
         navigation.navigate('Notifications');
       }),
     );

@@ -80,8 +80,15 @@ import { computeFinalCount, decimalFinalCountModel } from '../local/finalCount';
 import { currencySymbol } from '../utils/currency';
 import ShareCard, { canShareImages, shareCardImage } from '../components/ShareCard';
 import { useActiveSession } from '../context/ActiveSessionContext';
+import { useNextGamePlan } from '../context/NextGamePlanContext';
+import { crewSummary, isPlanConsumed, planNudgeLine, planToastText } from '../features/engagement/logic/nextGamePlan';
+import { localDayKey } from '../features/study/logic/localDay';
+import { track } from '../utils/analytics';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Session'>;
+
+/** Coarse player-count band for analytics — same buckets as the 2.4 plan/share events. */
+const playersBand = (n: number): string => (n <= 1 ? '1' : n <= 3 ? '2-3' : n <= 5 ? '4-5' : '6+');
 
 function toMoney(input: number, chipRatio: number | undefined, useChips: boolean): number {
   if (!useChips || !chipRatio || chipRatio === 0) return input;
@@ -168,6 +175,7 @@ export default function SessionScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
   const sym = currencySymbol();
   const { refresh: refreshActiveSession, clear: clearActiveSession } = useActiveSession();
+  const { plan: nextGamePlan, setNextGame } = useNextGamePlan();
 
   const [session, setSession] = useState<SessionDetailDto | null>(null);
   const [balances, setBalances] = useState<PlayerBalanceDto[]>([]);
@@ -264,6 +272,21 @@ export default function SessionScreen({ route, navigation }: Props) {
   const isActive = session?.status === 'Active';
   const isDraft = session?.status === 'Draft';
   const isFinished = session?.status === 'Finished';
+
+  // Closed loop (2.4, mirrors LocalSessionSummaryScreen): server sessions are cash-only, and the
+  // crew is display names only (guests are already folded into `username` server-side).
+  async function handlePlanNextGame() {
+    const crew = (session?.players ?? []).map(p => p.username);
+    await setNextGame({
+      mode: 'cash',
+      crew,
+      gameDay: localDayKey(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
+      createdDayKey: localDayKey(),
+      origin: 'server',
+    });
+    track('next_game_planned', { mode: 'cash', players_band: playersBand(crew.length) });
+    showToast(planToastText(Platform.OS === 'web'), 'success');
+  }
   const isAdminOrOwner = myRole === 'Admin' || myRole === 'Owner'
     || (session?.groupId == null && session?.creatorId === user?.userId);
 
@@ -1262,6 +1285,39 @@ export default function SessionScreen({ route, navigation }: Props) {
           </View>
         )}
 
+        {/* ── Closed loop (2.4): plan the same crew for next week — consumed plans re-offer ── */}
+        {isFinished && (
+          <View style={styles.section}>
+            {!nextGamePlan || isPlanConsumed(nextGamePlan, localDayKey()) ? (
+              <PressableScale
+                style={styles.planCard}
+                onPress={handlePlanNextGame}
+                haptic="medium"
+                accessibilityRole="button"
+                accessibilityLabel={`Same crew next week — plan a next game with ${crewSummary((session?.players ?? []).map(p => p.username))}`}
+              >
+                <View style={styles.planIconWrap}>
+                  <Ionicons name="calendar-outline" size={iconSize.sm} color={colors.gold} />
+                </View>
+                <View style={styles.planText}>
+                  <Text style={styles.planTitle}>Same crew next week?</Text>
+                  <Text style={styles.planSub}>
+                    {planNudgeLine(crewSummary((session?.players ?? []).map(p => p.username)), Platform.OS === 'web')}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={iconSize.xs} color={colors.textMuted} />
+              </PressableScale>
+            ) : (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md }}>
+                <Ionicons name="checkmark-circle" size={iconSize.sm} color={colors.success} />
+                <Text style={{ ...typography.bodySmall, color: colors.success }}>
+                  Next game planned · {crewSummary(nextGamePlan.crew)}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
         {/* ── Notes ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -2225,6 +2281,28 @@ const styles = StyleSheet.create({
 
   // Sections
   section: { marginTop: 20, paddingHorizontal: 16 },
+  // "Same crew next week?" (2.4) — visual parity with LocalSessionSummaryScreen's saveCard family.
+  planCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.lg,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.goldMuted,
+    gap: spacing.md,
+  },
+  planIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.md,
+    backgroundColor: colors.goldFaint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  planText: { flex: 1, gap: spacing.xs },
+  planTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
+  planSub: { fontSize: 12, color: colors.textMuted, lineHeight: 17 },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

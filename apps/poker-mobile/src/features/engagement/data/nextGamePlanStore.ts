@@ -23,6 +23,7 @@ export async function loadNextGamePlan(): Promise<NextGamePlan | null> {
       crew: (rec.crew as unknown[]).filter((n): n is string => typeof n === 'string'),
       gameDay: typeof rec.gameDay === 'string' ? rec.gameDay : undefined,
       createdDayKey: rec.createdDayKey,
+      origin: rec.origin === 'local' || rec.origin === 'server' ? rec.origin : undefined,
     };
   } catch {
     return null;

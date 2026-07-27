@@ -4,6 +4,7 @@ import {
   Text,
   ScrollView,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -39,7 +40,7 @@ import Celebration from '../components/motion/Celebration';
 import { PressableScale, MotiView, slideUpSequence, staggerIn } from '../components/motion';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useNextGamePlan } from '../context/NextGamePlanContext';
-import { crewSummary } from '../features/engagement/logic/nextGamePlan';
+import { crewSummary, isPlanConsumed, planNudgeLine, planToastText } from '../features/engagement/logic/nextGamePlan';
 import { localDayKey } from '../features/study/logic/localDay';
 import { track } from '../utils/analytics';
 import { showToast } from '../utils/toast';
@@ -146,9 +147,10 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
       crew: game!.players.map(p => p.name),
       gameDay: localDayKey(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
       createdDayKey: localDayKey(),
+      origin: 'local',
     });
     track('next_game_planned', { mode: game!.mode ?? 'cash', players_band: playersBand(game!.players.length) });
-    showToast("Next game planned — we'll nudge you on game day.", 'success');
+    showToast(planToastText(Platform.OS === 'web'), 'success');
   }
 
   function handleDelete() {
@@ -312,8 +314,9 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
         )}
 
         <View style={{ height: spacing.xxxl }} />
-        {/* Closed loop (2.4): plan the same crew for next week — creates an on-device next-game plan. */}
-        {!nextGamePlan ? (
+        {/* Closed loop (2.4): plan the same crew for next week — creates an on-device next-game plan.
+            A consumed plan (its game day has arrived/passed) re-offers, so the loop re-arms weekly. */}
+        {!nextGamePlan || isPlanConsumed(nextGamePlan, localDayKey()) ? (
           <PressableScale
             style={styles.saveCard}
             onPress={handlePlanNextGame}
@@ -326,7 +329,7 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
             </View>
             <View style={styles.saveText}>
               <Text style={styles.saveTitle}>Same crew next week?</Text>
-              <Text style={styles.saveSub}>We'll line up {crewSummary(game.players.map(p => p.name))} and nudge you on game day.</Text>
+              <Text style={styles.saveSub}>{planNudgeLine(crewSummary(game.players.map(p => p.name)), Platform.OS === 'web')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={iconSize.xs} color={colors.textMuted} />
           </PressableScale>

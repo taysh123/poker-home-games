@@ -15,6 +15,8 @@ import { radii } from '../theme/radii';
 import { useStudy } from '../features/study/state/StudyContext';
 import { studyStats } from '../features/study/logic/progress';
 import { localDayKey } from '../features/study/logic/localDay';
+import { useNextGamePlan } from '../context/NextGamePlanContext';
+import { crewSummary } from '../features/engagement/logic/nextGamePlan';
 import { loadReminderPrefs, saveReminderPrefs } from '../utils/reminderPrefs';
 import { ensureReminderPermission, rescheduleReminders } from '../utils/reminders';
 import { DEFAULT_REMINDER_PREFS, type ReminderPrefs } from '../utils/reminderLogic';
@@ -30,6 +32,7 @@ const fmtHour = (h: number) => `${((h + 11) % 12) + 1}:00 ${h < 12 ? 'AM' : 'PM'
 export default function NotificationPreferencesScreen() {
   const navigation = useNavigation<Nav>();
   const { progress } = useStudy();
+  const { plan } = useNextGamePlan();
   const [prefs, setPrefs] = useState<ReminderPrefs>(DEFAULT_REMINDER_PREFS);
   const reduced = useReducedMotion();
 
@@ -43,6 +46,8 @@ export default function NotificationPreferencesScreen() {
     await rescheduleReminders(next, {
       goalMetToday: stats.goalMetToday,
       streakAlive: progress.currentStreak > 0,
+      nextGame: plan?.gameDay ? { gameDay: plan.gameDay, crewLine: crewSummary(plan.crew) } : null,
+      nowMs: Date.now(),
     });
   }
 
@@ -82,6 +87,15 @@ export default function NotificationPreferencesScreen() {
             sub="Evening nudge if your streak is alive but today's goal isn't met"
             value={prefs.streakRisk}
             onChange={v => apply({ ...prefs, streakRisk: v }, v)}
+          />
+        </MotiView>
+        <MotiView {...slideUpSequence({ reduced, delay: staggerIn(3) })}>
+          <ToggleRow
+            icon="calendar-outline"
+            title="Game day"
+            sub="A heads-up on the day your next game is planned"
+            value={prefs.gameDay}
+            onChange={v => apply({ ...prefs, gameDay: v }, v)}
           />
         </MotiView>
         <Text style={styles.note}>Reminders are scheduled on your device. No data leaves the app.</Text>
