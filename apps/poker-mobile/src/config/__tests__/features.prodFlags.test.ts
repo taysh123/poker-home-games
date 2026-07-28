@@ -16,6 +16,10 @@ describe('PROD_FLAGS — Phase 1 launch state', () => {
     expect(PROD_FLAGS.immersive).toBe(true);
   });
 
+  it('turns review prompts ON (Q1.4 — the sheet asks a question and sells nothing)', () => {
+    expect(PROD_FLAGS.reviews).toBe(true);
+  });
+
   it('keeps paid/unsafe surfaces OFF (paywall is Subsystem 3)', () => {
     expect(PROD_FLAGS.paywall).toBe(false);
     expect(PROD_FLAGS.coach).toBe(false);

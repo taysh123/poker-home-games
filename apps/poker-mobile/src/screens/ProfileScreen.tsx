@@ -36,6 +36,7 @@ import { AVATAR_COLORS } from '../utils/avatarColor';
 import { confirmDialog } from '../utils/confirm';
 import { showToast } from '../utils/toast';
 import { track, setAnalyticsOptOut, isAnalyticsSharingEnabled } from '../utils/analytics';
+import { SUPPORT_EMAIL, supportMailto } from '../config/support';
 
 // Curated identity emojis — poker-flavored plus broadly fun picks.
 const IDENTITY_EMOJIS = [
@@ -601,13 +602,13 @@ export default function ProfileScreen({ navigation }: Props) {
 
           <PressableScale
             style={styles.aboutRow}
-            onPress={() => Linking.openURL('mailto:truestorylabs@gmail.com?subject=T%20Poker%20support')}
+            onPress={() => Linking.openURL(supportMailto('T Poker support'))}
             haptic="light"
             accessibilityRole="button"
-            accessibilityLabel="Email support at truestorylabs@gmail.com"
+            accessibilityLabel={`Email support at ${SUPPORT_EMAIL}`}
           >
             <Ionicons name="mail-outline" size={16} color={colors.textMuted} />
-            <Text style={styles.aboutRowText}>truestorylabs@gmail.com</Text>
+            <Text style={styles.aboutRowText}>{SUPPORT_EMAIL}</Text>
             <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
           </PressableScale>
 

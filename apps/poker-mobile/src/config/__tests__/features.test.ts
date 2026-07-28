@@ -61,6 +61,12 @@ describe('feature flags — production resolution', () => {
       // free_ai reminder was removed FIRST; reminderLogic.test.ts pins that no reminder ever
       // promises an unavailable feature.
       'reminders',
+      // Q1.4 — review prompts (owner decision 2026-07-28). Deliberate extension, not a weakening:
+      // the sheet asks a question, sells nothing, and promises nothing — iOS may silently decline
+      // to show the native dialog, so no copy claims it will appear. Our own rate limiting
+      // (>=3 qualifying moments, 3-day install floor, 90-day cooldown, once per version) is pinned
+      // in features/reviews/logic/__tests__/reviewPromptLogic.test.ts.
+      'reviews',
     ]);
     for (const [flag, value] of Object.entries(featureFlags)) {
       expect(value).toBe(expectedOn.has(flag));

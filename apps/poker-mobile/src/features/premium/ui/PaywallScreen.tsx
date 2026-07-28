@@ -23,6 +23,7 @@ import { usePremium } from '../state/PremiumContext';
 import { useEntitlements } from '../../../context/EntitlementsContext';
 import { PRICING, PREMIUM_FEATURES, isFeatureLive, paywallPriceFor } from '../config';
 import { isFeatureEnabled } from '../../../config/features';
+import { supportMailto } from '../../../config/support';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Rt = RouteProp<RootStackParamList, 'Paywall'>;
@@ -302,7 +303,7 @@ export default function PaywallScreen() {
               </PressableScale>
               <Text style={styles.legalDot}>·</Text>
               <PressableScale
-                onPress={() => Linking.openURL('mailto:truestorylabs@gmail.com?subject=Purchase%20help')}
+                onPress={() => Linking.openURL(supportMailto('Purchase help'))}
                 hitSlop={12} accessibilityRole="button" accessibilityLabel="Get help with a purchase"
               >
                 <Text style={styles.helpText}>Need help?</Text>

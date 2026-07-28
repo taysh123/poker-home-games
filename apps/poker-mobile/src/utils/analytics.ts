@@ -75,6 +75,12 @@ export type AnalyticsEvent =
   | 'nudge_impression'
   | 'analytics_opt_out'
   | 'analytics_opt_in'
+  // Q1.4 — review prompts (sentiment gate). Ids/counters/flags only; no amounts, no names.
+  | 'review_prompt_shown'
+  | 'review_sentiment'
+  | 'review_native_requested'
+  | 'review_feedback_opened'
+  | 'review_prompt_dismissed'
   | (string & {});
 
 export type AnalyticsProps = Record<string, string | number | boolean | null | undefined>;
