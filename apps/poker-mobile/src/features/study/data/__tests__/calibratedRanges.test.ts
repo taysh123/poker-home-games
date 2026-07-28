@@ -7,6 +7,8 @@
 import { CALIBRATED_DATASET } from '../calibratedRanges';
 import { tierLabel } from '../../logic/rangeConvert';
 import { allHands } from '../../logic/handGrid';
+import { buildTrainerHand } from '../../../../utils/trainerHand';
+import type { PokerPosition } from '../../../../utils/pokerTable';
 
 describe('CALIBRATED_DATASET (committed content gate)', () => {
   it('is the 9-range RFI + BB-defense family, complete and uniformly calibrated', () => {
@@ -35,5 +37,22 @@ describe('CALIBRATED_DATASET (committed content gate)', () => {
 
   it('labels honestly from its own tier', () => {
     expect(tierLabel(CALIBRATED_DATASET)).toBe('Expert-calibrated range');
+  });
+
+  it('every range builds a playable trainer hand (covers the scenarios the starter never had)', () => {
+    for (const r of CALIBRATED_DATASET.ranges) {
+      const snap = buildTrainerHand({
+        tableSize: r.tableSize,
+        scenario: r.scenario,
+        heroPosition: r.heroPosition as PokerPosition,
+        villainPosition: r.villainPosition as PokerPosition | undefined,
+        stackBb: r.stackBb,
+        openSizeBb: r.openSizeBb,
+      });
+      expect(snap.seats).toHaveLength(r.tableSize);
+      expect(snap.seats.find(s => s.state === 'hero')).toBeDefined();
+      // RFI = hero opens (nothing to call); defense = the open minus the posted big blind.
+      expect(snap.toCallBb).toBeCloseTo(r.scenario === 'RFI' ? 0 : (r.openSizeBb ?? 0) - 1, 5);
+    }
   });
 });
