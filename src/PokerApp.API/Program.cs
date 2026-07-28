@@ -29,7 +29,9 @@ var configuredOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<s
                          ?? Array.Empty<string>();
 var prodOrigins = configuredOrigins.Length > 0
     ? configuredOrigins
-    : new[] { "https://poker-home-games-three.vercel.app" };
+    // Defense-in-depth fallback only — Railway supplies AllowedOrigins__0 in production.
+    // app.tpoker.app is the live web-app origin; the old vercel.app host only redirects.
+    : new[] { "https://app.tpoker.app" };
 
 builder.Services.AddCors(options =>
 {

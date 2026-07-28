@@ -17,11 +17,12 @@ per shared invite link (`/join/group/<token>`) — all eligible for indexing, al
 |---|---|---|
 | `X-Robots-Tag: noindex` on every path | `apps/poker-mobile/vercel.json` | The whole app host drops out of the index, including invite URLs |
 | robots.txt keeps `Allow: /`, drops the `Sitemap:` line | `apps/poker-mobile/public/robots.txt` | Crawling stays open **on purpose** (see the trap below); nothing is submitted |
-| Sitemap emptied (file retained) | `apps/poker-mobile/public/sitemap.xml` | Submits no URLs. Kept rather than deleted because the SPA rewrite would otherwise serve HTML at `/sitemap.xml` with a 200 |
+| Sitemap DELETED, and `/sitemap.xml` + `/.well-known/*` excluded from the SPA rewrite | `apps/poker-mobile/vercel.json` | `/sitemap.xml` now 404s honestly. (An empty `<urlset>` is schema-invalid and Search Console reports it as an error, so "keep it but empty" was wrong; excluding it from the rewrite is what stops the shell answering with HTML.) |
+| Build command moved INTO the repo | `apps/poker-mobile/vercel.json` `buildCommand` | `vercel.json` overrides the dashboard, so the head injector runs deterministically — no manual step, no chance of a mistyped command |
 | Meta descriptions added | `public/privacy.html`, `public/terms.html` | Both lacked one; `pricing`/`refund` already had them |
 | Head injector + `npm run build:web` | `apps/poker-mobile/scripts/injectWebHead.mjs` | Shared links unfurl with a real title/description/image instead of a bare "T Poker" |
-| JSON-LD (Organization, WebSite, SoftwareApplication) | `apps/landing/app/layout.tsx` | Strengthens the landing as the entry point. **No `offers`/price, no `aggregateRating`** — nothing is purchasable and there are no reviews to cite |
-| Config pins | `src/utils/__tests__/indexingPolicy.test.ts` | The policy can't silently regress |
+| JSON-LD (Organization + WebSite only) | `apps/landing/app/layout.tsx` | Strengthens the landing as the entry point. **`SoftwareApplication` deliberately omitted**: its rich result REQUIRES `offers` (a price) or `aggregateRating` (stars), and we can honestly supply neither — including it would have had Search Console naming those two fields as the "fix", manufacturing pressure to fabricate them |
+| Config pins | `poker-mobile/src/utils/__tests__/indexingPolicy.test.ts`, `landing/__tests__/structuredData.test.ts` | The policy cannot silently regress — including that the landing stays INDEXABLE (de-indexing both hosts would make the product invisible everywhere) |
 
 ### The trap worth remembering: `Disallow` would have made this worse
 It is tempting to "block" the app host with `Disallow: /`. That is backwards for **removal**:
@@ -34,35 +35,33 @@ zero is a `Disallow` worth adding, purely to save crawl budget.
 
 ## ⚠️ Actions only the owner can take (not possible from the repo)
 
-### 1. Vercel — app project build command *(required for the unfurl fix)*
-The web build command lives in the **Vercel dashboard**, not the repo. Change it from:
+### ~~1. Vercel — app project build command~~ — NO LONGER NEEDED
+An earlier draft of this doc told the owner to paste
+`cd apps/poker-mobile && npm run build:web` into the dashboard. **That instruction was wrong
+and would have failed every deploy:** the project's Root Directory *is* `apps/poker-mobile`, so
+`cd apps/poker-mobile` from inside it exits 1 and `&&` short-circuits. Because Vercel keeps
+serving the last good deployment, the symptom would not have been an outage — it would have been
+silent: *every subsequent deploy failing*, including this entire slice.
 
-```
-cd apps/poker-mobile && npx expo export -p web
-```
-to:
-```
-cd apps/poker-mobile && npm run build:web
-```
+Superseded: `buildCommand` now lives in `apps/poker-mobile/vercel.json`, which overrides the
+dashboard setting. Nothing to do.
 
-Everything else in this slice ships automatically; **only the head injection depends on this.**
-Without it, the de-indexing still works and invite links keep unfurling bare.
-
-### 2. Vercel — make the old domain's redirect permanent *(recommended)*
+### 1. Vercel — make the old domain's redirect permanent *(recommended)*
 `poker-home-games-three.vercel.app` → `app.tpoker.app` is currently a **307 (temporary)**,
-configured at the dashboard level. A 307 does **not** consolidate ranking signals, so the old
-domain can stay indexed indefinitely. Change it to a **308 (permanent)** — Vercel's redirect UI
-exposes this as a "Permanent" toggle.
+configured at the dashboard level. Google treats a temporary redirect as only a *weak*
+canonicalization signal, so consolidation is slow and not guaranteed and the old domain can
+linger in the index; a **308 (permanent)** is the strong signal. Vercel's redirect UI exposes
+this as a "Permanent" toggle.
 
 *(For reference, the redirects that are already permanent and correct: `tpoker.app/{privacy,
 terms,refund,pricing}.html` → `app.tpoker.app/...`, set to 308 in `apps/landing/vercel.json`.)*
 
-### 3. Vercel — check the legacy landing alias
+### 2. Vercel — check the legacy landing alias
 `tpoker-landing-xi.vercel.app` was the landing's early deploy URL. Confirm it redirects to
 `tpoker.app` rather than serving a duplicate copy of the site. If it serves, only the canonical
 tag prevents duplicate-host indexing.
 
-### 4. Google Search Console — after this deploys
+### 3. Google Search Console — after this deploys
 1. Add/verify both properties: `tpoker.app` and `app.tpoker.app`.
 2. On **app.tpoker.app**: use **Removals → Temporary removal** for the host to clear results
    quickly, then let the `noindex` make it permanent. Watch *Pages → Not indexed → Excluded by
@@ -73,7 +72,20 @@ tag prevents duplicate-host indexing.
    indexed. Use **URL Inspection → Test live URL** to confirm the JSON-LD parses.
 5. Re-check in ~2 weeks. De-indexing is not instant; the crawl has to happen first.
 
-### 5. Nothing to do for the stores
+### 4. Nothing to do for the stores
 `https://app.tpoker.app/privacy.html` remains a directly-served 200 — no redirect hop — which is
 all App Store Connect and Play data-safety require. `noindex` affects search listing only, never
 reachability.
+
+**Accepted tradeoff, stated so it isn't rediscovered as a bug:** because the whole app host is
+de-indexed, the privacy/terms pages are *reachable but not findable via web search*. That is
+intended — the stores link them directly, and the landing links them too. If you ever want them
+searchable, the fix is to exclude those four paths from the noindex header, not to weaken the
+policy for the shell.
+
+### Also worth knowing: `/.well-known/` had the same trap
+The SPA rewrite used to answer `/.well-known/assetlinks.json` with HTML too. It is now excluded
+(so it 404s honestly), but **the file still does not exist** — which means Android App Links for
+`/join/*` cannot verify. That is a deep-linking gap, not an SEO one; it needs the release
+keystore's SHA-256 fingerprint, which only you can supply. Tracked separately — this slice
+deliberately does not fake it.

@@ -22,9 +22,14 @@ const here = dirname(fileURLToPath(import.meta.url));
 const INDEX = resolve(here, '../dist/index.html');
 
 const SITE = 'https://tpoker.app';
-const TITLE = 'T Poker — your home game, handled';
+const APP = 'https://app.tpoker.app';
+// EDUCATION-FIRST, mirroring the store listing and the landing description — this text unfurls
+// wherever an invite link is shared, so it is a store-classification surface, not just marketing.
+// The first draft led with the ledger ("Run the night and study the game…") and dropped the
+// not-a-gambling-product line; both are required by the standing posture.
+const TITLE = 'T Poker — learn poker strategy, keep score at home games';
 const DESCRIPTION =
-  'Run the night and study the game: buy-ins, cash-outs and instant settle-up for private home games, plus daily poker drills. Free, no account needed.';
+  'Learn poker strategy with lessons, a daily quiz and decision drills — and keep the buy-in ledger for your home game, settled in the fewest transfers. Not a gambling product: no wagering, no money in the app. 18+.';
 const OG_IMAGE = `${SITE}/og.png`;
 
 const START = '<!-- injected-head:start -->';
@@ -36,7 +41,10 @@ const block = `${START}
     <meta property="og:site_name" content="T Poker" />
     <meta property="og:title" content="${TITLE}" />
     <meta property="og:description" content="${DESCRIPTION}" />
+    <meta property="og:url" content="${APP}/" />
     <meta property="og:image" content="${OG_IMAGE}" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="${TITLE}" />
     <meta name="twitter:description" content="${DESCRIPTION}" />

@@ -85,9 +85,16 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   // Structured data (Q1.3). Strengthens tpoker.app as the SINGLE search entry point now that the
-  // app host is de-indexed. Deliberately carries NO `offers`/price and NO `aggregateRating`:
-  // nothing is purchasable and there are no reviews to cite — inventing either would be the same
-  // overclaim class the copy-honesty rules forbid.
+  // app host is de-indexed.
+  //
+  // DELIBERATELY NO `SoftwareApplication` NODE. Google's software rich result REQUIRES either
+  // `offers` (a price) or `aggregateRating` (stars). We can honestly supply neither: nothing is
+  // purchasable, and there are no reviews to cite. Including the node would have meant Search
+  // Console reporting it as invalid and naming the two fields to "fix" it — manufacturing steady
+  // pressure to fabricate a price or a star rating on the most machine-readable surface we own.
+  // Organization + WebSite carry the entity/brand consolidation we actually want and require no
+  // commerce fields. Pinned by __tests__/structuredData.test.ts — if a future reviewer wants the
+  // node back, it must arrive with TRUE values, not with the pin deleted.
   const jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -96,7 +103,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         '@id': `${SITE.siteUrl}/#organization`,
         name: SITE.name,
         url: SITE.siteUrl,
-        founder: { '@type': 'Person', name: SITE.company },
       },
       {
         '@type': 'WebSite',
@@ -104,15 +110,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         url: SITE.siteUrl,
         name: SITE.name,
         description,
-        publisher: { '@id': `${SITE.siteUrl}/#organization` },
-      },
-      {
-        '@type': 'SoftwareApplication',
-        name: SITE.name,
-        description,
-        url: SITE.siteUrl,
-        applicationCategory: 'EducationalApplication',
-        operatingSystem: 'iOS, Android, Web',
         publisher: { '@id': `${SITE.siteUrl}/#organization` },
       },
     ],
