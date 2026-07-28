@@ -15,6 +15,8 @@ export interface CalibratedRangeRow {
   Action: string;
   Frequency: number; // percent 0..100
   VerificationTier: string;
+  /** e.g. '100bb' — the source's own column; stackBb is DERIVED from it, never assumed. */
+  EffectiveStack: string;
 }
 
 const ACTION_MAP: Record<string, RangeAction> = {
@@ -36,19 +38,44 @@ interface ScenarioMeta {
   label: string;
 }
 
-function parseScenario(name: string): ScenarioMeta {
-  const rfi = /^RFI (\w+) (\d+)bb (\d+)-max$/.exec(name);
+/** Table size stated in a scenario name, when it states one ('… 6-max'). */
+function statedTableSize(name: string): number | null {
+  const m = /(\d+)-max$/.exec(name);
+  return m ? Number(m[1]) : null;
+}
+
+/** The drop's table size: every scenario that STATES one must agree, and at least one must.
+ * Names like 'BB Defense vs SB 3bb (BvB)' omit it — they INHERIT this derived value instead of
+ * the old hardcoded 6, and a drop that states nothing (or disagrees) now fails closed. Table
+ * size is not cosmetic: it drives buildTrainerHand's seat ring. */
+function dropTableSize(names: string[]): number {
+  const stated = [...new Set(names.map(statedTableSize).filter((n): n is number => n != null))];
+  if (stated.length === 0) throw new Error('rangeConvert: no scenario states a table size');
+  if (stated.length > 1) throw new Error(`rangeConvert: mixed table sizes [${stated.join(', ')}]`);
+  return stated[0];
+}
+
+/** Effective stack in bb, DERIVED from the source's own column (e.g. '100bb'). Fails closed —
+ * the defense branch used to hardcode 100. */
+function parseStack(effectiveStack: string, scenario: string): number {
+  const m = /^([\d.]+)bb$/.exec((effectiveStack ?? '').trim());
+  if (!m) throw new Error(`rangeConvert: unreadable EffectiveStack "${effectiveStack}" (${scenario})`);
+  return Number(m[1]);
+}
+
+function parseScenario(name: string, tableSize: number, stackBb: number): ScenarioMeta {
+  const rfi = /^RFI (\w+) [\d.]+bb \d+-max$/.exec(name);
   if (rfi) {
     return {
-      scenario: 'RFI', heroPosition: rfi[1], stackBb: Number(rfi[2]), tableSize: Number(rfi[3]),
-      label: `${rfi[1]} open (${rfi[2]}bb)`,
+      scenario: 'RFI', heroPosition: rfi[1], stackBb, tableSize,
+      label: `${rfi[1]} open (${stackBb}bb)`,
     };
   }
-  const def = /^BB Defense vs (\w+) ([\d.]+)bb(?: (\d+)-max| \(BvB\))$/.exec(name);
+  const def = /^BB Defense vs (\w+) ([\d.]+)bb(?: \d+-max| \(BvB\))$/.exec(name);
   if (def) {
     return {
       scenario: 'vs_RFI', heroPosition: 'BB', villainPosition: def[1],
-      stackBb: 100, tableSize: def[3] ? Number(def[3]) : 6, openSizeBb: Number(def[2]),
+      stackBb, tableSize, openSizeBb: Number(def[2]),
       label: `BB defend vs ${def[1]} ${def[2]}bb`,
     };
   }
@@ -82,9 +109,12 @@ export function convertCalibratedRows(rows: CalibratedRangeRow[], opts: { name: 
   }
 
   const canonical = allHands();
+  const tableSize = dropTableSize([...byScenario.keys()]);
   const ranges: PreflopRange[] = [];
   for (const [name, scenarioRows] of byScenario) {
-    const meta = parseScenario(name);
+    const stacks = [...new Set(scenarioRows.map(r => parseStack(r.EffectiveStack, name)))];
+    if (stacks.length !== 1) throw new Error(`rangeConvert: "${name}" mixes stacks [${stacks.join(', ')}]`);
+    const meta = parseScenario(name, tableSize, stacks[0]);
     const strategy: HandStrategy = {};
     for (const row of scenarioRows) {
       if (strategy[row.Hand]) throw new Error(`rangeConvert: duplicate hand ${row.Hand} in "${name}"`);

@@ -372,8 +372,12 @@ These are bug classes, not style preferences. Each one shipped (or nearly shippe
    `tierLabel(dataset)` (which tier) and `datasetScopeLine(dataset)` (what's covered) compute
    their claims from the data, so the copy cannot outrun the content. A hand-written
    "6-max, 100bb" read as a coverage claim while the data covered only opens + big-blind defense.
-4. **Never advertise a capability whose flag is OFF in `PROD_FLAGS`** (the `free_ai` reminder
-   class). Pinned by `features/study/__tests__/tierHonesty.test.ts`.
+4. **Never advertise a capability whose flag is OFF in `PROD_FLAGS`** — the `free_ai` reminder
+   class, pinned for reminders by `utils/__tests__/reminderLogic.test.ts`. Study-UI claims for
+   the `solver`/`coach` flags are *additionally* phrase-banned in
+   `features/study/__tests__/tierHonesty.test.ts` — but that ban is a **literal allow-list over
+   `features/study/ui` only**: a new phrasing, or any other prod-OFF flag (`bankroll`,
+   `mastery`, `paywall`), needs a new entry. Do not read "pinned" as "covered everywhere".
 5. **Replacement copy gets audited on its own terms.** Copy written in reaction to a flagged line
    inherits none of the original's review — it is a new claim and needs the same test.
 

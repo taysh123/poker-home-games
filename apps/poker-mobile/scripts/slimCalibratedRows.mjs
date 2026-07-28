@@ -21,7 +21,10 @@ const WANTED = /^(RFI \w+ \d+bb \d+-max|BB Defense vs \w+ [\d.]+bb( \d+-max| \(B
 const pack = JSON.parse(readFileSync(packPath, 'utf8'));
 const rows = pack.rows
   .filter(r => WANTED.test(r.Scenario))
-  .map(r => ({ Scenario: r.Scenario, Hand: r.Hand, Action: r.Action, Frequency: r.Frequency, VerificationTier: r.VerificationTier }))
+  // EffectiveStack is carried (not dropped) so the converter DERIVES stackBb instead of
+  // hardcoding it — and so the committed-data gate can verify it in CI, where this script
+  // never runs.
+  .map(r => ({ Scenario: r.Scenario, Hand: r.Hand, Action: r.Action, Frequency: r.Frequency, VerificationTier: r.VerificationTier, EffectiveStack: r.EffectiveStack }))
   // Deterministic order so a regeneration diffs cleanly regardless of source row order.
   .sort((a, b) => a.Scenario.localeCompare(b.Scenario) || a.Hand.localeCompare(b.Hand));
 

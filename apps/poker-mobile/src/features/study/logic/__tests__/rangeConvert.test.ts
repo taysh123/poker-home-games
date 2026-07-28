@@ -15,6 +15,7 @@ function scenarioRows(
   scenario: string,
   overrides: Record<string, { action: string; freq: number }> = {},
   tier = 'Calibrated',
+  effectiveStack = '100bb',
 ): CalibratedRangeRow[] {
   return allHands().map(hand => ({
     Scenario: scenario,
@@ -22,6 +23,7 @@ function scenarioRows(
     Action: overrides[hand]?.action ?? 'Fold',
     Frequency: overrides[hand]?.freq ?? 100,
     VerificationTier: tier,
+    EffectiveStack: effectiveStack,
   }));
 }
 
@@ -73,6 +75,27 @@ describe('convertCalibratedRows', () => {
     const mixedTier = scenarioRows('RFI UTG 100bb 6-max');
     mixedTier[0] = { ...mixedTier[0], VerificationTier: 'Nash-Solved' };
     expect(() => convertCalibratedRows(mixedTier, { name: 'x' })).toThrow(/tier/i);
+    // stack + table size are DERIVED, never assumed (auditor finds: the defense branch used to
+    // hardcode 100bb, and a BvB name with no stated table size silently became 6-max).
+    const badStack = scenarioRows('RFI UTG 100bb 6-max', {}, 'Calibrated', '??');
+    expect(() => convertCalibratedRows(badStack, { name: 'x' })).toThrow(/EffectiveStack/i);
+    const noSize = scenarioRows('BB Defense vs SB 3bb (BvB)');
+    expect(() => convertCalibratedRows(noSize, { name: 'x' })).toThrow(/table size/i);
+  });
+
+  it('a size-less BvB scenario INHERITS the stated drop size instead of guessing', () => {
+    const rows = [
+      ...scenarioRows('RFI UTG 100bb 9-max'),
+      ...scenarioRows('BB Defense vs SB 3bb (BvB)'),
+    ];
+    const ds = convertCalibratedRows(rows, { name: 'x' });
+    // Old behavior hardcoded 6 here — which would deal a 6-seat table for a 9-max drop.
+    expect(ds.ranges.every(r => r.tableSize === 9)).toBe(true);
+  });
+
+  it('derives stackBb from the source column, including a non-100bb drop', () => {
+    const rows = scenarioRows('BB Defense vs BTN 2.5bb 6-max', {}, 'Calibrated', '40bb');
+    expect(convertCalibratedRows(rows, { name: 'x' }).ranges[0].stackBb).toBe(40);
   });
 });
 
