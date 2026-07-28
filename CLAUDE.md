@@ -229,11 +229,18 @@ NEVER fail a command. Client: `src/hooks/usePushNotifications.ts` (registration 
 AuthContext.saveSession, unregistration on logout, tap → Notifications screen).
 Delivery testing: Android works in Expo Go; iOS needs an EAS dev build.
 
-Local reminders (Wave 0.3, flag `reminders` ON, native-only): two kinds ONLY —
-`daily_study` (opt-in, user-picked hour) and `streak_risk` (20:00 when the streak is
-alive + goal unmet). Pure gating in `utils/reminderLogic.ts`; scheduling in
-`utils/reminders.ts`; prefs at NotificationPreferencesScreen. The OS permission prompt
-fires at most ONCE ever, after the first completed drill (`requestReminderPermissionOnce`).
+Local reminders (Wave 0.3 + 2.4, flag `reminders` ON, native-only): three kinds ONLY —
+`daily_study` (opt-in, user-picked hour), `streak_risk` (20:00 when the streak is
+alive + goal unmet), and `game_day` (2.4: a ONE-SHOT date trigger at 17:00 on the
+next-game plan's gameDay; opt-out pref; cancel-on-clear falls out of the cancel-all
+reschedule funnel — never schedule a notification outside `rescheduleReminders`).
+Pure gating in `utils/reminderLogic.ts`; scheduling in `utils/reminders.ts` (SERIALIZED —
+concurrent reschedule calls queue, latest wins; pinned by rescheduleSerialization.test.ts);
+prefs at NotificationPreferencesScreen. Permission asks: the FIRST-DRILL prompt fires at
+most once ever (`requestReminderPermissionOnce`, marker-pinned); the prefs screen and the
+"Same crew next week?" handlers use the idempotent `ensureReminderPermission` (prompts only
+while the OS still allows asking; its result drives honest toast copy — never promise a
+nudge that can't fire).
 HONESTY PIN: no reminder may promise an unavailable feature (the old `free_ai` kind was
 removed for this) — `utils/__tests__/reminderLogic.test.ts`. Day keys are LOCAL
 (`localDayKey`); `toISOString().slice(0, 10)` is banned by `dayKeyBan.test.ts`.

@@ -52,22 +52,40 @@ export async function requestReminderPermissionOnce(): Promise<boolean> {
   }
 }
 
-/** Cancel all local scheduled reminders + reschedule the currently-eligible set. Best-effort. */
-export async function rescheduleReminders(prefs: ReminderPrefs, signals: ReminderSignals): Promise<void> {
-  const N = getNotifications();
-  if (!N) return;
-  try {
-    await N.cancelAllScheduledNotificationsAsync();
-    const specs = eligibleReminders(prefs, signals);
-    for (const spec of specs) {
-      await N.scheduleNotificationAsync({
-        content: { title: spec.title, body: spec.body },
-        trigger: { hour: spec.hour, minute: 0, repeats: true } as never,
-      });
+// The funnel is cancelAll-then-schedule against the OS: two overlapping runs interleave (one
+// run's cancelAll wiping another's half-scheduled set → duplicated or stranded reminders), so
+// calls are SERIALIZED through a promise chain and a generation counter lets the latest call
+// win — a queued run that is already superseded skips entirely. Pinned by
+// rescheduleSerialization.test.ts.
+let rescheduleChain: Promise<void> = Promise.resolve();
+let rescheduleGeneration = 0;
+
+/** Cancel all local scheduled reminders + reschedule the currently-eligible set. Best-effort,
+ * serialized: concurrent calls run one at a time and only the latest call's set survives. */
+export function rescheduleReminders(prefs: ReminderPrefs, signals: ReminderSignals): Promise<void> {
+  const generation = ++rescheduleGeneration;
+  const run = async () => {
+    if (generation !== rescheduleGeneration) return; // superseded while queued — skip entirely
+    const N = getNotifications();
+    if (!N) return;
+    try {
+      await N.cancelAllScheduledNotificationsAsync();
+      const specs = eligibleReminders(prefs, signals);
+      for (const spec of specs) {
+        await N.scheduleNotificationAsync({
+          // data.kind lets the tap listener route local reminders away from the server inbox.
+          content: { title: spec.title, body: spec.body, data: { kind: spec.kind } },
+          trigger: spec.fireAtMs != null
+            ? ({ type: 'date', date: spec.fireAtMs } as never) // one-shot (game_day)
+            : ({ hour: spec.hour, minute: 0, repeats: true } as never), // repeating daily
+        });
+      }
+    } catch {
+      // Reminders are best-effort; never throw into the UI.
     }
-  } catch {
-    // Reminders are best-effort; never throw into the UI.
-  }
+  };
+  rescheduleChain = rescheduleChain.then(run, run);
+  return rescheduleChain;
 }
 
 export async function cancelAllReminders(): Promise<void> {

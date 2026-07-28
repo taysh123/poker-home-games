@@ -52,6 +52,13 @@ export type AnalyticsEvent =
   | 'coach_analysis_failed'
   | 'local_game_started'
   | 'local_game_finished'
+  // Wave 2.4 — closed loop. Props: mode + players_band ONLY (counters/bands; never amounts/names).
+  | 'game_result_shared'
+  | 'next_game_planned'
+  // Wave 2.4 — pre-session moment. Props: mode / players_band / is_game_day ONLY.
+  | 'next_game_started'
+  | 'next_game_dismissed'
+  | 'next_game_warmup_tapped'
   // STEP 5.2 — Tier 2 (engagement loop)
   | 'study_trainer_started'
   | 'study_spot_answered'

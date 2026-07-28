@@ -87,8 +87,11 @@ Guests get the full tree — every feature context works signed-out.
   until the pool cycles). Metering: `FREE_QUIZ_PER_DAY = 1`, shared practice pool
   `FREE_PRACTICE_QUESTIONS_PER_DAY = 10` (`features/study/config.ts`).
 - Streaks live in StudyContext (freeze tokens, weekly refill, auto-freeze — `retention` flag).
-  Reminders: two kinds only (`daily_study`, `streak_risk`), honesty-pinned; OS permission asked
-  once, after the first completed drill.
+  Reminders: three kinds only (`daily_study`, `streak_risk`, and 2.4's one-shot `game_day`),
+  honesty-pinned; ALL scheduling flows through `rescheduleReminders`' cancel-all funnel (an
+  out-of-band schedule gets silently wiped), which SERIALIZES concurrent calls (latest wins).
+  Permission: once-ever first-drill prompt, plus the idempotent `ensureReminderPermission`
+  from the prefs screen and the plan handlers (whose result picks the honest toast copy).
 
 ## screens/ — where the risk is
 

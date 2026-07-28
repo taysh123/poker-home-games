@@ -33,6 +33,10 @@ import { usePersona } from '../features/persona/state/PersonaContext';
 import { heroVariantForGoal, drillCardSub } from '../features/persona/logic/recommendations';
 import { useStudy } from '../features/study/state/StudyContext';
 import { isFeatureEnabled } from '../config/features';
+import NextGameCard from '../features/engagement/ui/NextGameCard';
+import { useNextGamePlan } from '../context/NextGamePlanContext';
+import { isPlanStale } from '../features/engagement/logic/nextGamePlan';
+import { localDayKey } from '../features/study/logic/localDay';
 
 /** Time-of-day salutation (local clock; display-only). */
 function greetingWord(hour = new Date().getHours()): string {
@@ -50,6 +54,7 @@ export default function GuestHomeScreen() {
   const reduced = useReducedMotion();
   const splashDone = useSplashDone();
   const { games, activeGame } = useLocalGames();
+  const { plan: nextGamePlan } = useNextGamePlan();
   const { persona } = usePersona();
   const { limitFor } = useStudy();
   const greetName = persona?.displayName ?? null;
@@ -181,6 +186,18 @@ export default function GuestHomeScreen() {
               <Text style={styles.heroSubtitle}>Blind clock, buy-in tracking, podium</Text>
             </PressableScale>
           </View>
+        </MotiView>
+      )}
+
+      {/* ── Next game (2.4 pre-session moment) — hidden while a game is live. The wrapper is
+          conditional on a live plan: the content container uses `gap`, so an always-mounted
+          MotiView around a null-returning card added a phantom gap slot (critic find m9). ── */}
+      {!activeGame && nextGamePlan && !isPlanStale(nextGamePlan, localDayKey()) && (
+        <MotiView {...entrance(2)}>
+          <NextGameCard
+            onStart={plan => navigation.navigate('LocalNewGame', { mode: plan.mode, prefillNames: plan.crew, fromPlan: true })}
+            onWarmUp={() => navigation.navigate('StudyTrainer', { mode: 'spot' })}
+          />
         </MotiView>
       )}
 

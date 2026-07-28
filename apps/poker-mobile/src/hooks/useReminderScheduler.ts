@@ -10,12 +10,20 @@ import { isFeatureEnabled } from '../config/features';
 import { useStudy } from '../features/study/state/StudyContext';
 import { studyStats } from '../features/study/logic/progress';
 import { localDayKey } from '../features/study/logic/localDay';
+import { useNextGamePlan } from '../context/NextGamePlanContext';
+import { crewSummary } from '../features/engagement/logic/nextGamePlan';
 import { loadReminderPrefs } from '../utils/reminderPrefs';
 import { rescheduleReminders } from '../utils/reminders';
 
 export function useReminderScheduler(): void {
   const enabled = isFeatureEnabled('reminders');
   const { progress } = useStudy();
+  const { plan } = useNextGamePlan();
+  // Scalar deps, not the plan object (critic find C1): the effect re-runs only when the values
+  // the schedule actually consumes change. Set/clear/stale-auto-clear all change these scalars —
+  // that re-run IS the "schedule on create, cancel on clear" mechanism.
+  const planGameDay = plan?.gameDay ?? null;
+  const planCrewLine = plan ? crewSummary(plan.crew) : '';
 
   useEffect(() => {
     if (!enabled) return;
@@ -27,6 +35,8 @@ export function useReminderScheduler(): void {
       const signals = {
         goalMetToday: stats.goalMetToday,
         streakAlive: progress.currentStreak > 0,
+        nextGame: planGameDay ? { gameDay: planGameDay, crewLine: planCrewLine } : null,
+        nowMs: Date.now(),
       };
       if (!cancelled) await rescheduleReminders(prefs, signals);
     };
@@ -34,7 +44,7 @@ export function useReminderScheduler(): void {
     run();
     const sub = AppState.addEventListener('change', s => { if (s === 'active') run(); });
     return () => { cancelled = true; sub.remove(); };
-  }, [enabled, progress.currentStreak, progress.totalAnswered, progress.dailyGoal]);
+  }, [enabled, progress.currentStreak, progress.totalAnswered, progress.dailyGoal, planGameDay, planCrewLine]);
 }
 
 /** Mountable wrapper (renders nothing) so the hook can live inside the provider tree. */

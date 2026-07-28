@@ -48,6 +48,10 @@ import Screen from '../components/Screen';
 import Avatar from '../components/Avatar';
 import { topWeeklyMovers, moverLabel } from '../utils/topMovers';
 import { useActiveSession } from '../context/ActiveSessionContext';
+import { useLocalGames } from '../context/LocalGamesContext';
+import { useNextGamePlan } from '../context/NextGamePlanContext';
+import NextGameCard from '../features/engagement/ui/NextGameCard';
+import type { NextGamePlan } from '../features/engagement/logic/nextGamePlan';
 
 type HomeNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -76,6 +80,8 @@ export default function HomeScreen() {
     isFeatureEnabled('study') &&
     drillSub !== null;
   const { refresh: refreshActiveSession } = useActiveSession();
+  const { activeGame, isLoaded: localGamesLoaded } = useLocalGames();
+  const { refresh: refreshNextGamePlan } = useNextGamePlan();
   const reducedMotion = useReducedMotion();
 
   const [loggingOut, setLoggingOut] = useState(false);
@@ -161,8 +167,9 @@ export default function HomeScreen() {
   useFocusEffect(useCallback(() => {
     loadAll();
     refreshActiveSession();
+    refreshNextGamePlan(); // also auto-clears a stale (past-dated) plan
     runEntranceAnimation();
-  }, [loadAll, refreshActiveSession, runEntranceAnimation]));
+  }, [loadAll, refreshActiveSession, refreshNextGamePlan, runEntranceAnimation]));
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -194,6 +201,13 @@ export default function HomeScreen() {
   function openSession(s: RecentSessionDto) {
     navigation.navigate('Session', { sessionId: s.sessionId, groupId: s.groupId ?? '' });
   }
+
+  // Server-made plans start a server session; local (and legacy origin-less) plans open the
+  // wizard with the planned crew pre-filled and consume the plan once the game starts.
+  const startPlannedGame = useCallback((plan: NextGamePlan) => {
+    if (plan.origin === 'server') navigation.navigate('NewGame', {});
+    else navigation.navigate('LocalNewGame', { mode: plan.mode, prefillNames: plan.crew, fromPlan: true });
+  }, [navigation]);
 
   const activeSessions = stats?.recentSessions.filter(s => s.status === 'Active') ?? [];
   const recentSessions = stats?.recentSessions.filter(s => s.status === 'Finished').slice(0, 4) ?? [];
@@ -501,6 +515,16 @@ export default function HomeScreen() {
             <Ionicons name="chevron-forward" size={20} color={colors.gold} />
           </TouchableOpacity>
         ))}
+
+        {/* ── Next game (2.4 pre-session moment) — only once liveness is KNOWN (stats + local
+            games hydrated), and never while any game is live. On cold start the card used to
+            flash before the LIVE banner replaced it — a mis-tap started a second game (C2). ── */}
+        {!statsLoading && localGamesLoaded && activeSessions.length === 0 && !activeGame && (
+          <NextGameCard
+            onStart={startPlannedGame}
+            onWarmUp={() => navigation.navigate('StudyTrainer', { mode: 'spot' })}
+          />
+        )}
 
         {/* ── Pending Settlements Alert ── */}
         {pendingSettlements.length > 0 && (
