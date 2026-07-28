@@ -1,4 +1,14 @@
-﻿User-agent: *
+# app.tpoker.app is the APPLICATION host — not a search entry point. It is de-indexed by the
+# `X-Robots-Tag: noindex` header in vercel.json, NOT by Disallow, and that distinction matters:
+#
+#   Disallow stops a crawler FETCHING the URL, so it never sees the noindex — and Google can
+#   keep an already-indexed URL (as a bare link) indefinitely. Allowing the crawl is precisely
+#   what lets the noindex be read and the URL dropped. Once Search Console reports coverage at
+#   zero, a Disallow may be added to save crawl budget — not before.
+#
+# The public search entry point is the marketing site: https://tpoker.app
+User-agent: *
 Allow: /
 
-Sitemap: https://app.tpoker.app/sitemap.xml
+# No Sitemap: line on purpose — nothing on this host should be submitted for indexing.
+# The marketing site publishes its own at https://tpoker.app/sitemap.xml

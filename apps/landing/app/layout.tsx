@@ -84,9 +84,44 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Structured data (Q1.3). Strengthens tpoker.app as the SINGLE search entry point now that the
+  // app host is de-indexed.
+  //
+  // DELIBERATELY NO `SoftwareApplication` NODE. Google's software rich result REQUIRES either
+  // `offers` (a price) or `aggregateRating` (stars). We can honestly supply neither: nothing is
+  // purchasable, and there are no reviews to cite. Including the node would have meant Search
+  // Console reporting it as invalid and naming the two fields to "fix" it — manufacturing steady
+  // pressure to fabricate a price or a star rating on the most machine-readable surface we own.
+  // Organization + WebSite carry the entity/brand consolidation we actually want and require no
+  // commerce fields. Pinned by __tests__/structuredData.test.ts — if a future reviewer wants the
+  // node back, it must arrive with TRUE values, not with the pin deleted.
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': `${SITE.siteUrl}/#organization`,
+        name: SITE.name,
+        url: SITE.siteUrl,
+      },
+      {
+        '@type': 'WebSite',
+        '@id': `${SITE.siteUrl}/#website`,
+        url: SITE.siteUrl,
+        name: SITE.name,
+        description,
+        publisher: { '@id': `${SITE.siteUrl}/#organization` },
+      },
+    ],
+  };
+
   return (
     <html lang="en" className={`${inter.variable} ${dmSerif.variable}`}>
       <body>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <div className="bg-mesh" aria-hidden="true" />
         <MotionProvider>{children}</MotionProvider>
       </body>

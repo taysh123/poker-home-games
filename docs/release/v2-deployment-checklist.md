@@ -22,18 +22,22 @@
 
 ## Web → Vercel
 - [ ] Root Directory = `apps/poker-mobile` (so `apps/poker-mobile/vercel.json` is the active config; a repo-root one is ignored).
-- [ ] Build command = `cd apps/poker-mobile && npx expo export -p web`; Output dir = `apps/poker-mobile/dist`.
+- [ ] Build command is set IN THE REPO (`buildCommand` in `apps/poker-mobile/vercel.json` = `npm run build:web`),
+      which overrides the dashboard field. It is root-dir-relative: a `cd apps/poker-mobile` prefix would
+      run from INSIDE that directory and fail the build. Output dir = `dist` (relative to the Root Directory).
 - [ ] SPA rewrite present (`/(.*) → /index.html`) so `/join/group/:token` + `/join/session/:token` resolve.
 - [ ] Env: `EXPO_PUBLIC_API_URL` = production API URL; `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` set.
-- [ ] Production domain = `poker-home-games-three.vercel.app` (NOT `t-poker.vercel.app`); privacy at `/privacy.html`.
+- [ ] Production domain = `app.tpoker.app` (NOT `t-poker.vercel.app`, which we do not own); privacy at `/privacy.html`.
+      `poker-home-games-three.vercel.app` is the LEGACY host and should redirect permanently — see `seo-indexing.md`.
 - [ ] `main` auto-deploys → merging triggers the production web build. **(verify)** dashboard build settings unchanged.
 
 ## Backend → Railway
 - [ ] Repo-root `Dockerfile` is the build path (Nixpacks auto-detect fails on the monorepo).
 - [ ] Env (`__` nested keys): `ASPNETCORE_ENVIRONMENT=Production`, `ConnectionStrings__DefaultConnection`,
       `JwtSettings__SecretKey` (≥64 chars), `JwtSettings__Issuer`, `JwtSettings__Audience`,
-      `GoogleSettings__ClientIds__0`, `AllowedOrigins__0=https://poker-home-games-three.vercel.app`,
-      `AppSettings__WebBaseUrl=https://poker-home-games-three.vercel.app`.
+      `GoogleSettings__ClientIds__0`, `AllowedOrigins__0=https://app.tpoker.app`,
+      `AppSettings__WebBaseUrl=https://app.tpoker.app` (this builds invite links — a stale value would
+      mint invites on the de-indexed legacy host).
 - [ ] Commercial env — **only when monetizing** (empty ⇒ inert/fail-closed, so safe to leave unset pre-launch):
       `BillingSettings__Provider=direct`, `BillingSettings__AcceptSandbox=false`,
       `StripeSettings__SecretKey/__WebhookSecret/__PriceMonthlyId/__PriceYearlyId`,
