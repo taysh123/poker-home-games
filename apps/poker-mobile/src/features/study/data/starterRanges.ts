@@ -33,6 +33,7 @@ export const STARTER_DATASET: RangeDataset = {
   schemaVersion: 1,
   name: 'Illustrative Starter Pack',
   isIllustrative: true,
+  verificationTier: 'illustrative',
   ranges: [
     cash100('rfi-utg', 'UTG', 'RFI', 'UTG open · 6-max 100bb', {
       raise: '77+, AJs+, KQs, AQo+',

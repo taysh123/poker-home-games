@@ -13,15 +13,16 @@ import {
 } from '../logic/progress';
 import { limitStatus, type DailyLimitKind, type LimitStatus } from '../logic/dailyLimits';
 import { localDayKey } from '../logic/localDay';
-import { STARTER_DATASET } from '../data/starterRanges';
+import { CALIBRATED_DATASET } from '../data/calibratedRanges';
 import { isFeatureEnabled } from '../../../config/features';
 import { useEntitlements } from '../../../context/EntitlementsContext';
 import type { RangeDataset, StudyFile, StudyProgress } from '../types';
 
 /**
  * Study state — progress persistence + the active range dataset. Mirrors the other
- * V2 contexts (load on mount, serialized writes). `dataset` is the starter pack today;
- * an imported (verified) dataset can replace it here later with no UI changes.
+ * V2 contexts (load on mount, serialized writes). `dataset` is the expert-calibrated core
+ * (Q1.1 — converted from the approved content drop, fail-closed); an imported verified
+ * solver dataset can replace it here later with no UI changes.
  *
  * WRITE API RULE: every exposed write is ONE composed semantic operation (answer, quiz finished,
  * lesson done) — never raw "consume"/"record" halves for callers to chain. Commits are additionally
@@ -52,7 +53,7 @@ type StudyContextType = {
 
 const StudyContext = createContext<StudyContextType>({
   progress: store.emptyFile().progress,
-  dataset: STARTER_DATASET,
+  dataset: CALIBRATED_DATASET,
   isLoaded: false,
   recordAnswer: async () => {},
   recordPracticeAnswer: async () => {},
@@ -141,7 +142,7 @@ export function StudyProvider({ children }: { children: React.ReactNode }) {
   }, [commit]);
 
   return (
-    <StudyContext.Provider value={{ progress: file.progress, dataset: STARTER_DATASET, isLoaded, recordAnswer, recordPracticeAnswer, setDailyGoal, limitFor, recordQuizFinished, recordLessonCompleted }}>
+    <StudyContext.Provider value={{ progress: file.progress, dataset: CALIBRATED_DATASET, isLoaded, recordAnswer, recordPracticeAnswer, setDailyGoal, limitFor, recordQuizFinished, recordLessonCompleted }}>
       {children}
     </StudyContext.Provider>
   );

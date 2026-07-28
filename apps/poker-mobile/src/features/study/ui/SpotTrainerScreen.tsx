@@ -29,6 +29,7 @@ import { useEntitlements } from '../../../context/EntitlementsContext';
 import LockNudge from './LockNudge';
 import Chip from '../../../components/Chip';
 import { generateSpot, evaluateSpot, type Spot, type SpotResult } from '../logic/trainer';
+import { tierLabel } from '../logic/rangeConvert';
 import { practiceRunCap } from '../logic/dailyLimits';
 import type { RangeAction } from '../types';
 import TableScene from '../../../components/table/TableScene';
@@ -70,7 +71,9 @@ export default function SpotTrainerScreen() {
   const [done, setDone] = useState(false);
 
   const raiseLabel = spot.range.scenario === 'vs_RFI' ? 'Raise (3-bet)' : 'Raise';
-  const strategyLabel = dataset.isIllustrative ? 'Trainer range' : 'GTO play';
+  // Tier-honest label (Q1.1): derived from the dataset's own verification tier — the UI can
+  // never claim above what the data is ("GTO play" is gone).
+  const strategyLabel = tierLabel(dataset);
 
   // Derive a full preflop hand from the range: stacks, committed chips, pot, action order up to hero.
   const villainPos = spot.range.villainPosition as PokerPosition | undefined;
@@ -307,9 +310,6 @@ export default function SpotTrainerScreen() {
             <Text style={styles.feedbackBody}>
               {strategyLabel}: {result.strategy.map(s => `${ACTION_LABEL[s.action]} ${Math.round(s.freq * 100)}%`).join(' · ')}
             </Text>
-            {dataset.isIllustrative ? (
-              <Text style={styles.illustrativeNote}>Illustrative training range — not solver output.</Text>
-            ) : null}
           </Card>
         ) : null}
         </ContentContainer>
@@ -407,7 +407,6 @@ const styles = StyleSheet.create({
   feedbackHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   feedbackTitle: { ...typography.h4 },
   feedbackBody: { ...typography.body, color: colors.textHigh },
-  illustrativeNote: { ...typography.bodySmall, color: colors.textMuted },
   resultCard: { alignItems: 'center', gap: spacing.xs },
   resultScore: { ...typography.amountHero, color: colors.gold },
   resultAcc: { ...typography.h3, color: colors.textHigh },

@@ -231,7 +231,7 @@ export default function StudyScreen() {
         <View style={styles.noteRow}>
           <Ionicons name="information-circle-outline" size={15} color={colors.textMuted} />
           <Text style={styles.note}>
-            {dataset.name} — illustrative training ranges, not solver output. Real solver data can be imported later.
+            Expert-calibrated training ranges — import solver packs anytime.
           </Text>
         </View>
 

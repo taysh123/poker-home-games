@@ -571,6 +571,11 @@ export default function ProfileScreen({ navigation }: Props) {
             <Text style={styles.privacyHint}>
               Feature usage only — never your game amounts, player names, or hands.
             </Text>
+            {/* The ONE quiet home of the on-device story (Q1.1) — the repeated per-screen
+                "Stored on this device" chrome was retired in favor of this line. */}
+            <Text style={styles.privacyHint}>
+              Your games, study progress, and plans stay on this device.
+            </Text>
           </View>
           </MotiView>
         )}

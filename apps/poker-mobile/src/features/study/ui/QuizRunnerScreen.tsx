@@ -234,7 +234,7 @@ function PickView({ total, categories, limit, onStartAll, onStartCategory }: {
       <Card variant="hero">
         <Text style={styles.heroLabel}>QUESTION BANK</Text>
         <Text style={styles.heroNum}>{total}</Text>
-        <Text style={styles.heroSub}>Up to {RUN_LIMIT} questions per run · educational, not solver output</Text>
+        <Text style={styles.heroSub}>Up to {RUN_LIMIT} questions per run</Text>
         <View style={styles.limitChipRow} accessible accessibilityLabel={limit.remaining === Infinity ? 'Unlimited quizzes with Premium' : `${remainingLabel}`}>
           <Chip label={remainingLabel} tone={limit.remaining === Infinity ? 'gold' : 'neutral'} icon="time-outline" />
         </View>
@@ -371,7 +371,7 @@ function CalibrationReference({ assertions }: { assertions: string[] }) {
     <View style={styles.calibRef}>
       <Text
         style={styles.calibLabel}
-        accessibilityLabel="Calibrated reference — expert-calibrated, not solver-verified"
+        accessibilityLabel="Expert-calibrated reference"
       >
         CALIBRATED REFERENCE
       </Text>
