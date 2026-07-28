@@ -149,3 +149,49 @@ describe('BrandSplash — lifecycle (invariant 4: skippable, idempotent, reduced
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('BrandSplash — reveal (Q1.2: the screen rises THROUGH the dissolve, not after it)', () => {
+  it('fires onReveal when the exit fade STARTS, ~300ms before onDone', () => {
+    const onReveal = jest.fn();
+    const onDone = jest.fn();
+    render(<BrandSplash onReveal={onReveal} onDone={onDone} />);
+    advance(SPLASH.EXIT_AT - 1);
+    expect(onReveal).not.toHaveBeenCalled();
+    advance(2);
+    expect(onReveal).toHaveBeenCalledTimes(1); // gate opens as the fade begins
+    expect(onDone).not.toHaveBeenCalled();     // overlay still fading — do NOT unmount yet
+    advance(SPLASH.EXIT);
+    expect(onDone).toHaveBeenCalledTimes(1);
+  });
+
+  it('a skip reveals immediately too — the gate is never stranded behind a shortcut', () => {
+    const onReveal = jest.fn();
+    const onDone = jest.fn();
+    render(<BrandSplash onReveal={onReveal} onDone={onDone} />);
+    advance(200);
+    fireEvent.press(screen.getByLabelText('Skip intro'));
+    expect(onReveal).toHaveBeenCalledTimes(1);
+    advance(SPLASH.SKIP_EXIT + 1);
+    expect(onDone).toHaveBeenCalledTimes(1);
+  });
+
+  it('reduced motion still reveals exactly once (no fade to ride)', () => {
+    mockReduced = true;
+    const onReveal = jest.fn();
+    const onDone = jest.fn();
+    render(<BrandSplash onReveal={onReveal} onDone={onDone} />);
+    advance(SPLASH.REDUCED_HOLD + 1);
+    expect(onReveal).toHaveBeenCalledTimes(1);
+    expect(onDone).toHaveBeenCalledTimes(1);
+  });
+
+  it('onReveal never fires twice, even with taps during the fade', () => {
+    const onReveal = jest.fn();
+    render(<BrandSplash onReveal={onReveal} onDone={jest.fn()} />);
+    advance(SPLASH.EXIT_AT + 10);
+    fireEvent.press(screen.getByLabelText('Skip intro'));
+    fireEvent.press(screen.getByLabelText('Skip intro'));
+    advance(SPLASH.TOTAL);
+    expect(onReveal).toHaveBeenCalledTimes(1);
+  });
+});

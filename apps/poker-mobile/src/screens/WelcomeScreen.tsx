@@ -8,6 +8,7 @@ import { typography } from '../theme/typography';
 import { spacing } from '../theme/spacing';
 import { shadows } from '../theme/shadows';
 import Screen from '../components/Screen';
+import BrandLockup from '../components/brand/BrandLockup';
 import PrimaryButton from '../components/PrimaryButton';
 import { MotiView, slideUpSequence, staggerIn } from '../components/motion';
 import { useSplashDone } from '../components/brand/SplashGate';
@@ -65,14 +66,9 @@ export default function WelcomeScreen({ navigation, route }: Props) {
 
       <View style={styles.main}>
         <MotiView {...group(0)} style={styles.brandBlock}>
-          <View style={styles.logoOuter}>
-            <View style={styles.logoRing}>
-              <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
-            </View>
-          </View>
-          <Text style={styles.wordmark} accessibilityRole="header">T POKER</Text>
-          <View style={styles.brandRule} />
-          <Text style={styles.tagline}>Your home game, handled.</Text>
+          {/* Same BrandLockup the splash renders — the handoff shows one brand, not two
+              near-identical ones that drift (Q1.2). */}
+          <BrandLockup scale="screen" framed footer="rule" />
         </MotiView>
       </View>
 

@@ -76,6 +76,11 @@ function extractDeepLink(url: string): { type: 'session' | 'group'; token: strin
 export default function App() {
   const navRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
   // Branded launch splash (~1.2s, flag `v2Splash` = kill-switch). When off, start already "done".
+  // TWO states on purpose (Q1.2): `splashRevealed` opens the SplashGate when the overlay STARTS
+  // dissolving, so the screen underneath rises through the fade; `splashDone` unmounts the
+  // overlay when the fade ENDS. Collapsing them back into one either cuts the fade short or
+  // re-introduces the ~300ms of empty screen.
+  const [splashRevealed, setSplashRevealed] = useState(!isFeatureEnabled('v2Splash'));
   const [splashDone, setSplashDone] = useState(!isFeatureEnabled('v2Splash'));
   // Serif display accents (titles + hero numerals). On fontError we proceed —
   // unknown fontFamily falls back to the system font, which is cosmetic only.
@@ -154,10 +159,15 @@ export default function App() {
                       {/* Entry screens hold their entrance until the splash resolves
                           (SplashGate) — otherwise the choreography plays unseen under
                           the opaque overlay and the handoff double-exposes the brand. */}
-                      <SplashGateProvider done={splashDone}>
+                      <SplashGateProvider done={splashRevealed}>
                         <AppNavigator navigationRef={navRef} />
                       </SplashGateProvider>
-                      {!splashDone && <BrandSplash onDone={() => setSplashDone(true)} />}
+                      {!splashDone && (
+                        <BrandSplash
+                          onReveal={() => setSplashRevealed(true)}
+                          onDone={() => setSplashDone(true)}
+                        />
+                      )}
                     </EngagementProvider>
                   </CoachProvider>
                   </MasteryProvider>

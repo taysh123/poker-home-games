@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Image, Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 import Reanimated, {
   cancelAnimation,
   useAnimatedStyle,
@@ -7,8 +7,10 @@ import Reanimated, {
   withDelay,
   withSpring,
   withTiming,
+  Easing,
 } from 'react-native-reanimated';
 import { colors } from '../../theme/colors';
+import BrandLockup from './BrandLockup';
 import { typography } from '../../theme/typography';
 import { useReducedMotionState } from '../../hooks/useReducedMotion';
 import { SPLASH } from './splashTimeline';
@@ -27,11 +29,17 @@ import { SPLASH } from './splashTimeline';
  *   OS splash → this overlay handoff is seamless.
  */
 
-const TPOKER_LOGO = require('../../../assets/logo.png');
 
-type Props = { onDone: () => void };
+type Props = {
+  /** Overlay finished and may unmount (end of the fade). */
+  onDone: () => void;
+  /** The exit fade has STARTED — release the SplashGate here so the screen underneath rises
+   * THROUGH the dissolve instead of appearing after it. Before Q1.2 the gate opened with
+   * `onDone`, so the last ~300ms revealed an empty screen. Fires at most once, and on skip too. */
+  onReveal?: () => void;
+};
 
-export default function BrandSplash({ onDone }: Props) {
+export default function BrandSplash({ onDone, onReveal }: Props) {
   // Hold the opening frames until the OS setting is actually READ — the async probe used to
   // let a reduce-motion user see the animation start before it snapped to the static frame
   // (Q1.2 substrate: an accessibility defect). `ready` is synchronous on web.
@@ -45,14 +53,23 @@ export default function BrandSplash({ onDone }: Props) {
   const tagOpacity = useSharedValue(0);
 
   const doneRef = useRef(false);
+  const revealedRef = useRef(false);
   // Set the moment the exit fade engages (scheduled exit or tap-to-skip). From then
   // on, taps are no-ops (a tap during the fade must never EXTEND the splash) and a
   // late reduce-motion re-arm lands the fade instead of snapping back to opacity 1.
   const exitStartedRef = useRef(false);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
+  /** Open the gate exactly once, the moment the overlay starts dissolving. */
+  function reveal() {
+    if (revealedRef.current) return;
+    revealedRef.current = true;
+    onReveal?.();
+  }
+
   function finish() {
     if (doneRef.current) return;
+    reveal(); // reduced-motion / skip paths finish without a fade — never strand the gate
     doneRef.current = true;
     timersRef.current.forEach(clearTimeout);
     timersRef.current = [];
@@ -90,14 +107,19 @@ export default function BrandSplash({ onDone }: Props) {
       return () => timersRef.current.forEach(clearTimeout);
     }
 
-    logoOpacity.value = withTiming(1, { duration: SPLASH.LOGO_IN });
+    // Deliberate curves (Q1.2): things ARRIVING decelerate (ease-out); the overlay LEAVING
+    // accelerates away (ease-in). Everything previously rode Reanimated's default in-out,
+    // which reads soft at both ends.
+    const arrive = { easing: Easing.out(Easing.cubic) };
+    const depart = { easing: Easing.in(Easing.cubic) };
+    logoOpacity.value = withTiming(1, { duration: SPLASH.LOGO_IN, ...arrive });
     logoScale.value = withSpring(1, { damping: 16, stiffness: 190 });
-    wordOpacity.value = withDelay(SPLASH.WORD_DELAY, withTiming(1, { duration: SPLASH.WORD_IN }));
-    wordRise.value = withDelay(SPLASH.WORD_DELAY, withTiming(0, { duration: SPLASH.WORD_IN }));
-    tagOpacity.value = withDelay(SPLASH.TAG_DELAY, withTiming(0.9, { duration: SPLASH.TAG_IN }));
-    // Exit: the overlay fades itself out, revealing the app underneath.
-    rootOpacity.value = withDelay(SPLASH.EXIT_AT, withTiming(0, { duration: SPLASH.EXIT }));
-    schedule(() => { exitStartedRef.current = true; }, SPLASH.EXIT_AT);
+    wordOpacity.value = withDelay(SPLASH.WORD_DELAY, withTiming(1, { duration: SPLASH.WORD_IN, ...arrive }));
+    wordRise.value = withDelay(SPLASH.WORD_DELAY, withTiming(0, { duration: SPLASH.WORD_IN, ...arrive }));
+    tagOpacity.value = withDelay(SPLASH.TAG_DELAY, withTiming(0.9, { duration: SPLASH.TAG_IN, ...arrive }));
+    // Exit: the overlay fades itself out, revealing the app already rising underneath.
+    rootOpacity.value = withDelay(SPLASH.EXIT_AT, withTiming(0, { duration: SPLASH.EXIT, ...depart }));
+    schedule(() => { exitStartedRef.current = true; reveal(); }, SPLASH.EXIT_AT);
     schedule(finish, SPLASH.TOTAL);
 
     return () => timersRef.current.forEach(clearTimeout);
@@ -109,6 +131,7 @@ export default function BrandSplash({ onDone }: Props) {
     // the fade must shorten nothing and extend nothing.
     if (doneRef.current || exitStartedRef.current) return;
     exitStartedRef.current = true;
+    reveal();
     if (reduced) {
       finish();
       return;
@@ -138,15 +161,15 @@ export default function BrandSplash({ onDone }: Props) {
         accessibilityRole="button"
         accessibilityLabel="Skip intro"
       >
-        <Reanimated.View style={logoStyle}>
-          <Image source={TPOKER_LOGO} style={styles.logo} resizeMode="contain" />
-        </Reanimated.View>
-        <Reanimated.View style={wordStyle}>
-          <Text style={styles.wordmark}>T POKER</Text>
-        </Reanimated.View>
-        <Reanimated.View style={tagStyle}>
-          <Text style={styles.tagline}>YOUR HOME GAME, HANDLED</Text>
-        </Reanimated.View>
+        {/* ONE lockup, shared with Welcome (BrandLockup) — the parts are still animated
+            individually via the render slots, so the choreography is unchanged. */}
+        <BrandLockup
+          scale="splash"
+          footer="tagline"
+          renderBadge={badge => <Reanimated.View style={logoStyle}>{badge}</Reanimated.View>}
+          renderWordmark={word => <Reanimated.View style={wordStyle}>{word}</Reanimated.View>}
+          renderFooter={tag => <Reanimated.View style={tagStyle}>{tag}</Reanimated.View>}
+        />
         <Reanimated.View style={[styles.bylineWrap, tagStyle]} pointerEvents="none">
           <Text style={styles.byline}>BY TRUE STORY LABS</Text>
         </Reanimated.View>
@@ -165,20 +188,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  logo: { width: 148, height: 148 },
-  wordmark: {
-    ...typography.displaySerif,
-    fontSize: 26,
-    color: colors.goldLight,
-    letterSpacing: 4,
-    marginTop: 18,
-  },
-  tagline: {
-    ...typography.caps,
-    color: colors.goldMuted,
-    letterSpacing: 2.5,
-    marginTop: 8,
   },
   bylineWrap: { position: 'absolute', bottom: 56, alignSelf: 'center' },
   byline: {
