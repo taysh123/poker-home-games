@@ -245,6 +245,42 @@ HONESTY PIN: no reminder may promise an unavailable feature (the old `free_ai` k
 removed for this) — `utils/__tests__/reminderLogic.test.ts`. Day keys are LOCAL
 (`localDayKey`); `toISOString().slice(0, 10)` is banned by `dayKeyBan.test.ts`.
 
+## Review prompts (Q1.4, flag `reviews` ON) — NO in-app sheet
+
+`features/reviews/` calls `expo-store-review`'s `requestReview()` **directly** after a qualifying
+moment. There is deliberately **no pre-prompt of our own** — master-plan decision 4a (a sentiment
+gate) was SUPERSEDED 2026-07-29: the qualifying moments already are the sentiment filter, and an
+in-app gate that routes only happy users to the store is the review-gating pattern App Store
+Guideline 1.1.7 names as a rejection cause. Reasoning:
+`docs/superpowers/specs/2026-07-28-review-prompts-design.md` §0. **Do not re-add a sheet.**
+
+- **All rules are pure** in `logic/reviewPromptLogic.ts` (zero imports, `nowMs` injected):
+  ≥3 qualifying moments · 3-day install floor · 90-day cooldown · once per app version.
+  Eligibility returns a discriminated `reason`, so tests assert *why*, not just `false`.
+- **Constants are pinned to LITERAL values**, not referenced symbolically. Mutation-verified: the
+  symbolic-only version stayed green with the moments gate set to 0. Rate limiting must never be
+  dialable to nothing without a test going red.
+- **THREE moment kinds, all with real call sites** — `game_summary` · `drill_strong` (≥70%) ·
+  `streak_milestone`. The vocabulary pin means *producible*, not merely declared.
+- **Streak milestones are a [7, 30, 100] ladder** (`crossedStreakMilestone`), never the raw streak
+  value against a high-water mark — that counted every day past 7 (a 30-day streak produced 24
+  moments).
+- **Only the STUDY-day streak qualifies.** `HomeScreen`'s identically-named server win/loss streak
+  can be NEGATIVE; asking for a rating mid-losing-streak is the failure this prevents. Pinned at
+  the TYPE level via `Record<keyof ReviewSignals, true>`, so *any* added field fails `tsc`.
+- **Never over a celebration:** `EngagementContext.isCelebrating`, derived by the pure
+  `logic/celebration.ts#deriveIsCelebrating` so all three terms are pinned — inline, dropping
+  `enabled` or `celebrate` both survived mutation testing.
+- Asking consumes the allowance: iOS caps the dialog at ~3/year and may silently no-op, so we
+  rate-limit the **ask** and can never observe the outcome. The analytics prop is `requested`
+  ("we issued the call"), never `available`. No copy anywhere promises a dialog appears.
+  Native-only; web never asks.
+- The host reads everything mutable from refs — its 500ms tick captures nothing. Moments recorded
+  before the store loads are queued and flushed, never dropped; game moments carry a persisted
+  dedupe key so re-entering a summary cannot double-count.
+- `config/support.ts` is the ONE `SUPPORT_EMAIL` constant for TS call sites; `public/*.html` keeps
+  its literal, pinned by `legalSurfaces.test.ts`.
+
 ## Motion System — `src/components/motion/`
 
 Reanimated 4 components layered ON TOP of the legacy `Animated` helpers in `theme/motion.ts` (both coexist; don't rewrite old screens wholesale):

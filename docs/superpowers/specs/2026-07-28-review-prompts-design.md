@@ -1,4 +1,40 @@
-# Q1.4 — Ratings & feedback: the sentiment gate
+# Q1.4 — Ratings & feedback
+
+## 0. SUPERSEDED (owner, 2026-07-29) — the sentiment sheet is gone
+
+> **What changed:** master-plan decision **4a** — a pre-prompt asking "Enjoying T Poker?", routing
+> happy users to the native store review and unhappy users to a prefilled support email — is
+> **superseded**. We now call `requestNativeReview()` **directly** at a qualifying moment. There is
+> no sheet of our own, no sentiment capture, and no in-app feedback branch.
+>
+> **The owner's reasoning, recorded because it reversed an earlier approval of their own:**
+>
+> 1. **The qualifying moments already ARE the sentiment filter.** Someone who finished a drill at
+>    ≥70%, completed a game, and holds a 7-day study streak is not an unhappy user. Behavioural
+>    selection is more reliable than asking. The sheet was buying very little.
+> 2. **What it cost was large.** An entire occlusion-geometry subsystem, which the Q1.4 critic
+>    fleet showed produced two blockers — the sheet could rise over a **live, in-progress game**
+>    (the phone being passed around a table mid-hand), and it could **never** fire on a real
+>    finished game because the "fully seen" predicate was unsatisfiable for a settlements list of
+>    more than ~4 transfers. The mechanism was inverted against its own intent.
+> 3. **App Store Guideline 1.1.7.** Routing only the happy cohort to the native dialog is the
+>    canonical *review-gating* pattern Apple names as a rejection cause. On an individual developer
+>    account that already took a 2.3.6 metadata rejection, against a standing invariant that the
+>    store track is never blocked, that trade "isn't close".
+> 4. **Nothing meaningful is lost:** the unhappy-user feedback path already exists in Profile.
+>
+> **What survived and still ships:** the pure eligibility rules, the store, the native wrapper,
+> `EngagementContext.isCelebrating`, and the `SUPPORT_EMAIL` centralisation.
+>
+> **Sections below are kept for provenance.** Where they describe the sheet, the protected-region
+> geometry, sentiment capture, or the feedback branch, they describe a design that **was not
+> shipped**. Superseded passages are marked inline. The authoritative description of what ships is
+> `CLAUDE.md` → "Review prompts" plus the header comment in
+> `apps/poker-mobile/src/features/reviews/logic/reviewPromptLogic.ts`.
+
+---
+
+## 1-original. Ratings & feedback: the sentiment gate *(as designed, before §0)*
 
 - **Date:** 2026-07-28 · **Status:** APPROVED (owner, 2026-07-28)
 - **Slice:** Q1.4 of the product-quality master plan
@@ -155,7 +191,13 @@ already finished:
 | `SessionScreen`, after the summary modal is dismissed | settlements block | 7000ms — a money screen; same reasoning, though no celebration is playing by then |
 | Trainer results (`SpotTrainerScreen`, `done === true`) | none | 3000ms — its success `Celebration` runs ~1.5s |
 
-### Protecting the settlement list
+### Protecting the settlement list — ⛔ SUPERSEDED (§0), never shipped
+
+> This entire mechanism was deleted. It is retained only because the critic fleet's findings
+> against it are instructive: the `null`-rect case conflated "nothing to protect" with "not
+> measured yet" and failed **open** on the money screen, while `fullyVisibleAboveSheet` demanded
+> the whole block fit on screen simultaneously and so failed **closed** on any real settlements
+> list. With no sheet of our own there is no region to protect — the OS owns its dialog.
 
 Owner constraint, verbatim: *"the user must have clearly seen and absorbed their settlements before
 anything rises over them"* and *"never cover the settlement list."*
@@ -205,7 +247,11 @@ Following the house convention that a pin must pin what it claims (mutation-test
    `config/__tests__/features.test.ts` with a justification comment, in the same PR — per the
    standing rule that any flip extends the matrix in its own PR.
 
-## 7. Copy (Direction A — symmetric and quiet)
+## 7. Copy (Direction A — symmetric and quiet) — ⛔ SUPERSEDED (§0), never shipped
+
+> No sheet ships, so none of this copy exists in the app. The reasoning about symmetry is kept
+> because it remains the right instinct for any future in-app prompt: styling the agreeable answer
+> more prominently manufactures the result you are claiming to measure.
 
 Owner-selected taste direction. One line, two **equally weighted** buttons, no gold on either, no
 icon, no illustration.
