@@ -21,6 +21,7 @@ import {
 } from '@expo-google-fonts/sora';
 import * as WebBrowser from 'expo-web-browser';
 import { NavigationContainerRef } from '@react-navigation/native';
+import * as SplashScreen from 'expo-splash-screen';
 import { applyInterDefault } from './src/theme/fonts';
 import { AuthProvider } from './src/context/AuthContext';
 import { CurrencyProvider } from './src/context/CurrencyContext';
@@ -50,6 +51,12 @@ WebBrowser.maybeCompleteAuthSession();
 // Safe at module load — applies once the font files finish loading below.
 applyInterDefault();
 
+// Hold the NATIVE splash until we are ready to draw (Q1.2 substrate). Without this the OS splash
+// auto-hides on the first React frame — which lands while `useFonts` is still pending and App
+// renders null, so the user saw the brand vanish into a bare navy canvas before the JS splash
+// faded it back in. Best-effort: a rejection here must never block startup.
+void SplashScreen.preventAutoHideAsync().catch(() => {});
+
 // Web shell: paint the browser canvas navy at the earliest point our code runs,
 // so the moment between HTML load and the first React frame is deep navy instead
 // of a white flash. (The exported index.html ships an unstyled <body>.)
@@ -69,7 +76,17 @@ function extractDeepLink(url: string): { type: 'session' | 'group'; token: strin
 export default function App() {
   const navRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
   // Branded launch splash (~1.2s, flag `v2Splash` = kill-switch). When off, start already "done".
+  // TWO states on purpose (Q1.2): `splashRevealed` opens the SplashGate when the overlay STARTS
+  // dissolving, so the screen underneath rises through the fade; `splashDone` unmounts the
+  // overlay when the fade ENDS. Collapsing them back into one either cuts the fade short or
+  // re-introduces the ~300ms of empty screen.
+  const [splashRevealed, setSplashRevealed] = useState(!isFeatureEnabled('v2Splash'));
   const [splashDone, setSplashDone] = useState(!isFeatureEnabled('v2Splash'));
+  // The JS overlay is blank until the reduce-motion probe resolves, so hiding the native splash
+  // on fonts alone flashed a bare navy rectangle between two branded frames. Hold until the
+  // overlay reports it has painted — with a failsafe so a stalled probe can never strand the
+  // user behind an un-hideable native splash.
+  const [splashArmed, setSplashArmed] = useState(!isFeatureEnabled('v2Splash'));
   // Serif display accents (titles + hero numerals). On fontError we proceed —
   // unknown fontFamily falls back to the system font, which is cosmetic only.
   const [fontsLoaded, fontError] = useFonts({
@@ -114,8 +131,22 @@ export default function App() {
     void initAnalytics();
   }, []);
 
+  // Hand the native splash off deliberately: it stays up through the font gate AND through the
+  // JS overlay's first paint, so the badge never blinks out to a bare canvas between them.
+  // (Gating on fonts alone was not enough — the overlay is blank until the motion probe lands.)
+  const ready = fontsLoaded || fontError;
+  useEffect(() => {
+    if (ready && splashArmed) void SplashScreen.hideAsync().catch(() => {});
+  }, [ready, splashArmed]);
+
+  // Failsafe: never let the native splash outlive the launch, whatever happens upstream.
+  useEffect(() => {
+    const t = setTimeout(() => setSplashArmed(true), 2000);
+    return () => clearTimeout(t);
+  }, []);
+
   // Brief gate while the display font loads; proceed on error (system fallback).
-  if (!fontsLoaded && !fontError) return null;
+  if (!ready) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -139,10 +170,16 @@ export default function App() {
                       {/* Entry screens hold their entrance until the splash resolves
                           (SplashGate) — otherwise the choreography plays unseen under
                           the opaque overlay and the handoff double-exposes the brand. */}
-                      <SplashGateProvider done={splashDone}>
+                      <SplashGateProvider done={splashRevealed}>
                         <AppNavigator navigationRef={navRef} />
                       </SplashGateProvider>
-                      {!splashDone && <BrandSplash onDone={() => setSplashDone(true)} />}
+                      {!splashDone && (
+                        <BrandSplash
+                          onArmed={() => setSplashArmed(true)}
+                          onReveal={() => setSplashRevealed(true)}
+                          onDone={() => setSplashDone(true)}
+                        />
+                      )}
                     </EngagementProvider>
                   </CoachProvider>
                   </MasteryProvider>
