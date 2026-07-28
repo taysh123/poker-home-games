@@ -195,3 +195,28 @@ describe('BrandSplash — reveal (Q1.2: the screen rises THROUGH the dissolve, n
     expect(onReveal).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('BrandSplash — arming (Q1.2: the native splash must not hand off to a blank overlay)', () => {
+  it('does NOT arm while the motion preference is still unknown', () => {
+    mockMotionReady = false;
+    const onArmed = jest.fn();
+    render(<BrandSplash onArmed={onArmed} onDone={jest.fn()} />);
+    advance(SPLASH.TOTAL);
+    // Overlay is still blank here — App keeps the native splash up on the strength of this.
+    expect(onArmed).not.toHaveBeenCalled();
+  });
+
+  it('arms exactly once, as soon as the preference resolves (either value)', () => {
+    mockMotionReady = false;
+    const onArmed = jest.fn();
+    const view = render(<BrandSplash onArmed={onArmed} onDone={jest.fn()} />);
+    expect(onArmed).not.toHaveBeenCalled();
+    mockMotionReady = true;
+    view.rerender(<BrandSplash onArmed={onArmed} onDone={jest.fn()} />);
+    expect(onArmed).toHaveBeenCalledTimes(1);
+    // A later reduce-motion change re-arms the choreography but must not re-fire arming.
+    mockReduced = true;
+    view.rerender(<BrandSplash onArmed={onArmed} onDone={jest.fn()} />);
+    expect(onArmed).toHaveBeenCalledTimes(1);
+  });
+});

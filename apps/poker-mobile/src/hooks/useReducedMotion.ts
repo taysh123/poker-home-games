@@ -46,10 +46,19 @@ export function useReducedMotionState(): { reduced: boolean; ready: boolean } {
 
   useEffect(() => {
     let mounted = true;
-    const settle = (v: boolean) => { if (mounted) setState({ reduced: !!v, ready: true }); };
-    AccessibilityInfo.isReduceMotionEnabled?.()
-      .then(settle)
-      .catch(() => { if (mounted) setState(s => ({ ...s, ready: true })); });
+    // Identity-preserving: a reduceMotionChanged emission with no actual change must not
+    // re-render every consumer.
+    const settle = (v: boolean) => {
+      if (mounted) setState(s => (s.reduced === !!v && s.ready ? s : { reduced: !!v, ready: true }));
+    };
+    // Defensive: if the API is absent the optional call yields undefined, and chaining .then on
+    // it would throw synchronously and leave `ready` false forever — which now gates the launch.
+    const probe = AccessibilityInfo.isReduceMotionEnabled?.();
+    if (probe && typeof probe.then === 'function') {
+      probe.then(settle).catch(() => { if (mounted) setState(s => ({ ...s, ready: true })); });
+    } else if (mounted) {
+      setState(s => ({ ...s, ready: true })); // no API — proceed unreduced
+    }
     const sub = AccessibilityInfo.addEventListener?.('reduceMotionChanged', (v: boolean) => settle(v));
     return () => { mounted = false; sub?.remove?.(); };
   }, []);

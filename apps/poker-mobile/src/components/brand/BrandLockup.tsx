@@ -26,6 +26,10 @@ interface Props {
   footer?: 'none' | 'tagline' | 'rule';
   /** Welcome frames the badge in a gold-tinted tile; the splash shows it bare on the deep navy. */
   framed?: boolean;
+  /** Expose the wordmark as a heading. Welcome does (it is the screen's title); the splash must
+   * NOT — it is decorative there, and on react-native-web an unconditional role emitted a second
+   * heading nested inside the "Skip intro" button. */
+  headerRole?: boolean;
   /** Render slots so callers can animate individual parts (the splash fades them separately). */
   renderBadge?: (badge: React.ReactNode) => React.ReactNode;
   renderWordmark?: (wordmark: React.ReactNode) => React.ReactNode;
@@ -43,15 +47,20 @@ export default function BrandLockup({
   scale,
   footer = 'none',
   framed = false,
+  headerRole = false,
   renderBadge = identity,
   renderWordmark = identity,
   renderFooter = identity,
 }: Props) {
   const s = SIZES[scale];
 
+  // FRAMED draws inside a gold-tinted, clipped tile where the badge's own dark plate is the
+  // intended look. BARE draws straight onto the deep navy, so it needs the alpha-corrected
+  // asset — otherwise the "brand moment" is a near-black square with a one-sided seam sitting
+  // on navy (the exact defect fixed for the OS splash asset; both come from the same generator).
   const badgeImage = (
     <Image
-      source={require('../../../assets/logo.png')}
+      source={framed ? require('../../../assets/logo.png') : require('../../../assets/logo-splash.png')}
       style={{ width: s.badge, height: s.badge, borderRadius: s.radius }}
       resizeMode="contain"
     />
@@ -70,7 +79,7 @@ export default function BrandLockup({
   const wordmark = (
     <Text
       style={[styles.wordmark, { fontSize: s.wordmark, marginTop: framed ? 0 : 18 }]}
-      accessibilityRole="header"
+      accessibilityRole={headerRole ? 'header' : undefined}
     >
       T POKER
     </Text>

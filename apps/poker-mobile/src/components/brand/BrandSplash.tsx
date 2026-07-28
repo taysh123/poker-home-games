@@ -33,13 +33,17 @@ import { SPLASH } from './splashTimeline';
 type Props = {
   /** Overlay finished and may unmount (end of the fade). */
   onDone: () => void;
+  /** Fired once the overlay has actually PAINTED a branded frame (i.e. the motion preference
+   * resolved and the shared values are set). App holds the native splash until this arrives, so
+   * the OS splash covers the probe window instead of handing off to an empty navy rectangle. */
+  onArmed?: () => void;
   /** The exit fade has STARTED — release the SplashGate here so the screen underneath rises
    * THROUGH the dissolve instead of appearing after it. Before Q1.2 the gate opened with
    * `onDone`, so the last ~300ms revealed an empty screen. Fires at most once, and on skip too. */
   onReveal?: () => void;
 };
 
-export default function BrandSplash({ onDone, onReveal }: Props) {
+export default function BrandSplash({ onDone, onReveal, onArmed }: Props) {
   // Hold the opening frames until the OS setting is actually READ — the async probe used to
   // let a reduce-motion user see the animation start before it snapped to the static frame
   // (Q1.2 substrate: an accessibility defect). `ready` is synchronous on web.
@@ -54,6 +58,7 @@ export default function BrandSplash({ onDone, onReveal }: Props) {
 
   const doneRef = useRef(false);
   const revealedRef = useRef(false);
+  const armedRef = useRef(false);
   // Set the moment the exit fade engages (scheduled exit or tap-to-skip). From then
   // on, taps are no-ops (a tap during the fade must never EXTEND the splash) and a
   // late reduce-motion re-arm lands the fade instead of snapping back to opacity 1.
@@ -86,8 +91,10 @@ export default function BrandSplash({ onDone, onReveal }: Props) {
     timersRef.current.forEach(clearTimeout);
     timersRef.current = [];
     if (doneRef.current) return;
-    // Nothing starts (and nothing is visible to animate) until we know the preference.
+    // Nothing starts (and nothing is visible to animate) until we know the preference. The
+    // native splash stays up meanwhile — App waits for onArmed below.
     if (!motionReady) return;
+    if (!armedRef.current) { armedRef.current = true; onArmed?.(); }
     if (exitStartedRef.current) {
       // The exit fade (or a skip) is already in flight — never revert it; just
       // land the overlay on the short clock.

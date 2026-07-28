@@ -20,13 +20,21 @@ import { fileURLToPath } from 'url';
 import { PNG } from 'pngjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const SRC = resolve(here, '../assets/icon.png');
-const OUT = resolve(here, '../assets/splash-icon.png');
+/** Every asset drawn BARE on the deep-navy background needs its extraneous canvas removed.
+ * `logo.png` keeps its dark plate because Welcome draws it inside a gold-tinted, clipped tile
+ * where that plate is the intended look — see BrandLockup. */
+const TARGETS = [
+  { src: '../assets/icon.png', out: '../assets/splash-icon.png', size: 1024 },
+  { src: '../assets/logo.png', out: '../assets/logo-splash.png', size: 512 },
+];
 
 /** A pixel counts as extraneous canvas when it is near-black (the badge frame is gold, the
  *  interior artwork is coloured, so this only matches the surround + its antialiasing). */
 const CANVAS_MAX = 28;
 
+function build({ src: srcRel, out: outRel, size }) {
+const SRC = resolve(here, srcRel);
+const OUT = resolve(here, outRel);
 const png = PNG.sync.read(readFileSync(SRC));
 const { width: w, height: h, data } = png;
 const out = new PNG({ width: w, height: h });
@@ -75,6 +83,7 @@ for (let i = 0; i < out.data.length; i += 4) {
  * badge is never drawn larger than the screen; 1024 is the platform-recommended master size and
  * keeps the asset a fraction of the 2.1MB icon copy it replaces. */
 function downsample(src, target) {
+  if (src.width !== src.height) throw new Error('downsample expects a square source');
   if (src.width <= target) return src;
   const f = src.width / target;
   const dst = new PNG({ width: target, height: target });
@@ -102,11 +111,19 @@ function downsample(src, target) {
   return dst;
 }
 
-const final = downsample(out, 1024);
+const final = downsample(out, size);
 const before = readFileSync(SRC).length;
 writeFileSync(OUT, PNG.sync.write(final, { deflateLevel: 9 }));
 const after = readFileSync(OUT).length;
 console.log(`splash asset written: ${final.width}x${final.height} (from ${w}x${h})`);
 console.log(`  transparent canvas pixels: ${cleared.toLocaleString()} (${((cleared / (w * h)) * 100).toFixed(1)}%)`);
 console.log(`  size: ${(before / 1024).toFixed(0)}KB -> ${(after / 1024).toFixed(0)}KB`);
-if (cleared < w * h * 0.05) throw new Error('flood fill cleared implausibly little — check CANVAS_MAX / source art');
+// Two-sided sanity: too little means the fill never escaped the corners; too much means it
+// leaked THROUGH the frame and ate the badge. Both must fail loudly, not ship silently.
+if (cleared < w * h * 0.05) throw new Error(`${outRel}: flood fill cleared implausibly little — check CANVAS_MAX / source art`);
+if (cleared > w * h * 0.6) throw new Error(`${outRel}: flood fill leaked into the badge`);
+const mid = ((final.height >> 1) * final.width + (final.width >> 1)) * 4;
+if (final.data[mid + 3] !== 255) throw new Error(`${outRel}: badge centre is not opaque — fill breached the frame`);
+}
+
+for (const t of TARGETS) build(t);

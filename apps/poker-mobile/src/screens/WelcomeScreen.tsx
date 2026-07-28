@@ -1,12 +1,11 @@
 import React, { useEffect } from 'react';
-import { View, Text, Image, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { guestContinueTarget } from '../navigation/entryRouting';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { spacing } from '../theme/spacing';
-import { shadows } from '../theme/shadows';
 import Screen from '../components/Screen';
 import BrandLockup from '../components/brand/BrandLockup';
 import PrimaryButton from '../components/PrimaryButton';
@@ -68,7 +67,7 @@ export default function WelcomeScreen({ navigation, route }: Props) {
         <MotiView {...group(0)} style={styles.brandBlock}>
           {/* Same BrandLockup the splash renders — the handoff shows one brand, not two
               near-identical ones that drift (Q1.2). */}
-          <BrandLockup scale="screen" framed footer="rule" />
+          <BrandLockup scale="screen" framed headerRole footer="rule" />
         </MotiView>
       </View>
 
@@ -137,35 +136,6 @@ const styles = StyleSheet.create({
 
   main: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   brandBlock: { alignItems: 'center' },
-  logoOuter: {
-    width: 100,
-    height: 100,
-    borderRadius: 26,
-    backgroundColor: colors.goldFaint,
-    borderWidth: 1,
-    borderColor: colors.goldMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xl,
-    ...shadows.gold,
-  },
-  logoRing: { width: 84, height: 84, borderRadius: 20, overflow: 'hidden' },
-  logo: { width: 84, height: 84, borderRadius: 20 },
-  wordmark: {
-    ...typography.displaySerif,
-    fontSize: 24,
-    color: colors.goldLight,
-    letterSpacing: 4,
-    marginBottom: spacing.sm,
-  },
-  brandRule: {
-    width: 24,
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: colors.goldMuted,
-    marginBottom: spacing.lg,
-  },
-  tagline: { ...typography.body, color: colors.textMuted, textAlign: 'center' },
 
   footerArea: { gap: spacing.lg },
   ctas: { gap: spacing.md },

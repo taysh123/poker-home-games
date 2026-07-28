@@ -82,6 +82,11 @@ export default function App() {
   // re-introduces the ~300ms of empty screen.
   const [splashRevealed, setSplashRevealed] = useState(!isFeatureEnabled('v2Splash'));
   const [splashDone, setSplashDone] = useState(!isFeatureEnabled('v2Splash'));
+  // The JS overlay is blank until the reduce-motion probe resolves, so hiding the native splash
+  // on fonts alone flashed a bare navy rectangle between two branded frames. Hold until the
+  // overlay reports it has painted — with a failsafe so a stalled probe can never strand the
+  // user behind an un-hideable native splash.
+  const [splashArmed, setSplashArmed] = useState(!isFeatureEnabled('v2Splash'));
   // Serif display accents (titles + hero numerals). On fontError we proceed —
   // unknown fontFamily falls back to the system font, which is cosmetic only.
   const [fontsLoaded, fontError] = useFonts({
@@ -126,13 +131,19 @@ export default function App() {
     void initAnalytics();
   }, []);
 
-  // Hand the native splash off deliberately: it stays up through the font gate, and we hide it
-  // only once we are actually rendering — so the brand never blinks out to a bare canvas. The JS
-  // BrandSplash is already mounted on top at that moment, so the OS→JS seam is invisible.
+  // Hand the native splash off deliberately: it stays up through the font gate AND through the
+  // JS overlay's first paint, so the badge never blinks out to a bare canvas between them.
+  // (Gating on fonts alone was not enough — the overlay is blank until the motion probe lands.)
   const ready = fontsLoaded || fontError;
   useEffect(() => {
-    if (ready) void SplashScreen.hideAsync().catch(() => {});
-  }, [ready]);
+    if (ready && splashArmed) void SplashScreen.hideAsync().catch(() => {});
+  }, [ready, splashArmed]);
+
+  // Failsafe: never let the native splash outlive the launch, whatever happens upstream.
+  useEffect(() => {
+    const t = setTimeout(() => setSplashArmed(true), 2000);
+    return () => clearTimeout(t);
+  }, []);
 
   // Brief gate while the display font loads; proceed on error (system fallback).
   if (!ready) return null;
@@ -164,6 +175,7 @@ export default function App() {
                       </SplashGateProvider>
                       {!splashDone && (
                         <BrandSplash
+                          onArmed={() => setSplashArmed(true)}
                           onReveal={() => setSplashRevealed(true)}
                           onDone={() => setSplashDone(true)}
                         />
