@@ -231,7 +231,7 @@ export default function StudyScreen() {
         <View style={styles.noteRow}>
           <Ionicons name="information-circle-outline" size={15} color={colors.textMuted} />
           <Text style={styles.note}>
-            Expert-calibrated training ranges — import solver packs anytime.
+            Expert-calibrated training ranges — 6-max, 100bb.
           </Text>
         </View>
 

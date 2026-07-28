@@ -41,6 +41,14 @@ async function renderStudy(): Promise<void> {
   await waitFor(() => expect(ctx.isLoaded).toBe(true));
 }
 
+describe('StudyContext — the dataset it actually serves (Q1.1 wiring pin)', () => {
+  it('delivers the 9-range calibrated dataset to consumers, not the illustrative starter pack', async () => {
+    await renderStudy();
+    expect(ctx.dataset.verificationTier).toBe('calibrated');
+    expect(ctx.dataset.ranges).toHaveLength(9);
+  });
+});
+
 describe('StudyContext — chained writes compose (never clobber)', () => {
   it('two different writes fired in the same tick both land', async () => {
     await renderStudy();

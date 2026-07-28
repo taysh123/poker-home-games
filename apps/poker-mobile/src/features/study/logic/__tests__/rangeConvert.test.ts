@@ -4,7 +4,7 @@
  * (unknown scenario, unknown action, missing hands, mixed tiers) throws — a bad content drop
  * must fail the build/tests, never ship a wrong range.
  */
-import { convertCalibratedRows, tierLabel, type CalibratedRangeRow } from '../rangeConvert';
+import { convertCalibratedRows, spotVerdict, tierLabel, type CalibratedRangeRow } from '../rangeConvert';
 import { allHands } from '../handGrid';
 import type { RangeDataset } from '../../types';
 
@@ -88,5 +88,28 @@ describe('tierLabel — the honest, confident chip text (Q1.1 decision 1a)', () 
     expect(tierLabel(ds({ isIllustrative: true }))).toBe('Training range');
     expect(tierLabel(ds({ isIllustrative: false }))).toBe('Expert-calibrated range');
     expect(tierLabel(ds({ isIllustrative: false }))).not.toMatch(/GTO/);
+  });
+});
+
+describe('spotVerdict — the verdict may never contradict the frequencies shown beneath it', () => {
+  const pure = [{ action: 'raise' as const, freq: 1 }];
+  const mixed = [{ action: 'raise' as const, freq: 0.58 }, { action: 'fold' as const, freq: 0.42 }];
+
+  it('pure spots stay binary: right or wrong', () => {
+    expect(spotVerdict(pure, 'raise', true)).toEqual({ tone: 'ok', title: 'Correct' });
+    expect(spotVerdict(pure, 'fold', false)).toEqual({ tone: 'bad', title: 'Not quite' });
+  });
+
+  it('a mixed spot: the max-frequency action is the main line', () => {
+    expect(spotVerdict(mixed, 'raise', true)).toEqual({ tone: 'ok', title: 'Main line' });
+  });
+
+  it('a minority action the range genuinely plays is NOT "wrong" — it is off the main line', () => {
+    // Calling fold "Not quite" while the line below reads "Fold 42%" is a self-contradiction.
+    expect(spotVerdict(mixed, 'fold', false)).toEqual({ tone: 'mixed', title: 'Also in the range' });
+  });
+
+  it('an action the range never plays is still wrong, mixed spot or not', () => {
+    expect(spotVerdict(mixed, 'call', false)).toEqual({ tone: 'bad', title: 'Not quite' });
   });
 });

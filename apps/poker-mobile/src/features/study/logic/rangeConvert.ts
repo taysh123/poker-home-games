@@ -111,6 +111,31 @@ export function convertCalibratedRows(rows: CalibratedRangeRow[], opts: { name: 
   return { schemaVersion: 1, name: opts.name, isIllustrative: false, verificationTier: 'calibrated', ranges };
 }
 
+export interface SpotVerdict {
+  /** 'ok' = right, 'bad' = wrong, 'mixed' = a minority action the range genuinely plays. */
+  tone: 'ok' | 'bad' | 'mixed';
+  title: string;
+}
+
+/**
+ * The feedback verdict for one answered spot. Calibrated ranges contain genuine MIXES, and the
+ * card shows the split ("Raise 58% · Fold 42%") directly under the verdict — so calling the 42%
+ * action "Not quite" contradicts the very numbers beneath it. Pure spots stay binary; on a mixed
+ * spot the top-frequency action is the "Main line" and a real minority action is "Also in the
+ * range". An action the range never plays is still simply wrong.
+ */
+export function spotVerdict(
+  strategy: ActionFrequency[],
+  chosen: RangeAction,
+  correct: boolean,
+): SpotVerdict {
+  const isMixed = strategy.filter(s => s.freq > 0).length > 1;
+  if (correct) return { tone: 'ok', title: isMixed ? 'Main line' : 'Correct' };
+  const chosenFreq = strategy.find(s => s.action === chosen)?.freq ?? 0;
+  if (isMixed && chosenFreq > 0) return { tone: 'mixed', title: 'Also in the range' };
+  return { tone: 'bad', title: 'Not quite' };
+}
+
 /** The chip/label text for a dataset — derived from the data's OWN tier so the UI can never
  * claim above what the content is (decision 1a). Legacy fallback: illustrative → the confident
  * "Training range"; non-illustrative datasets are our calibrated ones ("GTO play" is gone —
