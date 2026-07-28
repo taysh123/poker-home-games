@@ -39,3 +39,10 @@ export function evaluate(s: EngagementSignals, seen: Record<string, string>): st
 export function findAchievement(key: string): LocalAchievement | undefined {
   return LOCAL_ACHIEVEMENTS.find(a => a.key === key);
 }
+
+/** Display-earned = permanently unlocked (seen marker) OR currently eligible. Volatile predicates
+ * (streaks, calendar windows) may gate the UNLOCK, but a celebrated badge never visually
+ * re-locks when its predicate lapses (Q0 fix). */
+export function isEarned(a: LocalAchievement, signals: EngagementSignals, seen: Record<string, string>): boolean {
+  return seen[a.key] != null || a.eligible(signals);
+}

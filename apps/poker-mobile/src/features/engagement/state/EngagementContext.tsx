@@ -5,8 +5,9 @@ import { useBankroll } from '../../bankroll/state/BankrollContext';
 import { useCoach } from '../../coach/state/CoachContext';
 import { useLocalGames } from '../../../context/LocalGamesContext';
 import { sessionNetCents } from '../../bankroll/logic/bankrollAnalytics';
-import { computeXp, rankForXp, type RankInfo } from '../logic/xp';
-import { LOCAL_ACHIEVEMENTS, evaluate, eligibleKeys, findAchievement } from '../logic/achievements';
+import { computeXp, rankForXp, xpAchievementCount, type RankInfo } from '../logic/xp';
+import { LOCAL_ACHIEVEMENTS, evaluate, eligibleKeys, findAchievement, isEarned } from '../logic/achievements';
+import { localMonthKey } from '../../study/logic/localDay';
 import * as store from '../data/engagementStore';
 import { track } from '../../../utils/analytics';
 import AchievementUnlock from '../../../components/AchievementUnlock';
@@ -45,7 +46,7 @@ export function EngagementProvider({ children }: { children: React.ReactNode }) 
   const { progress, isLoaded: studyLoaded } = useStudy();
   const { sessions, isLoaded: bankrollLoaded } = useBankroll();
   const { history, isLoaded: coachLoaded } = useCoach();
-  const { games } = useLocalGames();
+  const { games, isLoaded: gamesLoaded } = useLocalGames();
 
   const [state, setState] = useState<EngagementState>(store.emptyState());
   const [stateLoaded, setStateLoaded] = useState(false);
@@ -56,6 +57,10 @@ export function EngagementProvider({ children }: { children: React.ReactNode }) 
   // game or quiz JUST finished — and delay the rank-up burst accordingly so it
   // never plays simultaneously with a screen-level Celebration.
   const prevCelebrationTriggerRef = React.useRef({ localGamesFinished: 0, quizzesCompleted: 0 });
+  // The FIRST evaluation after state load is a catch-up, not user action — a restorative XP
+  // delta there (e.g. the Q0 seen-based formula raising a previously docked total) must sync
+  // lastXp silently, never celebrate at an idle cold open (Q0 finds m0/m7).
+  const hasEvaluatedOnceRef = React.useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -77,8 +82,12 @@ export function EngagementProvider({ children }: { children: React.ReactNode }) 
   const coachAnalyses = history.length;
   const localGamesFinished = useMemo(() => games.filter(g => g.status === 'Finished').length, [games]);
   const bankrollPositiveMonth = useMemo(() => {
-    const month = new Date().toISOString().slice(0, 7);
-    const net = sessions.filter(s => s.startedAt.slice(0, 7) === month).reduce((sum, s) => sum + sessionNetCents(s), 0);
+    // LOCAL month on both sides — the previous UTC-ISO month slice bucketed the first hours of
+    // every month into the PREVIOUS month in positive-offset timezones (Q0; dayKeyBan-guarded).
+    const month = localMonthKey();
+    const net = sessions
+      .filter(s => localMonthKey(new Date(s.startedAt)) === month)
+      .reduce((sum, s) => sum + sessionNetCents(s), 0);
     return net > 0;
   }, [sessions]);
 
@@ -87,11 +96,16 @@ export function EngagementProvider({ children }: { children: React.ReactNode }) 
     quizzesCompleted, lessonsCompleted,
   }), [spotsAnswered, studyStreak, studyDays, bankrollSessions, bankrollPositiveMonth, coachAnalyses, localGamesFinished, quizzesCompleted, lessonsCompleted]);
 
-  const eligibleCount = useMemo(() => eligibleKeys(signals).length, [signals]);
-  const xpTotal = useMemo(() => computeXp(signals, eligibleCount), [signals, eligibleCount]);
+  // XP counts permanently-SEEN achievements, never live eligibility — volatile predicates
+  // (streaks, month windows) used to dock XP by 25 per lapsed badge and could re-fire the
+  // rank-up celebration on re-crossing, violating the monotonic pin (Q0).
+  const unlockedCount = useMemo(() => xpAchievementCount(state.seenAchievements), [state.seenAchievements]);
+  const xpTotal = useMemo(() => computeXp(signals, unlockedCount), [signals, unlockedCount]);
   const rank = useMemo(() => rankForXp(xpTotal), [xpTotal]);
 
-  const pillarsLoaded = studyLoaded && bankrollLoaded && coachLoaded;
+  // LocalGames included (Q0 find m2): seeding with games still loading missed play_first and
+  // then celebrated it seconds later — the flood the silent seed exists to prevent.
+  const pillarsLoaded = studyLoaded && bankrollLoaded && coachLoaded && gamesLoaded;
 
   // ── React to changes: backfill once, then celebrate new unlocks + rank-ups ──
   useEffect(() => {
@@ -106,13 +120,15 @@ export function EngagementProvider({ children }: { children: React.ReactNode }) 
       quizzesCompleted: signals.quizzesCompleted,
     };
 
-    // First run: seed existing progress silently (no celebration flood).
+    // First run: seed existing progress silently (no celebration flood). lastXp must be the
+    // POST-seed value (seen-based) or the next render's XP jump would fire a phantom rank-up.
     if (!state.seeded) {
       const seen: Record<string, string> = {};
       eligibleKeys(signals).forEach(k => { seen[k] = now; });
-      const seeded: EngagementState = { ...state, seeded: true, seenAchievements: seen, lastXp: xpTotal };
+      const seeded: EngagementState = { ...state, seeded: true, seenAchievements: seen, lastXp: computeXp(signals, xpAchievementCount(seen)) };
       setState(seeded);
       store.saveState(seeded).catch(() => {});
+      hasEvaluatedOnceRef.current = true; // post-seed state is self-consistent — next run is live
       return;
     }
 
@@ -125,10 +141,14 @@ export function EngagementProvider({ children }: { children: React.ReactNode }) 
       setUnlockQueue(q => [...q, ...newly.map(k => toDto(k, now))]);
       newly.forEach(k => track('achievement_unlocked', { key: k, rarity: findAchievement(k)?.rarity, source: 'local' }));
     }
-    if (rankForXp(xpTotal).index > rankForXp(state.lastXp).index) {
+    // Rank check runs on the PROJECTED total (this run's unlocks included): the +25 for a fresh
+    // unlock otherwise lands one render late, where the game/quiz trigger diff is already
+    // consumed and the burst would bypass the anti-overlap delays (Q0 find m1).
+    const projectedXp = computeXp(signals, xpAchievementCount(next.seenAchievements));
+    if (hasEvaluatedOnceRef.current && rankForXp(projectedXp).index > rankForXp(state.lastXp).index) {
       // Track immediately; delay the visual burst so it never plays simultaneously
       // with a screen-level Celebration (game-end = 5.04 s; study success = 1.5 s).
-      track('rank_up', { rank: rankForXp(xpTotal).rank.name });
+      track('rank_up', { rank: rankForXp(projectedXp).rank.name });
       const screenBurstMs =
         signals.localGamesFinished > prevTrigger.localGamesFinished ? 5500 :
         signals.quizzesCompleted > prevTrigger.quizzesCompleted ? 2000 :
@@ -138,7 +158,10 @@ export function EngagementProvider({ children }: { children: React.ReactNode }) 
         setTimeout(() => setCelebrate(false), 2600);
       }, screenBurstMs);
     }
-    if (next.lastXp !== xpTotal) next = { ...next, lastXp: xpTotal };
+    hasEvaluatedOnceRef.current = true;
+    // Ratchet: lastXp only ever rises (Q0 find m2 — a transient empty pillar must not drag the
+    // celebration baseline down and replay a rank-up later).
+    if (projectedXp > next.lastXp) next = { ...next, lastXp: projectedXp };
     if (next !== state) { setState(next); store.saveState(next).catch(() => {}); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, stateLoaded, pillarsLoaded, xpTotal, signals]);
@@ -146,7 +169,8 @@ export function EngagementProvider({ children }: { children: React.ReactNode }) 
   const localAchievements: LocalAchievementView[] = useMemo(
     () => LOCAL_ACHIEVEMENTS.map(a => ({
       key: a.key, name: a.name, description: a.desc, iconKey: a.ionicon, rarity: a.rarity,
-      earned: a.eligible(signals),
+      // seen || eligible — a celebrated badge never visually re-locks when its predicate lapses (Q0).
+      earned: isEarned(a, signals, state.seenAchievements),
       unlockedAt: state.seenAchievements[a.key] ?? null,
     })),
     [signals, state.seenAchievements],

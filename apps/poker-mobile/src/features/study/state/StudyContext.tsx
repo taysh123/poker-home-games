@@ -46,8 +46,8 @@ type StudyContextType = {
   limitFor: (kind: DailyLimitKind) => LimitStatus;
   /** Record one FINISHED quiz: lifetime counter + today's quiz limit — a SINGLE commit. */
   recordQuizFinished: () => Promise<void>;
-  /** Record one completed/read lesson (feeds XP). */
-  recordLessonCompleted: () => Promise<void>;
+  /** Record one completed/read lesson (feeds XP) — counted once per module, ever (Q0). */
+  recordLessonCompleted: (moduleId: string) => Promise<void>;
 };
 
 const StudyContext = createContext<StudyContextType>({
@@ -76,6 +76,7 @@ export function StudyProvider({ children }: { children: React.ReactNode }) {
 
   const commit = useCallback((update: (f: StudyFile) => StudyFile) => {
     const next = update(fileRef.current);
+    if (next === fileRef.current) return writeQueue.current; // no-op updater — no re-render, no write
     fileRef.current = next;
     setFile(next);
     writeQueue.current = writeQueue.current.then(() => store.saveFile(next)).catch(() => {});
@@ -130,8 +131,13 @@ export function StudyProvider({ children }: { children: React.ReactNode }) {
     await commit(f => ({ ...f, progress: applyQuizFinished(f.progress, todayKey()) }));
   }, [commit]);
 
-  const recordLessonCompleted = useCallback(async () => {
-    await commit(f => ({ ...f, progress: applyLessonDone(f.progress) }));
+  const recordLessonCompleted = useCallback(async (moduleId: string) => {
+    // Identity-preserving on dedupe: re-opening a counted lesson must not re-render every study
+    // consumer or enqueue a byte-identical AsyncStorage write (Q0 find m4).
+    await commit(f => {
+      const p = applyLessonDone(f.progress, moduleId);
+      return p === f.progress ? f : { ...f, progress: p };
+    });
   }, [commit]);
 
   return (

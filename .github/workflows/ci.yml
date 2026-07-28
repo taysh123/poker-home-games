@@ -60,6 +60,10 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
       - name: Unit tests
+        # Positive-offset TZ (matches the user base): jest's local-day/month pins are UTC-blind on
+        # a UTC runner — a reverted toISOString() key produces identical output there (Q0 find C1).
+        env:
+          TZ: Asia/Jerusalem
         run: npx jest --ci
 
   landing:

@@ -52,7 +52,9 @@ export default function LogSessionScreen() {
 
   const [gameType, setGameType] = useState<BankrollGameType>(existing?.gameType ?? 'tournament');
   const [source, setSource] = useState<BankrollSource>(existing?.source ?? 'external');
-  const [date, setDate] = useState(existing ? existing.startedAt.slice(0, 10) : todayStr());
+  // LOCAL day of the stored instant — a UTC slice drifts the date one day earlier per edit
+  // round-trip in >UTC+12 timezones (noon anchor + slice; Q0 find m3).
+  const [date, setDate] = useState(existing ? localDayKey(new Date(existing.startedAt)) : todayStr());
   const [venue, setVenue] = useState(existing?.venue ?? '');
   const [durationMin, setDurationMin] = useState(existing?.durationMinutes ? String(existing.durationMinutes) : '');
   const [notes, setNotes] = useState(existing?.notes ?? '');

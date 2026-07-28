@@ -69,9 +69,20 @@ describe('loadFile', () => {
     const f = emptyFile();
     f.progress.quizzesCompleted = 3;
     f.progress.dailyLimitCounters = { quiz: { dayKey: '2026-06-25', count: 1 }, trainerSession: { dayKey: '', count: 0 }, practiceQuestion: { dayKey: '', count: 0 } };
+    f.progress.completedLessonIds = ['LM-01']; // Q0 dedupe list must survive persistence
     await saveFile(f);
     const loaded = await loadFile();
     expect(loaded.progress.quizzesCompleted).toBe(3);
     expect(loaded.progress.dailyLimitCounters!.quiz).toEqual({ dayKey: '2026-06-25', count: 1 });
+    expect(loaded.progress.completedLessonIds).toEqual(['LM-01']);
+  });
+
+  it('legacy files load with NO completedLessonIds — counter stands, dedupe starts on next open (Q0)', async () => {
+    const f = emptyFile();
+    f.progress.lessonsCompleted = 4;
+    await saveFile(f);
+    const loaded = await loadFile();
+    expect(loaded.progress.lessonsCompleted).toBe(4);
+    expect(loaded.progress.completedLessonIds).toBeUndefined();
   });
 });

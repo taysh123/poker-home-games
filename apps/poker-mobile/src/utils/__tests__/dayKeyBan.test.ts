@@ -9,7 +9,9 @@ import { readdirSync, readFileSync, statSync } from 'fs';
 import { join, relative, resolve } from 'path';
 
 const SRC = resolve(__dirname, '../..');
-const BANNED = /toISOString\(\)\.slice\(0,\s*10\)/;
+// Q0 extended the ban to month keys (slice(0, 7)) — the UTC month bucket escaped the original
+// regex twice (EngagementContext's bankrollPositiveMonth, coach/logic/limits.ts monthKey).
+const BANNED = /toISOString\(\)\.slice\(0,\s*(7|10)\)/;
 
 // The only legitimate homes for day-key math (UTC parsing of already-local keys is fine there):
 const ALLOWED = new Set([
@@ -30,7 +32,7 @@ function walk(dir: string, out: string[] = []): string[] {
 }
 
 describe('UTC day-key ban', () => {
-  it('no file outside localDay.ts derives a day key via toISOString().slice(0, 10)', () => {
+  it('no file outside localDay.ts derives a day or month key via toISOString().slice(0, 7|10)', () => {
     const offenders: string[] = [];
     for (const file of walk(SRC)) {
       const rel = relative(SRC, file).replace(/\\/g, '/');

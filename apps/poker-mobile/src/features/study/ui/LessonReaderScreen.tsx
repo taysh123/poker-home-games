@@ -2,7 +2,7 @@
  * Lesson Reader (PR #3) — renders a module's lesson sections (ordered by SectionOrder) as Markdown.
  * Read-only; reads only via useContent().query → ContentStore (no workbook access). Flag-gated.
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -31,7 +31,11 @@ export default function LessonReaderScreen() {
   const route = useRoute<Rt>();
   const { moduleId, moduleName } = route.params;
   const { enabled, isLoaded, query } = useContent();
-  const { recordLessonCompleted } = useStudy();
+  const { progress, recordLessonCompleted } = useStudy();
+  // Read inside the load effect without adding `progress` to its deps (that would re-query
+  // content on every answered spot).
+  const progressRef = useRef(progress);
+  progressRef.current = progress;
   const reduced = useReducedMotion();
   const [sections, setSections] = useState<LessonSection[] | null>(null);
   const [error, setError] = useState(false);
@@ -49,8 +53,13 @@ export default function LessonReaderScreen() {
         const secs = sortSections(rows);
         setSections(secs);
         if (secs.length > 0) {
-          track('study_lesson_completed', { module_id: moduleId });
-          void recordLessonCompleted();
+          // Analytics matches the counter: one completion event per module, ever — otherwise the
+          // dashboard metric silently diverges from the XP-bearing counter (Q0 find m8).
+          if (!progressRef.current.completedLessonIds?.includes(moduleId)) {
+            track('study_lesson_completed', { module_id: moduleId });
+          }
+          // Once per module, ever — re-opens no longer inflate the counter/XP (Q0).
+          void recordLessonCompleted(moduleId);
         }
       })
       .catch(() => { if (!cancelled) setError(true); });

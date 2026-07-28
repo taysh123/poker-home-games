@@ -208,9 +208,13 @@ export function recordQuizFinished(p: StudyProgress, dayKey: string): StudyProgr
   return { ...done, dailyLimitCounters: consumeToday(dailyCountersOf(done), 'quiz', dayKey) };
 }
 
-/** Record one completed/read lesson (lifetime counter; feeds XP). Pure. */
-export function recordLessonCompleted(p: StudyProgress): StudyProgress {
-  return { ...p, lessonsCompleted: (p.lessonsCompleted ?? 0) + 1 };
+/** Record one completed/read lesson — ONCE per module, ever (Q0): the reader used to bump the
+ * lifetime counter on every open, inflating the counter and its XP. Re-opening a completed
+ * module returns the SAME progress ref (no commit churn). Pure. */
+export function recordLessonCompleted(p: StudyProgress, moduleId: string): StudyProgress {
+  const done = p.completedLessonIds ?? [];
+  if (done.includes(moduleId)) return p;
+  return { ...p, completedLessonIds: [...done, moduleId], lessonsCompleted: (p.lessonsCompleted ?? 0) + 1 };
 }
 
 /** Read the daily-limit counters, defaulting per-kind (v1 data and pre-practiceQuestion files). Pure. */

@@ -142,12 +142,33 @@ describe('recordQuizCompleted', () => {
   });
 });
 
-describe('recordLessonCompleted', () => {
-  it('increments lessonsCompleted only (pure, idempotent input)', () => {
+describe('recordLessonCompleted (Q0: once per module, ever — re-opens must not inflate XP)', () => {
+  it('counts a module the FIRST time and records its id', () => {
     const p = emptyProgress();
-    const next = recordLessonCompleted(p);
+    const next = recordLessonCompleted(p, 'LM-01');
     expect(next.lessonsCompleted).toBe(1);
-    expect(p.lessonsCompleted).toBe(0);
+    expect(next.completedLessonIds).toEqual(['LM-01']);
+    expect(p.lessonsCompleted).toBe(0); // input untouched
     expect(next.quizzesCompleted).toBe(0);
+  });
+
+  it('re-opening the same module is a no-op (returns the SAME progress ref)', () => {
+    const once = recordLessonCompleted(emptyProgress(), 'LM-01');
+    const twice = recordLessonCompleted(once, 'LM-01');
+    expect(twice).toBe(once);
+    expect(twice.lessonsCompleted).toBe(1);
+  });
+
+  it('a different module counts', () => {
+    const p = recordLessonCompleted(recordLessonCompleted(emptyProgress(), 'LM-01'), 'LM-05');
+    expect(p.lessonsCompleted).toBe(2);
+    expect(p.completedLessonIds).toEqual(['LM-01', 'LM-05']);
+  });
+
+  it('older files (counter without ids) keep their counter and start deduping from now', () => {
+    const legacy = { ...emptyProgress(), lessonsCompleted: 4, completedLessonIds: undefined };
+    const next = recordLessonCompleted(legacy, 'LM-01');
+    expect(next.lessonsCompleted).toBe(5);
+    expect(next.completedLessonIds).toEqual(['LM-01']);
   });
 });
