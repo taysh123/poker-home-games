@@ -4,7 +4,9 @@
  * (unknown scenario, unknown action, missing hands, mixed tiers) throws — a bad content drop
  * must fail the build/tests, never ship a wrong range.
  */
-import { convertCalibratedRows, spotVerdict, tierLabel, type CalibratedRangeRow } from '../rangeConvert';
+import { convertCalibratedRows, datasetScopeLine, spotVerdict, tierLabel, type CalibratedRangeRow } from '../rangeConvert';
+import { CALIBRATED_DATASET } from '../../data/calibratedRanges';
+import type { PreflopRange } from '../../types';
 import { allHands } from '../handGrid';
 import type { RangeDataset } from '../../types';
 
@@ -111,5 +113,45 @@ describe('spotVerdict — the verdict may never contradict the frequencies shown
 
   it('an action the range never plays is still wrong, mixed spot or not', () => {
     expect(spotVerdict(mixed, 'call', false)).toEqual({ tone: 'bad', title: 'Not quite' });
+  });
+});
+
+describe('datasetScopeLine — the scope claim is COMPUTED from the ranges, never asserted by hand', () => {
+  const mk = (ranges: Partial<PreflopRange>[]): RangeDataset => ({
+    schemaVersion: 1, name: 'x', isIllustrative: false, verificationTier: 'calibrated',
+    ranges: ranges.map((r, i) => ({
+      id: `r${i}`, format: 'cash', tableSize: 6, stackBb: 100, scenario: 'RFI',
+      heroPosition: 'BTN', label: 'l', strategy: {}, ...r,
+    })) as PreflopRange[],
+  });
+
+  it('names what actually ships: opens + big-blind defense, not "6-max" in general', () => {
+    const ds = mk([
+      { scenario: 'RFI', heroPosition: 'UTG' },
+      { scenario: 'vs_RFI', heroPosition: 'BB', villainPosition: 'BTN' },
+    ]);
+    expect(datasetScopeLine(ds)).toBe('6-max opens and big-blind defense · 100bb');
+  });
+
+  it('says only "opens" when no defense ranges ship', () => {
+    expect(datasetScopeLine(mk([{ scenario: 'RFI' }]))).toBe('6-max opens · 100bb');
+  });
+
+  it('distinguishes cold defense (3-bet spots) from blind defense', () => {
+    const ds = mk([
+      { scenario: 'RFI' },
+      { scenario: 'vs_RFI', heroPosition: 'BB', villainPosition: 'BTN' },
+      { scenario: 'vs_RFI', heroPosition: 'SB', villainPosition: 'BTN' },
+    ]);
+    expect(datasetScopeLine(ds)).toBe('6-max opens, big-blind defense and cold defense · 100bb');
+  });
+
+  it('widens honestly when a drop spans several stacks or table sizes', () => {
+    const ds = mk([{ stackBb: 40 }, { stackBb: 100, tableSize: 9 }]);
+    expect(datasetScopeLine(ds)).toBe('6-max and 9-max opens · 40–100bb');
+  });
+
+  it('the SHIPPED dataset describes itself accurately (no cold defense today)', () => {
+    expect(datasetScopeLine(CALIBRATED_DATASET)).toBe('6-max opens and big-blind defense · 100bb');
   });
 });

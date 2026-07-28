@@ -47,6 +47,15 @@ describe('tier honesty — the label follows the data', () => {
     expect(src).toMatch(/\{strategyLabel\}/);
   });
 
+  it('StudyScreen derives its scope sentence from the dataset (no hand-written coverage claim)', () => {
+    // A hand-written "6-max, 100bb" reads as a COVERAGE claim while the data covers only opens
+    // + big-blind defense (no cold defense, no BB-vs-UTG). Deriving it means the sentence
+    // cannot outrun the content — the tierLabel rule applied to scope.
+    const src = stripComments(readFileSync(join(SRC, 'features/study/ui/StudyScreen.tsx'), 'utf8'));
+    expect(src).toMatch(/\{datasetScopeLine\(dataset\)\}/);
+    expect(src).not.toMatch(/6-max, 100bb/); // the retired hand-written claim
+  });
+
   it('StudyContext serves the calibrated dataset — reverting to the starter pack must fail here', () => {
     // The provider-delivered dataset is what the trainer labels; asserting the module alone let
     // a StudyContext revert stay green (fleet find C2 — the same class as Q0's unpinned wiring).

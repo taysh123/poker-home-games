@@ -111,6 +111,33 @@ export function convertCalibratedRows(rows: CalibratedRangeRow[], opts: { name: 
   return { schemaVersion: 1, name: opts.name, isIllustrative: false, verificationTier: 'calibrated', ranges };
 }
 
+/**
+ * The scope sentence for a dataset — COMPUTED from the ranges that actually ship, never written
+ * by hand. A hand-written "6-max, 100bb" reads as a coverage claim while the data covers only
+ * opens + big-blind defense; deriving it means the copy cannot outrun the content (the same
+ * rule as `tierLabel`, applied to scope instead of tier).
+ */
+export function datasetScopeLine(dataset: Pick<RangeDataset, 'ranges'>): string {
+  const ranges = dataset.ranges;
+  if (ranges.length === 0) return '';
+
+  const sizes = [...new Set(ranges.map(r => r.tableSize))].sort((a, b) => a - b);
+  const format = sizes.map(s => `${s}-max`).join(' and ');
+
+  const kinds: string[] = [];
+  if (ranges.some(r => r.scenario === 'RFI')) kinds.push('opens');
+  if (ranges.some(r => r.scenario === 'vs_RFI' && r.heroPosition === 'BB')) kinds.push('big-blind defense');
+  if (ranges.some(r => r.scenario === 'vs_RFI' && r.heroPosition !== 'BB')) kinds.push('cold defense');
+  const what = kinds.length <= 1
+    ? kinds.join('')
+    : `${kinds.slice(0, -1).join(', ')} and ${kinds[kinds.length - 1]}`;
+
+  const stacks = [...new Set(ranges.map(r => r.stackBb))].sort((a, b) => a - b);
+  const stack = stacks.length === 1 ? `${stacks[0]}bb` : `${stacks[0]}–${stacks[stacks.length - 1]}bb`;
+
+  return `${format} ${what} · ${stack}`;
+}
+
 export interface SpotVerdict {
   /** 'ok' = right, 'bad' = wrong, 'mixed' = a minority action the range genuinely plays. */
   tone: 'ok' | 'bad' | 'mixed';

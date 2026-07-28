@@ -17,6 +17,7 @@ import { radii } from '../../../theme/radii';
 import { iconSize } from '../../../theme/iconSize';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
 import { useStudy } from '../state/StudyContext';
+import { datasetScopeLine, tierLabel } from '../logic/rangeConvert';
 import { studyStats } from '../logic/progress';
 import { localDayKey } from '../logic/localDay';
 import { isFeatureEnabled } from '../../../config/features';
@@ -231,7 +232,7 @@ export default function StudyScreen() {
         <View style={styles.noteRow}>
           <Ionicons name="information-circle-outline" size={15} color={colors.textMuted} />
           <Text style={styles.note}>
-            Expert-calibrated training ranges — 6-max, 100bb.
+            {tierLabel(dataset)}s — {datasetScopeLine(dataset)}.
           </Text>
         </View>
 

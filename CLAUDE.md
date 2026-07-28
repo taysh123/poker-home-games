@@ -356,6 +356,30 @@ inline override "End anyway with an unbalanced count", finality footer, and the
 
 ---
 
+## Copy-honesty rules (standing — owner-set 2026-07-28, born from real blockers)
+
+These are bug classes, not style preferences. Each one shipped (or nearly shipped) at least once.
+
+1. **Moved copy must be re-audited against its DESTINATION's auth and data-flow context.**
+   A context-scoped claim re-homed unscoped *inverts its truth value*. Q1.1 moved "Stored on this
+   device" off the LOCAL-game wizard (where it was true) onto authed-only ProfileScreen (where the
+   user's games are exactly what goes to the server) — true sentence, false in its new home.
+   Re-audit: who can actually reach this screen, and is the claim true for *them*?
+2. **A kill-switch must never be able to remove a disclosure.** Data-handling statements render
+   OUTSIDE feature-flag gates. Flipping `analytics` off silently deleting the on-device statement
+   is a compliance defect, not a config option.
+3. **Copy that states what ships must be DERIVED from what ships, not hand-written.**
+   `tierLabel(dataset)` (which tier) and `datasetScopeLine(dataset)` (what's covered) compute
+   their claims from the data, so the copy cannot outrun the content. A hand-written
+   "6-max, 100bb" read as a coverage claim while the data covered only opens + big-blind defense.
+4. **Never advertise a capability whose flag is OFF in `PROD_FLAGS`** (the `free_ai` reminder
+   class). Pinned by `features/study/__tests__/tierHonesty.test.ts`.
+5. **Replacement copy gets audited on its own terms.** Copy written in reaction to a flagged line
+   inherits none of the original's review — it is a new claim and needs the same test.
+
+Enforcement lives in `features/study/__tests__/tierHonesty.test.ts` (tier/scope wiring +
+vocabulary + flag-claim bans) and `features/premium/__tests__/` (comingSoon/legal pins).
+
 ## Cross-Platform Rules
 
 ### Alert.alert() — a NO-OP on web, never use it directly
