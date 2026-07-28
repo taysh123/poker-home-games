@@ -5,6 +5,7 @@
  * Client enforces for UX; the server becomes the source of truth before public paid launch.
  */
 import type { AiCreditPolicy } from '../../premium/config';
+import { localMonthKey } from '../../study/logic/localDay';
 
 export const COACH_USAGE_SCHEMA_VERSION = 1 as const;
 
@@ -16,8 +17,11 @@ export interface CoachUsage {
   lastRequestAt?: string;  // ISO
 }
 
+// LOCAL month (Q0): the UTC slice reset the monthly quota hours off the user's calendar month.
+// A stored UTC-keyed month mismatching once on upgrade just grants one early reset — safe, and
+// the coach is prod-OFF today anyway.
 export const monthKey = (now: number | Date = Date.now()): string =>
-  new Date(now).toISOString().slice(0, 7);
+  localMonthKey(new Date(now));
 
 export function emptyUsage(now: number | Date = Date.now()): CoachUsage {
   return { schemaVersion: COACH_USAGE_SCHEMA_VERSION, monthKey: monthKey(now), usedThisMonth: 0, usedLifetime: 0 };

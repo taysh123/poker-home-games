@@ -76,6 +76,7 @@ export function StudyProvider({ children }: { children: React.ReactNode }) {
 
   const commit = useCallback((update: (f: StudyFile) => StudyFile) => {
     const next = update(fileRef.current);
+    if (next === fileRef.current) return writeQueue.current; // no-op updater — no re-render, no write
     fileRef.current = next;
     setFile(next);
     writeQueue.current = writeQueue.current.then(() => store.saveFile(next)).catch(() => {});
@@ -131,7 +132,12 @@ export function StudyProvider({ children }: { children: React.ReactNode }) {
   }, [commit]);
 
   const recordLessonCompleted = useCallback(async (moduleId: string) => {
-    await commit(f => ({ ...f, progress: applyLessonDone(f.progress, moduleId) }));
+    // Identity-preserving on dedupe: re-opening a counted lesson must not re-render every study
+    // consumer or enqueue a byte-identical AsyncStorage write (Q0 find m4).
+    await commit(f => {
+      const p = applyLessonDone(f.progress, moduleId);
+      return p === f.progress ? f : { ...f, progress: p };
+    });
   }, [commit]);
 
   return (
