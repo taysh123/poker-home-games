@@ -5,8 +5,15 @@ import { render, screen, fireEvent, act } from '@testing-library/react-native';
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
 
 // OS reduce-motion, controllable per test (flip + rerender to simulate async resolve).
+// `mockMotionReady` models the native probe: the splash must NOT start until the setting is
+// actually read (Q1.2 — it used to leak opening frames to reduce-motion users). Default true so
+// the existing lifecycle pins below read unchanged.
 let mockReduced = false;
-jest.mock('../../../hooks/useReducedMotion', () => ({ useReducedMotion: () => mockReduced }));
+let mockMotionReady = true;
+jest.mock('../../../hooks/useReducedMotion', () => ({
+  useReducedMotion: () => mockReduced,
+  useReducedMotionState: () => ({ reduced: mockReduced, ready: mockMotionReady }),
+}));
 
 import BrandSplash from '../BrandSplash';
 import { SPLASH } from '../splashTimeline';
@@ -16,6 +23,7 @@ const advance = (ms: number) => act(() => { jest.advanceTimersByTime(ms); });
 beforeEach(() => {
   jest.useFakeTimers();
   mockReduced = false;
+  mockMotionReady = true;
 });
 afterEach(() => {
   jest.useRealTimers();
@@ -83,6 +91,37 @@ describe('BrandSplash — lifecycle (invariant 4: skippable, idempotent, reduced
     const onDone = jest.fn();
     render(<BrandSplash onDone={onDone} />);
     fireEvent.press(screen.getByLabelText('Skip intro'));
+    expect(onDone).toHaveBeenCalledTimes(1);
+  });
+
+  it('holds until the OS motion preference is READ — no animated frames leak to a reduce-motion user', () => {
+    // Native resolves `isReduceMotionEnabled()` asynchronously. Before Q1.2 the splash started
+    // its choreography immediately with the default `false`, so a reduce-motion user saw the
+    // opening frames before it snapped to the static frame.
+    mockMotionReady = false;
+    const onDone = jest.fn();
+    const view = render(<BrandSplash onDone={onDone} />);
+    advance(SPLASH.TOTAL * 2);
+    expect(onDone).not.toHaveBeenCalled(); // nothing started, nothing finished
+
+    // Probe resolves: reduce-motion user gets the static frame on the short clock.
+    mockReduced = true;
+    mockMotionReady = true;
+    view.rerender(<BrandSplash onDone={onDone} />);
+    advance(SPLASH.REDUCED_HOLD + 1);
+    expect(onDone).toHaveBeenCalledTimes(1);
+  });
+
+  it('once the preference resolves to "no reduction", the full choreography runs its normal clock', () => {
+    mockMotionReady = false;
+    const onDone = jest.fn();
+    const view = render(<BrandSplash onDone={onDone} />);
+    advance(500);
+    mockMotionReady = true; // resolves: not reduced
+    view.rerender(<BrandSplash onDone={onDone} />);
+    advance(SPLASH.TOTAL - 1);
+    expect(onDone).not.toHaveBeenCalled();
+    advance(2);
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 

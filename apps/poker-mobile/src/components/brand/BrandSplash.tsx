@@ -10,7 +10,7 @@ import Reanimated, {
 } from 'react-native-reanimated';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
-import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { useReducedMotionState } from '../../hooks/useReducedMotion';
 import { SPLASH } from './splashTimeline';
 
 /**
@@ -32,7 +32,10 @@ const TPOKER_LOGO = require('../../../assets/logo.png');
 type Props = { onDone: () => void };
 
 export default function BrandSplash({ onDone }: Props) {
-  const reduced = useReducedMotion();
+  // Hold the opening frames until the OS setting is actually READ — the async probe used to
+  // let a reduce-motion user see the animation start before it snapped to the static frame
+  // (Q1.2 substrate: an accessibility defect). `ready` is synchronous on web.
+  const { reduced, ready: motionReady } = useReducedMotionState();
 
   const rootOpacity = useSharedValue(1);
   const logoOpacity = useSharedValue(0);
@@ -66,6 +69,8 @@ export default function BrandSplash({ onDone }: Props) {
     timersRef.current.forEach(clearTimeout);
     timersRef.current = [];
     if (doneRef.current) return;
+    // Nothing starts (and nothing is visible to animate) until we know the preference.
+    if (!motionReady) return;
     if (exitStartedRef.current) {
       // The exit fade (or a skip) is already in flight — never revert it; just
       // land the overlay on the short clock.
@@ -97,7 +102,7 @@ export default function BrandSplash({ onDone }: Props) {
 
     return () => timersRef.current.forEach(clearTimeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reduced]);
+  }, [reduced, motionReady]);
 
   function skip() {
     // Already exiting (scheduled fade or a previous tap) — ignore; a tap during

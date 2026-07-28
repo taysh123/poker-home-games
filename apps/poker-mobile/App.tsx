@@ -21,6 +21,7 @@ import {
 } from '@expo-google-fonts/sora';
 import * as WebBrowser from 'expo-web-browser';
 import { NavigationContainerRef } from '@react-navigation/native';
+import * as SplashScreen from 'expo-splash-screen';
 import { applyInterDefault } from './src/theme/fonts';
 import { AuthProvider } from './src/context/AuthContext';
 import { CurrencyProvider } from './src/context/CurrencyContext';
@@ -49,6 +50,12 @@ WebBrowser.maybeCompleteAuthSession();
 // Make Inter the app-wide default for all Text/TextInput (weight → family mapped).
 // Safe at module load — applies once the font files finish loading below.
 applyInterDefault();
+
+// Hold the NATIVE splash until we are ready to draw (Q1.2 substrate). Without this the OS splash
+// auto-hides on the first React frame — which lands while `useFonts` is still pending and App
+// renders null, so the user saw the brand vanish into a bare navy canvas before the JS splash
+// faded it back in. Best-effort: a rejection here must never block startup.
+void SplashScreen.preventAutoHideAsync().catch(() => {});
 
 // Web shell: paint the browser canvas navy at the earliest point our code runs,
 // so the moment between HTML load and the first React frame is deep navy instead
@@ -114,8 +121,16 @@ export default function App() {
     void initAnalytics();
   }, []);
 
+  // Hand the native splash off deliberately: it stays up through the font gate, and we hide it
+  // only once we are actually rendering — so the brand never blinks out to a bare canvas. The JS
+  // BrandSplash is already mounted on top at that moment, so the OS→JS seam is invisible.
+  const ready = fontsLoaded || fontError;
+  useEffect(() => {
+    if (ready) void SplashScreen.hideAsync().catch(() => {});
+  }, [ready]);
+
   // Brief gate while the display font loads; proceed on error (system fallback).
-  if (!fontsLoaded && !fontError) return null;
+  if (!ready) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
