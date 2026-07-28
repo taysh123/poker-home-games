@@ -48,7 +48,7 @@ describe('StudyContext — chained writes compose (never clobber)', () => {
     await act(async () => {
       // No await between the calls — the shipped QuizRunner/DecisionTrainer pattern.
       const a = ctx.recordAnswer(true);
-      const b = ctx.recordLessonCompleted();
+      const b = ctx.recordLessonCompleted('LM-01');
       await Promise.all([a, b]);
     });
 

@@ -1,4 +1,4 @@
-import { computeXp, rankForXp, RANKS, XP_WEIGHTS } from '../xp';
+import { computeXp, rankForXp, xpAchievementCount, RANKS, XP_WEIGHTS } from '../xp';
 import type { EngagementSignals } from '../../types';
 
 const base: EngagementSignals = {
@@ -77,5 +77,19 @@ describe('computeXp — quiz/lesson completion signals', () => {
     const s: EngagementSignals = { ...base, spotsAnswered: 5, quizzesCompleted: 1, lessonsCompleted: 1 };
     const expected = 5 * XP_WEIGHTS.spot + 1 * XP_WEIGHTS.quizCompleted + 1 * XP_WEIGHTS.lessonCompleted;
     expect(computeXp(s, 0)).toBe(expected);
+  });
+});
+
+describe('xpAchievementCount (Q0: the achievement term is MONOTONIC — seen markers, never live eligibility)', () => {
+  it('counts permanently-seen achievements', () => {
+    expect(xpAchievementCount({})).toBe(0);
+    expect(xpAchievementCount({ study_first: 'iso', study_streak_7: 'iso' })).toBe(2);
+  });
+
+  it('a broken streak cannot dock XP: seen markers persist, so the XP input is unchanged', () => {
+    const seenAfterStreakWeek = { study_first: 'iso', study_streak_7: 'iso' };
+    const aliveXp = computeXp({ ...base, studyStreak: 7 }, xpAchievementCount(seenAfterStreakWeek));
+    const brokenXp = computeXp({ ...base, studyStreak: 0 }, xpAchievementCount(seenAfterStreakWeek));
+    expect(brokenXp).toBe(aliveXp); // studyStreak carries no weight; the seen count is stable
   });
 });

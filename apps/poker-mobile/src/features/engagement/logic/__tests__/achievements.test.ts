@@ -1,4 +1,4 @@
-import { LOCAL_ACHIEVEMENTS, eligibleKeys, evaluate, findAchievement } from '../achievements';
+import { LOCAL_ACHIEVEMENTS, eligibleKeys, evaluate, findAchievement, isEarned } from '../achievements';
 import type { EngagementSignals } from '../../types';
 
 const base: EngagementSignals = {
@@ -42,5 +42,18 @@ describe('catalog integrity', () => {
   it('findAchievement resolves by key', () => {
     expect(findAchievement('coach_ten')?.name).toBe('Student of the Game');
     expect(findAchievement('nope')).toBeUndefined();
+  });
+});
+
+describe('isEarned (Q0: a celebrated badge never visually re-locks)', () => {
+  const weekStrong = findAchievement('study_streak_7')!;
+  it('seen but no longer eligible (broken streak) stays earned', () => {
+    expect(isEarned(weekStrong, { ...base, studyStreak: 0 }, { study_streak_7: '2026-07-01T00:00:00.000Z' })).toBe(true);
+  });
+  it('eligible but not yet seen is earned (pre-effect render)', () => {
+    expect(isEarned(weekStrong, { ...base, studyStreak: 7 }, {})).toBe(true);
+  });
+  it('neither seen nor eligible is locked', () => {
+    expect(isEarned(weekStrong, { ...base, studyStreak: 3 }, {})).toBe(false);
   });
 });

@@ -20,6 +20,13 @@ export const XP_WEIGHTS = {
   lessonCompleted: 6,
 } as const;
 
+/** The XP achievement input: achievements permanently UNLOCKED (seen markers) — never live
+ * eligibility. Live eligibility is volatile (streak/month predicates), so counting it let XP
+ * DROP when a streak broke, violating the monotonic pin above (Q0 fix). */
+export function xpAchievementCount(seenAchievements: Record<string, string>): number {
+  return Object.keys(seenAchievements).length;
+}
+
 export function computeXp(s: EngagementSignals, achievementsUnlocked: number): number {
   return (
     s.spotsAnswered * XP_WEIGHTS.spot +

@@ -5,8 +5,9 @@ import { useBankroll } from '../../bankroll/state/BankrollContext';
 import { useCoach } from '../../coach/state/CoachContext';
 import { useLocalGames } from '../../../context/LocalGamesContext';
 import { sessionNetCents } from '../../bankroll/logic/bankrollAnalytics';
-import { computeXp, rankForXp, type RankInfo } from '../logic/xp';
-import { LOCAL_ACHIEVEMENTS, evaluate, eligibleKeys, findAchievement } from '../logic/achievements';
+import { computeXp, rankForXp, xpAchievementCount, type RankInfo } from '../logic/xp';
+import { LOCAL_ACHIEVEMENTS, evaluate, eligibleKeys, findAchievement, isEarned } from '../logic/achievements';
+import { localMonthKey } from '../../study/logic/localDay';
 import * as store from '../data/engagementStore';
 import { track } from '../../../utils/analytics';
 import AchievementUnlock from '../../../components/AchievementUnlock';
@@ -77,8 +78,12 @@ export function EngagementProvider({ children }: { children: React.ReactNode }) 
   const coachAnalyses = history.length;
   const localGamesFinished = useMemo(() => games.filter(g => g.status === 'Finished').length, [games]);
   const bankrollPositiveMonth = useMemo(() => {
-    const month = new Date().toISOString().slice(0, 7);
-    const net = sessions.filter(s => s.startedAt.slice(0, 7) === month).reduce((sum, s) => sum + sessionNetCents(s), 0);
+    // LOCAL month on both sides — the previous toISOString().slice(0, 7) bucketed the first
+    // hours of every month into the PREVIOUS month in positive-offset timezones (Q0).
+    const month = localMonthKey();
+    const net = sessions
+      .filter(s => localMonthKey(new Date(s.startedAt)) === month)
+      .reduce((sum, s) => sum + sessionNetCents(s), 0);
     return net > 0;
   }, [sessions]);
 
@@ -87,8 +92,11 @@ export function EngagementProvider({ children }: { children: React.ReactNode }) 
     quizzesCompleted, lessonsCompleted,
   }), [spotsAnswered, studyStreak, studyDays, bankrollSessions, bankrollPositiveMonth, coachAnalyses, localGamesFinished, quizzesCompleted, lessonsCompleted]);
 
-  const eligibleCount = useMemo(() => eligibleKeys(signals).length, [signals]);
-  const xpTotal = useMemo(() => computeXp(signals, eligibleCount), [signals, eligibleCount]);
+  // XP counts permanently-SEEN achievements, never live eligibility — volatile predicates
+  // (streaks, month windows) used to dock XP by 25 per lapsed badge and could re-fire the
+  // rank-up celebration on re-crossing, violating the monotonic pin (Q0).
+  const unlockedCount = useMemo(() => xpAchievementCount(state.seenAchievements), [state.seenAchievements]);
+  const xpTotal = useMemo(() => computeXp(signals, unlockedCount), [signals, unlockedCount]);
   const rank = useMemo(() => rankForXp(xpTotal), [xpTotal]);
 
   const pillarsLoaded = studyLoaded && bankrollLoaded && coachLoaded;
@@ -106,11 +114,12 @@ export function EngagementProvider({ children }: { children: React.ReactNode }) 
       quizzesCompleted: signals.quizzesCompleted,
     };
 
-    // First run: seed existing progress silently (no celebration flood).
+    // First run: seed existing progress silently (no celebration flood). lastXp must be the
+    // POST-seed value (seen-based) or the next render's XP jump would fire a phantom rank-up.
     if (!state.seeded) {
       const seen: Record<string, string> = {};
       eligibleKeys(signals).forEach(k => { seen[k] = now; });
-      const seeded: EngagementState = { ...state, seeded: true, seenAchievements: seen, lastXp: xpTotal };
+      const seeded: EngagementState = { ...state, seeded: true, seenAchievements: seen, lastXp: computeXp(signals, xpAchievementCount(seen)) };
       setState(seeded);
       store.saveState(seeded).catch(() => {});
       return;
@@ -146,7 +155,8 @@ export function EngagementProvider({ children }: { children: React.ReactNode }) 
   const localAchievements: LocalAchievementView[] = useMemo(
     () => LOCAL_ACHIEVEMENTS.map(a => ({
       key: a.key, name: a.name, description: a.desc, iconKey: a.ionicon, rarity: a.rarity,
-      earned: a.eligible(signals),
+      // seen || eligible — a celebrated badge never visually re-locks when its predicate lapses (Q0).
+      earned: isEarned(a, signals, state.seenAchievements),
       unlockedAt: state.seenAchievements[a.key] ?? null,
     })),
     [signals, state.seenAchievements],

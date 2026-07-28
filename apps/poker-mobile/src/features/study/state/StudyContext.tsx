@@ -46,8 +46,8 @@ type StudyContextType = {
   limitFor: (kind: DailyLimitKind) => LimitStatus;
   /** Record one FINISHED quiz: lifetime counter + today's quiz limit — a SINGLE commit. */
   recordQuizFinished: () => Promise<void>;
-  /** Record one completed/read lesson (feeds XP). */
-  recordLessonCompleted: () => Promise<void>;
+  /** Record one completed/read lesson (feeds XP) — counted once per module, ever (Q0). */
+  recordLessonCompleted: (moduleId: string) => Promise<void>;
 };
 
 const StudyContext = createContext<StudyContextType>({
@@ -130,8 +130,8 @@ export function StudyProvider({ children }: { children: React.ReactNode }) {
     await commit(f => ({ ...f, progress: applyQuizFinished(f.progress, todayKey()) }));
   }, [commit]);
 
-  const recordLessonCompleted = useCallback(async () => {
-    await commit(f => ({ ...f, progress: applyLessonDone(f.progress) }));
+  const recordLessonCompleted = useCallback(async (moduleId: string) => {
+    await commit(f => ({ ...f, progress: applyLessonDone(f.progress, moduleId) }));
   }, [commit]);
 
   return (

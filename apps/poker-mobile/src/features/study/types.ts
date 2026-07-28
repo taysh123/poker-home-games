@@ -80,6 +80,9 @@ export interface StudyProgress {
   quizzesCompleted?: number;
   /** Lifetime lessons completed/read (feeds XP). */
   lessonsCompleted?: number;
+  /** Modules already counted toward `lessonsCompleted` — each counts ONCE, ever (Q0; additive,
+   * absent on older files: their counter stands and deduping starts from the next open). */
+  completedLessonIds?: string[];
 }
 
 export interface StudyFile {

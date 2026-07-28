@@ -50,7 +50,8 @@ export default function LessonReaderScreen() {
         setSections(secs);
         if (secs.length > 0) {
           track('study_lesson_completed', { module_id: moduleId });
-          void recordLessonCompleted();
+          // Once per module, ever — re-opens no longer inflate the counter/XP (Q0).
+          void recordLessonCompleted(moduleId);
         }
       })
       .catch(() => { if (!cancelled) setError(true); });
