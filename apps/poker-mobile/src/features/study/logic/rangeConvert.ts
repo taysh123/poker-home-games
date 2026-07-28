@@ -193,6 +193,30 @@ export function spotVerdict(
   return { tone: 'bad', title: 'Not quite' };
 }
 
+/**
+ * WHY "Expert-calibrated" — provenance, recorded so this is read, not re-litigated.
+ * (Owner ruling 2026-07-28, after an audit challenged the word as an unearned credential.)
+ *
+ * 1. IT IS A GOVERNED LABEL, NOT A COINED ONE. The content workbook's `Pack_Manifests` sheet
+ *    carries a `MarketableAs` field whose rule is explicit: a pack earns "GTO / Verified-ready"
+ *    only when ≥95% of its rows are Nash-Solved or Solver-Verified — otherwise it is labelled
+ *    "Expert Calibrated". That sheet doesn't ship to this repo (so a grep of the shipped packs
+ *    can't see it), but the SAME rule is encoded here in
+ *    `features/premium/logic/marketableLabel.ts`: `GTO_VERIFIED_THRESHOLD = 95`, the
+ *    `expert_calibrated` TierBadge, and the branch where a GTO/verified label below the
+ *    threshold degrades to `expert_calibrated`. `MarketableAs` is rendered VERBATIM there.
+ * 2. WHAT "EXPERT" REFERS TO: the owner's authorship as the domain expert calibrating the
+ *    ranges against published solver consensus (the source's own
+ *    `VerificationMethod = "Published solver consensus"`). It does not assert third-party
+ *    verification — the shipped rows are `SolverVerified: No`, tier `Calibrated`, and the app
+ *    never claims otherwise.
+ * 3. WHY "Solver-calibrated" WAS REJECTED (owner, firmly): putting "Solver" in a USER-FACING
+ *    label for content that is not solver-verified is MORE dangerous than "Expert", not less —
+ *    a poker player reading "Solver-calibrated" will assume solver output. That drifts toward
+ *    the exact overclaim this slice removed. Pinned by tierHonesty.test.ts so the swap can't be
+ *    "fixed" back in later.
+ */
+
 /** The chip/label text for a dataset — derived from the data's OWN tier so the UI can never
  * claim above what the content is (decision 1a). Legacy fallback: illustrative → the confident
  * "Training range"; non-illustrative datasets are our calibrated ones ("GTO play" is gone —

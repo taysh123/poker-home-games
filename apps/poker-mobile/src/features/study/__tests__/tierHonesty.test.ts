@@ -73,6 +73,16 @@ describe('tier honesty — the label follows the data', () => {
     expect(offenders).toEqual([]);
   });
 
+  it('the CALIBRATED tier is never labelled with "Solver-" (owner ruling — pinned, not re-litigated)', () => {
+    // "Solver-calibrated" was proposed and firmly rejected: a user-facing "Solver" prefix on
+    // content that is NOT solver-verified reads as solver output — more dangerous than
+    // "Expert-", not less. Full provenance rationale lives beside the mapping in
+    // logic/rangeConvert.ts. 'solver' tier data (imported, genuinely verified) may say Solver.
+    expect(tierLabel({ isIllustrative: false, verificationTier: 'calibrated' })).toBe('Expert-calibrated range');
+    expect(tierLabel({ isIllustrative: false, verificationTier: 'calibrated' })).not.toMatch(/solver/i);
+    expect(tierLabel({ isIllustrative: false, verificationTier: 'solver' })).toMatch(/solver/i);
+  });
+
   it('solver-grade vocabulary never appears in study UI copy', () => {
     // Widened after the fleet showed a narrow "GTO play" grep let an unguarded
     // "import solver packs anytime" claim ship in the very PR retiring apologetic copy.

@@ -384,6 +384,19 @@ These are bug classes, not style preferences. Each one shipped (or nearly shippe
 Enforcement lives in `features/study/__tests__/tierHonesty.test.ts` (tier/scope wiring +
 vocabulary + flag-claim bans) and `features/premium/__tests__/` (comingSoon/legal pins).
 
+**"Expert-calibrated" is a GOVERNED label — settled 2026-07-28, do not re-litigate.** It comes
+from the content workbook's `Pack_Manifests.MarketableAs` field, whose rule is: ≥95% Nash-Solved
+or Solver-Verified ⇒ "GTO / Verified-ready", **otherwise "Expert Calibrated"**. That sheet does
+not ship to this repo — a grep of the shipped packs will show only row-level
+`VerificationTier: Calibrated` and can look like the word was invented in code. It wasn't: the
+same rule is encoded in `features/premium/logic/marketableLabel.ts` (`GTO_VERIFIED_THRESHOLD`,
+the `expert_calibrated` badge, and the below-threshold degrade branch). "Expert" denotes the
+owner's authorship as the domain expert calibrating against published solver consensus; it
+asserts no third-party verification. **"Solver-calibrated" was proposed and firmly rejected** —
+a user-facing "Solver" prefix on non-solver-verified content reads as solver output, which is
+*more* dangerous than "Expert", not less. Rationale is recorded beside the mapping in
+`features/study/logic/rangeConvert.ts` and pinned in `tierHonesty.test.ts`.
+
 ## Cross-Platform Rules
 
 ### Alert.alert() — a NO-OP on web, never use it directly
