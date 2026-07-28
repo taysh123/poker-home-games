@@ -7,6 +7,7 @@ import { useLocalGames } from '../../../context/LocalGamesContext';
 import { sessionNetCents } from '../../bankroll/logic/bankrollAnalytics';
 import { computeXp, rankForXp, xpAchievementCount, type RankInfo } from '../logic/xp';
 import { LOCAL_ACHIEVEMENTS, evaluate, eligibleKeys, findAchievement, isEarned } from '../logic/achievements';
+import { deriveIsCelebrating } from '../logic/celebration';
 import { localMonthKey } from '../../study/logic/localDay';
 import * as store from '../data/engagementStore';
 import { track } from '../../../utils/analytics';
@@ -185,8 +186,10 @@ export function EngagementProvider({ children }: { children: React.ReactNode }) 
 
   const value: EngagementContextType = {
     enabled, isLoaded: stateLoaded, xpTotal, rank, signals, localAchievements,
-    // Mirrors the render gates below exactly — if you change those, change this.
-    isCelebrating: enabled && (unlockQueue.length > 0 || celebrate),
+    // Mirrors the render gates below exactly — if you change those, change this. Extracted to a
+    // pure fn so every term is pinned (logic/__tests__/celebration.test.ts); as an inline
+    // expression, dropping `enabled` or `celebrate` survived mutation testing.
+    isCelebrating: deriveIsCelebrating({ enabled, unlockQueueLength: unlockQueue.length, celebrate }),
   };
 
   return (

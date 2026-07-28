@@ -1,29 +1,27 @@
 /**
- * Review-prompt host. Owns the counters and the decision; screens only report what happened and
- * where their protected content is.
+ * Review-prompt host. Owns the counters and the decision. Screens only report that something
+ * good happened; this decides whether — and when — to ask the OS for its review dialog.
  *
- * Why ONE host instead of per-screen state: three screens produce qualifying moments and three can
- * present the sheet. Duplicating the rate limiting is how "once per 90 days" quietly becomes
- * "three times per 90 days".
+ * There is NO sheet of our own (owner decision 2026-07-29, superseding master-plan 4a). The
+ * qualifying moments ARE the sentiment filter, so we call `requestNativeReview()` directly at a
+ * terminal moment. That deleted the occlusion-geometry subsystem along with both of its blockers,
+ * and removed Guideline 1.1.7 exposure. See logic/reviewPromptLogic.ts for the full note.
  *
- * STALE-CLOSURE DISCIPLINE: the presentation tick runs on an interval, so everything it reads
+ * STALE-CLOSURE DISCIPLINE: the pending-request tick runs on an interval, so everything it reads
  * lives in a ref that a companion effect keeps current. Nothing mutable is captured in the
  * interval's closure — that bug class has bitten this repo before.
  */
 import Constants from 'expo-constants';
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { Linking, Platform } from 'react-native';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import { isFeatureEnabled } from '../../../config/features';
-import { supportMailto } from '../../../config/support';
 import { track } from '../../../utils/analytics';
 import { useEngagement } from '../../engagement/state/EngagementContext';
 import {
   DWELL_MS,
-  SHEET_OCCLUSION_H,
   canPresentNow,
+  crossedStreakMilestone,
   evaluateReviewPrompt,
-  regionState,
-  type DwellSurface,
   type ReviewMomentKind,
   type ReviewPromptState,
 } from '../logic/reviewPromptLogic';
@@ -33,72 +31,50 @@ import {
   saveReviewPromptState,
 } from '../data/reviewPromptStore';
 import { requestNativeReview } from '../nativeReview';
-import SentimentSheet from '../ui/SentimentSheet';
-
-export interface ProtectedRect {
-  /** Viewport-space Y of the protected block's top edge. */
-  top: number;
-  bottom: number;
-  viewportH: number;
-}
 
 interface ReviewPromptContextType {
-  recordMoment: (kind: ReviewMomentKind) => void;
-  /** Streak milestones are a STATE, not an event — a high-water mark stops re-counting. */
+  /**
+   * Records a qualifying moment and arms a pending review request.
+   * @param dedupeKey optional stable id (e.g. a game id) so re-entering a screen cannot count the
+   *   same moment twice. Without it, a 60s "just ended" window let one game count repeatedly.
+   */
+  recordMoment: (kind: ReviewMomentKind, dedupeKey?: string) => void;
+  /** Study-day streak only. Counts once per MILESTONE (7/30/100), never once per day. */
   recordStreakMilestone: (studyStreak: number) => void;
-  armSurface: (surface: DwellSurface | null) => void;
-  setProtectedRect: (rect: ProtectedRect | null) => void;
 }
 
 const NOOP: ReviewPromptContextType = {
   recordMoment: () => {},
   recordStreakMilestone: () => {},
-  armSurface: () => {},
-  setProtectedRect: () => {},
 };
 
 const Ctx = createContext<ReviewPromptContextType | null>(null);
 
 const APP_VERSION = Constants.expoConfig?.version ?? '0.0.0';
 const TICK_MS = 500;
-const STREAK_MILESTONE = 7;
 const isNative = Platform.OS === 'ios' || Platform.OS === 'android';
 
+interface Pending { kind: ReviewMomentKind; armedAt: number }
+
 export function ReviewPromptProvider({ children }: { children: React.ReactNode }) {
-  // Web never presents: there is no store to send anyone to, and Profile already carries the
-  // support address for the feedback path.
+  // Web never asks: there is no store review to request there.
   const enabled = isFeatureEnabled('reviews') && isNative;
   const { isCelebrating } = useEngagement();
 
   const [state, setState] = useState<ReviewPromptState>(() => defaultReviewPromptState(Date.now()));
   const [loaded, setLoaded] = useState(false);
-  const [visible, setVisible] = useState(false);
 
   // ── Refs read by the interval tick (never captured values) ──
   const stateRef = useRef(state);
   const celebratingRef = useRef(isCelebrating);
-  const surfaceRef = useRef<DwellSurface | null>(null);
-  const armedAtRef = useRef<number | null>(null);
-  const rectRef = useRef<ProtectedRect | null>(null);
-  const seenRef = useRef(false);
-  const lastKindRef = useRef<ReviewMomentKind | null>(null);
-  /** At most one prompt per app session, independent of the persisted rules. */
-  const shownThisSessionRef = useRef(false);
+  const pendingRef = useRef<Pending | null>(null);
+  /** At most one request per app session, independent of the persisted rules. */
+  const askedThisSessionRef = useRef(false);
+  /** Moments recorded before the store finished loading — flushed on load, never dropped. */
+  const preloadQueueRef = useRef<Array<{ kind: ReviewMomentKind; dedupeKey?: string }>>([]);
 
   useEffect(() => { stateRef.current = state; }, [state]);
   useEffect(() => { celebratingRef.current = isCelebrating; }, [isCelebrating]);
-
-  useEffect(() => {
-    if (!enabled) return;
-    let alive = true;
-    void loadReviewPromptState(Date.now()).then(s => {
-      if (!alive) return;
-      setState(s);
-      stateRef.current = s;
-      setLoaded(true);
-    });
-    return () => { alive = false; };
-  }, [enabled]);
 
   const persist = useCallback((next: ReviewPromptState) => {
     stateRef.current = next;
@@ -106,116 +82,111 @@ export function ReviewPromptProvider({ children }: { children: React.ReactNode }
     void saveReviewPromptState(next);
   }, []);
 
-  const recordMoment = useCallback((kind: ReviewMomentKind) => {
-    if (!enabled || !loaded) return;
-    lastKindRef.current = kind;
-    persist({ ...stateRef.current, moments: stateRef.current.moments + 1 });
-  }, [enabled, loaded, persist]);
+  /** Applies one moment to the state. Assumes the store is loaded. */
+  const applyMoment = useCallback((kind: ReviewMomentKind, dedupeKey?: string) => {
+    const prev = stateRef.current;
+    if (dedupeKey && prev.countedKeys.includes(dedupeKey)) return;
+    pendingRef.current = { kind, armedAt: Date.now() };
+    persist({
+      ...prev,
+      moments: prev.moments + 1,
+      countedKeys: dedupeKey ? [...prev.countedKeys, dedupeKey] : prev.countedKeys,
+    });
+  }, [persist]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    let alive = true;
+    void loadReviewPromptState(Date.now()).then(s => {
+      if (!alive) return;
+      stateRef.current = s;
+      setState(s);
+      setLoaded(true);
+      // Flush anything recorded while the read was in flight. Previously these were silently
+      // dropped, and the call sites latched a "already recorded" ref before calling, so the
+      // moment was lost permanently rather than retried.
+      const queued = preloadQueueRef.current;
+      preloadQueueRef.current = [];
+      for (const m of queued) applyMoment(m.kind, m.dedupeKey);
+    });
+    return () => { alive = false; };
+  }, [enabled, applyMoment]);
+
+  const recordMoment = useCallback((kind: ReviewMomentKind, dedupeKey?: string) => {
+    if (!enabled) return;
+    if (!loaded) { preloadQueueRef.current.push({ kind, dedupeKey }); return; }
+    applyMoment(kind, dedupeKey);
+  }, [enabled, loaded, applyMoment]);
 
   const recordStreakMilestone = useCallback((studyStreak: number) => {
     if (!enabled || !loaded) return;
     const prev = stateRef.current;
-    if (studyStreak < STREAK_MILESTONE || studyStreak <= prev.streakMilestoneHigh) return;
-    lastKindRef.current = 'streak_milestone';
-    persist({ ...prev, streakMilestoneHigh: studyStreak, moments: prev.moments + 1 });
+    const milestone = crossedStreakMilestone(studyStreak, prev.streakMilestoneHigh);
+    if (milestone === null) return;
+    pendingRef.current = { kind: 'streak_milestone', armedAt: Date.now() };
+    persist({ ...prev, streakMilestoneHigh: milestone, moments: prev.moments + 1 });
   }, [enabled, loaded, persist]);
 
-  const armSurface = useCallback((surface: DwellSurface | null) => {
-    surfaceRef.current = surface;
-    armedAtRef.current = surface ? Date.now() : null;
-    rectRef.current = null;
-    seenRef.current = false;
-  }, []);
-
-  const setProtectedRect = useCallback((rect: ProtectedRect | null) => {
-    rectRef.current = rect;
-    if (!rect) return;
-    // Sticky: once the block has been fully readable above the sheet, it stays "seen".
-    if (regionState({ ...rect, sheetH: SHEET_OCCLUSION_H }).fullyVisibleAboveSheet) {
-      seenRef.current = true;
-    }
-  }, []);
-
-  // Polled rather than reactive: dwell is time-based, and scroll position changes without a
-  // re-render. Deps deliberately exclude `state` / `isCelebrating` — those are read from refs.
+  // Polled rather than reactive: dwell is time-based. Deps deliberately exclude `state` /
+  // `isCelebrating` — those are read from refs.
   useEffect(() => {
-    if (!enabled || !loaded || visible) return;
+    if (!enabled || !loaded || askedThisSessionRef.current) return;
+    // Once this version has been asked, the tick can never succeed — don't run a 2Hz timer for
+    // the rest of the session.
+    if (evaluateReviewPrompt(stateRef.current, { nowMs: Date.now(), appVersion: APP_VERSION }).reason
+        === 'already_this_version') return;
+
     const id = setInterval(() => {
-      if (shownThisSessionRef.current) return;
-      const surface = surfaceRef.current;
-      const armedAt = armedAtRef.current;
-      if (!surface || armedAt === null) return;
+      if (askedThisSessionRef.current) return;
+      const pending = pendingRef.current;
+      if (!pending) return;
 
       const now = Date.now();
       const current = stateRef.current;
       if (!evaluateReviewPrompt(current, { nowMs: now, appVersion: APP_VERSION }).eligible) return;
 
-      const rect = rectRef.current;
-      const rs = rect ? regionState({ ...rect, sheetH: SHEET_OCCLUSION_H }) : null;
-
-      const ok = canPresentNow({
-        dwellElapsedMs: now - armedAt,
-        requiredDwellMs: DWELL_MS[surface],
+      if (!canPresentNow({
+        dwellElapsedMs: now - pending.armedAt,
+        requiredDwellMs: DWELL_MS[pending.kind],
         isCelebrating: celebratingRef.current,
-        protectedRegion: rs ? { seen: seenRef.current, intersectsSheet: rs.intersectsSheet } : null,
-      });
-      if (!ok) return;
+      })) return;
 
-      shownThisSessionRef.current = true;
-      setVisible(true);
-      // Showing consumes the allowance — whichever button is pressed, and even if none is. We
-      // rate-limit asking, not answering.
+      askedThisSessionRef.current = true;
+      pendingRef.current = null;
+      // Asking consumes the allowance. iOS may silently decline to show anything, so we must
+      // rate-limit the ASK; we can never observe the outcome.
       persist({
         ...current,
         lastPromptedAt: now,
         promptedVersions: [...current.promptedVersions, APP_VERSION],
       });
-      track('review_prompt_shown', {
-        moment_kind: lastKindRef.current ?? 'unknown',
-        moments: current.moments,
+      void requestNativeReview().then(requested => {
+        // `requested` means "we issued the call", NOT "the dialog appeared" — iOS caps the modal
+        // at ~3/year. Naming it `available` invited exactly the wrong reading in the warehouse.
+        track('review_native_requested', {
+          moment_kind: pending.kind,
+          moments: current.moments,
+          requested,
+        });
       });
     }, TICK_MS);
     return () => clearInterval(id);
-  }, [enabled, loaded, visible, persist]);
+  }, [enabled, loaded, persist]);
 
-  const onHappy = useCallback(() => {
-    setVisible(false);
-    persist({ ...stateRef.current, lastSentiment: 'happy' });
-    track('review_sentiment', { value: 'happy' });
-    // Fire-and-forget. `false` is normal (iOS ~3/year cap, TestFlight) and never surfaced.
-    void requestNativeReview().then(requested => {
-      track('review_native_requested', { available: requested });
-    });
-  }, [persist]);
-
-  const onUnhappy = useCallback(() => {
-    setVisible(false);
-    persist({ ...stateRef.current, lastSentiment: 'unhappy' });
-    track('review_sentiment', { value: 'unhappy' });
-    track('review_feedback_opened');
-    void Linking.openURL(supportMailto('T Poker feedback', 'What could be better?\n\n')).catch(() => {});
-  }, [persist]);
-
-  const onDismiss = useCallback(() => {
-    setVisible(false);
-    track('review_prompt_dismissed');
-  }, []);
-
-  return (
-    <Ctx.Provider value={{ recordMoment, recordStreakMilestone, armSurface, setProtectedRect }}>
-      {children}
-      {enabled && (
-        <SentimentSheet
-          visible={visible}
-          onHappy={onHappy}
-          onUnhappy={onUnhappy}
-          onDismiss={onDismiss}
-        />
-      )}
-    </Ctx.Provider>
+  const value = useMemo<ReviewPromptContextType>(
+    () => ({ recordMoment, recordStreakMilestone }),
+    [recordMoment, recordStreakMilestone],
   );
+
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
 export function useReviewPrompt(): ReviewPromptContextType {
-  return useContext(Ctx) ?? NOOP;
+  const ctx = useContext(Ctx);
+  if (!ctx && __DEV__) {
+    // Fail loudly in dev: a silent NOOP is how a provider moved out of the navigator becomes a
+    // feature that records nothing, shows nothing, and reports nothing.
+    console.warn('[reviews] useReviewPrompt() used outside ReviewPromptProvider — moments are being discarded.');
+  }
+  return ctx ?? NOOP;
 }

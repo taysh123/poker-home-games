@@ -41,7 +41,6 @@ import { HoleCards } from '../../../components/table/PlayingCard';
 import { buildTrainerHand } from '../../../utils/trainerHand';
 import type { PokerPosition, PlayerAction } from '../../../utils/pokerTable';
 import { useReviewPrompt } from '../../reviews/state/ReviewPromptContext';
-import { useReviewSurface } from '../../reviews/state/useReviewSurface';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Rt = RouteProp<RootStackParamList, 'StudyTrainer'>;
@@ -72,11 +71,9 @@ export default function SpotTrainerScreen() {
   const [correctCount, setCorrectCount] = useState(0);
   const [done, setDone] = useState(false);
 
-  // Q1.4 — the results screen is a terminal state and a valid review surface, but the drill is
-  // NOT. Arming is gated on `done` so the dwell clock cannot start while questions are still
-  // being answered. No protected region here: nothing on the results screen must stay uncovered.
+  // Q1.4 — a strong drill is a qualifying moment. The moment itself arms the request, so nothing
+  // needs to know which screen is on top.
   const { recordMoment } = useReviewPrompt();
-  useReviewSurface('drill_results', done);
 
   const raiseLabel = spot.range.scenario === 'vs_RFI' ? 'Raise (3-bet)' : 'Raise';
   // Tier-honest label (Q1.1): derived from the dataset's own verification tier — the UI can

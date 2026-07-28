@@ -16,6 +16,11 @@ import React from 'react';
 import { Text } from 'react-native';
 import { render, waitFor } from '@testing-library/react-native';
 
+// Mounting the real provider (four mocked pillar contexts + an async store load) is heavy, and
+// under parallel workers it can exceed jest's 5s default and fail as a TIMEOUT rather than an
+// assertion. Scoped to this file — the repo-wide default is deliberately left alone.
+jest.setTimeout(20_000);
+
 let mockStorage: Record<string, string> = {};
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
@@ -54,9 +59,17 @@ import { EngagementProvider, useEngagement } from '../EngagementContext';
 
 const STORE_KEY = 'tpoker.engagement.v1';
 
+// Renders isCelebrating UNCONDITIONALLY. The first version gated on `isLoaded`, so the
+// no-provider case asserted 'loading' and never read the value at all — a mutation flipping the
+// fallback to `true` sailed through. Loading state is reported separately.
 function Probe() {
   const { isCelebrating, isLoaded } = useEngagement();
-  return <Text testID="probe">{isLoaded ? String(isCelebrating) : 'loading'}</Text>;
+  return (
+    <>
+      <Text testID="probe">{String(isCelebrating)}</Text>
+      <Text testID="loaded">{String(isLoaded)}</Text>
+    </>
+  );
 }
 
 const mount = () => render(<EngagementProvider><Probe /></EngagementProvider>);
@@ -87,21 +100,26 @@ describe('EngagementContext.isCelebrating', () => {
   it('is false at rest when there is nothing new to celebrate', async () => {
     seededWithStudyFirstSeen();
     const { getByTestId } = mount();
-    await waitFor(() => expect(getByTestId('probe').props.children).toBe('false'));
-    // Give any queued celebration a chance to appear; it must not.
+    await waitFor(() => expect(getByTestId('loaded').props.children).toBe('true'));
     expect(getByTestId('probe').props.children).toBe('false');
   });
 
-  it('is false when retention is OFF, even with an unlock that would otherwise queue', async () => {
+  it('is false when retention is OFF', async () => {
+    // NOTE: this is a WIRING check only. It cannot pin the `enabled` term — with retention off
+    // the evaluate effect early-returns, so the queue never populates and the expression is false
+    // either way. That term is pinned properly in logic/__tests__/celebration.test.ts.
     mockRetentionOn = false;
     seededWithNothingSeen();
     const { getByTestId } = mount();
-    await waitFor(() => expect(getByTestId('probe').props.children).not.toBe('loading'));
+    await waitFor(() => expect(getByTestId('probe')).toBeTruthy());
     expect(getByTestId('probe').props.children).toBe('false');
   });
 
   it('is false from the no-provider fallback', () => {
+    // Reads the VALUE now, not the loading state. A fallback flipped to `true` would mean a
+    // provider mounted outside EngagementProvider silently suppresses the review request forever.
     const { getByTestId } = render(<Probe />);
-    expect(getByTestId('probe').props.children).toBe('loading');
+    expect(getByTestId('probe').props.children).toBe('false');
+    expect(getByTestId('loaded').props.children).toBe('false');
   });
 });

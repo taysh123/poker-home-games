@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MAX_COUNTED_KEYS } from '../../logic/reviewPromptLogic';
 import {
   REVIEW_PROMPT_KEY,
   defaultReviewPromptState,
@@ -33,42 +34,44 @@ describe('reviewPromptStore', () => {
 
   it('does not re-stamp installedAt on a later load', async () => {
     await loadReviewPromptState(NOW);
-    const later = await loadReviewPromptState(NOW + 10_000);
-    expect(later.installedAt).toBe(NOW);
+    expect((await loadReviewPromptState(NOW + 10_000)).installedAt).toBe(NOW);
   });
 
   it('falls back to defaults on a corrupt payload without throwing', async () => {
     mem.set(REVIEW_PROMPT_KEY, '{not json');
-    const s = await loadReviewPromptState(NOW);
-    expect(s).toEqual(defaultReviewPromptState(NOW));
+    expect(await loadReviewPromptState(NOW)).toEqual(defaultReviewPromptState(NOW));
   });
 
   it('falls back to defaults when fields have the wrong types', async () => {
     mem.set(REVIEW_PROMPT_KEY, JSON.stringify({ installedAt: 'yesterday', moments: null }));
-    const s = await loadReviewPromptState(NOW);
-    expect(s).toEqual(defaultReviewPromptState(NOW));
-  });
-
-  it('rejects a payload whose promptedVersions holds non-strings', async () => {
-    mem.set(
-      REVIEW_PROMPT_KEY,
-      JSON.stringify({ ...defaultReviewPromptState(NOW), promptedVersions: [1, 2] }),
-    );
     expect(await loadReviewPromptState(NOW)).toEqual(defaultReviewPromptState(NOW));
   });
 
-  it('rejects a payload with an unknown sentiment value', async () => {
-    mem.set(
-      REVIEW_PROMPT_KEY,
-      JSON.stringify({ ...defaultReviewPromptState(NOW), lastSentiment: 'furious' }),
-    );
+  it('rejects a payload whose promptedVersions holds non-strings', async () => {
+    mem.set(REVIEW_PROMPT_KEY, JSON.stringify({ ...defaultReviewPromptState(NOW), promptedVersions: [1, 2] }));
+    expect(await loadReviewPromptState(NOW)).toEqual(defaultReviewPromptState(NOW));
+  });
+
+  it('rejects a payload missing countedKeys (pre-rework shape)', async () => {
+    const { countedKeys, ...legacy } = defaultReviewPromptState(NOW);
+    void countedKeys;
+    mem.set(REVIEW_PROMPT_KEY, JSON.stringify(legacy));
     expect(await loadReviewPromptState(NOW)).toEqual(defaultReviewPromptState(NOW));
   });
 
   it('round-trips a saved state', async () => {
-    const s = { ...defaultReviewPromptState(NOW), moments: 4, promptedVersions: ['1.2.0'] };
+    const s = { ...defaultReviewPromptState(NOW), moments: 4, promptedVersions: ['1.2.0'], countedKeys: ['g1'] };
     await saveReviewPromptState(s);
     expect(await loadReviewPromptState(NOW + 1)).toEqual(s);
+  });
+
+  it('bounds countedKeys so the dedupe list cannot grow forever', async () => {
+    const many = Array.from({ length: MAX_COUNTED_KEYS + 20 }, (_, i) => `g${i}`);
+    await saveReviewPromptState({ ...defaultReviewPromptState(NOW), countedKeys: many });
+    const loaded = await loadReviewPromptState(NOW);
+    expect(loaded.countedKeys).toHaveLength(MAX_COUNTED_KEYS);
+    // Keeps the MOST RECENT keys — dropping those would let a recent game be counted twice.
+    expect(loaded.countedKeys[loaded.countedKeys.length - 1]).toBe(`g${MAX_COUNTED_KEYS + 19}`);
   });
 
   it('never throws when the write fails', async () => {

@@ -62,7 +62,6 @@ import {
   GuestBalanceDto,
 } from '../api/settlementsApi';
 import { useReviewPrompt } from '../features/reviews/state/ReviewPromptContext';
-import { useReviewSurface } from '../features/reviews/state/useReviewSurface';
 import {
   getSessionHandHistory,
   addHandRecord,
@@ -215,17 +214,18 @@ export default function SessionScreen({ route, navigation }: Props) {
   const [endSummary, setEndSummary] = useState<{ players: PlayerBalanceDto[]; settlements: SettlementDto[] } | null>(null);
 
   // ── Q1.4 review prompt ──────────────────────────────────────────────────────────────────
-  // The step-3 summary is itself a <Modal>, and BottomSheet is also a Modal — nested modals
-  // fail on iOS. So the moment is recorded when the summary is DISMISSED, and the sheet then
-  // presents over this screen. Watching the endStep transition (rather than editing each close
-  // handler) catches every dismissal path — button, hardware back, onRequestClose — additively.
+  // The moment is recorded when the step-3 summary is DISMISSED, never while it is open.
+  // Watching the endStep transition (rather than editing each close handler) catches every
+  // dismissal path — button, hardware back, onRequestClose — additively. The session id is the
+  // dedupe key so revisiting a finished session cannot re-count it.
   const { recordMoment: recordReviewMoment } = useReviewPrompt();
-  const review = useReviewSurface('game_summary');
   const prevEndStepRef = useRef(endStep);
   useEffect(() => {
-    if (prevEndStepRef.current === 3 && endStep !== 3) recordReviewMoment('game_summary');
+    if (prevEndStepRef.current === 3 && endStep !== 3) {
+      recordReviewMoment('game_summary', `session:${sessionId}`);
+    }
     prevEndStepRef.current = endStep;
-  }, [endStep, recordReviewMoment]);
+  }, [endStep, sessionId, recordReviewMoment]);
   const [finalStacks, setFinalStacks] = useState<Record<string, string>>({});
   const [endLoading, setEndLoading] = useState(false);
   const [overrideBalance, setOverrideBalance] = useState(false);
@@ -888,8 +888,6 @@ export default function SessionScreen({ route, navigation }: Props) {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} tintColor={colors.gold} />
         }
-        onScroll={review.onScroll}
-        scrollEventThrottle={16}
       >
         {/* ── Header ── */}
         <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
@@ -1144,9 +1142,6 @@ export default function SessionScreen({ route, navigation }: Props) {
           </View>
         )}
 
-        {/* Q1.4: both settlement blocks are the PROTECTED region — the review sheet may never
-            cover who owes whom. Layout-transparent wrapper (no style prop). */}
-        <View ref={review.protectedRef} onLayout={review.onProtectedLayout}>
         {/* ── Settlements (Finished) ── */}
         {isFinished && (
           <View style={styles.section}>
@@ -1324,8 +1319,6 @@ export default function SessionScreen({ route, navigation }: Props) {
             </View>
           </View>
         )}
-
-        </View>
 
         {/* ── Closed loop (2.4): plan the same crew for next week — consumed plans re-offer ── */}
         {isFinished && (

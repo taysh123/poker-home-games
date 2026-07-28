@@ -4,7 +4,7 @@
  * worth crashing a session over.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { ReviewPromptState } from '../logic/reviewPromptLogic';
+import { MAX_COUNTED_KEYS, type ReviewPromptState } from '../logic/reviewPromptLogic';
 
 export const REVIEW_PROMPT_KEY = 'tpoker.reviewPrompt.v1';
 
@@ -15,8 +15,12 @@ export function defaultReviewPromptState(nowMs: number): ReviewPromptState {
     streakMilestoneHigh: 0,
     lastPromptedAt: null,
     promptedVersions: [],
-    lastSentiment: null,
+    countedKeys: [],
   };
+}
+
+function isStringArray(v: unknown): v is string[] {
+  return Array.isArray(v) && v.every(x => typeof x === 'string');
 }
 
 function isValid(v: unknown): v is ReviewPromptState {
@@ -28,9 +32,8 @@ function isValid(v: unknown): v is ReviewPromptState {
     typeof s.moments === 'number' &&
     typeof s.streakMilestoneHigh === 'number' &&
     (s.lastPromptedAt === null || typeof s.lastPromptedAt === 'number') &&
-    Array.isArray(s.promptedVersions) &&
-    s.promptedVersions.every(x => typeof x === 'string') &&
-    (s.lastSentiment === null || s.lastSentiment === 'happy' || s.lastSentiment === 'unhappy')
+    isStringArray(s.promptedVersions) &&
+    isStringArray(s.countedKeys)
   );
 }
 
@@ -57,7 +60,11 @@ export async function loadReviewPromptState(nowMs: number): Promise<ReviewPrompt
 
 export async function saveReviewPromptState(state: ReviewPromptState): Promise<void> {
   try {
-    await AsyncStorage.setItem(REVIEW_PROMPT_KEY, JSON.stringify(state));
+    // Bound the dedupe list so it cannot grow forever across a long install.
+    const bounded: ReviewPromptState = state.countedKeys.length > MAX_COUNTED_KEYS
+      ? { ...state, countedKeys: state.countedKeys.slice(-MAX_COUNTED_KEYS) }
+      : state;
+    await AsyncStorage.setItem(REVIEW_PROMPT_KEY, JSON.stringify(bounded));
   } catch {
     // best-effort; never throw into the UI
   }
