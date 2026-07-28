@@ -1,7 +1,10 @@
 # Product-Quality Master Plan — "Make it feel like a studio product"
 
-- **Date:** 2026-07-27
-- **Status:** DRAFT — awaiting owner approval; nothing here is being built yet
+- **Date:** 2026-07-27 · **decisions recorded 2026-07-28** (see §4-ANSWERED)
+- **Status:** APPROVED (PR #58 merged 2026-07-27; all 10 §4 questions answered 2026-07-28).
+  Execution order per owner: **Q0 → Q1 → Q2 → Q3.** Per-slice rules: TDD · adversarial critic
+  fleet before EVERY PR · one PR per slice · owner merges · commit/push working state BEFORE
+  running agent fleets (quota-resilience rule, owner 2026-07-28).
 - **Relationship to prior specs:** extends the product-evolution master plan
   (`2026-07-22-product-evolution-master-plan.md`) post-launch. Its ship invariants remain binding
   on every slice here: **nothing purchasable anywhere; AI Coach makes zero API calls; all premium
@@ -208,7 +211,52 @@ inconsistency, missed premium moments. Its findings feed Q2/Q3 backlogs. (First 
 already folded in: the paywall preview dead-end, notification-tap dead route for guests
 (fixed in 2.4), splash triple-brand, prefs screen shown on web where reminders can't fire.)
 
-## 4. Open questions for the owner (blockers only for their own slices)
+## 4-ANSWERED. Owner decisions (2026-07-28) — the questions below are RESOLVED
+
+1. **(Q1.1) → (a).** Tier chips replace the "not solver output" footnotes; the on-device privacy
+   line survives only in Profile + the onboarding router.
+2. **(Q2.3) → (a).** Bankroll free = logging + calendar + core stats (net, win rate, monthly
+   P&L); premium-later = the pinned "Variance, filters & deeper trends" set (variance/std-dev/
+   drawdown/histogram/deep filters) behind the honest Coming-soon lock.
+3. **(Q3.3/3.4) → "Ranges"** naming; **full RFI family free**, advanced spots locked; owner
+   authors/curates content. AMENDED by the content finding below: most v1 content already
+   exists — see §4b.
+4. **(Q1.4) → (a).** Sentiment gate → store review / prefilled support email. In-app feedback
+   form deferred to its own later slice.
+5. **(Q2.7) → (a).** Locked lesson rows route to the paywall preview.
+6. **(Q1.2) → (a).** Splash cross-fade approved: SplashGate releases at EXIT_AT (900ms); the
+   pinned timeline tests are updated deliberately in that slice's PR.
+7. **(N headroom) → (i) YES + (ii) YES + (iii) NO.** Profile About gets a "Made by True Story
+   Labs" row; the landing footer gets a TSL brand line (© stays Tay Shofer). The store long
+   description is NOT touched — that copy was carefully written after a 2.3.6 metadata rejection
+   and is not worth churning for a branding mention. (Store-listing copy stays locked verbatim.)
+8. **(Sequencing) → (a).** Q1 perception → Q2 pillars → Q3 library.
+9. **(Q3.5) → (a).** Retro milestone unlocks: celebratory queue capped at 3, rest seeded silent.
+10. **(Q3.1/2.2 timing) → (a).** Results Card 2.0 stays at Q3.1.
+
+### §4b. Range-content finding (2026-07-28) — Q3.4 re-scoped from "author" to "convert + curate"
+
+`content/release-0.8.1/exports/0.8.1/packs/range_viewer_database.pack.json` holds **31 complete
+169-hand grids (5,239 rows — exactly 31 × 169), ALL ProductionReady=Yes and Status=Approved**:
+5 RFI (UTG/HJ/CO/BTN/SB 100bb 6-max) · 4 BB-defense (vs BTN/CO/HJ 2.5bb + BvB 3bb) · 8 3-bet ·
+3 facing-3-bet · 3 4-bet · 2 facing-4-bet · 2 squeeze · 4 push/fold (10–12bb, **Nash-Solved**).
+**No tier mixing inside any scenario** (27 uniformly Calibrated, 4 uniformly Nash-Solved), so
+per-range tier labeling is clean and honest. Encoding: one row per hand — pure or single-action
+mixed frequency (`Raise (mixed)` + Frequency, remainder = fold), which maps 1:1 onto the app's
+`HandStrategy`. Converter = a pure build-time tool (rows → grouped scenarios → SolverPack JSON
+through the EXISTING fail-closed `importPack` validation), plus an additive extension of the
+app's `RangeScenario` union ('RFI' | 'vs_RFI' today → + 3bet/vs_3bet/4bet/vs_4bet/squeeze/
+push_fold) — estimated **S–M (~1 day) with TDD fixtures**. Free tier per decision 3: the 5 RFI
+grids; the other 26 ship as locked Coming-soon previews.
+**Honesty caveat:** Nash-Solved rows carry NO `SolveConfigID` (provenance incomplete). Until the
+owner backfills solve provenance for the 4 push/fold charts, the converter maps Nash-Solved →
+the app's 'calibrated' tier (under-claiming is honest; over-claiming is not). The other range-ish
+databases (icm_decisions 1,620 rows, bb_defense 536, flop_cbet 224, …) are group-level guidance,
+not per-hand grids — future lesson/inspector enrichment, not Q3.4 feedstock.
+Owner authoring is now OPTIONAL EXPANSION only: deeper MTT stacks (15–40bb), vs-UTG defense,
+9-max/HU — none required for v1.
+
+## 4-HISTORICAL. Open questions as originally posed (answers above)
 
 1. **(Q1.1)** Approve the copy direction: tier chips ("Expert-calibrated range") replace the
    "not solver output" footnotes; the on-device privacy line survives only in Profile +
