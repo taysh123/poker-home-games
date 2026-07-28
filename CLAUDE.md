@@ -356,6 +356,47 @@ inline override "End anyway with an unbalanced count", finality footer, and the
 
 ---
 
+## Copy-honesty rules (standing — owner-set 2026-07-28, born from real blockers)
+
+These are bug classes, not style preferences. Each one shipped (or nearly shipped) at least once.
+
+1. **Moved copy must be re-audited against its DESTINATION's auth and data-flow context.**
+   A context-scoped claim re-homed unscoped *inverts its truth value*. Q1.1 moved "Stored on this
+   device" off the LOCAL-game wizard (where it was true) onto authed-only ProfileScreen (where the
+   user's games are exactly what goes to the server) — true sentence, false in its new home.
+   Re-audit: who can actually reach this screen, and is the claim true for *them*?
+2. **A kill-switch must never be able to remove a disclosure.** Data-handling statements render
+   OUTSIDE feature-flag gates. Flipping `analytics` off silently deleting the on-device statement
+   is a compliance defect, not a config option.
+3. **Copy that states what ships must be DERIVED from what ships, not hand-written.**
+   `tierLabel(dataset)` (which tier) and `datasetScopeLine(dataset)` (what's covered) compute
+   their claims from the data, so the copy cannot outrun the content. A hand-written
+   "6-max, 100bb" read as a coverage claim while the data covered only opens + big-blind defense.
+4. **Never advertise a capability whose flag is OFF in `PROD_FLAGS`** — the `free_ai` reminder
+   class, pinned for reminders by `utils/__tests__/reminderLogic.test.ts`. Study-UI claims for
+   the `solver`/`coach` flags are *additionally* phrase-banned in
+   `features/study/__tests__/tierHonesty.test.ts` — but that ban is a **literal allow-list over
+   `features/study/ui` only**: a new phrasing, or any other prod-OFF flag (`bankroll`,
+   `mastery`, `paywall`), needs a new entry. Do not read "pinned" as "covered everywhere".
+5. **Replacement copy gets audited on its own terms.** Copy written in reaction to a flagged line
+   inherits none of the original's review — it is a new claim and needs the same test.
+
+Enforcement lives in `features/study/__tests__/tierHonesty.test.ts` (tier/scope wiring +
+vocabulary + flag-claim bans) and `features/premium/__tests__/` (comingSoon/legal pins).
+
+**"Expert-calibrated" is a GOVERNED label — settled 2026-07-28, do not re-litigate.** It comes
+from the content workbook's `Pack_Manifests.MarketableAs` field, whose rule is: ≥95% Nash-Solved
+or Solver-Verified ⇒ "GTO / Verified-ready", **otherwise "Expert Calibrated"**. That sheet does
+not ship to this repo — a grep of the shipped packs will show only row-level
+`VerificationTier: Calibrated` and can look like the word was invented in code. It wasn't: the
+same rule is encoded in `features/premium/logic/marketableLabel.ts` (`GTO_VERIFIED_THRESHOLD`,
+the `expert_calibrated` badge, and the below-threshold degrade branch). "Expert" denotes the
+owner's authorship as the domain expert calibrating against published solver consensus; it
+asserts no third-party verification. **"Solver-calibrated" was proposed and firmly rejected** —
+a user-facing "Solver" prefix on non-solver-verified content reads as solver output, which is
+*more* dangerous than "Expert", not less. Rationale is recorded beside the mapping in
+`features/study/logic/rangeConvert.ts` and pinned in `tierHonesty.test.ts`.
+
 ## Cross-Platform Rules
 
 ### Alert.alert() — a NO-OP on web, never use it directly

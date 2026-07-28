@@ -29,6 +29,7 @@ import { useEntitlements } from '../../../context/EntitlementsContext';
 import LockNudge from './LockNudge';
 import Chip from '../../../components/Chip';
 import { generateSpot, evaluateSpot, type Spot, type SpotResult } from '../logic/trainer';
+import { spotVerdict, tierLabel } from '../logic/rangeConvert';
 import { practiceRunCap } from '../logic/dailyLimits';
 import type { RangeAction } from '../types';
 import TableScene from '../../../components/table/TableScene';
@@ -70,7 +71,14 @@ export default function SpotTrainerScreen() {
   const [done, setDone] = useState(false);
 
   const raiseLabel = spot.range.scenario === 'vs_RFI' ? 'Raise (3-bet)' : 'Raise';
-  const strategyLabel = dataset.isIllustrative ? 'Trainer range' : 'GTO play';
+  // Tier-honest label (Q1.1): derived from the dataset's own verification tier — the UI can
+  // never claim above what the data is ("GTO play" is gone).
+  const strategyLabel = tierLabel(dataset);
+  // Calibrated ranges contain genuine mixes; the verdict must not contradict the split shown
+  // right beneath it (pure fn, tested — see rangeConvert.spotVerdict).
+  const verdict = result
+    ? spotVerdict(result.strategy, result.chosen, result.correct)
+    : { tone: 'ok' as const, title: '' };
 
   // Derive a full preflop hand from the range: stacks, committed chips, pot, action order up to hero.
   const villainPos = spot.range.villainPosition as PokerPosition | undefined;
@@ -291,25 +299,26 @@ export default function SpotTrainerScreen() {
         )}
 
         {result ? (
-          <Card style={[styles.feedback, result.correct ? styles.feedbackOk : styles.feedbackBad]}>
+          <Card style={[styles.feedback, verdict.tone === 'ok' ? styles.feedbackOk : verdict.tone === 'mixed' ? styles.feedbackMixed : styles.feedbackBad]}>
             <View style={styles.feedbackHead}>
-              {result.correct ? (
+              {verdict.tone === 'ok' ? (
                 <MotiView {...successPop({ reduced })}>
                   <Ionicons name="checkmark-circle" size={iconSize.sm} color={colors.success} />
                 </MotiView>
               ) : (
-                <Ionicons name="close-circle" size={iconSize.sm} color={colors.error} />
+                <Ionicons
+                  name={verdict.tone === 'mixed' ? 'git-branch-outline' : 'close-circle'}
+                  size={iconSize.sm}
+                  color={verdict.tone === 'mixed' ? colors.warning : colors.error}
+                />
               )}
-              <Text style={[styles.feedbackTitle, { color: result.correct ? colors.success : colors.error }]}>
-                {result.correct ? 'Correct' : 'Not quite'}
+              <Text style={[styles.feedbackTitle, { color: verdict.tone === 'ok' ? colors.success : verdict.tone === 'mixed' ? colors.warning : colors.error }]}>
+                {verdict.title}
               </Text>
             </View>
             <Text style={styles.feedbackBody}>
               {strategyLabel}: {result.strategy.map(s => `${ACTION_LABEL[s.action]} ${Math.round(s.freq * 100)}%`).join(' · ')}
             </Text>
-            {dataset.isIllustrative ? (
-              <Text style={styles.illustrativeNote}>Illustrative training range — not solver output.</Text>
-            ) : null}
           </Card>
         ) : null}
         </ContentContainer>
@@ -404,10 +413,11 @@ const styles = StyleSheet.create({
   feedback: { gap: spacing.xs, borderWidth: 1 },
   feedbackOk: { borderColor: 'rgba(39,174,96,0.4)' },
   feedbackBad: { borderColor: colors.errorMuted },
+  // Mixed spots aren't failures — a distinct amber, not the error red.
+  feedbackMixed: { borderColor: 'rgba(243,156,18,0.4)' },
   feedbackHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   feedbackTitle: { ...typography.h4 },
   feedbackBody: { ...typography.body, color: colors.textHigh },
-  illustrativeNote: { ...typography.bodySmall, color: colors.textMuted },
   resultCard: { alignItems: 'center', gap: spacing.xs },
   resultScore: { ...typography.amountHero, color: colors.gold },
   resultAcc: { ...typography.h3, color: colors.textHigh },

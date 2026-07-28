@@ -279,10 +279,6 @@ export default function LocalNewGameScreen({ route, navigation }: Props) {
         {step === 1 && (
           <View style={styles.stepContent}>
             <Text style={styles.stepTitle}>Set the Table</Text>
-            <View style={styles.localBadge}>
-              <Ionicons name="phone-portrait-outline" size={iconSize.xs} color={colors.goldLight} />
-              <Text style={styles.localBadgeText}>Stored on this device — no account needed</Text>
-            </View>
 
             <AppTextInput
               label="Game Name"
@@ -697,21 +693,6 @@ const styles = StyleSheet.create({
   content: { padding: spacing.xl },
   stepContent: { gap: spacing.xxl },
   stepTitle: { ...typography.h2, color: colors.text },
-
-  localBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    alignSelf: 'flex-start',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.sm,
-    backgroundColor: colors.goldFaint,
-    borderWidth: 1,
-    borderColor: colors.goldMuted,
-    marginTop: -spacing.md,
-  },
-  localBadgeText: { fontSize: 12, fontWeight: '600', color: colors.goldLight },
 
   field: { gap: spacing.md },
   fieldLabel: {

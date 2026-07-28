@@ -546,9 +546,8 @@ export default function ProfileScreen({ navigation }: Props) {
         </View>
         </MotiView>
 
-        {/* ── Privacy — anonymous usage analytics (Wave 0.2, opt-out any time) ── */}
-        {isFeatureEnabled('analytics') && (
-          <MotiView {...slideUpSequence({ reduced, delay: staggerIn(5) })}>
+        {/* ── Privacy — where data lives + the analytics opt-out (Wave 0.2) ── */}
+        <MotiView {...slideUpSequence({ reduced, delay: staggerIn(5) })}>
           <View style={styles.section}>
             <View style={[styles.sectionHeader, { marginBottom: 12 }]}>
               <View style={styles.sectionTitleRow}>
@@ -558,22 +557,35 @@ export default function ProfileScreen({ navigation }: Props) {
                 <Text style={styles.sectionTitle}>Privacy</Text>
               </View>
             </View>
-            <View style={styles.aboutRow} accessible accessibilityRole="switch" accessibilityState={{ checked: analyticsSharing }} accessibilityLabel="Share anonymous usage analytics">
-              <Ionicons name="pulse-outline" size={16} color={colors.textMuted} />
-              <Text style={styles.aboutRowText}>Share anonymous usage analytics</Text>
-              <Switch
-                value={analyticsSharing}
-                onValueChange={toggleAnalyticsSharing}
-                trackColor={{ false: colors.border, true: colors.goldMuted }}
-                thumbColor={analyticsSharing ? colors.gold : colors.textDim}
-              />
-            </View>
+            {/* The signed-in home of the on-device story (Q1.1). PRECISION MATTERS: this screen
+                is authed-only, and an account holder's group/session games DO sync to their
+                account (privacy.html scopes the device-only guarantee to guest mode) — so the
+                claim is split by what actually happens. Guests read the device-only line on
+                Welcome / GuestHome / onboarding instead. Rendered OUTSIDE the analytics gate:
+                a data-handling statement must not disappear with an unrelated kill-switch. */}
             <Text style={styles.privacyHint}>
-              Feature usage only — never your game amounts, player names, or hands.
+              Quick Games, study progress, and next-game plans stay on this device. Games you play
+              with an account are saved to it, so your crew sees the same numbers.
             </Text>
+            {isFeatureEnabled('analytics') && (
+              <>
+                <View style={[styles.aboutRow, { marginTop: 12 }]} accessible accessibilityRole="switch" accessibilityState={{ checked: analyticsSharing }} accessibilityLabel="Share anonymous usage analytics">
+                  <Ionicons name="pulse-outline" size={16} color={colors.textMuted} />
+                  <Text style={styles.aboutRowText}>Share anonymous usage analytics</Text>
+                  <Switch
+                    value={analyticsSharing}
+                    onValueChange={toggleAnalyticsSharing}
+                    trackColor={{ false: colors.border, true: colors.goldMuted }}
+                    thumbColor={analyticsSharing ? colors.gold : colors.textDim}
+                  />
+                </View>
+                <Text style={styles.privacyHint}>
+                  Feature usage only — never your game amounts, player names, or hands.
+                </Text>
+              </>
+            )}
           </View>
-          </MotiView>
-        )}
+        </MotiView>
 
         {/* ── About & Support ─────────────────────────────────────────── */}
         <MotiView {...slideUpSequence({ reduced, delay: staggerIn(5) })}>

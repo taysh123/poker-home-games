@@ -48,8 +48,12 @@ export interface PreflopRange {
 export interface RangeDataset {
   schemaVersion: 1;
   name: string;
-  /** TRUE for the bundled starter pack; set FALSE only for verified solver data. */
+  /** TRUE for the illustrative starter pack; FALSE for calibrated/solver data. Prefer
+   * `verificationTier` — this stays for compatibility and as the tier fallback. */
   isIllustrative: boolean;
+  /** Honest content tier (Q1.1): drives the UI label via `tierLabel` — the chip can never
+   * claim above what the data is. 'solver' only ever comes from imported verified packs. */
+  verificationTier?: 'illustrative' | 'calibrated' | 'solver';
   ranges: PreflopRange[];
 }
 

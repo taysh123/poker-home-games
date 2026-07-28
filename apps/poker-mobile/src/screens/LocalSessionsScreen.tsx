@@ -45,7 +45,7 @@ export default function LocalSessionsScreen({ embedded = false }: { embedded?: b
           animated
           ionicon="card-outline"
           title="No games yet"
-          subtitle="Games you play on this device show up here. Start your first one — no account needed."
+          subtitle="Games you play show up here. Start your first one."
           action={{ label: 'Start a Game', onPress: () => navigation.navigate('LocalNewGame', { mode: 'cash' }) }}
         />
         <PressableScale
