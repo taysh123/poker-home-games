@@ -84,9 +84,47 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Structured data (Q1.3). Strengthens tpoker.app as the SINGLE search entry point now that the
+  // app host is de-indexed. Deliberately carries NO `offers`/price and NO `aggregateRating`:
+  // nothing is purchasable and there are no reviews to cite — inventing either would be the same
+  // overclaim class the copy-honesty rules forbid.
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': `${SITE.siteUrl}/#organization`,
+        name: SITE.name,
+        url: SITE.siteUrl,
+        founder: { '@type': 'Person', name: SITE.company },
+      },
+      {
+        '@type': 'WebSite',
+        '@id': `${SITE.siteUrl}/#website`,
+        url: SITE.siteUrl,
+        name: SITE.name,
+        description,
+        publisher: { '@id': `${SITE.siteUrl}/#organization` },
+      },
+      {
+        '@type': 'SoftwareApplication',
+        name: SITE.name,
+        description,
+        url: SITE.siteUrl,
+        applicationCategory: 'EducationalApplication',
+        operatingSystem: 'iOS, Android, Web',
+        publisher: { '@id': `${SITE.siteUrl}/#organization` },
+      },
+    ],
+  };
+
   return (
     <html lang="en" className={`${inter.variable} ${dmSerif.variable}`}>
       <body>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <div className="bg-mesh" aria-hidden="true" />
         <MotionProvider>{children}</MotionProvider>
       </body>

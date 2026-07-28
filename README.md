@@ -18,7 +18,7 @@ want to get better between sessions, and argue about the ledger every time.
 > advanced bankroll analytics) are shown honestly as **"Coming soon"** and are
 > not purchasable yet — see [the free/paid split](#freepaid-split).
 
-> **Web:** [poker-home-games-three.vercel.app](https://poker-home-games-three.vercel.app) · **Android:** installable
+> **Site:** [tpoker.app](https://tpoker.app) · **Web app:** [app.tpoker.app](https://app.tpoker.app) · **Android:** installable
 > v1.1.0 APKs building on EAS ([builds](https://expo.dev/accounts/taysh/projects/t-poker/builds)) ·
 > **Store release:** assets + step-by-step guide ready — [docs/store-release.md](docs/store-release.md)
 

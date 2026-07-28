@@ -493,15 +493,21 @@ rewrite `{"source":"/(.*)","destination":"/index.html"}` so deep links like
 
 **Invite-link routing:** the backend builds `https://<WebBaseUrl>/join/group/:token`;
 the SPA rewrite serves the app, and React Navigation's `linking` config (in
-`AppNavigator`, prefixes `https://poker-home-games-three.vercel.app` + `tpoker://`)
+`AppNavigator`, prefixes `https://app.tpoker.app` + `tpoker://`)
 maps the URL to the `JoinGroup`/`JoinSession` screen. Guests are sent to sign-in
 and the join resumes after auth via the pending-invite stash.
 
-Production domain is **`poker-home-games-three.vercel.app`** (NOT `t-poker.vercel.app`
-— that subdomain belongs to an unrelated third-party site we do not own). The
-privacy policy is served at the canonical `https://app.tpoker.app/privacy.html` (the
-`poker-home-games-three.vercel.app/privacy.html` deployment 307-redirects to it; declare the
-`app.tpoker.app` URL on the stores).
+Live domains: **`tpoker.app`** is the marketing site and the SINGLE public search entry
+point; **`app.tpoker.app`** is the web app. `poker-home-games-three.vercel.app` is the
+LEGACY deploy URL and redirects to `app.tpoker.app` (make that redirect permanent — see
+`docs/release/seo-indexing.md`). `t-poker.vercel.app` is an unrelated third-party site we
+do not own — never reference it. The privacy policy is served at the canonical
+`https://app.tpoker.app/privacy.html` (declare that URL on the stores).
+
+**Indexing policy (Q1.3):** `app.tpoker.app` is de-indexed via `X-Robots-Tag: noindex` in
+`apps/poker-mobile/vercel.json`, because the SPA rewrite answers every path with the same
+contentless shell. robots.txt deliberately still ALLOWS crawling — a `Disallow` would stop
+crawlers ever seeing the noindex. Pinned by `utils/__tests__/indexingPolicy.test.ts`.
 
 Set `EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` in Vercel environment settings.
 
