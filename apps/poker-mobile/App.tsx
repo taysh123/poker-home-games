@@ -37,6 +37,7 @@ import { PersonaProvider } from './src/features/persona/state/PersonaContext';
 import { CoachProvider } from './src/features/coach/state/CoachContext';
 import { MasteryProvider } from './src/features/mastery/state/MasteryContext';
 import { EngagementProvider } from './src/features/engagement/state/EngagementContext';
+import { ReviewPromptProvider } from './src/features/reviews/state/ReviewPromptContext';
 import { ReminderScheduler } from './src/hooks/useReminderScheduler';
 import AppNavigator from './src/navigation/AppNavigator';
 import { RootStackParamList } from './src/navigation/AppNavigator';
@@ -165,6 +166,9 @@ export default function App() {
                   <MasteryProvider>
                   <CoachProvider>
                     <EngagementProvider>
+                      {/* Inside EngagementProvider — it consumes isCelebrating so the review
+                          sheet never rises over a celebration. */}
+                      <ReviewPromptProvider>
                       <StatusBar style="light" />
                       <ReminderScheduler />
                       {/* Entry screens hold their entrance until the splash resolves
@@ -180,6 +184,7 @@ export default function App() {
                           onDone={() => setSplashDone(true)}
                         />
                       )}
+                      </ReviewPromptProvider>
                     </EngagementProvider>
                   </CoachProvider>
                   </MasteryProvider>
