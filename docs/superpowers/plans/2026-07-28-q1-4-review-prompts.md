@@ -1,5 +1,21 @@
 # Q1.4 Review Prompts Implementation Plan
 
+> ## ⛔ SUPERSEDED — DO NOT EXECUTE THIS PLAN
+>
+> **Owner decision 2026-07-29.** Tasks 6 and 7 below build a sentiment sheet
+> (`SentimentSheet.tsx`), a surface hook (`useReviewSurface.ts`), and an occlusion-geometry
+> subsystem. **All of that was built, reviewed by a 5-agent critic fleet, and deleted.** Following
+> these steps would reconstruct two blockers and re-introduce App Store Guideline 1.1.7 exposure.
+>
+> What ships instead: `requestNativeReview()` called **directly** at a qualifying moment, no sheet.
+> Read `docs/superpowers/specs/2026-07-28-review-prompts-design.md` **§0** for the reasoning, and
+> `CLAUDE.md` → "Review prompts" for the shipped behaviour.
+>
+> Kept for provenance, and because Tasks 1–5 (pure rules, store, flag, native wrapper,
+> `isCelebrating`) describe work that did survive — though even those changed: the constants are
+> now pinned to literals, the moment vocabulary dropped to three kinds, streak milestones use a
+> ladder, and `lastSentiment` is gone.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Ask engaged users whether they are enjoying T Poker after a genuinely positive moment, routing happy users to the native store review and unhappy users to a prefilled support email — without ever nagging, interrupting a task, or covering a settlement list.
