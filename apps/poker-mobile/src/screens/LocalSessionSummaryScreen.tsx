@@ -45,6 +45,8 @@ import { ensureReminderPermission } from '../utils/reminders';
 import { localDayKey } from '../features/study/logic/localDay';
 import { track } from '../utils/analytics';
 import { showToast } from '../utils/toast';
+import { useReviewPrompt } from '../features/reviews/state/ReviewPromptContext';
+import { useReviewSurface } from '../features/reviews/state/useReviewSurface';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocalSessionSummary'>;
 
@@ -111,6 +113,19 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
   // Confetti only when arriving fresh from ending the game — not when
   // revisiting an old summary from the games list.
   const justEnded = !!game.endedAt && Date.now() - new Date(game.endedAt).getTime() < 60_000;
+
+  // Q1.4 — a freshly-finished game is a qualifying moment AND this screen is a presentation
+  // surface. The settlements block below is PROTECTED: the sheet may not rise until the user has
+  // actually seen it and it is not currently covered. `justEnded` is a 60s wall-clock window that
+  // can re-evaluate true across renders, so the moment is recorded at most once per mount.
+  const { recordMoment } = useReviewPrompt();
+  const review = useReviewSurface('game_summary');
+  const momentRecordedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (!justEnded || momentRecordedRef.current) return;
+    momentRecordedRef.current = true;
+    recordMoment('game_summary');
+  }, [justEnded, recordMoment]);
 
   // Shareable image card (native only)
   const shareData: ShareCardData = {
@@ -206,7 +221,12 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
         </View>
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        onScroll={review.onScroll}
+        scrollEventThrottle={16}
+      >
         <ContentContainer>
         {/* Cash games: a clean player list of who won and lost, up top where the felt used to be. */}
         {!podium && results.length > 0 && (
@@ -310,7 +330,10 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
         )}
 
         {/* Cash settlements — the one screen a reviewer (or a new user) is most likely to
-            misread as the app moving money. Say plainly, on-screen, that it never does. */}
+            misread as the app moving money. Say plainly, on-screen, that it never does.
+            Q1.4: the onLayout wrapper marks this as the PROTECTED region — the review sheet is
+            never allowed to cover who owes whom. Layout-transparent (no style prop). */}
+        <View ref={review.protectedRef} onLayout={review.onProtectedLayout}>
         <Text style={styles.sectionTitle}>CASH SETTLEMENTS</Text>
         <Text style={styles.settleNote}>
           Settle in person — T Poker records who owes what and never moves, holds, or processes money.
@@ -332,6 +355,7 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
             </MotiView>
           ))
         )}
+        </View>
 
         <View style={{ height: spacing.xxxl }} />
         {/* Closed loop (2.4): plan the same crew for next week — creates an on-device next-game plan.
