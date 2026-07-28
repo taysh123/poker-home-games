@@ -21,19 +21,30 @@ const WANTED = /^(RFI \w+ \d+bb \d+-max|BB Defense vs \w+ [\d.]+bb( \d+-max| \(B
 const pack = JSON.parse(readFileSync(packPath, 'utf8'));
 const rows = pack.rows
   .filter(r => WANTED.test(r.Scenario))
-  .map(r => ({ Scenario: r.Scenario, Hand: r.Hand, Action: r.Action, Frequency: r.Frequency, VerificationTier: r.VerificationTier }));
+  .map(r => ({ Scenario: r.Scenario, Hand: r.Hand, Action: r.Action, Frequency: r.Frequency, VerificationTier: r.VerificationTier }))
+  // Deterministic order so a regeneration diffs cleanly regardless of source row order.
+  .sort((a, b) => a.Scenario.localeCompare(b.Scenario) || a.Hand.localeCompare(b.Hand));
 
 const scenarios = [...new Set(rows.map(r => r.Scenario))];
 if (scenarios.length !== 9 || rows.length !== 9 * 169) {
   throw new Error(`expected 9 complete scenarios (${9 * 169} rows), got ${scenarios.length} (${rows.length} rows)`);
 }
+// Every scenario in this family is a 100bb spot; the slim rows drop EffectiveStack, so the
+// converter's stackBb=100 assumption is asserted HERE against the source instead.
+const stacks = [...new Set(pack.rows.filter(r => WANTED.test(r.Scenario)).map(r => r.EffectiveStack))];
+if (stacks.length !== 1 || stacks[0] !== '100bb') {
+  throw new Error(`expected a uniform 100bb family, got [${stacks.join(', ')}]`);
+}
 
+// Provenance: manifest keys are snake_case (dataset_version, content_hash).
+const version = pack.manifest?.dataset_version ?? 'unknown';
+const hash = pack.manifest?.content_hash ?? 'unknown';
 const header = `/**
  * GENERATED — do not edit. Source: content/release-0.8.1 range_viewer_database
- * (dataset version ${pack.manifest?.datasetVersion ?? 'unknown'}). Regenerate:
+ * (dataset ${version}, content hash ${hash}). Regenerate:
  *   node scripts/slimCalibratedRows.mjs
- * ${scenarios.length} scenarios × 169 hands, uniform 'Calibrated' tier — validated fail-closed
- * by logic/rangeConvert.ts via data/__tests__/calibratedRanges.test.ts.
+ * ${scenarios.length} scenarios × 169 hands, uniform 'Calibrated' tier @ 100bb — validated
+ * fail-closed by logic/rangeConvert.ts via data/__tests__/calibratedRanges.test.ts.
  */
 import type { CalibratedRangeRow } from '../logic/rangeConvert';
 
