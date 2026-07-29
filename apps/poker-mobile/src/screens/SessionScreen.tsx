@@ -85,6 +85,7 @@ import { crewSummary, isGameDay, isPlanConsumed, planNudgeLine, planToastText } 
 import { ensureReminderPermission } from '../utils/reminders';
 import { localDayKey } from '../features/study/logic/localDay';
 import { track } from '../utils/analytics';
+import { useLatest } from '../hooks/useLatest';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Session'>;
 
@@ -247,6 +248,10 @@ export default function SessionScreen({ route, navigation }: Props) {
   // Session recap
   const [recap, setRecap] = useState<SessionRecapDto | null>(null);
   const [recapLoading, setRecapLoading] = useState(false);
+  // `load` is a useCallback that feeds useFocusEffect, so it CANNOT depend on `recap`: load()
+  // sets recap, which would change load's identity, which would re-fire the focus effect, which
+  // calls load() again. Reading through a ref keeps load's identity stable and its view current.
+  const recapRef = useLatest(recap);
 
   // Delete session
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -340,7 +345,10 @@ export default function SessionScreen({ route, navigation }: Props) {
         setHands(handsData);
 
         if (sessionData.status === 'Finished') {
-          if (!recap) setRecapLoading(true);
+          // Only show the recap skeleton when we have nothing to display yet. This read was
+          // captured at first render (always null), so the guard was permanently true and the
+          // recap card dropped to its loading state on EVERY focus reload of a finished session.
+          if (!recapRef.current) setRecapLoading(true);
           const [settData, recapData] = await Promise.all([
             getSessionSettlements(token, sessionId).catch(() => null),
             getSessionRecap(token, sessionId).catch(() => null),
@@ -384,7 +392,10 @@ export default function SessionScreen({ route, navigation }: Props) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [sessionId, groupId, user?.userId]);
+    // recapRef is a useLatest ref: its identity is stable (pinned by hooks/__tests__/useLatest),
+    // so listing it satisfies exhaustive-deps without changing load()'s identity — which is the
+    // whole reason the value is read through a ref instead of being a dependency itself.
+  }, [sessionId, groupId, user?.userId, recapRef]);
 
   useFocusEffect(useCallback(() => {
     load();

@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
+import { useLatest } from './useLatest';
 import * as Google from 'expo-auth-session/providers/google';
 
 // OAuth client IDs — these must ALL be listed in the backend's
@@ -20,9 +21,9 @@ type GoogleAuthResult =
   | { type: 'cancel' };
 
 function useGoogleAuthNative(onResult: (result: GoogleAuthResult) => void) {
-  // Ref keeps the latest callback without triggering the effect to re-run
-  const onResultRef = useRef(onResult);
-  useEffect(() => { onResultRef.current = onResult; });
+  // Ref keeps the latest callback without triggering the effect to re-run.
+  // Consolidated onto the shared primitive — this was a hand-rolled duplicate of it.
+  const onResultRef = useLatest(onResult);
 
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: EXPO_CLIENT_ID,
@@ -53,7 +54,10 @@ function useGoogleAuthNative(onResult: (result: GoogleAuthResult) => void) {
     } else if (response.type === 'dismiss' || response.type === 'cancel') {
       onResultRef.current({ type: 'cancel' });
     }
-  }, [response]);
+    // onResultRef is a useLatest ref — stable identity, so listing it is inert. exhaustive-deps
+    // only auto-exempts refs it can see come straight from useRef; behind a custom hook it
+    // cannot, so it asks. Listing it is the honest answer rather than a suppression.
+  }, [response, onResultRef]);
 
   return { prompt: () => promptAsync(), ready: !!request };
 }
