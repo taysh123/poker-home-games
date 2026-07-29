@@ -493,6 +493,33 @@ try {
 }
 ```
 
+### Accessibility — known platform gaps (verified against the installed sources, 2026-07-29)
+
+Two props do **not** behave uniformly. Do not read a green a11y board as web/native parity.
+
+| Prop | iOS | Android | Web (react-native-web) |
+|---|---|---|---|
+| `accessibilityLiveRegion` | **no implementation at all** | works | works (`aria-live`) |
+| `accessibilityRole="alert"` | maps to `UIAccessibilityTraitNone` | roleDescription | `role="alert"` |
+| `accessibilityState` (`selected`/`checked`/`busy`) | works | works | **dropped entirely** — `createDOMProps` never reads it |
+| `accessibilityState.disabled` | works | works | works (`aria-disabled`) |
+
+Consequences that have already bitten:
+- **Form errors need BOTH** the live-region props *and* `hooks/useAnnouncedError` (iOS-only
+  `announceForAccessibility`). Neither half covers all three platforms; shipping only the props
+  left auth failures silent on iOS behind a comment claiming they were announced.
+- **Selection state is invisible on `app.tpoker.app`.** Every `selected`/`checked`/`busy` is
+  dropped on web. A web-safe fix would mean passing flat `aria-checked` / `aria-selected`
+  alongside `accessibilityState` at each call site (RNW reads those) — cheap per site, but it is
+  a second parallel convention, so it needs a deliberate decision rather than drift.
+- `TouchableOpacity` **overwrites** `accessibilityState.disabled` from its `disabled` prop, so the
+  explicit prop is documentation, not the mechanism.
+
+Ratchets: `components/__tests__/a11yRoleRatchet.test.ts` (per-file ceiling of unroled touchables,
+counts may only go down) and `components/__tests__/a11yContract.test.tsx` (shared-component names).
+Neither can judge whether a role is *correct* or a name is *truthful* — `"Add Dan"` on a chip that
+only fills a field passed every automated check and needed a human-directed critic.
+
 ### Storage
 
 Import from `utils/storage` (not `expo-secure-store` directly) — the wrapper handles web vs native:

@@ -32,6 +32,16 @@ export default function SessionListItem({ name, meta, profitLoss, status, onPres
     <PressableScale
       style={[styles.row, !isFirst && styles.border]}
       onPress={onPress}
+      accessibilityRole="button"
+      // Composed from everything the row shows, because a screen reader reaches the row as ONE
+      // node and would otherwise announce an unlabelled button. This component renders in six
+      // screens, many rows each — the highest coverage-per-line fix in the app.
+      accessibilityLabel={[
+        name,
+        isActive ? 'live' : null,
+        meta,
+        pl != null ? formatPL(pl) : null,
+      ].filter(Boolean).join(', ')}
     >
       <View style={[styles.accent, { backgroundColor: isActive ? colors.gold : colors.border }]} />
       <View style={styles.content}>

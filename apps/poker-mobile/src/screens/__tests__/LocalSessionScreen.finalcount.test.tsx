@@ -107,6 +107,17 @@ beforeEach(() => {
   mockGames = [activeCashGame()];
 });
 
+/**
+ * Queried BY ACCESSIBLE NAME, not by placeholder-and-index.
+ *
+ * Two wins in one move on the money-critical path. It pins the per-player accessible name — every
+ * Final Count row used to announce identically with no player identity, so a screen-reader user
+ * could not tell whose stack they were entering. And it removes the positional coupling: the old
+ * `getAllByPlaceholderText('0')[0]` silently followed row ORDER, so a re-sort would have kept the
+ * test green while the assertions moved to the wrong player.
+ */
+const stackInput = (player: string) => screen.getByLabelText(`${player} final cash amount`);
+
 describe('LocalSessionScreen — The Final Count gate (money-critical)', () => {
   it('blocks "End Game & Settle" until the count balances exactly', async () => {
     renderScreen();
@@ -120,8 +131,7 @@ describe('LocalSessionScreen — The Final Count gate (money-critical)', () => {
     expect(mockEndGame).not.toHaveBeenCalled();
 
     // Under-count (₪30 of ₪40) stays disabled + blocked.
-    const inputs = screen.getAllByPlaceholderText('0');
-    fireEvent.changeText(inputs[0], '30');
+    fireEvent.changeText(stackInput('Alex'), '30');
     expect(settleBtn().props.accessibilityState?.disabled).toBe(true);
     fireEvent.press(settleBtn());
     expect(mockEndGame).not.toHaveBeenCalled();
@@ -132,9 +142,8 @@ describe('LocalSessionScreen — The Final Count gate (money-critical)', () => {
     const nav = renderScreen();
     fireEvent.press(screen.getByText('End Game'));
 
-    const inputs = screen.getAllByPlaceholderText('0');
-    fireEvent.changeText(inputs[0], '30'); // Alex ₪30 → 3000
-    fireEvent.changeText(inputs[1], '10'); // Dana ₪10 → 1000  (== ₪40 remaining)
+    fireEvent.changeText(stackInput('Alex'), '30'); // ₪30 → 3000
+    fireEvent.changeText(stackInput('Dana'), '10'); // ₪10 → 1000  (== ₪40 remaining)
     expect(screen.getByText(/Totals match/)).toBeTruthy();
     expect(settleBtn().props.accessibilityState?.disabled).toBeFalsy(); // enabled
 
@@ -153,8 +162,7 @@ describe('LocalSessionScreen — The Final Count gate (money-critical)', () => {
     renderScreen();
     fireEvent.press(screen.getByText('End Game'));
 
-    const inputs = screen.getAllByPlaceholderText('0');
-    fireEvent.changeText(inputs[0], '25'); // ₪25 of ₪40 → short, blocked
+    fireEvent.changeText(stackInput('Alex'), '25'); // ₪25 of ₪40 → short, blocked
     fireEvent.press(screen.getByRole('button', { name: 'End Game & Settle' }));
     expect(mockEndGame).not.toHaveBeenCalled();
 

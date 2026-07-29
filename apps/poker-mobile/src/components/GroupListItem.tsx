@@ -27,6 +27,13 @@ export default function GroupListItem({ name, memberCount, role, myGroupPL, myGr
       style={[styles.row, !isFirst && styles.border]}
       onPress={onPress}
       haptic="light"
+      accessibilityRole="button"
+      accessibilityLabel={[
+        name,
+        isOwner ? 'Owner' : isAdmin ? 'Admin' : null,
+        `${memberCount} member${memberCount === 1 ? '' : 's'}`,
+        myGroupSessions ? `${myGroupSessions} session${myGroupSessions === 1 ? '' : 's'}` : null,
+      ].filter(Boolean).join(', ')}
     >
       <Avatar name={name} size={40} style={styles.avatar} />
       <View style={styles.content}>
