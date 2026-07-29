@@ -132,7 +132,7 @@ describe('landing content — honesty + correctness', () => {
           isFeatureLive: () => true,
         };
       });
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const flipped = require('../landingContent');
       const benefits = flipped.landingBenefits();
       expect(benefits.length).toBeGreaterThanOrEqual(3);
@@ -155,7 +155,7 @@ describe('landing content — honesty + correctness', () => {
   });
 
   it('store links default to null (coming-soon pills) until the listings exist', () => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { STORE_LINKS } = require('../landingContent');
     expect(STORE_LINKS.appStoreUrl).toBeNull();
     expect(STORE_LINKS.playStoreUrl).toBeNull();

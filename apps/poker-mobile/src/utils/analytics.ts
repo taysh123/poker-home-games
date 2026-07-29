@@ -129,7 +129,7 @@ function startClientIfAllowed(): void {
   if (client || !gateNow()) return;
   try {
     // Lazy require: the SDK module is never even loaded pre-consent / when dark.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const PostHog = require('posthog-react-native').default;
     client = new PostHog(posthogKey(), {
       host: posthogHost(),
@@ -163,7 +163,6 @@ export function track(event: AnalyticsEvent, props?: AnalyticsProps): void {
   buffer.push(entry);
   if (buffer.length > MAX_BUFFER) { buffer.shift(); if (drained > 0) drained--; }
   if (__DEV__) {
-    // eslint-disable-next-line no-console
     console.log('[analytics]', event, props ?? {});
   }
   dispatch(entry);

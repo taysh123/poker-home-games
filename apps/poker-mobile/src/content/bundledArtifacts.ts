@@ -15,7 +15,6 @@
 
 /** Coach grounding dataset ({ dataset_version, claims }). */
 export function coachGroundingArtifact(): unknown {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require('../../assets/content/0.8.1/coach_grounding.json');
 }
 
@@ -23,37 +22,31 @@ export function coachGroundingArtifact(): unknown {
  *  30-question quiz_sample; both map to table `quiz_bank`, so exactly one may ever be bundled).
  *  Hard FK CalibrationProfileID → Calibration_Report: bundle WITH calibration_report or it dangles. */
 export function quizBankPackArtifact(): unknown {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require('../../assets/content/0.8.1/quiz_bank.pack.json');
 }
 
 /** Analytics contract ({ dataset_version, events }). */
 export function analyticsContractArtifact(): unknown {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require('../../assets/content/0.8.1/analytics_contract.json');
 }
 
 /** Pack manifests ContentPack (verification rollups; hard FK → premium_content_catalog). */
 export function packManifestsPackArtifact(): unknown {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require('../../assets/content/0.8.1/pack_manifests.pack.json');
 }
 
 /** Premium content catalog ContentPack (access tier + metadata). Bundled WITH pack_manifests (FK pair). */
 export function premiumContentCatalogPackArtifact(): unknown {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require('../../assets/content/0.8.1/premium_content_catalog.pack.json');
 }
 
 /** Learning modules ContentPack (lesson catalog — 28 modules; free-first opens 3 via FREE_LESSON_MODULE_IDS). */
 export function learningModulesPackArtifact(): unknown {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require('../../assets/content/0.8.1/learning_modules.pack.json');
 }
 
 /** Lesson content ContentPack (section text; FK → learning_modules). Bundled WITH learning_modules. */
 export function lessonContentPackArtifact(): unknown {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require('../../assets/content/0.8.1/lesson_content.pack.json');
 }
 
@@ -63,18 +56,15 @@ export function lessonContentPackArtifact(): unknown {
 
 /** Calibration report ContentPack (learning_modules.CalibrationProfileID → this). */
 export function calibrationReportPackArtifact(): unknown {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require('../../assets/content/0.8.1/calibration_report.pack.json');
 }
 
 /** Coach knowledge map ContentPack (lesson_content.LinkedConceptID → this). */
 export function coachKnowledgeMapPackArtifact(): unknown {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require('../../assets/content/0.8.1/coach_knowledge_map.pack.json');
 }
 
 /** Quiz learning objectives ContentPack (lesson_content.LinkedObjectiveID → this). */
 export function quizLearningObjectivesPackArtifact(): unknown {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require('../../assets/content/0.8.1/quiz_learning_objectives.pack.json');
 }

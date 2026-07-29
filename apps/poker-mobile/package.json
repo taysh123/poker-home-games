@@ -9,7 +9,9 @@
     "ios": "expo start --ios",
     "web": "expo start --web --port 8081",
     "test": "jest",
-    "build:web": "expo export -p web && node scripts/injectWebHead.mjs"
+    "lint": "eslint .",
+    "build:web": "expo export -p web && node scripts/injectWebHead.mjs",
+    "lint": "expo lint"
   },
   "dependencies": {
     "@expo-google-fonts/dm-serif-display": "^0.4.2",
@@ -66,10 +68,12 @@
     "@testing-library/react-native": "12.9.0",
     "@types/jest": "^29.5.14",
     "@types/react": "~19.1.0",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~10.0.0",
     "jest": "~29.7.0",
     "jest-expo": "~54.0.17",
-    "typescript": "~5.9.2",
-    "pngjs": "^7.0.0"
+    "pngjs": "^7.0.0",
+    "typescript": "~5.9.2"
   },
   "private": true
 }
