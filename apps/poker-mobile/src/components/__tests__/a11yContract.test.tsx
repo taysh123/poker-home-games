@@ -28,8 +28,10 @@ import { render } from '@testing-library/react-native';
 
 import AppTextInput from '../AppTextInput';
 import BrandHeader from '../BrandHeader';
+import GroupListItem from '../GroupListItem';
 import GuestNameInput from '../GuestNameInput';
 import PrimaryButton from '../PrimaryButton';
+import SessionListItem from '../SessionListItem';
 
 // BrandHeader pulls in the icon font + navigation + safe-area, none of which resolve in this jest
 // context. Presentation only — irrelevant to the a11y contracts under test.
@@ -151,6 +153,100 @@ describe('GuestNameInput — the shared hole in two half-labelled wizards', () =
       <GuestNameInput {...props} placeholder="Player name..." />,
     );
     expect(getByLabelText('Player name')).toBeTruthy();
+  });
+});
+
+/**
+ * The two list rows carry a COMPOSED accessible name, and these tests exist because the role
+ * ratchet cannot see it: its only predicate is the literal string `accessibilityRole`, so the role
+ * half of that commit was revert-tested and the name half was pinned by nothing at all. Deleting
+ * either label left all 1,106 tests green — an unpinned fix, by this repo's own rule.
+ *
+ * Expected strings are written as LITERALS rather than rebuilt from `formatPL`/the component's own
+ * array, so a test cannot follow the code it guards. Currency is the module default (ILS).
+ *
+ * These also pin the thing automation kept missing: that the spoken name matches what is on SCREEN.
+ * Every case below was a real defect — an omitted chip, an omitted money value, or a plural rule
+ * written twice with two different answers.
+ *
+ * That second sentence was briefly untrue, which is why the badge cases now assert `getByText`
+ * alongside `getByLabelText`. A mutation demonstrated it: changing ONLY the rendered Chip to read
+ * "DRAW" while the label still announced "even" left all 23 tests green. Label-only assertions pin
+ * the string against a literal and never look at the tree, so the agreement was held by shared
+ * derivation in the component, not by any test.
+ */
+describe('SessionListItem — the row announces everything the row shows', () => {
+  const base = { name: 'Friday Night', meta: '3 players · 2h', onPress: () => {} };
+
+  it('names a finished row with its result badge, meta and P&L', () => {
+    const { getByLabelText, getByText } = render(
+      <SessionListItem {...base} status="Finished" profitLoss={-4250} showResultBadge />,
+    );
+    expect(getByLabelText('Friday Night, loss, 3 players · 2h, -₪4,250')).toBeTruthy();
+    expect(getByText('LOSS')).toBeTruthy(); // the spoken term and the visible chip, not just one
+  });
+
+  it('announces a break-even row as EVEN, not as a gain', () => {
+    // The visible Chip reads "EVEN" while formatPL(0) reads "+₪0". Announcing only the number told
+    // a screen-reader user they had won money on a session where they broke even.
+    const { getByLabelText, getByText } = render(
+      <SessionListItem {...base} status="Finished" profitLoss={0} showResultBadge />,
+    );
+    expect(getByLabelText('Friday Night, even, 3 players · 2h, +₪0')).toBeTruthy();
+    expect(getByText('EVEN')).toBeTruthy();
+  });
+
+  it('says "live" for an active row and omits the result badge', () => {
+    const { getByLabelText, getByText, queryByText } = render(
+      <SessionListItem {...base} status="Active" profitLoss={1200} showResultBadge />,
+    );
+    expect(getByLabelText('Friday Night, live, 3 players · 2h, +₪1,200')).toBeTruthy();
+    expect(getByText('LIVE')).toBeTruthy();
+    expect(queryByText('WIN')).toBeNull(); // an active row has no result yet, spoken or shown
+  });
+
+  it('omits the badge term wherever the badge is not rendered', () => {
+    const { getByLabelText, queryByText } = render(
+      <SessionListItem {...base} status="Finished" profitLoss={-4250} />,
+    );
+    expect(getByLabelText('Friday Night, 3 players · 2h, -₪4,250')).toBeTruthy();
+    expect(queryByText('LOSS')).toBeNull();
+  });
+
+  it('drops the money term when there is no P&L to show', () => {
+    const { getByLabelText } = render(<SessionListItem {...base} status="Draft" />);
+    expect(getByLabelText('Friday Night, 3 players · 2h')).toBeTruthy();
+  });
+});
+
+describe('GroupListItem — the row announces everything the row shows', () => {
+  it('includes the P&L chip the row renders', () => {
+    // Regression, not merely an omission: with no explicit label RN derived a name from the child
+    // <Text> nodes, which INCLUDED this number. Adding a label that omits it made the value
+    // unreachable, because the row is one accessibility element (Pressable defaults `accessible`
+    // to true) — the label replaces the derived name rather than adding to it.
+    const { getByLabelText } = render(
+      <GroupListItem name="Poker Crew" memberCount={4} role="Owner" myGroupPL={-450} myGroupSessions={12} onPress={() => {}} />,
+    );
+    expect(getByLabelText('Poker Crew, Owner, 4 members · 12 sessions, -₪450')).toBeTruthy();
+  });
+
+  it('uses ONE meta string for both the visible line and the name', () => {
+    // The plural rule was written twice and disagreed: the label said "1 session" while the row
+    // rendered "1 sessions". A single source makes drift structurally impossible, which is what the
+    // commit claimed and did not do.
+    const { getByLabelText, getByText } = render(
+      <GroupListItem name="Solo Crew" memberCount={1} myGroupSessions={1} onPress={() => {}} />,
+    );
+    expect(getByText('1 member · 1 session')).toBeTruthy();
+    expect(getByLabelText('Solo Crew, 1 member · 1 session')).toBeTruthy();
+  });
+
+  it('omits sessions and P&L when the row shows neither', () => {
+    const { getByLabelText } = render(
+      <GroupListItem name="New Crew" memberCount={2} myGroupSessions={0} onPress={() => {}} />,
+    );
+    expect(getByLabelText('New Crew, 2 members')).toBeTruthy();
   });
 });
 

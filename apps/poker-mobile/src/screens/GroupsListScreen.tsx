@@ -29,6 +29,7 @@ import {
   deleteGroup,
 } from '../api/groupsApi';
 import { formatPL } from '../utils/formatters';
+import { groupMetaLine, groupRowLabel } from '../utils/groupRow';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import ActionSheet, { ActionSheetOption } from '../components/ActionSheet';
 import { showToast } from '../utils/toast';
@@ -311,7 +312,10 @@ export default function GroupsListScreen() {
                   haptic="light"
                   onPress={() => navigation.navigate('GroupDetail', { groupId: item.id, groupName: item.name })}
                   accessibilityRole="button"
-                  accessibilityLabel={`${item.name}, ${item.memberCount} member${item.memberCount !== 1 ? 's' : ''}`}
+                  // Shared with GroupListItem (utils/groupRow): the two rows render the same facts,
+                  // so they must announce the same facts. This one previously stopped at the member
+                  // count, dropping the role, the sessions and the P&L that are all on screen.
+                  accessibilityLabel={groupRowLabel(item)}
                 >
                   <Avatar name={item.name} size={44} style={styles.avatar} />
                   <View style={styles.cardLeft}>
@@ -326,8 +330,7 @@ export default function GroupsListScreen() {
                     ) : null}
                     <View style={styles.memberRow}>
                       <Text style={styles.memberCount}>
-                        {item.memberCount} member{item.memberCount !== 1 ? 's' : ''}
-                        {item.myGroupSessions > 0 ? ` · ${item.myGroupSessions} sessions` : ''}
+                        {groupMetaLine(item.memberCount, item.myGroupSessions)}
                       </Text>
                       {item.myGroupPL != null && (
                         <Text style={[styles.plText, item.myGroupPL >= 0 ? styles.plPositive : styles.plNegative]}>

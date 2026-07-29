@@ -107,21 +107,48 @@ beforeEach(() => {
   mockGames = [activeCashGame()];
 });
 
+/**
+ * Queried BY ACCESSIBLE NAME, not by placeholder-and-index.
+ *
+ * The win is that it pins the per-player accessible name on the money-critical path: revert-tested,
+ * deleting `accessibilityLabel` from the Final Count row in LocalSessionScreen fails all three
+ * tests here. Without it every row announced identically, so a screen-reader user could not tell
+ * whose stack they were entering.
+ *
+ * It also makes the query order-independent — it addresses whichever row belongs to Alex rather
+ * than whichever row is first. An earlier version of this comment went further and claimed the old
+ * `getAllByPlaceholderText('0')[0]` would have "kept the test green while the assertions moved to
+ * the wrong player". That is backwards. Re-ordering the RENDERED ROWS turns the OLD positional test
+ * RED (it entered amounts against the wrong players, and `endGame` asserts per-player cents) and
+ * leaves THIS one green, because this one follows the player.
+ *
+ * Precisely which mutation, because two reviewers reached opposite conclusions by mutating
+ * different things: re-ordering the underlying `game.players` array fails BOTH, since the
+ * `toHaveBeenCalledWith('g1', [alex, dana])` assertion below is an ORDERED array and its order
+ * comes from that array, not from the query. So the honest claim is narrow — order-independence
+ * buys robustness against a row re-sort, not extra sensitivity, and it does not survive a reorder
+ * of the data itself. Recorded rather than deleted because an unverified counterfactual on the
+ * money path is exactly the kind of claim this repo keeps having to retract.
+ */
+const stackInput = (player: string) => screen.getByLabelText(`${player} final cash amount`);
+
 describe('LocalSessionScreen — The Final Count gate (money-critical)', () => {
   it('blocks "End Game & Settle" until the count balances exactly', async () => {
     renderScreen();
     fireEvent.press(screen.getByText('End Game'));
     expect(screen.getByText('The Final Count')).toBeTruthy();
 
-    // No stacks entered → unbalanced (local requires an exact count): the button is disabled
-    // (affordance) AND settling is a defensive no-op.
+    // No stacks entered → unbalanced (local requires an exact count), so the button is disabled.
+    // What this pins is the AFFORDANCE only: `fireEvent.press` on a disabled button never reaches
+    // the handler, so the guard inside `confirmEndGame` can be deleted with all three tests still
+    // green. It is defence in depth, not a tested guarantee — said plainly, because the previous
+    // wording asserted both halves and only one is true.
     expect(settleBtn().props.accessibilityState?.disabled).toBe(true);
     fireEvent.press(settleBtn());
     expect(mockEndGame).not.toHaveBeenCalled();
 
     // Under-count (₪30 of ₪40) stays disabled + blocked.
-    const inputs = screen.getAllByPlaceholderText('0');
-    fireEvent.changeText(inputs[0], '30');
+    fireEvent.changeText(stackInput('Alex'), '30');
     expect(settleBtn().props.accessibilityState?.disabled).toBe(true);
     fireEvent.press(settleBtn());
     expect(mockEndGame).not.toHaveBeenCalled();
@@ -132,9 +159,8 @@ describe('LocalSessionScreen — The Final Count gate (money-critical)', () => {
     const nav = renderScreen();
     fireEvent.press(screen.getByText('End Game'));
 
-    const inputs = screen.getAllByPlaceholderText('0');
-    fireEvent.changeText(inputs[0], '30'); // Alex ₪30 → 3000
-    fireEvent.changeText(inputs[1], '10'); // Dana ₪10 → 1000  (== ₪40 remaining)
+    fireEvent.changeText(stackInput('Alex'), '30'); // ₪30 → 3000
+    fireEvent.changeText(stackInput('Dana'), '10'); // ₪10 → 1000  (== ₪40 remaining)
     expect(screen.getByText(/Totals match/)).toBeTruthy();
     expect(settleBtn().props.accessibilityState?.disabled).toBeFalsy(); // enabled
 
@@ -153,8 +179,7 @@ describe('LocalSessionScreen — The Final Count gate (money-critical)', () => {
     renderScreen();
     fireEvent.press(screen.getByText('End Game'));
 
-    const inputs = screen.getAllByPlaceholderText('0');
-    fireEvent.changeText(inputs[0], '25'); // ₪25 of ₪40 → short, blocked
+    fireEvent.changeText(stackInput('Alex'), '25'); // ₪25 of ₪40 → short, blocked
     fireEvent.press(screen.getByRole('button', { name: 'End Game & Settle' }));
     expect(mockEndGame).not.toHaveBeenCalled();
 

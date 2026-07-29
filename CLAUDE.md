@@ -493,6 +493,53 @@ try {
 }
 ```
 
+### Accessibility — known platform gaps
+
+Verified 2026-07-29 against the **installed** sources — react-native **0.81.5** (pinned exactly in
+`package.json`), react-native-web **0.21.2** (via `^0.21.0`, so a minor bump can move it). Cells
+carry a source file where one nails the behaviour; the rest were verified by reading those packages
+and are re-checkable by grepping for the prop name. None of this is contractual API.
+Do not read a green a11y board as web/native parity.
+
+| Prop | iOS | Android | Web (react-native-web) |
+|---|---|---|---|
+| `accessibilityLiveRegion` | **no implementation at all** | works (`BaseViewManager.java`) | works (`aria-live`) |
+| `accessibilityRole="alert"` | `UIAccessibilityTraitNone` (`RCTViewManager.m`) | roleDescription | `role="alert"` |
+| `accessibilityState` (`selected`/`checked`/`busy`/**`disabled`**) | works | works | **dropped entirely** |
+
+`accessibilityState` is absent from RNW's `modules/forwardedProps` allow-list, so **no** key of it
+reaches the DOM — `disabled` included. Web gets `aria-disabled` from the **flat `disabled` prop**:
+`Pressable` sets `"aria-disabled": disabled` and `TouchableOpacity` sets `accessibilityDisabled:
+disabled`, which `createDOMProps` reads at `var disabled = ariaDisabled || accessibilityDisabled`.
+
+> An earlier version of this table claimed `accessibilityState.disabled` "works (`aria-disabled`)"
+> on web. It does not, and it contradicted the row directly above it. Left recorded because the
+> header said "verified against the installed sources" while that one cell was not.
+
+Consequences that have already bitten:
+- **Form errors need BOTH** the live-region props *and* `hooks/useAnnouncedError` (iOS-only
+  `announceForAccessibility`). Neither half covers all three platforms; shipping only the props
+  left auth failures silent on iOS behind a comment claiming they were announced.
+- **Selection state is invisible on `app.tpoker.app`.** Every `selected`/`checked`/`busy` is
+  dropped on web. The web-safe fix is a flat `aria-checked` / `aria-selected` alongside
+  `accessibilityState` (RNW reads those). **That convention is already adopted — and unfinished:**
+  it ships at five call sites today (`NewGameScreen` ×3, `LocalNewGameScreen` ×2) and nowhere else.
+  So the open question is finishing the sweep, not whether to start it. Until it is finished, a
+  half-applied convention is the failure mode, and any NEW `accessibilityState` with
+  `checked`/`selected` should carry its flat `aria-*` twin.
+- **Disabled state needs the flat `disabled` prop** to be announced on web; an `accessibilityState`
+  saying so is inert there. On native, `TouchableOpacity` **overwrites** `accessibilityState.disabled`
+  from `disabled` anyway — so on both, `disabled` is the mechanism and the explicit state is
+  documentation.
+
+Ratchets: `components/__tests__/a11yRoleRatchet.test.ts` (per-file ceiling of unroled touchables,
+AST-measured, with fixture tests pinning the measurement itself) and
+`components/__tests__/a11yContract.test.tsx` (shared-component accessible NAMES, composed-string
+pins). The ceiling pair stops debt growing and stops a ceiling banking headroom; it is **not** a
+mechanism forcing counts down — raising a number is green, so review, not CI, refuses it.
+Neither can judge whether a role is *correct* or a name is *truthful* — `"Add Dan"` on a chip that
+only fills a field passed every automated check and needed a human-directed critic.
+
 ### Storage
 
 Import from `utils/storage` (not `expo-secure-store` directly) — the wrapper handles web vs native:

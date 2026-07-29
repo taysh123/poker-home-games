@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { formatPL } from '../utils/formatters';
+import { groupMetaLine, groupRowLabel } from '../utils/groupRow';
 import Avatar from './Avatar';
 import Chip from './Chip';
 import PressableScale from './motion/PressableScale';
@@ -21,12 +22,18 @@ type Props = {
 export default function GroupListItem({ name, memberCount, role, myGroupPL, myGroupSessions, onPress, isFirst }: Props) {
   const isOwner = role === 'Owner';
   const isAdmin = role === 'Admin';
+  // Shared with the hand-rolled twin row in GroupsListScreen (utils/groupRow). The two rendered the
+  // same facts and described them differently — one announced only "name, N members" — and the
+  // plural rule was written twice and disagreed with itself ("1 session" spoken, "1 sessions" shown).
+  const metaText = groupMetaLine(memberCount, myGroupSessions);
 
   return (
     <PressableScale
       style={[styles.row, !isFirst && styles.border]}
       onPress={onPress}
       haptic="light"
+      accessibilityRole="button"
+      accessibilityLabel={groupRowLabel({ name, role, memberCount, myGroupSessions, myGroupPL })}
     >
       <Avatar name={name} size={40} style={styles.avatar} />
       <View style={styles.content}>
@@ -37,10 +44,7 @@ export default function GroupListItem({ name, memberCount, role, myGroupPL, myGr
           )}
         </View>
         <View style={styles.metaRow}>
-          <Text style={styles.meta}>
-            {memberCount} member{memberCount !== 1 ? 's' : ''}
-            {myGroupSessions != null && myGroupSessions > 0 ? ` · ${myGroupSessions} sessions` : ''}
-          </Text>
+          <Text style={styles.meta}>{metaText}</Text>
           {myGroupPL != null && (
             <Text style={[styles.plChip, myGroupPL >= 0 ? styles.plPositive : styles.plNegative]}>
               {formatPL(myGroupPL)}
