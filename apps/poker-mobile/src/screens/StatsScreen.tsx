@@ -467,9 +467,11 @@ export default function StatsScreen({ embedded = false }: { embedded?: boolean }
         achievements={unlockQueue}
         onDone={async () => {
           // Same source as the READ in load(). These were two separate literals reading the user
-          // from two different scopes — load()'s was a stale capture, this one current — so the
-          // baseline could be written under one key and checked under another, replaying a
-          // user's entire badge history on every load. One helper, one source, no divergence.
+          // from two different scopes — load()'s a stale capture, this one current — so in
+          // principle the baseline could be written under one key and checked under another,
+          // replaying a user's whole badge history. Unreachable today for the same reason given
+          // at the userIdRef declaration (AppNavigator remounts this screen on any auth change),
+          // so this is hardening, not a live-bug fix. One helper, one source, no divergence.
           const key = seenAchievementsKey(userIdRef.current);
           try {
             const raw = await SecureStore.getItemAsync(key);

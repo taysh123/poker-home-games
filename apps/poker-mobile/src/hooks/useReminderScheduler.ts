@@ -44,6 +44,14 @@ export function useReminderScheduler(): void {
     run();
     const sub = AppState.addEventListener('change', s => { if (s === 'active') run(); });
     return () => { cancelled = true; sub.remove(); };
+    // INVARIANT this dep list depends on: `run()` closes over the whole `progress` object but the
+    // deps are scalars, which is the shape that produces stale reads in a long-lived AppState
+    // listener. It is safe ONLY because studyStats() (features/study/logic/progress.ts) reads
+    // exactly dailyCounts[today], totalAnswered and dailyGoal, and recordAnswer() bumps
+    // dailyCounts[dayKey] and totalAnswered in the SAME pure step — so they cannot diverge.
+    // Add a writer that touches dailyCounts without totalAnswered and the streak-risk reminder
+    // silently schedules off stale signals, with no test failing. That invariant lives in another
+    // file; this comment is the only thing pointing at it.
   }, [enabled, progress.currentStreak, progress.totalAnswered, progress.dailyGoal, planGameDay, planCrewLine]);
 }
 

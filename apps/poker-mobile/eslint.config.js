@@ -37,9 +37,22 @@ module.exports = defineConfig([
       'react-hooks/rules-of-hooks': 'error',
 
       // Stale closures are a bug class this repo HAS shipped, so this is a real ratchet target —
-      // but there are existing violations and each needs individual judgement (a careless
-      // dependency addition introduces bugs rather than fixing them). Warn now; escalate to error
-      // in its own slice.
+      // but each violation needs individual judgement: both bugs fixed in fix/stale-closure-deps
+      // resisted the textbook repair, because adding the missing dependency changed a callback's
+      // identity and re-fired the useFocusEffect that calls it. Warn now; escalate in its own
+      // slice.
+      //
+      // ⚠️ THAT SLICE MUST ENUMERATE SUPPRESSIONS, NOT JUST WARNINGS. `--max-warnings` counts the
+      // ~16 reported sites; there are also ~13 pre-existing
+      // `// eslint-disable-next-line react-hooks/exhaustive-deps` comments that ESLint never
+      // reports and the ceiling never counts (`grep -rn "eslint-disable.*exhaustive-deps" src/`).
+      // They are author suppressions with rationale, not lint-gaming — but escalating to error
+      // would show a green board with those sites never individually judged.
+      //
+      // What actually distinguishes dangerous from benign: a missing dep in a SYNCHRONOUS effect
+      // body can never read stale (React invokes the latest closure). Stale reads come only from
+      // a useCallback/useMemo handed to a consumer, or a callback created inside an effect that
+      // outlives it (interval / subscription / timeout). Triage those first.
       'react-hooks/exhaustive-deps': 'warn',
 
       // OFF, deliberately. This rule wants `don&apos;t` instead of `don't` in JSX text. The
