@@ -93,6 +93,19 @@ describe('eslint.config.js — guarantees are explicit, not inherited', () => {
     expect(pkg.scripts.lint).toMatch(/^eslint\s/);
   });
 
+  it('pins the --max-warnings ceiling to a literal', () => {
+    // Mutation-proven gap this closes: reverting the SessionScreen stale-closure fix outright
+    // leaves all 1,067 tests GREEN — lint is its only guard. And the ceiling was unpinned, so
+    // raising 201 back to 203 (or deleting the flag) also stayed green. Together that meant a
+    // fixed bug could be reinstated with a fully green board.
+    //
+    // The literal is the point. Lowering it as the backlog shrinks means editing this line —
+    // deliberate, and visible in review. Raising it means the same, which is exactly when
+    // someone should have to justify themselves.
+    const pkg = JSON.parse(fs.readFileSync(path.join(APP_ROOT, 'package.json'), 'utf8'));
+    expect(pkg.scripts.lint).toContain('--max-warnings 201');
+  });
+
   it('lints the project ROOT, not just src/ — App.tsx must be covered', () => {
     // App.tsx holds nine hooks above an early return. It was the single file left uncovered when
     // `npm run lint` resolved to `expo lint` (DEFAULT_INPUTS = src/app/components).

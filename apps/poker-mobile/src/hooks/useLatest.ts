@@ -13,9 +13,14 @@ import { useEffect, useRef, type MutableRefObject } from 'react';
  * Reading through this ref gives the callback a stable identity AND a current value, so neither
  * failure mode is available.
  *
- * Deliberately assigns in an effect rather than during render: a render can be thrown away
- * (StrictMode double-render, Suspense retry) and mutating a ref during render would publish a
- * value that was never committed.
+ * Deliberately assigns in an effect rather than during render: React's documented rule is not to
+ * write `ref.current` during rendering, because an interrupted or discarded render would publish
+ * a value that was never committed.
+ *
+ * (An earlier version of this comment also cited StrictMode's double-render. That was wrong —
+ * StrictMode re-renders the SAME state, so a render-time assignment there is harmless. The real
+ * case is an interrupted render. Nothing in this app currently uses Suspense or useTransition, so
+ * the hazard defended against is latent while the caveats below are immediate.)
  *
  * TWO CAVEATS THAT FAIL SILENTLY — read before using:
  *

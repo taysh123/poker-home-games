@@ -43,7 +43,7 @@ module.exports = defineConfig([
       // slice.
       //
       // ⚠️ THAT SLICE MUST ENUMERATE SUPPRESSIONS, NOT JUST WARNINGS. `--max-warnings` counts the
-      // ~16 reported sites; there are also ~13 pre-existing
+      // 16 reported sites; there are also 14 pre-existing (counted, not estimated:
       // `// eslint-disable-next-line react-hooks/exhaustive-deps` comments that ESLint never
       // reports and the ceiling never counts (`grep -rn "eslint-disable.*exhaustive-deps" src/`).
       // They are author suppressions with rationale, not lint-gaming — but escalating to error
