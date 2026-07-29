@@ -754,7 +754,18 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
                       </View>
                       <View style={styles.stackInputWrap}>
                         <AppTextInput
+                          // Intentionally no visible label — the player's name is the row heading
+                          // beside it. But a sibling Text is not an accessible name in RN, so every
+                          // Final Count row announced identically with no player identity. On the
+                          // one screen where getting the wrong row wrong costs real money.
                           label=""
+                          // Local games are cash-only here (the field renders prefix={sym}), so the
+                          // unit is fixed rather than a fake ternary. SessionScreen DOES derive it,
+                          // because there useChips is a real toggle.
+                          accessibilityLabel={`${p.name} final cash amount`}
+                          // "Busted · 0" is a sibling Text the screen reader never reaches, yet it
+                          // is the whole signal that blank settles this player at zero.
+                          accessibilityHint={isEmpty ? 'Leave empty to settle this player at zero' : undefined}
                           value={finalStacks[p.id] ?? ''}
                           onChangeText={v => setFinalStacks(prev => ({ ...prev, [p.id]: v }))}
                           placeholder="0"

@@ -288,7 +288,7 @@ export default function NewGameScreen({ route, navigation }: Props) {
               ) : groups.length === 0 ? (
                 <View style={styles.noGroupsBox}>
                   <Text style={styles.noGroupsText}>You need a group to start a game.</Text>
-                  <TouchableOpacity onPress={() => navigation.navigate('CreateGroup')}>
+                  <TouchableOpacity onPress={() => navigation.navigate('CreateGroup')} accessibilityRole="button" accessibilityLabel="Create group">
                     <Text style={styles.noGroupsLink}>+ Create Group</Text>
                   </TouchableOpacity>
                 </View>
@@ -297,6 +297,10 @@ export default function NewGameScreen({ route, navigation }: Props) {
                   <TouchableOpacity
                     style={[styles.groupChip, selectedGroupId === null && styles.groupChipSelected]}
                     onPress={() => { setSelectedGroupId(null); setSelectedGroupName(''); }}
+                    accessibilityRole="radio"
+                    accessibilityLabel="No group"
+                    accessibilityState={{ checked: selectedGroupId === null }}
+                    aria-checked={selectedGroupId === null}
                   >
                     <Text style={[styles.groupChipText, selectedGroupId === null && styles.groupChipTextSelected]}>
                       No Group
@@ -307,6 +311,10 @@ export default function NewGameScreen({ route, navigation }: Props) {
                       key={g.id}
                       style={[styles.groupChip, selectedGroupId === g.id && styles.groupChipSelected]}
                       onPress={() => { setSelectedGroupId(g.id); setSelectedGroupName(g.name); }}
+                      accessibilityRole="radio"
+                      accessibilityLabel={g.name}
+                      accessibilityState={{ checked: selectedGroupId === g.id }}
+                      aria-checked={selectedGroupId === g.id}
                     >
                       <Text style={[styles.groupChipText, selectedGroupId === g.id && styles.groupChipTextSelected]}>
                         {g.name}
@@ -363,6 +371,10 @@ export default function NewGameScreen({ route, navigation }: Props) {
                           key={m.userId}
                           style={[styles.memberChip, selected && styles.memberChipSelected]}
                           onPress={() => toggleMember(m.userId)}
+                          accessibilityRole="checkbox"
+                          accessibilityLabel={m.username}
+                          accessibilityState={{ checked: selected }}
+                          aria-checked={selected}
                         >
                           <Text style={[styles.memberChipText, selected && styles.memberChipTextSelected]}>
                             {m.username}
@@ -398,6 +410,8 @@ export default function NewGameScreen({ route, navigation }: Props) {
                       key={(p as any).name}
                       style={styles.addedGuestChip}
                       onPress={() => removeGuest((p as any).name)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remove ${(p as any).name}`}
                     >
                       <Text style={styles.addedGuestChipText}>{(p as any).name}</Text>
                       <Ionicons name="close" size={12} color={colors.textMuted} style={{ marginLeft: 4 }} />

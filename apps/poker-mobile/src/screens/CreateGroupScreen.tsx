@@ -13,6 +13,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
+import { useAnnouncedError } from '../hooks/useAnnouncedError';
 import { createGroup } from '../api/groupsApi';
 import { track } from '../utils/analytics';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -65,6 +66,9 @@ export default function CreateGroupScreen({ navigation }: Props) {
       setLoading(false);
     }
   }
+  // iOS ignores the live-region props below; this is what actually speaks the error there.
+  useAnnouncedError(error);
+
 
   return (
     <Screen>
@@ -86,6 +90,7 @@ export default function CreateGroupScreen({ navigation }: Props) {
           value={name}
           onChangeText={setName}
           maxLength={50}
+          accessibilityLabel="Group name"
           autoFocus
           returnKeyType="next"
         />
@@ -99,19 +104,25 @@ export default function CreateGroupScreen({ navigation }: Props) {
           value={description}
           onChangeText={setDescription}
           maxLength={200}
+          accessibilityLabel="Group description"
           multiline
           numberOfLines={3}
           returnKeyType="done"
         />
         <Text style={styles.charCount}>{description.length}/200</Text>
 
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        {error ? (
+          <Text style={styles.errorText} accessibilityLiveRegion="polite" accessibilityRole="alert">{error}</Text>
+        ) : null}
 
         <TouchableOpacity
           style={[styles.createButton, (!name.trim() || loading) && styles.createButtonDisabled]}
           onPress={handleCreate}
           disabled={!name.trim() || loading}
           activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Create group"
+          accessibilityState={{ disabled: !name.trim() || loading, busy: loading }}
         >
           {loading ? (
             <ActivityIndicator color={colors.background} size="small" />

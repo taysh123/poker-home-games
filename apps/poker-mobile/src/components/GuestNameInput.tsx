@@ -10,6 +10,8 @@ type Props = {
   suggestions: string[];
   onPickSuggestion: (name: string) => void;
   placeholder?: string;
+  /** Accessible name for the field. Defaults to the placeholder without its trailing ellipsis. */
+  fieldLabel?: string;
 };
 
 /** Name input + Add button + recent-name suggestions — used by the New Game wizards. */
@@ -20,7 +22,12 @@ export default function GuestNameInput({
   suggestions,
   onPickSuggestion,
   placeholder = 'Guest name...',
+  fieldLabel,
 }: Props) {
+  // LocalNewGameScreen says "Player name...", NewGameScreen says "Guest name...". Hardcoding
+  // "Guest name" contradicted one of them — this component takes a placeholder override precisely
+  // because the two wizards use different vocabulary.
+  const inputLabel = fieldLabel ?? placeholder.replace(/[.]{3}$/, '');
   return (
     <View style={styles.container}>
       <View style={styles.inputRow}>
@@ -32,11 +39,19 @@ export default function GuestNameInput({
           placeholderTextColor={colors.textDim}
           onSubmitEditing={onAdd}
           returnKeyType="done"
+          // The placeholder is not an accessible name — it disappears the moment the user types.
+          accessibilityLabel={inputLabel}
         />
         <TouchableOpacity
           style={[styles.addBtn, !value.trim() && styles.addBtnDisabled]}
           onPress={onAdd}
           disabled={!value.trim()}
+          accessibilityRole="button"
+          accessibilityLabel="Add guest"
+          // Explicit for readers, but TouchableOpacity OVERWRITES this from the `disabled` prop
+          // (Libraries/Components/Touchable/TouchableOpacity.js) — `disabled` is what actually
+          // produces the announced state.
+          accessibilityState={{ disabled: !value.trim() }}
         >
           <Text style={styles.addBtnText}>Add</Text>
         </TouchableOpacity>
@@ -46,7 +61,16 @@ export default function GuestNameInput({
           <Text style={styles.suggestionsLabel}>Recent:</Text>
           <View style={styles.chipRow}>
             {suggestions.map(name => (
-              <TouchableOpacity key={name} style={styles.suggestionChip} onPress={() => onPickSuggestion(name)}>
+              <TouchableOpacity
+                key={name}
+                style={styles.suggestionChip}
+                onPress={() => onPickSuggestion(name)}
+                accessibilityRole="button"
+                // "Add X" was a FALSE PROMISE: both callers wire onPickSuggestion to
+                // setGuestInput/setPlayerInput, so the chip only FILLS the field — the user must
+                // still press Add. VoiceOver announced a player as added when they were not.
+                accessibilityLabel={`Use ${name}`}
+              >
                 <Text style={styles.suggestionChipText}>{name}</Text>
               </TouchableOpacity>
             ))}

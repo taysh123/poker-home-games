@@ -1368,6 +1368,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                 multiline
                 maxLength={500}
                 placeholder="Session notes..."
+                accessibilityLabel="Session notes"
                 placeholderTextColor={colors.textDim}
                 autoFocus
               />
@@ -1582,6 +1583,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                   onChangeText={setTxAmount}
                   keyboardType="decimal-pad"
                   placeholder="0"
+                  accessibilityLabel={useChips ? 'Amount in chips' : 'Amount'}
                   placeholderTextColor={colors.textDim}
                   autoFocus
                 />
@@ -1701,6 +1703,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                 value={guestName}
                 onChangeText={setGuestName}
                 placeholder="Guest name"
+                accessibilityLabel="Guest name"
                 placeholderTextColor={colors.textDim}
               />
               <PressableScale
@@ -1840,6 +1843,17 @@ export default function SessionScreen({ route, navigation }: Props) {
                         keyboardType="decimal-pad"
                         placeholder={session.chipRatio && useChips ? 'chips' : sym}
                         placeholderTextColor={colors.textDim}
+                        // Mirrors LocalSessionScreen's Final Count row (CLAUDE.md requires the two
+                        // flows to stay in sync). Every row previously announced identically with
+                        // no player identity, on the screen where a mis-keyed row costs money.
+                        // The UNIT is derived, not hand-written: `useChips` defaults to false and
+                        // the toggle is not rendered without a chipRatio, so "chip count" was wrong
+                        // in the common case and contradicted the visible subtitle two lines up.
+                        accessibilityLabel={`${p.username} final ${session.chipRatio && useChips ? 'chip count' : 'cash amount'}`}
+                        // "Busted · 0" renders as a sibling Text, which a screen reader never
+                        // reaches — yet it is the whole signal that leaving this blank settles the
+                        // player at zero.
+                        accessibilityHint={isEmpty ? 'Leave empty to settle this player at zero' : undefined}
                       />
                     )}
                   </View>
@@ -2147,6 +2161,7 @@ export default function SessionScreen({ route, navigation }: Props) {
               onChangeText={setHandPot}
               keyboardType="decimal-pad"
               placeholder={sym}
+              accessibilityLabel="Pot amount"
               placeholderTextColor={colors.textDim}
             />
 
@@ -2175,6 +2190,7 @@ export default function SessionScreen({ route, navigation }: Props) {
               value={handNote}
               onChangeText={setHandNote}
               placeholder="e.g. Full house vs flush"
+              accessibilityLabel="Hand note"
               placeholderTextColor={colors.textDim}
             />
 

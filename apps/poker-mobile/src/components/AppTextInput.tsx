@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, View, Text, TextInput, TextInputProps, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, TextInputProps, StyleSheet } from 'react-native';
+import { useAnnouncedError } from '../hooks/useAnnouncedError';
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 
@@ -13,17 +14,9 @@ type Props = TextInputProps & {
 export default function AppTextInput({ label, error, hint, prefix, style, onFocus, onBlur, ...rest }: Props) {
   const [isFocused, setIsFocused] = useState(false);
 
-  // Announce the error explicitly. The live region + alert role below cover Android and web, but
-  // NOT iOS: RN maps role "alert" to UIAccessibilityTraitNone and ships no iOS implementation of
-  // accessibilityLiveRegion at all. Without this, a VoiceOver user submitting a form got no
-  // feedback that it had failed — which is most of the reason this change exists.
-  const announcedRef = useRef<string | undefined>(undefined);
-  useEffect(() => {
-    if (error && error !== announcedRef.current) {
-      AccessibilityInfo.announceForAccessibility?.(error);
-    }
-    announcedRef.current = error;
-  }, [error]);
+  // Speaks the error on iOS, where the live-region props below do nothing. Shared with the two
+  // hand-rolled forms (CreateGroup/EditGroup) so there is one implementation, not three.
+  useAnnouncedError(error);
 
   return (
     <View style={styles.container}>
