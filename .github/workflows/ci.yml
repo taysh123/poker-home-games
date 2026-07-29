@@ -60,11 +60,13 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
       - name: Lint
-        # Fails the build on ERRORS only; warnings are visible but non-blocking while the
-        # pre-existing backlog is worked down (see eslint.config.js for the ratchet plan).
-        # react-hooks/rules-of-hooks is an ERROR — a violation of it crashes at runtime and is
-        # invisible to tsc, jest and the web export. Severity is pinned by
+        # Fails this JOB on any error, and on the warning count RISING above today's frozen
+        # ceiling (--max-warnings) so the pre-existing backlog can only shrink.
+        # react-hooks/rules-of-hooks is an ERROR — a violation crashes at runtime and is invisible
+        # to tsc, jest and the web export. Severity is pinned by
         # src/config/__tests__/eslintRules.test.ts so it cannot be silently downgraded.
+        # NOTE: `main` has no branch protection / required checks, so a red job does not itself
+        # block a merge — that is an owner setting, not something this file can assert.
         run: npm run lint
       - name: Unit tests
         # Positive-offset TZ (matches the user base): jest's local-day/month pins are UTC-blind on
@@ -90,6 +92,10 @@ jobs:
       - run: npm ci
       - name: Typecheck
         run: npm run typecheck
+      - name: Lint
+        # next/core-web-vitals already includes react-hooks/rules-of-hooks as an error, and this
+        # app is currently clean — gating it costs one line and covers the second React codebase.
+        run: npm run lint
       - name: Tests (honesty pins)
         run: npm test
       - name: Static build

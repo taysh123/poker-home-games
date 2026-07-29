@@ -1,6 +1,7 @@
 // ESLint flat config — https://docs.expo.dev/guides/using-eslint/
 //
-// WHY THIS EXISTS (2026-07-29): the repo had NO linter. A genuine `react-hooks/rules-of-hooks`
+// WHY THIS EXISTS (2026-07-29): `apps/poker-mobile` had NO linter (`apps/landing` did, and is
+// clean, via next/core-web-vitals). A genuine `react-hooks/rules-of-hooks`
 // violation — hooks appended below a conditional return, which crashes at runtime with "Rendered
 // fewer hooks than expected" — passed `tsc --noEmit`, 1,051 jest tests AND a full web export in a
 // single session. That is a bug class the toolchain literally could not see. This config's first

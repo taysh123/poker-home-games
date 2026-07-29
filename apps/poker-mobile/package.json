@@ -9,9 +9,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web --port 8081",
     "test": "jest",
-    "lint": "eslint .",
     "build:web": "expo export -p web && node scripts/injectWebHead.mjs",
-    "lint": "expo lint"
+    "lint": "eslint . --max-warnings 203"
   },
   "dependencies": {
     "@expo-google-fonts/dm-serif-display": "^0.4.2",

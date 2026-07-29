@@ -38,7 +38,6 @@ export async function shareCardImage(ref: React.RefObject<View | null>): Promise
  * Branded result card rendered OFF-SCREEN (absolute, far left) purely as a
  * capture target for image sharing. Never visible in the layout.
  */
-// eslint-disable-next-line react/display-name -- assigned below; the arrow keeps the ref generic
 const ShareCard = forwardRef<View, { data: ShareCardData }>(({ data }, ref) => {
   if (!canShareImages) return null;
   return (
@@ -77,6 +76,10 @@ const ShareCard = forwardRef<View, { data: ShareCardData }>(({ data }, ref) => {
     </View>
   );
 });
+
+// forwardRef components are anonymous otherwise — DevTools and error boundaries would show
+// "ForwardRef" instead of the component name.
+ShareCard.displayName = 'ShareCard';
 
 export default ShareCard;
 
