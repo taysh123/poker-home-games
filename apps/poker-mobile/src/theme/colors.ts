@@ -39,6 +39,13 @@ export const colors = {
   tealGlow: 'rgba(78,170,220,0.10)',
   aiPurple: '#C46EE8', // same hue as the Epic achievement rarity — promoted to a token
   aiPurpleFaint: 'rgba(196,110,232,0.10)',
+
+  // Podium accents. 1st place uses `gold`; 2nd/3rd had no token and were duplicated as literals
+  // across SessionScreen and GroupDetailScreen. NOT interchangeable with textMuted (#8E9BAA) —
+  // visually adjacent to silver but semantically body copy; collapsing them tints 2nd place as
+  // disabled text. Consumed via theme/rankRarity.ts.
+  rankSilver: '#8DA9C4',
+  rankBronze: '#B87333',
 };
 
 /** Felt table gradient (center → edge) for the immersive PokerTable surface. */

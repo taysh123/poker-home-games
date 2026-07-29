@@ -72,7 +72,11 @@ export default function PrimaryButton({
       haptic="light"
       disabled={disabled || loading}
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
+      // Falls back to `label`, as the prop's JSDoc has always claimed. It previously forwarded
+      // `undefined` and worked only by accident, because RN derives a name from the child <Text>.
+      // That accident breaks exactly when `loading` swaps the label for a bare ActivityIndicator,
+      // leaving an UNNAMED button mid-submit. Pinned in __tests__/a11yContract.test.tsx.
+      accessibilityLabel={accessibilityLabel ?? label}
     >
       {variant === 'gradient' && (
         <LinearGradient

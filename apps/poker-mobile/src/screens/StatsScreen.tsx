@@ -14,6 +14,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
+import { rarityColor as rarityColorFor } from '../theme/rankRarity';
 import { typography } from '../theme/typography';
 import { shadows } from '../theme/shadows';
 import { fadeIn, slideUp, pulse } from '../theme/motion';
@@ -695,15 +696,8 @@ const streakStyles = StyleSheet.create({
   label: { fontSize: 9, fontWeight: '700' as const, color: colors.textMuted, letterSpacing: 0.8, textTransform: 'uppercase' as const },
 });
 
-const RARITY_COLORS: Record<string, string> = {
-  Common: colors.textMuted,
-  Rare: '#4EAADC',
-  Epic: '#C46EE8',
-  Legendary: colors.gold,
-};
-
 function AchievementBadge({ achievement, earned, progressText }: { achievement: AchievementDto; earned: boolean; progressText?: string }) {
-  const rarityColor = RARITY_COLORS[achievement.rarity] ?? colors.textMuted;
+  const rarityColor = rarityColorFor(achievement.rarity);
   return (
     <View style={[achStyles.badge, !earned && achStyles.badgeLocked]}>
       <View style={[achStyles.iconCircle, { borderColor: earned ? rarityColor + '66' : colors.border }]}>

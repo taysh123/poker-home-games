@@ -717,7 +717,7 @@ flag is ON everywhere).
 
 **Frontend:**
 - `achievementsApi.ts` (`api/achievementsApi.ts`) — `getMyAchievements(token)`.
-- `StatsScreen` — achievements section below the P&L trend. Earned badges full-color (rarity tint), locked at 45% opacity. Rarity colors: Common=textMuted, Rare=#4EAADC, Epic=#C46EE8, Legendary=gold. Sorted: earned (desc by unlockedAt) then locked, separated by a divider.
+- `StatsScreen` — achievements section below the P&L trend. Earned badges full-color (rarity tint), locked at 45% opacity. Rarity + podium accents come from **`theme/rankRarity.ts`** (`RARITY_COLORS`/`rarityColor`, `RANK_COLORS`/`rankColor`) — every value is a token: Common=`textMuted`, Rare=`info`, Epic=`aiPurple`, Legendary=`gold`; podium 2nd/3rd=`rankSilver`/`rankBronze`. Do NOT re-declare these locally: rarity was previously defined three times and rank twice, already drifted (two copies inlined `#4EAADC` though `colors.info` is identical, all three inlined `#C46EE8` though `aiPurple` was added for exactly that hue, and the fallback differed — two rendered an unknown rarity as *Legendary*). Sorted: earned (desc by unlockedAt) then locked, separated by a divider.
 - Loaded alongside stats via `Promise.all` with `.catch(() => null)` fallback so a cold DB (pre-migration) doesn't break the screen.
 
 **Important implementation note:** EF Core does NOT have `ToHashSetAsync`. Use `.ToListAsync(ct).ToHashSet()` instead.

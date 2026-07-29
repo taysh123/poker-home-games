@@ -24,6 +24,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
+import { RANK_COLORS } from '../theme/rankRarity';
 import { shadows } from '../theme/shadows';
 import { spacing } from '../theme/spacing';
 import { radii } from '../theme/radii';
@@ -61,10 +62,12 @@ import { useReducedMotion } from '../hooks/useReducedMotion';
 
 const LB_PERIODS = ['week', 'month', 'all'] as const;
 const LB_PERIOD_LABELS = ['Week', 'Month', 'All Time'];
-// Podium accents — gold maps to the DS token; silver/bronze have no DS token
-// (mirrors the local RANK_COLORS in SessionScreen, the polished reference).
-const RANK_SILVER = '#8DA9C4';
-const RANK_BRONZE = '#B87333';
+// Podium accents now come from theme/rankRarity (silver/bronze are real tokens). The previous
+// comment here said they had "no DS token … mirrors the local RANK_COLORS in SessionScreen" —
+// both halves were false by the time it was read: the tokens were added, and SessionScreen's
+// RANK_COLORS was dead code referenced by nothing.
+const RANK_SILVER = colors.rankSilver;
+const RANK_BRONZE = colors.rankBronze;
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupDetail'>;
 
@@ -857,12 +860,6 @@ function MemberRow({ member, canRemove, isRemoving, onRemove, onPress }: MemberR
     </PressableScale>
   );
 }
-
-const RANK_COLORS: Record<number, string> = {
-  1: colors.gold,
-  2: RANK_SILVER,
-  3: RANK_BRONZE,
-};
 
 function LeaderboardRow({ entry, rank }: { entry: PlayerLeaderboardEntryDto; rank: number }) {
   const isPositive = entry.totalProfitLoss > 0;

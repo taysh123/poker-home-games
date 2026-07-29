@@ -28,10 +28,20 @@ export default function AppTextInput({ label, error, hint, prefix, style, onFocu
           onFocus={(e) => { setIsFocused(true); onFocus?.(e); }}
           onBlur={(e) => { setIsFocused(false); onBlur?.(e); }}
           {...rest}
+          // React Native has no htmlFor/aria-labelledby, so the visible <Text> above is NOT this
+          // input's accessible name — it announced as "text field, <placeholder>". Bind it here so
+          // every caller inherits a correct name instead of remembering to pass one.
+          // After {...rest} deliberately: `rest.accessibilityLabel` is read explicitly below, so an
+          // explicit caller label still wins.
+          accessibilityLabel={rest.accessibilityLabel ?? label}
         />
       </View>
       {error ? (
-        <Text style={styles.error}>{error}</Text>
+        // Announced, not just drawn. Auth failures on Login/Register rendered here were silent
+        // to a screen reader — the user got no feedback that submission had failed at all.
+        <Text style={styles.error} accessibilityLiveRegion="polite" accessibilityRole="alert">
+          {error}
+        </Text>
       ) : hint ? (
         <Text style={styles.hint}>{hint}</Text>
       ) : null}

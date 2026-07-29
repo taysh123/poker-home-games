@@ -2227,13 +2227,15 @@ function MetaChip({ label, gold }: { label: string; gold?: boolean }) {
   );
 }
 
-// Tokenized rank label — "#1", "#2", … (no emoji glyphs). Top-3 are tinted gold/
-// silver/bronze via RANK_COLORS at the call sites.
+// Tokenized rank label — "#1", "#2", … (no emoji glyphs).
+//
+// The RANK_COLORS map that used to sit below was DEAD: declared here, referenced nowhere, and the
+// comment above it claimed the top three were "tinted gold/silver/bronze via RANK_COLORS at the
+// call sites" — which no call site did. Deleted rather than migrated. The live podium tinting is
+// in GroupDetailScreen, which now reads theme/rankRarity.
 function rankLabel(rank: number): string {
   return `#${rank}`;
 }
-
-const RANK_COLORS: Record<number, string> = { 1: '#C9A84C', 2: '#8DA9C4', 3: '#B87333' };
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
