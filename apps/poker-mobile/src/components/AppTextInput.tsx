@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TextInputProps, StyleSheet } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, View, Text, TextInput, TextInputProps, StyleSheet } from 'react-native';
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 
@@ -12,6 +12,18 @@ type Props = TextInputProps & {
 
 export default function AppTextInput({ label, error, hint, prefix, style, onFocus, onBlur, ...rest }: Props) {
   const [isFocused, setIsFocused] = useState(false);
+
+  // Announce the error explicitly. The live region + alert role below cover Android and web, but
+  // NOT iOS: RN maps role "alert" to UIAccessibilityTraitNone and ships no iOS implementation of
+  // accessibilityLiveRegion at all. Without this, a VoiceOver user submitting a form got no
+  // feedback that it had failed — which is most of the reason this change exists.
+  const announcedRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (error && error !== announcedRef.current) {
+      AccessibilityInfo.announceForAccessibility?.(error);
+    }
+    announcedRef.current = error;
+  }, [error]);
 
   return (
     <View style={styles.container}>
@@ -33,12 +45,18 @@ export default function AppTextInput({ label, error, hint, prefix, style, onFocu
           // every caller inherits a correct name instead of remembering to pass one.
           // After {...rest} deliberately: `rest.accessibilityLabel` is read explicitly below, so an
           // explicit caller label still wins.
-          accessibilityLabel={rest.accessibilityLabel ?? label}
+          //
+          // `label || undefined`, not `?? label`: one caller passes `label=""` (LocalSessionScreen's
+          // Final Count rows, which draw the player's name in a sibling Text instead). `??` would
+          // forward the empty string as the accessible name; falling through to `undefined` lets RN
+          // derive one instead of pinning an empty label.
+          accessibilityLabel={rest.accessibilityLabel ?? (label || undefined)}
         />
       </View>
       {error ? (
-        // Announced, not just drawn. Auth failures on Login/Register rendered here were silent
-        // to a screen reader — the user got no feedback that submission had failed at all.
+        // Covers Android (roleDescription + polite live region) and web (role=alert + aria-live).
+        // iOS is covered by the explicit announceForAccessibility above, because RN implements
+        // neither of these props there.
         <Text style={styles.error} accessibilityLiveRegion="polite" accessibilityRole="alert">
           {error}
         </Text>

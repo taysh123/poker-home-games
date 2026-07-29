@@ -1,5 +1,5 @@
 import { colors } from '../colors';
-import { RANK_COLORS, RARITY_COLORS, rankColor, rarityColor } from '../rankRarity';
+import { RANK_COLORS, RARITY_COLORS, rarityColor } from '../rankRarity';
 
 /**
  * One source for podium and rarity accents.
@@ -63,14 +63,5 @@ describe('podium accents', () => {
     expect(colors.rankSilver).not.toBe(colors.textMuted);
   });
 
-  it('returns null outside the podium rather than a colour', () => {
-    // 4th place must render in the default colour, not a medal tint.
-    expect(rankColor(4)).toBeNull();
-    expect(rankColor(0)).toBeNull();
-  });
 
-  it('resolves podium places', () => {
-    expect(rankColor(1)).toBe(colors.gold);
-    expect(rankColor(3)).toBe(colors.rankBronze);
-  });
 });

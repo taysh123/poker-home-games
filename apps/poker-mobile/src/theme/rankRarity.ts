@@ -31,14 +31,15 @@ export function rarityColor(rarity: string | undefined | null): string {
   return (rarity && RARITY_COLORS[rarity]) || colors.textMuted;
 }
 
-/** Podium places 1-3. */
+/**
+ * Podium places 1-3. Consumers supply their own out-of-podium default — GroupDetailScreen wants
+ * `colors.textDim`, not a null. An exported `rankColor()` helper was written here and deleted
+ * before merge: nothing consumed it, and its documented behaviour (`null` for 4th) disagreed with
+ * the one real caller. Shipping a helper that contradicts its only consumer is how the drift this
+ * module exists to end gets reintroduced.
+ */
 export const RANK_COLORS: Record<number, string> = {
   1: colors.gold,
   2: colors.rankSilver,
   3: colors.rankBronze,
 };
-
-/** `null` outside the podium, so callers render the default colour rather than a medal tint. */
-export function rankColor(rank: number): string | null {
-  return RANK_COLORS[rank] ?? null;
-}

@@ -1,9 +1,15 @@
 /**
  * Accessibility contracts for the shared form/chrome components.
  *
- * These four components are where the app's a11y leverage lives: fixing them repairs ~45 defects
- * across ~20 screens, because a screen using `AppTextInput` or `PrimaryButton` should inherit a
- * correct accessible name rather than remembering to supply one.
+ * These three components are where the app's a11y leverage lives, because a screen using
+ * `AppTextInput` or `PrimaryButton` should inherit a correct accessible name rather than
+ * remembering to supply one.
+ *
+ * Scope, counted rather than estimated: `AppTextInput` is used by 42 inputs across 8 screens, and
+ * `BrandHeader` (re-exported as `ScreenHeader`) by 32 call sites. An earlier version of this
+ * comment claimed "~45 defects across ~20 screens" and included `FormRow` — which had ZERO
+ * production call sites and has since been deleted. Hardening dead code inflates the number and
+ * delivers nothing.
  *
  * The defect these pin is invisible to a sighted user and total for a screen-reader user: React
  * Native has no `htmlFor`/`aria-labelledby`, so a visible `<Text>` rendered as a SIBLING of a
@@ -17,12 +23,11 @@
  * a guarantee; this test is.
  */
 import React from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { AccessibilityInfo, View } from 'react-native';
 import { render } from '@testing-library/react-native';
 
 import AppTextInput from '../AppTextInput';
 import BrandHeader from '../BrandHeader';
-import FormRow from '../FormRow';
 import PrimaryButton from '../PrimaryButton';
 
 // BrandHeader pulls in the icon font + navigation + safe-area, none of which resolve in this jest
@@ -50,12 +55,36 @@ describe('AppTextInput — the visible label must be the accessible name', () =>
     expect(getByLabelText('Buy-in amount in shekels')).toBeTruthy();
   });
 
-  it('announces its inline error instead of rendering it silently', () => {
-    // Auth failures on Login/Register were rendered as a plain <Text> — never announced.
+  it('marks its inline error as a live alert (Android + web)', () => {
     const { getByText } = render(<AppTextInput label="Password" error="Incorrect password" />);
     const errorNode = getByText('Incorrect password');
     expect(errorNode.props.accessibilityLiveRegion).toBe('polite');
     expect(errorNode.props.accessibilityRole).toBe('alert');
+  });
+
+  it('ALSO announces the error explicitly, because iOS implements neither prop', () => {
+    // RN maps role "alert" to UIAccessibilityTraitNone on iOS and ships no iOS implementation of
+    // accessibilityLiveRegion. Relying on the props alone would leave auth failures silent on
+    // iOS — the platform this app shipped on first.
+    const spy = jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(() => {});
+    render(<AppTextInput label="Password" error="Incorrect password" />);
+    expect(spy).toHaveBeenCalledWith('Incorrect password');
+    spy.mockRestore();
+  });
+
+  it('does not re-announce an unchanged error on re-render', () => {
+    const spy = jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(() => {});
+    const { rerender } = render(<AppTextInput label="Password" error="Incorrect password" />);
+    rerender(<AppTextInput label="Password" error="Incorrect password" />);
+    expect(spy).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
+  });
+
+  it('says nothing when there is no error', () => {
+    const spy = jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(() => {});
+    render(<AppTextInput label="Password" />);
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
   });
 
   it('does not mark the hint as an alert', () => {
@@ -75,40 +104,6 @@ describe('PrimaryButton — named even while loading', () => {
       <PrimaryButton label="Save" accessibilityLabel="Save profile changes" onPress={() => {}} />,
     );
     expect(getByLabelText('Save profile changes')).toBeTruthy();
-  });
-});
-
-describe('FormRow — binds its label to the control it wraps', () => {
-  it('labels a single unlabelled child', () => {
-    const { getByLabelText } = render(
-      <FormRow label="Chip ratio"><TextInput placeholder="100" /></FormRow>,
-    );
-    expect(getByLabelText('Chip ratio')).toBeTruthy();
-  });
-
-  it('leaves an already-labelled child untouched', () => {
-    const { getByLabelText, queryByLabelText } = render(
-      <FormRow label="Chip ratio"><TextInput accessibilityLabel="Chips per shekel" /></FormRow>,
-    );
-    expect(getByLabelText('Chips per shekel')).toBeTruthy();
-    expect(queryByLabelText('Chip ratio')).toBeNull();
-  });
-
-  it('passes multiple children through unchanged rather than guessing', () => {
-    // Cloning is only safe for a single control; with several we cannot know which owns the label.
-    const { getByText } = render(
-      <FormRow label="Blinds"><Text>a</Text><Text>b</Text></FormRow>,
-    );
-    expect(getByText('a')).toBeTruthy();
-    expect(getByText('b')).toBeTruthy();
-  });
-
-  it('tolerates a non-element child without crashing', () => {
-    // Cloning must be guarded by isValidElement — a null/conditional child is common.
-    const { getByText } = render(
-      <FormRow label="Notes">{null}<Text>after</Text></FormRow>,
-    );
-    expect(getByText('after')).toBeTruthy();
   });
 });
 

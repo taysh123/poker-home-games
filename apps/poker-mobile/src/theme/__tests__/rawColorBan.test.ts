@@ -8,38 +8,55 @@ import { join, relative, resolve } from 'path';
  * nothing enforced it, so rarity accents drifted into THREE divergent copies and podium colours
  * into two, each inlining literals that already existed as tokens.
  *
- * This is an ALLOWLIST ratchet, not a blanket ban. Plenty of raw colour in this app is legitimate
- * and deliberately not tokenised: the poker-table position palette, the avatar palette, playing-
- * card faces, `#000` shadows, and the HTML/email export stylesheet. Those are listed below and can
- * only be REMOVED. What the ratchet stops is a NEW file quietly starting to hardcode colour.
+ * This is a per-file COUNT CEILING, not a boolean allowlist. That distinction was earned: a
+ * boolean allowlist entry for `SessionScreen.tsx` — added for its single `#000` shadow — would
+ * have licensed unlimited new colour anywhere in a 3.1k-line money-critical file, which is the one
+ * most likely to receive new UI code. Counts can only be LOWERED.
  *
- * Three traps this had to handle, found by reading the code before writing the rule:
- *  1. Rank labels like `"#1"` / `"#2"` appear in comments and copy — requiring >=3 hex digits
- *     avoids matching them.
- *  2. ~31 sites do `colors.success + '44'` — an alpha suffix, which is a HALF hex and invisible to
- *     a `#` regex. This test does not claim to catch those; saying so here is the point, because a
- *     ban that silently misses a whole shape is worse than no ban.
- *  3. This file names hex literals in its own allowlist, so it must exclude itself.
+ * Covers BOTH `#hex` and `rgb()/rgba()`. An earlier draft matched only `#hex` while its header
+ * claimed to be a "raw-colour ratchet", silently ignoring 65 rgba literals — the exact failure its
+ * own doc block warned against ("a ban that silently misses a whole shape is worse than no ban").
+ *
+ * Known and DISCLAIMED gaps, so a green board is not read as more than it is:
+ *  - Alpha-suffix concatenation (`colors.gold + '14'`, ~31 sites) builds a colour this cannot see.
+ *  - 4-digit CSS shorthand (`#fff8`) is not matched.
+ *  - The walk is rooted at `src/`, so `App.tsx` and `scripts/` are out of scope.
+ *
+ * Entries are legitimate untokenised colour: the poker-table position palette, the avatar palette,
+ * playing-card faces, `#000` shadows, glass/sheen overlays, and the HTML export stylesheet.
  */
 const SRC = resolve(__dirname, '..', '..');
 
-/** >=3 hex digits, so `#1`/`#2` rank labels never match. */
-const HEX = /#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?(?:[0-9a-fA-F]{2})?\b/;
+/** >=3 hex digits so `#1`/`#2` rank labels never match, plus rgb()/rgba(). */
+const RAW_COLOR = /#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?(?:[0-9a-fA-F]{2})?\b|rgba?\(/g;
 
 /**
- * Files permitted to contain raw colour, each with the reason. This list may SHRINK; adding to it
- * should be a deliberate, reviewed act — that is the entire mechanism.
+ * Max raw-colour literals permitted per file. LOWER these as files are tokenised; never raise one
+ * without saying why in review. A file absent from this map may contain none.
  */
-const ALLOWED = new Set<string>([
-  'utils/exportUtils.ts',            // HTML/email export stylesheet — leaves the RN theme entirely
-  'utils/pokerTable.ts',             // position palette + casino chip tiers (domain colours)
-  'utils/avatarColor.ts',            // avatar palette — deliberately its own hash-indexed set
-  'components/table/PlayingCard.tsx',// card face/pip/suit colours — physical-object colours
-  'components/table/PokerTable.tsx', // #000 shadow
-  'components/Toast.tsx',            // #000 shadow + on-colour white
-  'components/InviteSheet.tsx',      // QR code needs literal fg/bg, not theme-resolved
-  'screens/SessionScreen.tsx',       // #000 shadow (the 3.1k monolith — see Q3.6 for its cleanup)
-]);
+const CEILING: Record<string, number> = {
+  'screens/SessionScreen.tsx': 34,          // #000 shadow + rgba overlays (3.1k monolith — Q3.6)
+  'utils/exportUtils.ts': 20,               // HTML/email export stylesheet (9 are token byte-copies — see below)
+  'utils/pokerTable.ts': 20,                // position palette + casino chip tiers (domain colours)
+  'screens/HomeScreen.tsx': 10,             // activity-icon tints + glass overlays
+  'utils/avatarColor.ts': 10,               // avatar palette — deliberately its own hash-indexed set
+  'components/table/PlayingCard.tsx': 6,    // card face/pip/suit — physical-object colours
+  'screens/NewGameScreen.tsx': 6,           // gold chip fills
+  'components/InviteSheet.tsx': 4,          // QR needs literal fg/bg + white card
+  'components/motion/Shimmer.tsx': 4,       // white sheen gradient stops
+  'components/Toast.tsx': 3,                // #000 shadow + on-colour white
+  'components/table/PokerTable.tsx': 2,
+  'components/table/TableBackdrop.tsx': 2,  // felt glow gradient
+  'features/study/ui/SpotTrainerScreen.tsx': 2,
+  'components/ActionSheet.tsx': 1,
+  'components/motion/GlassView.tsx': 1,
+  'components/StepIndicator.tsx': 1,
+  'components/table/ChipStack.tsx': 1,
+  'components/table/Pot.tsx': 1,
+  'features/bankroll/ui/BankrollScreen.tsx': 1,
+  'features/study/ui/QuizRunnerScreen.tsx': 1,
+  'screens/EditGroupScreen.tsx': 1,
+};
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -51,43 +68,57 @@ function walk(dir: string, out: string[] = []): string[] {
   return out;
 }
 
+/** Raw-colour count per src-relative file, excluding theme/ (the tokens themselves). */
+function counts(): Map<string, number> {
+  const found = new Map<string, number>();
+  for (const file of walk(SRC)) {
+    const rel = relative(SRC, file).replace(/\\/g, '/');
+    if (rel.startsWith('theme/')) continue;
+    const matches = readFileSync(file, 'utf8').match(RAW_COLOR);
+    if (matches) found.set(rel, matches.length);
+  }
+  return found;
+}
+
 describe('raw colour ratchet', () => {
-  it('no file outside theme/ or the allowlist hardcodes a hex colour', () => {
-    const offenders: string[] = [];
-    for (const file of walk(SRC)) {
-      const rel = relative(SRC, file).replace(/\\/g, '/');
-      if (rel.startsWith('theme/')) continue; // the tokens themselves
-      if (ALLOWED.has(rel)) continue;
-      if (HEX.test(readFileSync(file, 'utf8'))) offenders.push(rel);
+  it('no file exceeds its ceiling, and no new file introduces raw colour', () => {
+    const over: string[] = [];
+    for (const [rel, n] of counts()) {
+      const max = CEILING[rel] ?? 0;
+      if (n > max) over.push(`${rel}: ${n} > ${max}`);
     }
-    expect(offenders).toEqual([]);
+    expect(over).toEqual([]);
   });
 
-  it('the allowlist contains no stale entries', () => {
-    // An allowlist entry for a file that no longer has raw colour is a licence nobody revoked.
-    // Forcing it to shrink is what makes this a ratchet rather than a snapshot.
-    const stale = [...ALLOWED].filter(rel => {
-      try {
-        return !HEX.test(readFileSync(join(SRC, rel), 'utf8'));
-      } catch {
-        return true; // file deleted — entry is stale
-      }
-    });
-    expect(stale).toEqual([]);
+  it('every ceiling is tight — none has slack a regression could hide in', () => {
+    // Slack is how a ratchet stops ratcheting: a ceiling of 34 on a file down to 20 silently
+    // permits 14 new literals. Lowering a ceiling is a one-line edit; leaving slack is not free.
+    const slack: string[] = [];
+    const found = counts();
+    for (const [rel, max] of Object.entries(CEILING)) {
+      const n = found.get(rel) ?? 0;
+      if (n < max) slack.push(`${rel}: ceiling ${max}, actual ${n} — lower it`);
+    }
+    expect(slack).toEqual([]);
   });
 
-  it('the rule ignores short "#1"-style rank labels', () => {
-    // Guards trap 1: a regex without the >=3-digit floor flags every `#${rank}` label and every
-    // "#1" in prose, which would make the ban unusable and get it deleted.
-    expect(HEX.test('const label = `#${rank}`;')).toBe(false);
-    expect(HEX.test('// Top-3 are tinted, e.g. #1 and #2')).toBe(false);
-    expect(HEX.test("color: '#C46EE8'")).toBe(true);
-    expect(HEX.test("color: '#fff'")).toBe(true);
+  it('ignores short "#1"-style rank labels', () => {
+    // Without the >=3-digit floor this flags every `#${rank}` label and every "#1" in prose,
+    // which makes the ban unusable and gets it deleted rather than obeyed.
+    expect('const label = `#${rank}`;'.match(RAW_COLOR)).toBeNull();
+    expect('// Top-3 are tinted, e.g. #1 and #2'.match(RAW_COLOR)).toBeNull();
+    expect("color: '#C46EE8'".match(RAW_COLOR)).toHaveLength(1);
+    expect("color: '#fff'".match(RAW_COLOR)).toHaveLength(1);
+  });
+
+  it('catches rgb()/rgba(), not only hex', () => {
+    expect("backgroundColor: 'rgba(15,25,35,0.6)'".match(RAW_COLOR)).toHaveLength(1);
+    expect("backgroundColor: 'rgb(15,25,35)'".match(RAW_COLOR)).toHaveLength(1);
   });
 
   it('does NOT claim to catch alpha-suffix concatenation', () => {
-    // Trap 2, stated rather than hidden. `colors.gold + '14'` builds a colour the regex cannot
-    // see. Documented so nobody reads a green board as "no untokenised colour exists".
-    expect(HEX.test("backgroundColor: colors.gold + '14'")).toBe(false);
+    // Disclaimed, not hidden. `colors.gold + '14'` builds a colour the regex cannot see, so a
+    // green board here does not mean "no untokenised colour exists".
+    expect("backgroundColor: colors.gold + '14'".match(RAW_COLOR)).toBeNull();
   });
 });
