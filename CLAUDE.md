@@ -495,9 +495,10 @@ try {
 
 ### Accessibility — known platform gaps
 
-Verified 2026-07-29 against the **installed** sources — react-native **0.81.5**, react-native-web
-**0.21.2** — with the file each claim came from, so it can be re-checked by grep instead of memory.
-Versions matter: these are caret ranges and the web behaviour below is not contractual.
+Verified 2026-07-29 against the **installed** sources — react-native **0.81.5** (pinned exactly in
+`package.json`), react-native-web **0.21.2** (via `^0.21.0`, so a minor bump can move it). Cells
+carry a source file where one nails the behaviour; the rest were verified by reading those packages
+and are re-checkable by grepping for the prop name. None of this is contractual API.
 Do not read a green a11y board as web/native parity.
 
 | Prop | iOS | Android | Web (react-native-web) |

@@ -83,10 +83,15 @@ describe('both group rows are wired to the shared helper', () => {
     expect(src).toContain('groupMetaLine(memberCount, myGroupSessions)');
   });
 
-  it('neither row hand-rolls the session plural any more', () => {
-    // The literal that disagreed with itself across the two files.
+  it('neither row hand-rolls a session count of its own', () => {
+    // Narrow on purpose. This is a substring check over source, so it catches the literal that
+    // disagreed with itself and nothing subtler — it would not notice the same string rebuilt a
+    // different way. The behavioural guarantee lives in groupMetaLine's own tests above; this only
+    // stops the deleted duplication growing back in place.
     for (const rel of ['screens/GroupsListScreen.tsx', 'components/GroupListItem.tsx']) {
-      expect(read(rel)).not.toContain('sessions`');
+      const src = read(rel);
+      expect(src).not.toMatch(/\bsessions?\$\{/);
+      expect(src).not.toMatch(/\$\{[^}]*\}\s*sessions?\b/);
     }
   });
 });

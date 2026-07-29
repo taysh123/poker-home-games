@@ -118,11 +118,17 @@ beforeEach(() => {
  * It also makes the query order-independent — it addresses whichever row belongs to Alex rather
  * than whichever row is first. An earlier version of this comment went further and claimed the old
  * `getAllByPlaceholderText('0')[0]` would have "kept the test green while the assertions moved to
- * the wrong player". That is false, and backwards: re-sorting the rows turns the OLD positional
- * test RED (it asserts per-player amounts in `endGame`), and leaves THIS one green, because this
- * one follows the player. Order-independence is the right property for a money assertion, but it
- * buys robustness, not extra sensitivity. Recorded rather than deleted because an unverified
- * counterfactual on the money path is exactly the kind of claim this repo keeps having to retract.
+ * the wrong player". That is backwards. Re-ordering the RENDERED ROWS turns the OLD positional test
+ * RED (it entered amounts against the wrong players, and `endGame` asserts per-player cents) and
+ * leaves THIS one green, because this one follows the player.
+ *
+ * Precisely which mutation, because two reviewers reached opposite conclusions by mutating
+ * different things: re-ordering the underlying `game.players` array fails BOTH, since the
+ * `toHaveBeenCalledWith('g1', [alex, dana])` assertion below is an ORDERED array and its order
+ * comes from that array, not from the query. So the honest claim is narrow — order-independence
+ * buys robustness against a row re-sort, not extra sensitivity, and it does not survive a reorder
+ * of the data itself. Recorded rather than deleted because an unverified counterfactual on the
+ * money path is exactly the kind of claim this repo keeps having to retract.
  */
 const stackInput = (player: string) => screen.getByLabelText(`${player} final cash amount`);
 

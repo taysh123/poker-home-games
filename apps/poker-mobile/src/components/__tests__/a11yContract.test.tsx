@@ -212,7 +212,8 @@ describe('GroupListItem — the row announces everything the row shows', () => {
   it('includes the P&L chip the row renders', () => {
     // Regression, not merely an omission: with no explicit label RN derived a name from the child
     // <Text> nodes, which INCLUDED this number. Adding a label that omits it made the value
-    // unreachable, because accessibilityRole="button" collapses the row to one element.
+    // unreachable, because the row is one accessibility element (Pressable defaults `accessible`
+    // to true) — the label replaces the derived name rather than adding to it.
     const { getByLabelText } = render(
       <GroupListItem name="Poker Crew" memberCount={4} role="Owner" myGroupPL={-450} myGroupSessions={12} onPress={() => {}} />,
     );

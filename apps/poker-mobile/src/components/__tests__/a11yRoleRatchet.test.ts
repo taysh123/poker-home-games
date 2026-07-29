@@ -25,9 +25,12 @@ import * as ts from 'typescript';
  *  2. A brace-aware scan fixed that but was still raw text, so it counted JSX written inside
  *     COMMENTS. `components/ListRow.tsx` carried a ceiling of 1 that was satisfied entirely by the
  *     string `<PressableScale><Card style={row}>…` in its doc header — no such touchable exists.
- *     That single phantom made three shipped claims false at once ("48 across 18 files"; the entry's
- *     own "// the no-onPress branch renders a bare body"; and the anti-slack guarantee, since one
- *     genuine unroled touchable could be added under the phantom's allowance). It also meant a
+ *     That single phantom made two shipped claims false ("48 across 18 files"; the entry's own
+ *     "// the no-onPress branch renders a bare body") and opened a swap: a real unroled touchable
+ *     added to ListRow *alongside* the comment went RED at 2 > 1, but DELETING the doc comment and
+ *     adding a real touchable in its place stayed green at 1 — a genuine regression trading places
+ *     with prose. (An earlier version of this note claimed the simpler "one unroled touchable fitted
+ *     under the phantom's allowance". That is false; the swap is the real hole.) It also meant a
  *     prose-only edit to a doc comment turned this suite RED.
  * Both bugs are the same class — reading JSX as text — so the fix is to stop doing that. Fixture
  * tests below pin the measurement itself, because bug 2 was caught only incidentally, by ceiling
@@ -39,9 +42,11 @@ import * as ts from 'typescript';
  *    NAME is truthful — "Add Dan" on a chip that only fills a field passed every automated check in
  *    this repo and needed a human-directed critic. Names are pinned per-component in
  *    a11yContract.test.tsx instead.
- *  - Components that supply a role internally (PrimaryButton, ListRow, Segmented, ProgressBar) are
- *    not raw touchables, so a screen built from them reads as clean — correctly. Their own internal
- *    touchable IS counted here, and is roled.
+ *  - Components that supply a role internally (PrimaryButton, ListRow, Segmented) are not raw
+ *    touchables, so a screen built from them reads as clean — correctly. Each one's own internal
+ *    touchable IS counted here, and is roled. ProgressBar is a different case and was previously
+ *    listed here in error: it contains no touchable at all, so nothing of it is counted — its
+ *    `accessibilityRole="progressbar"` sits on a plain View.
  *  - This counts JSX call sites, not rendered rows. A touchable inside a `.map()` counts once. That
  *    is deliberate: rendered counts are not statically derivable and would swing with runtime data.
  */
@@ -57,17 +62,51 @@ const TOUCHABLES = new Set([
 ]);
 
 /**
+ * Aliases of a touchable primitive that FORWARD their props (and therefore any role) to it, so the
+ * role belongs at the alias's call sites rather than inside the wrapper. Each must be justified.
+ *
+ * `AnimatedPressable` is `Animated.createAnimatedComponent(Pressable)` in `motion/PressableScale`,
+ * which spreads `{...rest}` onto it — the role arrives from whoever renders `PressableScale`, and
+ * `PressableScale` itself is measured at every one of its call sites.
+ */
+const ROLE_FORWARDING_ALIASES = new Set(['AnimatedPressable']);
+
+function parse(src: string, fileName: string): ts.SourceFile {
+  const sf = ts.createSourceFile(fileName, src, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  // A file the parser chokes on would otherwise measure 0 and read as clean — a false green in the
+  // one place this ratchet cannot afford one.
+  const errors = (sf as unknown as { parseDiagnostics?: ts.Diagnostic[] }).parseDiagnostics ?? [];
+  if (errors.length) {
+    throw new Error(`${fileName}: ${errors.length} parse error(s); the ratchet cannot measure it`);
+  }
+  return sf;
+}
+
+/**
+ * The rightmost identifier of a JSX tag name: `Pressable` for both `<Pressable>` and
+ * `<Animated.Pressable>`.
+ *
+ * A member-expression tag returns "Animated.Pressable" from `getText()`, which matches no entry in
+ * TOUCHABLES — so without this it would be silently uncounted. Reanimated is used heavily here, and
+ * `Animated.createAnimatedComponent` already appears in the tree, so this is a live shape.
+ */
+function tagLeafName(node: ts.JsxOpeningElement | ts.JsxSelfClosingElement, sf: ts.SourceFile): string {
+  const tag = node.tagName;
+  return ts.isPropertyAccessExpression(tag) ? tag.name.getText(sf) : tag.getText(sf);
+}
+
+/**
  * Count touchables with no `accessibilityRole`, by parsing.
  *
  * A spread (`{...props}`) could carry a role we cannot see, so it is NOT credited — the conservative
  * direction for a11y, and there are zero such call sites today.
  */
 export function countUnroled(src: string, fileName = 'file.tsx'): number {
-  const sf = ts.createSourceFile(fileName, src, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const sf = parse(src, fileName);
   let n = 0;
   const visit = (node: ts.Node): void => {
     if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
-      if (TOUCHABLES.has(node.tagName.getText(sf))) {
+      if (TOUCHABLES.has(tagLeafName(node, sf))) {
         const roled = node.attributes.properties.some(
           p => ts.isJsxAttribute(p) && p.name.getText(sf) === 'accessibilityRole',
         );
@@ -80,19 +119,38 @@ export function countUnroled(src: string, fileName = 'file.tsx'): number {
   return n;
 }
 
-/** Every JSX tag in a file whose name looks like a touchable primitive. */
-function touchableNamedTags(src: string, fileName = 'file.tsx'): string[] {
-  const sf = ts.createSourceFile(fileName, src, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-  const found: string[] = [];
+/**
+ * Names that denote a touchable primitive in this file and are NOT already measured: tags whose leaf
+ * name looks like one, plus any local alias built by `Animated.createAnimatedComponent(<touchable>)`.
+ *
+ * The second half exists because the first is not sufficient. `AnimatedPressable` neither starts
+ * with `Pressable`/`Touchable` nor appears in TOUCHABLES, so a name-shape check alone declared "we
+ * know about every touchable primitive the app uses" while that exact construct sat in
+ * `motion/PressableScale.tsx`. The guarantee is now: no touchable primitive enters the codebase
+ * without being either measured or explicitly acknowledged as role-forwarding.
+ */
+export function unacknowledgedTouchableNames(src: string, fileName = 'file.tsx'): string[] {
+  const sf = parse(src, fileName);
+  const found = new Set<string>();
   const visit = (node: ts.Node): void => {
     if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
-      const tag = node.tagName.getText(sf);
-      if (/^(Pressable|Touchable)/.test(tag)) found.push(tag);
+      const tag = tagLeafName(node, sf);
+      if (/^(Pressable|Touchable)/.test(tag)) found.add(tag);
+    }
+    // const X = Animated.createAnimatedComponent(Pressable)
+    if (
+      ts.isCallExpression(node)
+      && node.expression.getText(sf).endsWith('createAnimatedComponent')
+      && node.arguments.length === 1
+      && TOUCHABLES.has(node.arguments[0].getText(sf))
+    ) {
+      let decl: ts.Node = node.parent;
+      if (ts.isVariableDeclaration(decl) && decl.name) found.add(decl.name.getText(sf));
     }
     ts.forEachChild(node, visit);
   };
   visit(sf);
-  return found;
+  return [...found].filter(n => !TOUCHABLES.has(n) && !ROLE_FORWARDING_ALIASES.has(n));
 }
 
 /**
@@ -166,12 +224,14 @@ describe('accessibility role ratchet', () => {
     expect(slack).toEqual([]);
   });
 
-  it('knows about every touchable primitive the app actually uses', () => {
-    // Without this, adding `TouchableNativeFeedback` (or any new primitive) to a screen would be
-    // invisible to the ratchet: unmeasured, uncapped, and reported as clean.
+  it('every touchable primitive in the tree is measured or explicitly acknowledged', () => {
+    // Without this, adding `TouchableNativeFeedback` — or aliasing one through
+    // `createAnimatedComponent` — would be invisible to the ratchet: unmeasured, uncapped, reported
+    // as clean. Scoped honestly: it catches touchable-SHAPED tag names and animated aliases of a
+    // known touchable. An arbitrarily-named wrapper (`const Tappable = Pressable`) still escapes.
     const unknown = new Set<string>();
     for (const { rel, src } of sources()) {
-      for (const tag of touchableNamedTags(src, rel)) if (!TOUCHABLES.has(tag)) unknown.add(tag);
+      for (const name of unacknowledgedTouchableNames(src, rel)) unknown.add(name);
     }
     expect([...unknown]).toEqual([]);
   });
@@ -181,11 +241,13 @@ describe('accessibility role ratchet', () => {
  * The measurement, pinned independently of the ceiling numbers. Without these, a broken measurement
  * shows up only as ceilings mysteriously moving — which is how the comment bug reached `main`.
  *
- * Measured, not assumed: replaying these fixtures against the previous brace-aware text scan turns
- * exactly ONE of them red — the comment case, which is the bug that was live. The other eight are
- * regression documentation: the old scan happened to get them right too, so they discriminate
- * against a future naive rewrite, not against the version this replaced. Stated plainly because the
- * useful claim is "the shipped bug is pinned", not "nine tests now guard the parser".
+ * Measured, not assumed: replaying the eight text-scan fixtures below against the previous
+ * brace-aware scan turns exactly ONE red — the comment case, which is the bug that was live. The
+ * other seven are regression documentation: the old scan happened to get them right too, so they
+ * discriminate against a future naive rewrite, not against the version this replaced. Stated
+ * plainly because the useful claim is "the shipped bug is pinned", not "eight tests now guard the
+ * parser". The member-expression and alias cases are separate: they pin a hole the AST rewrite
+ * INTRODUCED, which is a different thing again.
  */
 describe('countUnroled — the measurement itself', () => {
   it('does not count JSX written inside comments', () => {
@@ -244,5 +306,44 @@ describe('countUnroled — the measurement itself', () => {
 
   it('does not credit a spread that might or might not carry a role', () => {
     expect(countUnroled('const A = () => <Pressable {...rest} onPress={f} />;')).toBe(1);
+  });
+
+  it('counts a member-expression tag, which the AST rewrite would otherwise miss', () => {
+    // `tagName.getText()` returns "Animated.Pressable", matching no entry in TOUCHABLES. This hole
+    // was introduced BY the parser rewrite — the text scan matched `<Pressable` inside it — so it
+    // is pinned separately from the fixtures above.
+    expect(countUnroled('const A = () => <Animated.Pressable onPress={f} />;')).toBe(1);
+    expect(countUnroled('const A = () => <Animated.Pressable onPress={f} accessibilityRole="button" />;')).toBe(0);
+  });
+
+  it('refuses to measure a file it cannot parse instead of reporting it clean', () => {
+    expect(() => countUnroled('const A = () => <Pressable onPress={', 'broken.tsx')).toThrow(/parse error/);
+  });
+});
+
+describe('unacknowledgedTouchableNames — no primitive enters unmeasured', () => {
+  it('flags a touchable-shaped tag that is not in the measured set', () => {
+    expect(unacknowledgedTouchableNames('const A = () => <TouchableNativeFeedback onPress={f} />;'))
+      .toEqual(['TouchableNativeFeedback']);
+  });
+
+  it('flags an animated alias of a touchable that nobody acknowledged', () => {
+    // The shape that was live in motion/PressableScale.tsx while the old check called itself
+    // complete: the alias name looks nothing like a touchable.
+    expect(unacknowledgedTouchableNames(`
+      const Tappable = Animated.createAnimatedComponent(TouchableOpacity);
+      const A = () => <Tappable onPress={f} />;
+    `)).toEqual(['Tappable']);
+  });
+
+  it('accepts an alias that is explicitly acknowledged as role-forwarding', () => {
+    expect(unacknowledgedTouchableNames(`
+      const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+      const A = () => <AnimatedPressable onPress={f} />;
+    `)).toEqual([]);
+  });
+
+  it('says nothing about a file with no touchables', () => {
+    expect(unacknowledgedTouchableNames('const A = () => <View><Text>x</Text></View>;')).toEqual([]);
   });
 });

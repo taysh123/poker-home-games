@@ -1,6 +1,8 @@
 import { readFileSync } from 'fs';
 import { join, resolve } from 'path';
 
+import * as ts from 'typescript';
+
 /**
  * The Final Count exists TWICE — `LocalSessionScreen` (guest games) and `SessionScreen` (server
  * sessions) — and CLAUDE.md requires the two to stay in sync until the extraction slice merges
@@ -10,40 +12,81 @@ import { join, resolve } from 'path';
  * revert-tested by LocalSessionScreen.finalcount.test.tsx, but `SessionScreen`'s identical label
  * could be deleted with the entire suite green — so the money screen used by every signed-in user
  * had none of the protection the local flow had. A stated invariant with no test is how the last
- * five false claims shipped.
+ * six false claims shipped.
  *
- * SCOPE, stated so a green run is not over-read: this is a SOURCE-LEVEL pin. It proves each screen
- * emits a per-player accessible name on its Final Count amount field; it does not render either
- * screen, so it cannot prove the label reaches the tree or reads correctly. `SessionScreen` is ~3.1k
- * lines and mounting it is the extraction slice's job. This is the cheap half that makes deletion
- * loud, not a substitute for the render test.
+ * PARSED, NOT GREPPED. The first version of this file used `toContain` over the raw source, which
+ * passes just as happily when the attribute is COMMENTED OUT — the identical defect this slice had
+ * just finished removing from the role ratchet, reintroduced one file over. It now reads real
+ * `accessibilityLabel` JSX attributes off the TypeScript AST, so prose cannot satisfy it.
+ *
+ * SCOPE, stated so a green run is not over-read: this is still a SOURCE-LEVEL pin. It proves each
+ * screen *declares* a per-player accessible name on a Final Count amount field; it does not render
+ * either screen, so it cannot prove the label reaches the tree, that the field is the one the user
+ * types into, or that it reads correctly. `SessionScreen` is ~3.1k lines and mounting it belongs to
+ * the extraction slice. This is the cheap half that makes deletion loud.
  *
  * The two wordings are deliberately NOT identical: local games are cash-only here, while
- * `SessionScreen` derives the unit because `useChips` is a real toggle. Both are pinned to the
- * literal shape rather than to each other.
+ * `SessionScreen` derives the unit because `useChips` is a real toggle.
  */
 const SCREENS = resolve(__dirname, '..');
 
-function source(file: string): string {
-  return readFileSync(join(SCREENS, file), 'utf8');
+/** The source text of every `accessibilityLabel={...}` attribute actually present in the JSX. */
+function accessibilityLabels(file: string): string[] {
+  const path = join(SCREENS, file);
+  const src = readFileSync(path, 'utf8');
+  const sf = ts.createSourceFile(path, src, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const errors = (sf as unknown as { parseDiagnostics?: ts.Diagnostic[] }).parseDiagnostics ?? [];
+  if (errors.length) throw new Error(`${file}: ${errors.length} parse error(s)`);
+
+  const out: string[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isJsxAttribute(node) && node.name.getText(sf) === 'accessibilityLabel' && node.initializer) {
+      out.push(node.initializer.getText(sf));
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sf);
+  return out;
 }
 
 describe('The Final Count — the per-player accessible name, pinned on BOTH flows', () => {
   it('LocalSessionScreen names each amount field after its player', () => {
-    expect(source('LocalSessionScreen.tsx')).toContain('accessibilityLabel={`${p.name} final cash amount`}');
+    expect(accessibilityLabels('LocalSessionScreen.tsx').some(t => t.includes('${p.name} final cash amount')))
+      .toBe(true);
   });
 
   it('SessionScreen names each amount field after its player, with the unit derived', () => {
-    expect(source('SessionScreen.tsx')).toContain(
-      "accessibilityLabel={`${p.username} final ${session.chipRatio && useChips ? 'chip count' : 'cash amount'}`}",
-    );
+    expect(accessibilityLabels('SessionScreen.tsx').some(
+      t => t.includes('${p.username} final ') && t.includes('chip count') && t.includes('cash amount'),
+    )).toBe(true);
   });
 
-  it('neither flow hard-codes a row index or position into that name', () => {
-    // Guards the defect the local render test removed: a name that follows row ORDER rather than
-    // the player is worse than no name at all on a screen where a mis-keyed row costs real money.
+  it('a commented-out label does not satisfy either pin', () => {
+    // The regression guard for this file's own first version. Kept as a fixture rather than a
+    // promise, because "we parse now" is exactly the kind of claim that needs a test.
+    const commented = ts.createSourceFile(
+      'f.tsx',
+      'const A = () => (\n  // accessibilityLabel={`${p.name} final cash amount`}\n  <View />\n);',
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.TSX,
+    );
+    const found: string[] = [];
+    const visit = (n: ts.Node): void => {
+      if (ts.isJsxAttribute(n) && n.name.getText(commented) === 'accessibilityLabel') found.push('x');
+      ts.forEachChild(n, visit);
+    };
+    visit(commented);
+    expect(found).toEqual([]);
+  });
+
+  it('neither flow keys that name off a row index or position', () => {
+    // A name that follows row ORDER rather than the player is worse than no name at all on a screen
+    // where a mis-keyed row costs real money.
     for (const file of ['LocalSessionScreen.tsx', 'SessionScreen.tsx']) {
-      expect(source(file)).not.toMatch(/accessibilityLabel=\{`(Player|Row) \$\{(i|index|idx)\b/);
+      for (const label of accessibilityLabels(file)) {
+        expect(label).not.toMatch(/`(Player|Row) \$\{(i|index|idx)\b/);
+      }
     }
   });
 });

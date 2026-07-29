@@ -39,8 +39,9 @@ export default function SessionListItem({ name, meta, profitLoss, status, onPres
       style={[styles.row, !isFirst && styles.border]}
       onPress={onPress}
       accessibilityRole="button"
-      // Composed from everything the row shows, because accessibilityRole collapses the row to ONE
-      // accessibility element. Without a label RN still derived a name from the child <Text> nodes,
+      // Composed from everything the row shows, because the row is a single accessibility element
+      // (Pressable defaults `accessible` to true), so an omitted value is unreachable rather than
+      // merely late. Without a label RN still derived a name from the child <Text> nodes,
       // so this is not "unlabelled → labelled" — it is an incidental announcement, in an order
       // nobody chose, replaced by a deliberate one. Every term below mirrors a rendered element;
       // a11yContract.test.tsx pins the composed string, because the role ratchet cannot see names.
