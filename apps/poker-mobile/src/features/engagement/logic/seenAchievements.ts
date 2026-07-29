@@ -10,7 +10,18 @@
  */
 export const SEEN_ACHIEVEMENTS_PREFIX = 'tpoker.seenAch.';
 
-/** `undefined`/`null`/empty all collapse to the shared signed-out bucket. */
+/**
+ * `undefined`/`null`/empty all collapse to the shared signed-out bucket.
+ *
+ * DELIBERATE BEHAVIOUR CHANGE, stated rather than slipped in: the previous inline literal used
+ * `?? 'anon'`, so an EMPTY-STRING user id produced `tpoker.seenAch.` — a bare prefix with a
+ * trailing dot, shared by every such user. `||` collapses it to the `anon` bucket instead.
+ *
+ * Migration impact is nil in practice: `userId` is a server-issued GUID and is never `''`, so no
+ * existing key changes. For every reachable input — a real id, `undefined`, `null` — output is
+ * byte-identical to the old expression, which is what matters: a changed key makes a stored
+ * baseline unreadable and replays a user's entire badge history at them.
+ */
 export function seenAchievementsKey(userId: string | null | undefined): string {
   return `${SEEN_ACHIEVEMENTS_PREFIX}${userId || 'anon'}`;
 }
