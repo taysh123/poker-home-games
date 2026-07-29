@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { AccessibilityInfo, Platform } from 'react-native';
 
 /**
@@ -19,11 +19,13 @@ import { AccessibilityInfo, Platform } from 'react-native';
  * "re-announces after clearing" test below pins the HOOK's behaviour, not any call site's.
  */
 export function useAnnouncedError(error: string | null | undefined): void {
-  const announced = useRef<string | null | undefined>(undefined);
   useEffect(() => {
-    if (Platform.OS === 'ios' && error && error !== announced.current) {
+    // No ref comparison: the effect only re-runs when `error` changes identity, so a "have I
+    // already said this?" check is dead by construction. A mutation run deleted the ref entirely
+    // and every test stayed green — the test named "does not repeat an unchanged error" was
+    // asserting React's dependency array, not this code.
+    if (Platform.OS === 'ios' && error) {
       AccessibilityInfo.announceForAccessibility?.(error);
     }
-    announced.current = error;
   }, [error]);
 }

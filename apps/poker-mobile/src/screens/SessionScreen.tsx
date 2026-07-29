@@ -1843,10 +1843,17 @@ export default function SessionScreen({ route, navigation }: Props) {
                         keyboardType="decimal-pad"
                         placeholder={session.chipRatio && useChips ? 'chips' : sym}
                         placeholderTextColor={colors.textDim}
-                        // Mirrors LocalSessionScreen's Final Count row. CLAUDE.md requires the two
-                        // flows to stay in sync; without this every row here announced identically
-                        // with no player identity, on the screen where a mis-keyed row costs money.
-                        accessibilityLabel={`${p.username} final chip count`}
+                        // Mirrors LocalSessionScreen's Final Count row (CLAUDE.md requires the two
+                        // flows to stay in sync). Every row previously announced identically with
+                        // no player identity, on the screen where a mis-keyed row costs money.
+                        // The UNIT is derived, not hand-written: `useChips` defaults to false and
+                        // the toggle is not rendered without a chipRatio, so "chip count" was wrong
+                        // in the common case and contradicted the visible subtitle two lines up.
+                        accessibilityLabel={`${p.username} final ${session.chipRatio && useChips ? 'chip count' : 'cash amount'}`}
+                        // "Busted · 0" renders as a sibling Text, which a screen reader never
+                        // reaches — yet it is the whole signal that leaving this blank settles the
+                        // player at zero.
+                        accessibilityHint={isEmpty ? 'Leave empty to settle this player at zero' : undefined}
                       />
                     )}
                   </View>

@@ -138,10 +138,19 @@ describe('GuestNameInput — the shared hole in two half-labelled wizards', () =
     expect(getByLabelText('Add guest').props.accessibilityState).toMatchObject({ disabled: true });
   });
 
-  it('names each suggestion chip with what it will do', () => {
+  it('names each suggestion chip with what it ACTUALLY does', () => {
+    // Not "Add Dan". The chip only fills the field — the user must still press Add. The earlier
+    // label promised an action the tap does not perform, and this test pinned the wrong string.
     const { getByLabelText } = render(<GuestNameInput {...props} suggestions={['Dan', 'Ron']} />);
-    expect(getByLabelText('Add Dan').props.accessibilityRole).toBe('button');
-    expect(getByLabelText('Add Ron')).toBeTruthy();
+    expect(getByLabelText('Use Dan').props.accessibilityRole).toBe('button');
+    expect(getByLabelText('Use Ron')).toBeTruthy();
+  });
+
+  it('takes its field name from the caller vocabulary, not a hardcoded "Guest"', () => {
+    const { getByLabelText } = render(
+      <GuestNameInput {...props} placeholder="Player name..." />,
+    );
+    expect(getByLabelText('Player name')).toBeTruthy();
   });
 });
 
