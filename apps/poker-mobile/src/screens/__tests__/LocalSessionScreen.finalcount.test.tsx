@@ -110,11 +110,19 @@ beforeEach(() => {
 /**
  * Queried BY ACCESSIBLE NAME, not by placeholder-and-index.
  *
- * Two wins in one move on the money-critical path. It pins the per-player accessible name — every
- * Final Count row used to announce identically with no player identity, so a screen-reader user
- * could not tell whose stack they were entering. And it removes the positional coupling: the old
- * `getAllByPlaceholderText('0')[0]` silently followed row ORDER, so a re-sort would have kept the
- * test green while the assertions moved to the wrong player.
+ * The win is that it pins the per-player accessible name on the money-critical path: revert-tested,
+ * deleting `accessibilityLabel` from the Final Count row in LocalSessionScreen fails all three
+ * tests here. Without it every row announced identically, so a screen-reader user could not tell
+ * whose stack they were entering.
+ *
+ * It also makes the query order-independent — it addresses whichever row belongs to Alex rather
+ * than whichever row is first. An earlier version of this comment went further and claimed the old
+ * `getAllByPlaceholderText('0')[0]` would have "kept the test green while the assertions moved to
+ * the wrong player". That is false, and backwards: re-sorting the rows turns the OLD positional
+ * test RED (it asserts per-player amounts in `endGame`), and leaves THIS one green, because this
+ * one follows the player. Order-independence is the right property for a money assertion, but it
+ * buys robustness, not extra sensitivity. Recorded rather than deleted because an unverified
+ * counterfactual on the money path is exactly the kind of claim this repo keeps having to retract.
  */
 const stackInput = (player: string) => screen.getByLabelText(`${player} final cash amount`);
 
@@ -124,8 +132,11 @@ describe('LocalSessionScreen — The Final Count gate (money-critical)', () => {
     fireEvent.press(screen.getByText('End Game'));
     expect(screen.getByText('The Final Count')).toBeTruthy();
 
-    // No stacks entered → unbalanced (local requires an exact count): the button is disabled
-    // (affordance) AND settling is a defensive no-op.
+    // No stacks entered → unbalanced (local requires an exact count), so the button is disabled.
+    // What this pins is the AFFORDANCE only: `fireEvent.press` on a disabled button never reaches
+    // the handler, so the guard inside `confirmEndGame` can be deleted with all three tests still
+    // green. It is defence in depth, not a tested guarantee — said plainly, because the previous
+    // wording asserted both halves and only one is true.
     expect(settleBtn().props.accessibilityState?.disabled).toBe(true);
     fireEvent.press(settleBtn());
     expect(mockEndGame).not.toHaveBeenCalled();

@@ -493,30 +493,49 @@ try {
 }
 ```
 
-### Accessibility — known platform gaps (verified against the installed sources, 2026-07-29)
+### Accessibility — known platform gaps
 
-Two props do **not** behave uniformly. Do not read a green a11y board as web/native parity.
+Verified 2026-07-29 against the **installed** sources — react-native **0.81.5**, react-native-web
+**0.21.2** — with the file each claim came from, so it can be re-checked by grep instead of memory.
+Versions matter: these are caret ranges and the web behaviour below is not contractual.
+Do not read a green a11y board as web/native parity.
 
 | Prop | iOS | Android | Web (react-native-web) |
 |---|---|---|---|
-| `accessibilityLiveRegion` | **no implementation at all** | works | works (`aria-live`) |
-| `accessibilityRole="alert"` | maps to `UIAccessibilityTraitNone` | roleDescription | `role="alert"` |
-| `accessibilityState` (`selected`/`checked`/`busy`) | works | works | **dropped entirely** — `createDOMProps` never reads it |
-| `accessibilityState.disabled` | works | works | works (`aria-disabled`) |
+| `accessibilityLiveRegion` | **no implementation at all** | works (`BaseViewManager.java`) | works (`aria-live`) |
+| `accessibilityRole="alert"` | `UIAccessibilityTraitNone` (`RCTViewManager.m`) | roleDescription | `role="alert"` |
+| `accessibilityState` (`selected`/`checked`/`busy`/**`disabled`**) | works | works | **dropped entirely** |
+
+`accessibilityState` is absent from RNW's `modules/forwardedProps` allow-list, so **no** key of it
+reaches the DOM — `disabled` included. Web gets `aria-disabled` from the **flat `disabled` prop**:
+`Pressable` sets `"aria-disabled": disabled` and `TouchableOpacity` sets `accessibilityDisabled:
+disabled`, which `createDOMProps` reads at `var disabled = ariaDisabled || accessibilityDisabled`.
+
+> An earlier version of this table claimed `accessibilityState.disabled` "works (`aria-disabled`)"
+> on web. It does not, and it contradicted the row directly above it. Left recorded because the
+> header said "verified against the installed sources" while that one cell was not.
 
 Consequences that have already bitten:
 - **Form errors need BOTH** the live-region props *and* `hooks/useAnnouncedError` (iOS-only
   `announceForAccessibility`). Neither half covers all three platforms; shipping only the props
   left auth failures silent on iOS behind a comment claiming they were announced.
 - **Selection state is invisible on `app.tpoker.app`.** Every `selected`/`checked`/`busy` is
-  dropped on web. A web-safe fix would mean passing flat `aria-checked` / `aria-selected`
-  alongside `accessibilityState` at each call site (RNW reads those) — cheap per site, but it is
-  a second parallel convention, so it needs a deliberate decision rather than drift.
-- `TouchableOpacity` **overwrites** `accessibilityState.disabled` from its `disabled` prop, so the
-  explicit prop is documentation, not the mechanism.
+  dropped on web. The web-safe fix is a flat `aria-checked` / `aria-selected` alongside
+  `accessibilityState` (RNW reads those). **That convention is already adopted — and unfinished:**
+  it ships at five call sites today (`NewGameScreen` ×3, `LocalNewGameScreen` ×2) and nowhere else.
+  So the open question is finishing the sweep, not whether to start it. Until it is finished, a
+  half-applied convention is the failure mode, and any NEW `accessibilityState` with
+  `checked`/`selected` should carry its flat `aria-*` twin.
+- **Disabled state needs the flat `disabled` prop** to be announced on web; an `accessibilityState`
+  saying so is inert there. On native, `TouchableOpacity` **overwrites** `accessibilityState.disabled`
+  from `disabled` anyway — so on both, `disabled` is the mechanism and the explicit state is
+  documentation.
 
 Ratchets: `components/__tests__/a11yRoleRatchet.test.ts` (per-file ceiling of unroled touchables,
-counts may only go down) and `components/__tests__/a11yContract.test.tsx` (shared-component names).
+AST-measured, with fixture tests pinning the measurement itself) and
+`components/__tests__/a11yContract.test.tsx` (shared-component accessible NAMES, composed-string
+pins). The ceiling pair stops debt growing and stops a ceiling banking headroom; it is **not** a
+mechanism forcing counts down — raising a number is green, so review, not CI, refuses it.
 Neither can judge whether a role is *correct* or a name is *truthful* — `"Add Dan"` on a chip that
 only fills a field passed every automated check and needed a human-directed critic.
 

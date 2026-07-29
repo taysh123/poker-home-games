@@ -20,6 +20,12 @@ type Props = {
 export default function SessionListItem({ name, meta, profitLoss, status, onPress, isFirst, showResultBadge }: Props) {
   const isActive = status === 'Active';
   const pl = profitLoss ?? null;
+  // Derived ONCE and consumed by both the Chip and the accessible name, so the two cannot say
+  // different things. They already did: a break-even row showed "EVEN" and announced only
+  // formatPL(0) — "+₪0" — reporting a gain on a session the user broke even on.
+  const result = showResultBadge && !isActive && pl != null
+    ? (pl > 0 ? 'WIN' : pl < 0 ? 'LOSS' : 'EVEN')
+    : null;
   const plColor = pl == null
     ? colors.textMuted
     : pl > 0
@@ -33,12 +39,16 @@ export default function SessionListItem({ name, meta, profitLoss, status, onPres
       style={[styles.row, !isFirst && styles.border]}
       onPress={onPress}
       accessibilityRole="button"
-      // Composed from everything the row shows, because a screen reader reaches the row as ONE
-      // node and would otherwise announce an unlabelled button. This component renders in six
-      // screens, many rows each — the highest coverage-per-line fix in the app.
+      // Composed from everything the row shows, because accessibilityRole collapses the row to ONE
+      // accessibility element. Without a label RN still derived a name from the child <Text> nodes,
+      // so this is not "unlabelled → labelled" — it is an incidental announcement, in an order
+      // nobody chose, replaced by a deliberate one. Every term below mirrors a rendered element;
+      // a11yContract.test.tsx pins the composed string, because the role ratchet cannot see names.
+      // This component renders in six screens, many rows each.
       accessibilityLabel={[
         name,
         isActive ? 'live' : null,
+        result?.toLowerCase() ?? null,
         meta,
         pl != null ? formatPL(pl) : null,
       ].filter(Boolean).join(', ')}
@@ -48,8 +58,8 @@ export default function SessionListItem({ name, meta, profitLoss, status, onPres
         <View style={styles.top}>
           <Text style={styles.name} numberOfLines={1}>{name}</Text>
           {isActive && <Chip label="LIVE" tone="gold" dot />}
-          {showResultBadge && !isActive && pl != null && (
-            <Chip label={pl > 0 ? 'WIN' : pl < 0 ? 'LOSS' : 'EVEN'} tone={pl > 0 ? 'success' : pl < 0 ? 'error' : 'neutral'} />
+          {result && (
+            <Chip label={result} tone={pl! > 0 ? 'success' : pl! < 0 ? 'error' : 'neutral'} />
           )}
         </View>
         <Text style={styles.meta} numberOfLines={1}>{meta}</Text>
