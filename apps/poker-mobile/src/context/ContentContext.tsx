@@ -43,7 +43,6 @@ export function useContent(): ContentContextValue {
   const v = useContext(Ctx);
   if (v === null) {
     if (__DEV__) {
-      // eslint-disable-next-line no-console
       console.warn('useContent() used outside <ContentProvider> — returning disabled default.');
     }
     return DISABLED;

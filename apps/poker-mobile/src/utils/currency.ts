@@ -59,7 +59,7 @@ export function formatIntlMajor(value: number, code: CurrencyCode, maxFractionDi
 /** First-launch default: the device locale's currency if supported, else USD. Lazy-loads expo-localization. */
 export function detectDefaultCurrency(): CurrencyCode {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const Localization = require('expo-localization');
     const locales = Localization.getLocales?.() ?? [];
     const cc = locales[0]?.currencyCode;

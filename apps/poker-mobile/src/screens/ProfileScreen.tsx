@@ -61,7 +61,6 @@ export default function ProfileScreen({ navigation }: Props) {
   // Premium-teaser impression — once per screen visit (paywall OFF ⇒ the teaser row renders).
   React.useEffect(() => {
     if (!isFeatureEnabled('paywall')) track('nudge_impression', { trigger: 'profile_teaser', paywallOn: false });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Profile edit state

@@ -25,6 +25,5 @@ const mdStyles = {
 };
 
 export default function Markdown({ children }: { children: string }) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return <RNMarkdown style={mdStyles as any}>{children}</RNMarkdown>;
 }

@@ -77,6 +77,10 @@ const ShareCard = forwardRef<View, { data: ShareCardData }>(({ data }, ref) => {
   );
 });
 
+// forwardRef components are anonymous otherwise — DevTools and error boundaries would show
+// "ForwardRef" instead of the component name.
+ShareCard.displayName = 'ShareCard';
+
 export default ShareCard;
 
 const styles = StyleSheet.create({

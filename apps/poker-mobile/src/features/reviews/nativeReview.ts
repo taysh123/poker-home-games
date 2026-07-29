@@ -15,7 +15,7 @@ const isNative = Platform.OS === 'ios' || Platform.OS === 'android';
 function getStoreReview(): typeof import('expo-store-review') | null {
   if (!isNative) return null;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     return require('expo-store-review');
   } catch {
     return null;
