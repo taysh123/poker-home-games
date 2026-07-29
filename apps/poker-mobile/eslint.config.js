@@ -21,11 +21,19 @@ module.exports = defineConfig([
       // Playwright screenshot harness — run ad-hoc, not part of the app bundle, and it imports
       // `playwright`, which is deliberately not a dependency of the app.
       'store-assets/*',
+      // Deliberately-invalid fixture that `src/config/__tests__/eslintRules.test.ts` lints with
+      // --no-ignore to prove the linter REPORTS a rules-of-hooks violation. Excluded here so it
+      // does not fail the very gate it verifies.
+      'src/config/__fixtures__/*',
     ],
   },
   {
     rules: {
-      // ── The reason this config exists. Explicit, never inherited. ──
+      // ── The reason this config exists. ──
+      // Honest note: eslint-config-expo ALREADY sets this to error, so this line is a no-op
+      // today — it is documentation plus insurance against a preset change, not the thing
+      // providing the guarantee. What actually holds the guarantee is
+      // src/config/__tests__/eslintRules.test.ts, which lints a real violating fixture.
       'react-hooks/rules-of-hooks': 'error',
 
       // Stale closures are a bug class this repo HAS shipped, so this is a real ratchet target —
