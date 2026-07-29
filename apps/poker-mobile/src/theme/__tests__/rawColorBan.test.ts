@@ -17,10 +17,20 @@ import { join, relative, resolve } from 'path';
  * claimed to be a "raw-colour ratchet", silently ignoring 65 rgba literals — the exact failure its
  * own doc block warned against ("a ban that silently misses a whole shape is worse than no ban").
  *
+ * Only `theme/colors.ts` — the palette itself — is exempt. An earlier draft skipped ALL of
+ * `theme/`, which meant `rankRarity.ts` (the file whose entire purpose is "no literals") sat inside
+ * the one directory the ban could not see, and any NEW theme file could hardcode freely. A
+ * mutation run proved both.
+ *
+ * Comments are stripped before counting, so the ban measures SHIPPED COLOUR rather than prose.
+ * Without that, a file explaining which literals it replaced gets flagged for the explanation.
+ *
  * Known and DISCLAIMED gaps, so a green board is not read as more than it is:
  *  - Alpha-suffix concatenation (`colors.gold + '14'`, ~31 sites) builds a colour this cannot see.
  *  - 4-digit CSS shorthand (`#fff8`) is not matched.
- *  - The walk is rooted at `src/`, so `App.tsx` and `scripts/` are out of scope.
+ *  - Comment stripping is regex-based, so a `//` inside a string literal can over-strip.
+ *  - `scripts/` is out of scope; `App.tsx` IS covered (matching eslintRules.test.ts, which asserts
+ *    the project root is linted rather than just `src/`).
  *
  * Entries are legitimate untokenised colour: the poker-table position palette, the avatar palette,
  * playing-card faces, `#000` shadows, glass/sheen overlays, and the HTML export stylesheet.
@@ -35,6 +45,7 @@ const RAW_COLOR = /#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?(?:[0-9a-fA-F]{2})?\b|rgba?
  * without saying why in review. A file absent from this map may contain none.
  */
 const CEILING: Record<string, number> = {
+  'theme/shadows.ts': 4,                    // #000 shadow colour — the only literal a shadow can take
   'screens/SessionScreen.tsx': 34,          // #000 shadow + rgba overlays (3.1k monolith — Q3.6)
   'utils/exportUtils.ts': 20,               // HTML/email export stylesheet (9 are token byte-copies — see below)
   'utils/pokerTable.ts': 20,                // position palette + casino chip tiers (domain colours)
@@ -68,13 +79,28 @@ function walk(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-/** Raw-colour count per src-relative file, excluding theme/ (the tokens themselves). */
+/** Approximate comment strip, so the ban measures shipped colour and not prose about colour. */
+function stripComments(src: string): string {
+  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+}
+
+/** The palette itself. Everything else — including the rest of theme/ — is measured. */
+const PALETTE = 'theme/colors.ts';
+
+/** Raw-colour count per file, keyed src-relative (App.tsx keyed as 'App.tsx'). */
 function counts(): Map<string, number> {
   const found = new Map<string, number>();
-  for (const file of walk(SRC)) {
-    const rel = relative(SRC, file).replace(/\\/g, '/');
-    if (rel.startsWith('theme/')) continue;
-    const matches = readFileSync(file, 'utf8').match(RAW_COLOR);
+  const files = [...walk(SRC), join(SRC, '..', 'App.tsx')];
+  for (const file of files) {
+    const rel = relative(SRC, file).replace(/\\/g, '/').replace(/^\.\.\//, '');
+    if (rel === PALETTE) continue;
+    let src: string;
+    try {
+      src = readFileSync(file, 'utf8');
+    } catch {
+      continue; // App.tsx guaranteed to exist, but never fail the suite on a read
+    }
+    const matches = stripComments(src).match(RAW_COLOR);
     if (matches) found.set(rel, matches.length);
   }
   return found;

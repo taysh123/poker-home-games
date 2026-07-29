@@ -31,21 +31,54 @@ function testDirs(dir: string, out: string[] = []): string[] {
   return out;
 }
 
+/** Every file that LOOKS like a test, by any common convention — not just `*.test.ts`. */
+function testFiles(dir: string, out: string[] = []): string[] {
+  for (const name of readdirSync(dir)) {
+    if (name === 'node_modules') continue;
+    const full = join(dir, name);
+    if (statSync(full).isDirectory()) testFiles(full, out);
+    else if (/\.(test|spec)\.(ts|tsx|js|jsx)$/.test(name) || /[-.]test\.(ts|tsx)$/.test(name)) out.push(full);
+  }
+  return out;
+}
+
+/**
+ * `dot: true` is load-bearing. Without it minimatch's `**` refuses to cross a dot-segment, so this
+ * suite reported EVERY directory as uncovered when run from `.claude/worktrees/agent-*` — which is
+ * exactly where this repo runs its mutation critics. Jest's own matcher has no such restriction, so
+ * the pin was contradicting the behaviour it claims to pin.
+ */
+const matchesAnyGlob = (file: string, globs: string[]): boolean =>
+  globs.some(glob => minimatch(file.replace(/\\/g, '/'), glob, { dot: true }));
+
 describe('jest testMatch covers every __tests__ directory under src/', () => {
   it('leaves no test directory silently unrun', () => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { testMatch } = require('../../../jest.config.js') as { testMatch: string[] };
 
     const uncovered = testDirs(SRC)
-      .map(dir => {
-        // A representative file each glob would have to match, in POSIX form for minimatch.
-        const probe = join(dir, 'probe.test.ts').replace(/\\/g, '/');
-        return { rel: relative(SRC, dir).replace(/\\/g, '/'), probe };
-      })
-      .filter(({ probe }) => !testMatch.some(glob => minimatch(probe, glob)))
+      .map(dir => ({
+        rel: relative(SRC, dir).replace(/\\/g, '/'),
+        probe: join(dir, 'probe.test.ts'),
+      }))
+      .filter(({ probe }) => !matchesAnyGlob(probe, testMatch))
       .map(({ rel }) => rel);
 
     expect(uncovered).toEqual([]);
+  });
+
+  it('leaves no test FILE silently unrun, whatever it is named', () => {
+    // The directory check alone does not close the class: a `.spec.ts` inside a fully-covered
+    // `__tests__` directory is still skipped in silence. A mutation run dropped a deliberately
+    // FAILING `rogue.spec.ts` into a covered directory and the board stayed green.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { testMatch } = require('../../../jest.config.js') as { testMatch: string[] };
+
+    const unrun = testFiles(SRC)
+      .filter(file => !matchesAnyGlob(file, testMatch))
+      .map(file => relative(SRC, file).replace(/\\/g, '/'));
+
+    expect(unrun).toEqual([]);
   });
 
   it('every glob accepts BOTH .ts and .tsx', () => {

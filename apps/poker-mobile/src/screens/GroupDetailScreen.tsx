@@ -24,7 +24,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
-import { RANK_COLORS } from '../theme/rankRarity';
+import { RANK_COLORS, RANK_DEFAULT } from '../theme/rankRarity';
 import { shadows } from '../theme/shadows';
 import { spacing } from '../theme/spacing';
 import { radii } from '../theme/radii';
@@ -872,7 +872,7 @@ function LeaderboardRow({ entry, rank }: { entry: PlayerLeaderboardEntryDto; ran
   const avgIsPos = entry.avgProfitLoss > 0;
   const avgIsNeg = entry.avgProfitLoss < 0;
   const avgColor = avgIsPos ? colors.success : avgIsNeg ? colors.error : colors.textMuted;
-  const rankColor = RANK_COLORS[rank] ?? colors.textDim;
+  const rankColor = RANK_COLORS[rank] ?? RANK_DEFAULT;
 
   return (
     <View style={[

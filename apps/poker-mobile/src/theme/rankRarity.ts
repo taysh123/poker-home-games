@@ -28,8 +28,21 @@ export const RARITY_COLORS: Record<string, string> = {
  * React Native treats that as "inherit", which can render an accent invisibly.
  */
 export function rarityColor(rarity: string | undefined | null): string {
-  return (rarity && RARITY_COLORS[rarity]) || colors.textMuted;
+  // `hasOwn`, not plain indexing: RARITY_COLORS is an object literal, so it inherits
+  // Object.prototype and `rarityColor('toString')` would return a FUNCTION rather than a colour.
+  // Unreachable from either data source, but the guarantee above should be true, not lucky.
+  if (rarity && Object.prototype.hasOwnProperty.call(RARITY_COLORS, rarity)) {
+    return RARITY_COLORS[rarity];
+  }
+  return colors.textMuted;
 }
+
+/**
+ * Podium default for places outside the top three. Lives here so the one consumer
+ * (GroupDetailScreen's leaderboard) does not carry an unpinned literal: a mutation run changed
+ * that call site's fallback to `colors.error` — a red 4th place — and all 1,094 tests stayed green.
+ */
+export const RANK_DEFAULT = colors.textDim;
 
 /**
  * Podium places 1-3. Consumers supply their own out-of-podium default — GroupDetailScreen wants
