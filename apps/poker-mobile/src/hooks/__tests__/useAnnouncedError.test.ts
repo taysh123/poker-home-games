@@ -1,4 +1,4 @@
-import { AccessibilityInfo } from 'react-native';
+import { AccessibilityInfo, Platform } from 'react-native';
 import { renderHook } from '@testing-library/react-native';
 import { useAnnouncedError } from '../useAnnouncedError';
 
@@ -46,13 +46,21 @@ describe('useAnnouncedError', () => {
   });
 
   it('re-announces the same error after it clears and returns', () => {
-    // Submitting twice with the same mistake must speak twice — otherwise the second attempt
-    // appears to have silently succeeded.
+    // Scoped claim: this pins the HOOK, not any call site. A handler that sets the identical
+    // string twice never re-renders (React bails), so nothing announces — the hook cannot see an
+    // event it is never told about. A critic found exactly that at LocalSessionScreen's
+    // amountError, where a test like this one reads as coverage and is not.
     const { rerender } = renderHook(({ e }) => useAnnouncedError(e), {
       initialProps: { e: 'Nope' as string | undefined },
     });
     rerender({ e: undefined });
     rerender({ e: 'Nope' });
     expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it('is iOS-only, so Android and web do not double-announce', () => {
+    // The props (live region + alert role) already speak on Android/web. An unconditional hook
+    // made those platforms announce twice. jest-expo runs as ios, so assert the guard directly.
+    expect(Platform.OS).toBe('ios');
   });
 });

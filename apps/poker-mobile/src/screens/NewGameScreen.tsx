@@ -297,9 +297,10 @@ export default function NewGameScreen({ route, navigation }: Props) {
                   <TouchableOpacity
                     style={[styles.groupChip, selectedGroupId === null && styles.groupChipSelected]}
                     onPress={() => { setSelectedGroupId(null); setSelectedGroupName(''); }}
-                    accessibilityRole="button"
+                    accessibilityRole="radio"
                     accessibilityLabel="No group"
-                    accessibilityState={{ selected: selectedGroupId === null }}
+                    accessibilityState={{ checked: selectedGroupId === null }}
+                    aria-checked={selectedGroupId === null}
                   >
                     <Text style={[styles.groupChipText, selectedGroupId === null && styles.groupChipTextSelected]}>
                       No Group
@@ -310,9 +311,10 @@ export default function NewGameScreen({ route, navigation }: Props) {
                       key={g.id}
                       style={[styles.groupChip, selectedGroupId === g.id && styles.groupChipSelected]}
                       onPress={() => { setSelectedGroupId(g.id); setSelectedGroupName(g.name); }}
-                      accessibilityRole="button"
+                      accessibilityRole="radio"
                       accessibilityLabel={g.name}
-                      accessibilityState={{ selected: selectedGroupId === g.id }}
+                      accessibilityState={{ checked: selectedGroupId === g.id }}
+                      aria-checked={selectedGroupId === g.id}
                     >
                       <Text style={[styles.groupChipText, selectedGroupId === g.id && styles.groupChipTextSelected]}>
                         {g.name}
@@ -369,9 +371,10 @@ export default function NewGameScreen({ route, navigation }: Props) {
                           key={m.userId}
                           style={[styles.memberChip, selected && styles.memberChipSelected]}
                           onPress={() => toggleMember(m.userId)}
-                          accessibilityRole="button"
+                          accessibilityRole="checkbox"
                           accessibilityLabel={m.username}
-                          accessibilityState={{ selected }}
+                          accessibilityState={{ checked: selected }}
+                          aria-checked={selected}
                         >
                           <Text style={[styles.memberChipText, selected && styles.memberChipTextSelected]}>
                             {m.username}

@@ -1368,6 +1368,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                 multiline
                 maxLength={500}
                 placeholder="Session notes..."
+                accessibilityLabel="Session notes"
                 placeholderTextColor={colors.textDim}
                 autoFocus
               />
@@ -1582,6 +1583,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                   onChangeText={setTxAmount}
                   keyboardType="decimal-pad"
                   placeholder="0"
+                  accessibilityLabel={useChips ? 'Amount in chips' : 'Amount'}
                   placeholderTextColor={colors.textDim}
                   autoFocus
                 />
@@ -1701,6 +1703,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                 value={guestName}
                 onChangeText={setGuestName}
                 placeholder="Guest name"
+                accessibilityLabel="Guest name"
                 placeholderTextColor={colors.textDim}
               />
               <PressableScale
@@ -2151,6 +2154,7 @@ export default function SessionScreen({ route, navigation }: Props) {
               onChangeText={setHandPot}
               keyboardType="decimal-pad"
               placeholder={sym}
+              accessibilityLabel="Pot amount"
               placeholderTextColor={colors.textDim}
             />
 
@@ -2179,6 +2183,7 @@ export default function SessionScreen({ route, navigation }: Props) {
               value={handNote}
               onChangeText={setHandNote}
               placeholder="e.g. Full house vs flush"
+              accessibilityLabel="Hand note"
               placeholderTextColor={colors.textDim}
             />
 

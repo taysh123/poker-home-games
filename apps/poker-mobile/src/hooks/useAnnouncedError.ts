@@ -1,22 +1,27 @@
 import { useEffect, useRef } from 'react';
-import { AccessibilityInfo } from 'react-native';
+import { AccessibilityInfo, Platform } from 'react-native';
 
 /**
- * Speaks a form error when it appears, and again if it returns after clearing.
+ * Speaks a form error on iOS, where the live-region props do nothing.
  *
- * WHY THIS IS NOT JUST `accessibilityLiveRegion`: those props cover Android and web and cover
- * NOTHING on iOS. React Native maps `accessibilityRole="alert"` to `UIAccessibilityTraitNone`, and
- * ships no iOS implementation of `accessibilityLiveRegion` at all. Relying on them alone left auth
- * failures silent on the platform this app shipped on first — behind a comment asserting they were
- * announced. Pair this hook WITH the props; neither covers all three platforms alone.
+ * PAIR IT WITH `accessibilityLiveRegion="polite"` + `accessibilityRole="alert"` on the error node.
+ * Neither half covers all three platforms:
+ *  - iOS   — RN maps the alert role to `UIAccessibilityTraitNone` and ships NO implementation of
+ *            `accessibilityLiveRegion` (no `liveRegion` anywhere under `React/`). This hook is the
+ *            only thing that speaks.
+ *  - Android / web — the props work. This hook is deliberately iOS-ONLY so those platforms do not
+ *            announce twice, which an unconditional version caused.
  *
- * Re-announcing after a clear matters: submitting twice with the same mistake must speak twice, or
- * the second attempt reads as a silent success.
+ * ⚠️ LIMIT, stated because a test can look like it covers this and does not: the hook fires on a
+ * CHANGE of `error`. If a call site sets the identical error string twice in a row, React bails out
+ * of the re-render and nothing announces — so a second failed submit is silent. Handlers that can
+ * repeat a message must clear it first in a separate commit, or announce imperatively. The
+ * "re-announces after clearing" test below pins the HOOK's behaviour, not any call site's.
  */
 export function useAnnouncedError(error: string | null | undefined): void {
   const announced = useRef<string | null | undefined>(undefined);
   useEffect(() => {
-    if (error && error !== announced.current) {
+    if (Platform.OS === 'ios' && error && error !== announced.current) {
       AccessibilityInfo.announceForAccessibility?.(error);
     }
     announced.current = error;
