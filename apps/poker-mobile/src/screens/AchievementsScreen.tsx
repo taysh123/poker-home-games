@@ -10,6 +10,7 @@ import SectionTitle from '../components/SectionTitle';
 import EmptyState from '../components/EmptyState';
 import ProgressBar from '../components/ProgressBar';
 import { colors } from '../theme/colors';
+import { rarityColor as rarityColorFor } from '../theme/rankRarity';
 import { typography } from '../theme/typography';
 import { spacing } from '../theme/spacing';
 import { radii } from '../theme/radii';
@@ -24,11 +25,9 @@ import type { RootStackParamList } from '../navigation/AppNavigator';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-// Rarity accents. Common/Legendary/Rare map to design tokens (textMuted/gold/info);
-// Epic purple has no DS token — kept as a local literal, matching StatsScreen's catalog.
-const RARITY_COLORS: Record<string, string> = {
-  Common: colors.textMuted, Rare: colors.info, Epic: '#C46EE8', Legendary: colors.gold,
-};
+// Rarity accents come from theme/rankRarity — every one maps to a design token. The comment
+// that used to sit here said "Epic purple has no DS token — kept as a local literal"; that had
+// been false since `colors.aiPurple` was added for exactly this hue.
 
 interface Item {
   key: string; name: string; description: string; iconKey: string; rarity: string; earned: boolean;
@@ -147,7 +146,10 @@ export default function AchievementsScreen() {
 }
 
 function Badge({ item }: { item: Item }) {
-  const color = RARITY_COLORS[item.rarity] ?? colors.gold;
+  // Fallback changed from colors.gold to the shared muted default: an UNRECOGNISED rarity used
+  // to render as Legendary here, which over-promises. Unreachable in practice (rarity is always
+  // one of the four, from both the server DTO and the local catalog).
+  const color = rarityColorFor(item.rarity);
   return (
     <View
       style={styles.badgeFill}

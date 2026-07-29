@@ -13,12 +13,7 @@ import Celebration from './motion/Celebration';
 import PrimaryButton from './PrimaryButton';
 import type { AchievementDto } from '../api/achievementsApi';
 
-const RARITY_COLORS: Record<string, string> = {
-  Common: colors.textMuted,
-  Rare: '#4EAADC',
-  Epic: '#C46EE8',
-  Legendary: colors.gold,
-};
+import { rarityColor as rarityColorFor } from '../theme/rankRarity';
 
 type Props = {
   /** Newly-unlocked achievements to celebrate, shown one at a time. */
@@ -33,7 +28,9 @@ type Props = {
 export default function AchievementUnlock({ achievements, onDone }: Props) {
   const [idx, setIdx] = useState(0);
   const current = achievements[idx];
-  const rarity = current ? RARITY_COLORS[current.rarity] ?? colors.gold : colors.gold;
+  // No current achievement → gold (the celebration's own accent). A PRESENT but unrecognised
+  // rarity now resolves muted rather than gold, which used to render it as Legendary.
+  const rarity = current ? rarityColorFor(current.rarity) : colors.gold;
 
   const scale = useRef(new Animated.Value(0.6)).current;
   const opacity = useRef(new Animated.Value(0)).current;

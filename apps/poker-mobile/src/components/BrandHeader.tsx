@@ -58,7 +58,9 @@ export default function BrandHeader({ variant = 'screen', title, subtitle, onBac
         {/* Title block (deep screens, or a labelled tab screen) */}
         {title ? (
           <View style={styles.titles}>
-            <Text style={[large ? styles.titleLarge : styles.title]} numberOfLines={1} maxFontSizeMultiplier={1.3}>{title}</Text>
+            {/* Header landmark — how a screen-reader user orients on arrival. One line here
+                gives every screen using BrandHeader a title landmark. */}
+            <Text style={[large ? styles.titleLarge : styles.title]} numberOfLines={1} maxFontSizeMultiplier={1.3} accessibilityRole="header">{title}</Text>
             {subtitle ? <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
           </View>
         ) : (

@@ -103,7 +103,7 @@ describe('eslint.config.js — guarantees are explicit, not inherited', () => {
     // deliberate, and visible in review. Raising it means the same, which is exactly when
     // someone should have to justify themselves.
     const pkg = JSON.parse(fs.readFileSync(path.join(APP_ROOT, 'package.json'), 'utf8'));
-    expect(pkg.scripts.lint).toContain('--max-warnings 201');
+    expect(pkg.scripts.lint).toContain('--max-warnings 200');
   });
 
   it('lints the project ROOT, not just src/ — App.tsx must be covered', () => {

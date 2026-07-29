@@ -25,5 +25,6 @@ module.exports = {
     '**/src/hooks/__tests__/**/*.test.ts?(x)',
     '**/src/config/__tests__/**/*.test.ts?(x)',
     '**/src/screens/__tests__/**/*.test.ts?(x)',
+    '**/src/theme/__tests__/**/*.test.ts?(x)',
   ],
 };
