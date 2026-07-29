@@ -71,16 +71,19 @@ describe('groupRowLabel — the spoken name matches the rendered row', () => {
 describe('both group rows are wired to the shared helper', () => {
   const read = (rel: string) => readFileSync(resolve(__dirname, '..', '..', rel), 'utf8');
 
+  // Whitespace-tolerant on purpose: an exact substring made a behaviour-preserving reformat (or a
+  // Prettier line-wrap) fail with zero change in behaviour. A pin that cries wolf on a no-op edit
+  // gets deleted by the next person, which is worse than not having it.
   it('GroupsListScreen composes its card label and meta line from groupRow', () => {
     const src = read('screens/GroupsListScreen.tsx');
-    expect(src).toContain('accessibilityLabel={groupRowLabel(item)}');
-    expect(src).toContain('groupMetaLine(item.memberCount, item.myGroupSessions)');
+    expect(src).toMatch(/accessibilityLabel=\{\s*groupRowLabel\(\s*item\s*\)\s*\}/);
+    expect(src).toMatch(/groupMetaLine\(\s*item\.memberCount\s*,\s*item\.myGroupSessions\s*\)/);
   });
 
   it('GroupListItem composes its label and meta line from groupRow', () => {
     const src = read('components/GroupListItem.tsx');
-    expect(src).toContain('accessibilityLabel={groupRowLabel(');
-    expect(src).toContain('groupMetaLine(memberCount, myGroupSessions)');
+    expect(src).toMatch(/accessibilityLabel=\{\s*groupRowLabel\(/);
+    expect(src).toMatch(/groupMetaLine\(\s*memberCount\s*,\s*myGroupSessions\s*\)/);
   });
 
   it('neither row hand-rolls a session count of its own', () => {

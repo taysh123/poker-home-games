@@ -80,13 +80,19 @@ describe('The Final Count — the per-player accessible name, pinned on BOTH flo
     expect(found).toEqual([]);
   });
 
-  it('neither flow keys that name off a row index or position', () => {
-    // A name that follows row ORDER rather than the player is worse than no name at all on a screen
-    // where a mis-keyed row costs real money.
-    for (const file of ['LocalSessionScreen.tsx', 'SessionScreen.tsx']) {
-      for (const label of accessibilityLabels(file)) {
-        expect(label).not.toMatch(/`(Player|Row) \$\{(i|index|idx)\b/);
-      }
+  it('keys that name off player IDENTITY, not row position', () => {
+    // Asserted as the positive property. The first version blacklisted the literal shape
+    // `Player ${i}`, which its own test name outran: `Seat ${rowIndex + 1}` is just as mis-keyed
+    // and sailed through. Requiring the identity expression catches every positional spelling
+    // instead of the three that were thought of. On a screen where a mis-keyed row costs real
+    // money, a name that follows row ORDER is worse than no name at all.
+    for (const [file, identity] of [
+      ['LocalSessionScreen.tsx', '${p.name}'],
+      ['SessionScreen.tsx', '${p.username}'],
+    ] as const) {
+      const finalCount = accessibilityLabels(file).filter(t => t.includes(' final '));
+      expect(finalCount.length).toBeGreaterThan(0);
+      for (const label of finalCount) expect(label).toContain(identity);
     }
   });
 });

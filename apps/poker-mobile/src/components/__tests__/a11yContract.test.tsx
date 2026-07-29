@@ -168,38 +168,49 @@ describe('GuestNameInput — the shared hole in two half-labelled wizards', () =
  * These also pin the thing automation kept missing: that the spoken name matches what is on SCREEN.
  * Every case below was a real defect — an omitted chip, an omitted money value, or a plural rule
  * written twice with two different answers.
+ *
+ * That second sentence was briefly untrue, which is why the badge cases now assert `getByText`
+ * alongside `getByLabelText`. A mutation demonstrated it: changing ONLY the rendered Chip to read
+ * "DRAW" while the label still announced "even" left all 23 tests green. Label-only assertions pin
+ * the string against a literal and never look at the tree, so the agreement was held by shared
+ * derivation in the component, not by any test.
  */
 describe('SessionListItem — the row announces everything the row shows', () => {
   const base = { name: 'Friday Night', meta: '3 players · 2h', onPress: () => {} };
 
   it('names a finished row with its result badge, meta and P&L', () => {
-    const { getByLabelText } = render(
+    const { getByLabelText, getByText } = render(
       <SessionListItem {...base} status="Finished" profitLoss={-4250} showResultBadge />,
     );
     expect(getByLabelText('Friday Night, loss, 3 players · 2h, -₪4,250')).toBeTruthy();
+    expect(getByText('LOSS')).toBeTruthy(); // the spoken term and the visible chip, not just one
   });
 
   it('announces a break-even row as EVEN, not as a gain', () => {
     // The visible Chip reads "EVEN" while formatPL(0) reads "+₪0". Announcing only the number told
     // a screen-reader user they had won money on a session where they broke even.
-    const { getByLabelText } = render(
+    const { getByLabelText, getByText } = render(
       <SessionListItem {...base} status="Finished" profitLoss={0} showResultBadge />,
     );
     expect(getByLabelText('Friday Night, even, 3 players · 2h, +₪0')).toBeTruthy();
+    expect(getByText('EVEN')).toBeTruthy();
   });
 
   it('says "live" for an active row and omits the result badge', () => {
-    const { getByLabelText } = render(
+    const { getByLabelText, getByText, queryByText } = render(
       <SessionListItem {...base} status="Active" profitLoss={1200} showResultBadge />,
     );
     expect(getByLabelText('Friday Night, live, 3 players · 2h, +₪1,200')).toBeTruthy();
+    expect(getByText('LIVE')).toBeTruthy();
+    expect(queryByText('WIN')).toBeNull(); // an active row has no result yet, spoken or shown
   });
 
   it('omits the badge term wherever the badge is not rendered', () => {
-    const { getByLabelText } = render(
+    const { getByLabelText, queryByText } = render(
       <SessionListItem {...base} status="Finished" profitLoss={-4250} />,
     );
     expect(getByLabelText('Friday Night, 3 players · 2h, -₪4,250')).toBeTruthy();
+    expect(queryByText('LOSS')).toBeNull();
   });
 
   it('drops the money term when there is no P&L to show', () => {
