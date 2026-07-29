@@ -32,11 +32,18 @@ export default function GuestNameInput({
           placeholderTextColor={colors.textDim}
           onSubmitEditing={onAdd}
           returnKeyType="done"
+          // The placeholder is not an accessible name — it disappears the moment the user types.
+          accessibilityLabel="Guest name"
         />
         <TouchableOpacity
           style={[styles.addBtn, !value.trim() && styles.addBtnDisabled]}
           onPress={onAdd}
           disabled={!value.trim()}
+          accessibilityRole="button"
+          accessibilityLabel="Add guest"
+          // Mirrors the `disabled` prop: dimmed-and-inert otherwise announces as an ordinary
+          // button that silently does nothing when activated.
+          accessibilityState={{ disabled: !value.trim() }}
         >
           <Text style={styles.addBtnText}>Add</Text>
         </TouchableOpacity>
@@ -46,7 +53,14 @@ export default function GuestNameInput({
           <Text style={styles.suggestionsLabel}>Recent:</Text>
           <View style={styles.chipRow}>
             {suggestions.map(name => (
-              <TouchableOpacity key={name} style={styles.suggestionChip} onPress={() => onPickSuggestion(name)}>
+              <TouchableOpacity
+                key={name}
+                style={styles.suggestionChip}
+                onPress={() => onPickSuggestion(name)}
+                accessibilityRole="button"
+                // The name alone reads as a label, not an action — "Add Dan" says what happens.
+                accessibilityLabel={`Add ${name}`}
+              >
                 <Text style={styles.suggestionChipText}>{name}</Text>
               </TouchableOpacity>
             ))}

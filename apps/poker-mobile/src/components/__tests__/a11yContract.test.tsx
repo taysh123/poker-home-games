@@ -28,6 +28,7 @@ import { render } from '@testing-library/react-native';
 
 import AppTextInput from '../AppTextInput';
 import BrandHeader from '../BrandHeader';
+import GuestNameInput from '../GuestNameInput';
 import PrimaryButton from '../PrimaryButton';
 
 // BrandHeader pulls in the icon font + navigation + safe-area, none of which resolve in this jest
@@ -104,6 +105,43 @@ describe('PrimaryButton — named even while loading', () => {
       <PrimaryButton label="Save" accessibilityLabel="Save profile changes" onPress={() => {}} />,
     );
     expect(getByLabelText('Save profile changes')).toBeTruthy();
+  });
+});
+
+describe('GuestNameInput — the shared hole in two half-labelled wizards', () => {
+  // Q1.5a labelled every AppTextInput, which left NewGameScreen announcing in step 1 and silent
+  // in step 2, and LocalNewGameScreen complete except here. A half-announced form is worse than a
+  // silent one: the user cannot calibrate what the silence means.
+  const props = {
+    value: '',
+    onChangeText: () => {},
+    onAdd: () => {},
+    suggestions: [] as string[],
+    onPickSuggestion: () => {},
+  };
+
+  it('names its text field', () => {
+    const { getByLabelText } = render(<GuestNameInput {...props} />);
+    expect(getByLabelText('Guest name')).toBeTruthy();
+  });
+
+  it('gives the Add button a role and a name', () => {
+    const { getByLabelText } = render(<GuestNameInput {...props} value="Dan" />);
+    const add = getByLabelText('Add guest');
+    expect(add.props.accessibilityRole).toBe('button');
+  });
+
+  it('reports the Add button as disabled when there is nothing to add', () => {
+    // It is visually dimmed and functionally disabled; without accessibilityState a screen reader
+    // announces an ordinary button that silently does nothing.
+    const { getByLabelText } = render(<GuestNameInput {...props} value="   " />);
+    expect(getByLabelText('Add guest').props.accessibilityState).toMatchObject({ disabled: true });
+  });
+
+  it('names each suggestion chip with what it will do', () => {
+    const { getByLabelText } = render(<GuestNameInput {...props} suggestions={['Dan', 'Ron']} />);
+    expect(getByLabelText('Add Dan').props.accessibilityRole).toBe('button');
+    expect(getByLabelText('Add Ron')).toBeTruthy();
   });
 });
 

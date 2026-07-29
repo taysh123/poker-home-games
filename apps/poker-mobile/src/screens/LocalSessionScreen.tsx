@@ -754,7 +754,12 @@ export default function LocalSessionScreen({ route, navigation }: Props) {
                       </View>
                       <View style={styles.stackInputWrap}>
                         <AppTextInput
+                          // Intentionally no visible label — the player's name is the row heading
+                          // beside it. But a sibling Text is not an accessible name in RN, so every
+                          // Final Count row announced identically with no player identity. On the
+                          // one screen where getting the wrong row wrong costs real money.
                           label=""
+                          accessibilityLabel={`${p.name} final chip count`}
                           value={finalStacks[p.id] ?? ''}
                           onChangeText={v => setFinalStacks(prev => ({ ...prev, [p.id]: v }))}
                           placeholder="0"

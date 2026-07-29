@@ -1840,6 +1840,10 @@ export default function SessionScreen({ route, navigation }: Props) {
                         keyboardType="decimal-pad"
                         placeholder={session.chipRatio && useChips ? 'chips' : sym}
                         placeholderTextColor={colors.textDim}
+                        // Mirrors LocalSessionScreen's Final Count row. CLAUDE.md requires the two
+                        // flows to stay in sync; without this every row here announced identically
+                        // with no player identity, on the screen where a mis-keyed row costs money.
+                        accessibilityLabel={`${p.username} final chip count`}
                       />
                     )}
                   </View>

@@ -13,6 +13,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as SecureStore from '../utils/storage';
 import { colors } from '../theme/colors';
+import { useAnnouncedError } from '../hooks/useAnnouncedError';
 import { updateGroup } from '../api/groupsApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import Screen from '../components/Screen';
@@ -65,6 +66,9 @@ export default function EditGroupScreen({ route, navigation }: Props) {
   };
 
   const canSave = name.trim().length > 0 && name.trim().length <= MAX_NAME && !loading;
+  // iOS ignores the live-region props below; this is what actually speaks the error there.
+  useAnnouncedError(error);
+
 
   return (
     <Screen>
@@ -75,7 +79,7 @@ export default function EditGroupScreen({ route, navigation }: Props) {
     >
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         {error ? (
-          <View style={styles.errorBanner}>
+          <View style={styles.errorBanner} accessibilityLiveRegion="polite" accessibilityRole="alert">
             <Text style={styles.errorText}>{error}</Text>
           </View>
         ) : null}
@@ -88,6 +92,7 @@ export default function EditGroupScreen({ route, navigation }: Props) {
           placeholder="Enter group name"
           placeholderTextColor={colors.textDim}
           maxLength={MAX_NAME}
+          accessibilityLabel="Group name"
           autoFocus
           returnKeyType="next"
         />
@@ -101,6 +106,7 @@ export default function EditGroupScreen({ route, navigation }: Props) {
           placeholder="What's this group about?"
           placeholderTextColor={colors.textDim}
           maxLength={MAX_DESC}
+          accessibilityLabel="Group description"
           multiline
           numberOfLines={3}
         />
@@ -111,6 +117,9 @@ export default function EditGroupScreen({ route, navigation }: Props) {
           onPress={handleSave}
           disabled={!canSave}
           activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Save changes"
+          accessibilityState={{ disabled: !canSave, busy: loading }}
         >
           {loading ? (
             <ActivityIndicator color={colors.background} size="small" />
