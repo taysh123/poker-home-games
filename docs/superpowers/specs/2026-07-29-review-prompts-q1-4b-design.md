@@ -43,6 +43,32 @@ problem and design it explicitly, rather than treating it as plumbing around a s
 - The step-3 modal in `SessionScreen` has no `onRequestClose`, so Android hardware-back can lose the server `game_summary` moment.
 - `isCelebrating` covers only Engagement-owned celebrations; the screen-level `Celebration` components are covered *only* by the hardcoded dwell constants, with nothing pinning that coupling. Shortening a dwell would put the dialog over live confetti with every test green.
 
+### 2.4 From the mutation-testing round (33/33 named invariants KILLED; these SURVIVED)
+
+The literal-pin discipline works. The gaps are all in layers no test covers, and they are Q1.4b's
+to close because Q1.4 deleted the code they live in. Each of these passed **all 1,048 tests**:
+
+**Orchestration (the host had no test file at all).** Deleting the `evaluateReviewPrompt(...)
+.eligible` guard bypasses *every* rate limit while the pure rules stay perfect and pinned — the
+"dialable to nothing with CI applauding" failure moved one layer up. Also survived: deleting the
+`canPresentNow` guard, the `countedKeys` dedupe, the `enabled` flag read (killing the kill-switch),
+the `persist` of `lastPromptedAt`/`promptedVersions` (so the cooldown never *starts*), and
+`askedThisSessionRef` (the 2Hz tick then fires `requestReview` repeatedly, burning the iOS ~3/year
+allowance in seconds).
+
+**"Producible, not merely declared" is not enforced.** The vocabulary pin asserts array contents;
+nothing checks a call site exists. Deleting the only `drill_strong` call site survived — recreating
+exactly the `achievement_dismissed` defect the comment claims was fixed. So did `acc >= 70` →
+`acc >= 0`, making a **0%-score drill** a positive moment.
+
+**The `isCelebrating` pattern is the model to copy:** pure truth table *plus* a wiring test. Every
+mutation against both was killed. The review host has the first half and none of the second. A
+provider-level suite with fake timers, a mocked `requestNativeReview` and a mocked store closes
+roughly 14 of the 18 survivors — see the preserved draft beside this spec.
+
+**Minor:** reason precedence in `evaluateReviewPrompt` is unpinned (each test triggers exactly one
+branch, so ordering is never observed) despite the file making precedence an explicit design point.
+
 ## 3. What already ships and must not be re-litigated
 
 - **No in-app sentiment sheet, ever.** Master-plan decision 4a is superseded; Guideline 1.1.7

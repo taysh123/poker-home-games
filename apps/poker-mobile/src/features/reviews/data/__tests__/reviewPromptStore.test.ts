@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { MAX_COUNTED_KEYS } from '../../logic/reviewPromptLogic';
 import {
   REVIEW_PROMPT_KEY,
   defaultReviewPromptState,
@@ -65,13 +64,23 @@ describe('reviewPromptStore', () => {
     expect(await loadReviewPromptState(NOW + 1)).toEqual(s);
   });
 
-  it('bounds countedKeys so the dedupe list cannot grow forever', async () => {
-    const many = Array.from({ length: MAX_COUNTED_KEYS + 20 }, (_, i) => `g${i}`);
+  it('pins the storage key — changing it resets every user to defaults', () => {
+    // A mutation run took v1 -> v2 and the whole suite stayed green; in production that silently
+    // clears everyone's cooldown and promptedVersions, re-prompting the entire installed base.
+    expect(REVIEW_PROMPT_KEY).toBe('tpoker.reviewPrompt.v1');
+  });
+
+  it('bounds countedKeys at 50 so the dedupe list cannot grow forever', async () => {
+    // LITERAL 70/50, not `MAX_COUNTED_KEYS + 20` / `toHaveLength(MAX_COUNTED_KEYS)`. Computing the
+    // fixture from the constant made this test self-adjusting: 50 -> 1 survived, and at 1 the
+    // dedupe list holds one key so re-entering any older summary re-counts it.
+    const many = Array.from({ length: 70 }, (_, i) => `g${i}`);
     await saveReviewPromptState({ ...defaultReviewPromptState(NOW), countedKeys: many });
     const loaded = await loadReviewPromptState(NOW);
-    expect(loaded.countedKeys).toHaveLength(MAX_COUNTED_KEYS);
+    expect(loaded.countedKeys).toHaveLength(50);
     // Keeps the MOST RECENT keys — dropping those would let a recent game be counted twice.
-    expect(loaded.countedKeys[loaded.countedKeys.length - 1]).toBe(`g${MAX_COUNTED_KEYS + 19}`);
+    expect(loaded.countedKeys[loaded.countedKeys.length - 1]).toBe('g69');
+    expect(loaded.countedKeys[0]).toBe('g20');
   });
 
   it('never throws when the write fails', async () => {

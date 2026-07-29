@@ -279,9 +279,13 @@ Guideline 1.1.7 names as a rejection cause. Reasoning:
 - **Streak milestones are a [7, 30, 100] ladder** (`crossedStreakMilestone`), never the raw streak
   value against a high-water mark — that counted every day past 7 (a 30-day streak produced 24
   moments).
-- **Only the STUDY-day streak qualifies.** `HomeScreen`'s identically-named server win/loss streak
-  can be NEGATIVE; asking for a rating mid-losing-streak is the failure this prevents. Pinned at
-  the TYPE level via `Record<keyof ReviewSignals, true>`, so *any* added field fails `tsc`.
+- **Only the STUDY-day streak may qualify.** `HomeScreen`'s identically-named server win/loss
+  streak can be NEGATIVE. `Record<keyof ReviewSignals, true>` does fail `tsc` on any added field
+  (mutation-verified, including optional) — but **that pin guards `ReviewSignals` only**. The
+  streak arrives as a bare `number`, so the type pin does *not* stop the wrong streak being
+  passed; a mutation run wired the server win/loss streak in and it passed `tsc` and 1,048 tests.
+  What holds today is arithmetic: milestones are all positive, so a negative streak can't cross.
+  A positive 7-game *poker* win streak would. **Q1.4b owns guaranteeing the caller.**
 - **Never over a celebration:** `EngagementContext.isCelebrating`, derived by the pure
   `logic/celebration.ts#deriveIsCelebrating` so all three terms are pinned — inline, dropping
   `enabled` or `celebrate` both survived mutation testing.

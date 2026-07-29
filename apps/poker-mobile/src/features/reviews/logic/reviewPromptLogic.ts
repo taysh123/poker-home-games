@@ -27,9 +27,16 @@
  *  - The three moment kinds below are the complete PRODUCIBLE set — each has a real call site. A
  *    fourth ('achievement_dismissed') was declared in an earlier draft and produced nowhere; the
  *    vocabulary now matches what actually ships rather than what was planned.
- *  - ReviewSignals carries no win/loss streak field. Only the STUDY-day streak may qualify: the
- *    server win/loss streak can be NEGATIVE ("3-game loss streak"), and asking for a rating during
- *    a losing run is the exact failure this prevents.
+ *  - `ReviewSignals` carries no win/loss streak field, and `Record<keyof ReviewSignals, true>` in
+ *    the test fails `tsc` if ANY field is added — verified by mutation, including an OPTIONAL one.
+ *    ⚠️ But scope that claim honestly: it guards `ReviewSignals` ONLY. The streak reaches
+ *    `crossedStreakMilestone` as a bare `number`, never through `ReviewSignals`, so the type pin
+ *    is NOT what stops the wrong streak being passed. A mutation run wired HomeScreen's server
+ *    win/loss streak straight in and it passed `tsc` and all 1,048 tests.
+ *    What actually holds today is arithmetic: every milestone is positive, so a NEGATIVE streak
+ *    can never cross the ladder — the "asking mid-losing-streak" outcome is blocked. A POSITIVE
+ *    7-game poker win streak WOULD cross, silently turning a gambling-outcome signal into a study
+ *    moment. Q1.4b must guarantee the caller passes the study-day streak; nothing here can.
  *  - The rate-limit CONSTANTS are pinned to their literal values, not merely referenced
  *    symbolically. A mutation run proved the symbolic-only tests stayed green with the moments
  *    gate set to 0 — rate limiting was dialable to nothing with CI applauding.

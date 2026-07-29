@@ -1,6 +1,7 @@
 import {
   DWELL_MS,
   INSTALL_AGE_FLOOR_MS,
+  MAX_COUNTED_KEYS,
   MIN_QUALIFYING_MOMENTS,
   PROMPT_COOLDOWN_MS,
   REVIEW_MOMENT_KINDS,
@@ -157,6 +158,21 @@ describe('rate-limit LITERAL pins — do not weaken', () => {
 
   it('uses the [7, 30, 100] streak-milestone ladder', () => {
     expect([...STREAK_MILESTONES]).toEqual([7, 30, 100]);
+  });
+
+  it('bounds the dedupe list at 50 keys', () => {
+    // Was symbolic-only, three lines below the comment bragging about fixing exactly that for the
+    // rate-limit constants. A mutation run took MAX_COUNTED_KEYS 50 -> 1 and every test stayed
+    // green, because the store test computed its fixture FROM the constant. At 1, re-entering any
+    // older summary re-counts it.
+    expect(MAX_COUNTED_KEYS).toBe(50);
+  });
+
+  it('holds the exact dwell for every moment kind', () => {
+    // Only game_summary had a floor (`> 5040`), and a floor is not a value: 7000 -> 5041 survived.
+    // drill_strong and streak_milestone had no pin at all — 3000 -> 0 survived, which would fire
+    // the request instantly over the ~1.5s study Celebration.
+    expect(DWELL_MS).toEqual({ game_summary: 7000, drill_strong: 3000, streak_milestone: 2000 });
   });
 });
 
