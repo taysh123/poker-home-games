@@ -1,0 +1,237 @@
+/**
+ * Provider-level wiring pins for the review host (Q1.4).
+ *
+ * The pure rules, the store and the native wrapper all had suites; this file did not — and an
+ * adversarial fleet found that EVERY blocker lived here, because the pure logic was correct and
+ * the wiring into it was not. These tests drive the real provider through the real interval.
+ */
+import React from 'react';
+import { Text, Pressable } from 'react-native';
+import { act, render, waitFor } from '@testing-library/react-native';
+
+let mockStorage: Record<string, string> = {};
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  __esModule: true,
+  default: {
+    getItem: jest.fn((k: string) => Promise.resolve(mockStorage[k] ?? null)),
+    setItem: jest.fn((k: string, v: string) => { mockStorage[k] = v; return Promise.resolve(); }),
+    removeItem: jest.fn((k: string) => { delete mockStorage[k]; return Promise.resolve(); }),
+  },
+}));
+
+const mockTrack = jest.fn();
+jest.mock('../../../../utils/analytics', () => ({ track: (...a: unknown[]) => mockTrack(...a) }));
+
+const mockRequestNativeReview = jest.fn(() => Promise.resolve(true));
+jest.mock('../../nativeReview', () => ({
+  requestNativeReview: () => mockRequestNativeReview(),
+}));
+
+let mockReviewsOn = true;
+jest.mock('../../../../config/features', () => ({
+  isFeatureEnabled: (flag: string) => (flag === 'reviews' ? mockReviewsOn : false),
+}));
+
+let mockIsCelebrating = false;
+jest.mock('../../../engagement/state/EngagementContext', () => ({
+  useEngagement: () => ({ isCelebrating: mockIsCelebrating }),
+}));
+
+jest.mock('expo-constants', () => ({
+  __esModule: true,
+  default: { expoConfig: { version: '1.2.0' } },
+}));
+
+import { ReviewPromptProvider, useReviewPrompt } from '../ReviewPromptContext';
+import { REVIEW_PROMPT_KEY } from '../../data/reviewPromptStore';
+import { MIN_QUALIFYING_MOMENTS, type ReviewPromptState } from '../../logic/reviewPromptLogic';
+
+const DAY = 24 * 60 * 60 * 1000;
+
+function seed(over: Partial<ReviewPromptState> = {}) {
+  const base: ReviewPromptState = {
+    installedAt: Date.now() - 30 * DAY,
+    moments: MIN_QUALIFYING_MOMENTS - 1, // one short: the moment under test tips it over
+    streakMilestoneHigh: 0,
+    lastPromptedAt: null,
+    promptedVersions: [],
+    countedKeys: [],
+    ...over,
+  };
+  mockStorage[REVIEW_PROMPT_KEY] = JSON.stringify(base);
+}
+
+function Probe({ kind = 'game_summary' as const, dedupeKey }: { kind?: 'game_summary' | 'drill_strong'; dedupeKey?: string }) {
+  const { recordMoment, recordStreakMilestone } = useReviewPrompt();
+  return (
+    <>
+      <Pressable testID="record" onPress={() => recordMoment(kind, dedupeKey)}><Text>rec</Text></Pressable>
+      <Pressable testID="streak" onPress={() => recordStreakMilestone(7)}><Text>streak</Text></Pressable>
+    </>
+  );
+}
+
+const mount = (ui: React.ReactElement = <Probe />) =>
+  render(<ReviewPromptProvider>{ui}</ReviewPromptProvider>);
+
+/** Let the async store load settle. */
+async function settle() {
+  await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+}
+
+/** Advance past a dwell plus a tick. */
+async function advance(ms: number) {
+  await act(async () => { jest.advanceTimersByTime(ms); await Promise.resolve(); });
+}
+
+beforeEach(() => {
+  mockStorage = {};
+  mockReviewsOn = true;
+  mockIsCelebrating = false;
+  mockTrack.mockClear();
+  mockRequestNativeReview.mockClear();
+  jest.useFakeTimers();
+});
+
+afterEach(() => { jest.useRealTimers(); });
+
+describe('ReviewPromptContext — the ask', () => {
+  it('requests the native review after the moment and its dwell', async () => {
+    seed();
+    const { getByTestId } = mount();
+    await settle();
+    await act(async () => { getByTestId('record').props.onPress(); });
+    expect(mockRequestNativeReview).not.toHaveBeenCalled(); // dwell not elapsed
+    await advance(7500);
+    await waitFor(() => expect(mockRequestNativeReview).toHaveBeenCalledTimes(1));
+  });
+
+  it('does NOT request before the dwell elapses', async () => {
+    seed();
+    const { getByTestId } = mount();
+    await settle();
+    await act(async () => { getByTestId('record').props.onPress(); });
+    await advance(6000); // game_summary dwell is 7000
+    expect(mockRequestNativeReview).not.toHaveBeenCalled();
+  });
+
+  it('does NOT request while a celebration is playing, then does once it clears', async () => {
+    seed();
+    mockIsCelebrating = true;
+    const { getByTestId, rerender } = mount();
+    await settle();
+    await act(async () => { getByTestId('record').props.onPress(); });
+    await advance(8000);
+    expect(mockRequestNativeReview).not.toHaveBeenCalled();
+
+    mockIsCelebrating = false;
+    rerender(<ReviewPromptProvider><Probe /></ReviewPromptProvider>);
+    await advance(1000);
+    await waitFor(() => expect(mockRequestNativeReview).toHaveBeenCalledTimes(1));
+  });
+
+  it('does NOT request when the moment count is still short', async () => {
+    seed({ moments: 0 }); // +1 from the recorded moment = 1, below the threshold
+    const { getByTestId } = mount();
+    await settle();
+    await act(async () => { getByTestId('record').props.onPress(); });
+    await advance(9000);
+    expect(mockRequestNativeReview).not.toHaveBeenCalled();
+  });
+
+  it('does NOT request inside the install-age floor', async () => {
+    seed({ installedAt: Date.now() - 1 * DAY });
+    const { getByTestId } = mount();
+    await settle();
+    await act(async () => { getByTestId('record').props.onPress(); });
+    await advance(9000);
+    expect(mockRequestNativeReview).not.toHaveBeenCalled();
+  });
+
+  it('does NOT request twice for the same app version', async () => {
+    seed({ promptedVersions: ['1.2.0'] });
+    const { getByTestId } = mount();
+    await settle();
+    await act(async () => { getByTestId('record').props.onPress(); });
+    await advance(9000);
+    expect(mockRequestNativeReview).not.toHaveBeenCalled();
+  });
+
+  it('asks at most once per app session', async () => {
+    seed();
+    const { getByTestId } = mount();
+    await settle();
+    await act(async () => { getByTestId('record').props.onPress(); });
+    await advance(7500);
+    await waitFor(() => expect(mockRequestNativeReview).toHaveBeenCalledTimes(1));
+    await act(async () => { getByTestId('record').props.onPress(); });
+    await advance(9000);
+    expect(mockRequestNativeReview).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('ReviewPromptContext — the kill switch', () => {
+  it('does nothing at all when the reviews flag is OFF', async () => {
+    mockReviewsOn = false;
+    seed();
+    const { getByTestId } = mount();
+    await settle();
+    await act(async () => { getByTestId('record').props.onPress(); });
+    await advance(20000);
+    expect(mockRequestNativeReview).not.toHaveBeenCalled();
+    expect(mockTrack).not.toHaveBeenCalled();
+  });
+});
+
+describe('ReviewPromptContext — counting', () => {
+  it('counts a dedupe key only once, however many times the moment fires', async () => {
+    seed({ moments: 0 });
+    const { getByTestId } = mount(<Probe dedupeKey="local:g1" />);
+    await settle();
+    for (let i = 0; i < 5; i++) {
+      await act(async () => { getByTestId('record').props.onPress(); });
+    }
+    const saved: ReviewPromptState = JSON.parse(mockStorage[REVIEW_PROMPT_KEY]);
+    expect(saved.moments).toBe(1);
+    expect(saved.countedKeys).toEqual(['local:g1']);
+  });
+
+  it('flushes moments recorded before the store finished loading', async () => {
+    seed({ moments: 0 });
+    const { getByTestId } = mount();
+    // No settle() — record while the async load is still in flight.
+    await act(async () => { getByTestId('record').props.onPress(); });
+    await settle();
+    const saved: ReviewPromptState = JSON.parse(mockStorage[REVIEW_PROMPT_KEY]);
+    expect(saved.moments).toBe(1);
+  });
+
+  it('counts a streak milestone once, not once per day past 7', async () => {
+    seed({ moments: 0 });
+    const { getByTestId } = mount();
+    await settle();
+    await act(async () => { getByTestId('streak').props.onPress(); });
+    await act(async () => { getByTestId('streak').props.onPress(); });
+    await act(async () => { getByTestId('streak').props.onPress(); });
+    const saved: ReviewPromptState = JSON.parse(mockStorage[REVIEW_PROMPT_KEY]);
+    expect(saved.moments).toBe(1);
+    expect(saved.streakMilestoneHigh).toBe(7);
+  });
+});
+
+describe('ReviewPromptContext — analytics honesty', () => {
+  it('reports `requested`, never a claim that a dialog appeared', async () => {
+    seed();
+    const { getByTestId } = mount();
+    await settle();
+    await act(async () => { getByTestId('record').props.onPress(); });
+    await advance(7500);
+    await waitFor(() => expect(mockTrack).toHaveBeenCalledWith(
+      'review_native_requested',
+      expect.objectContaining({ requested: true, moment_kind: 'game_summary' }),
+    ));
+    const props = mockTrack.mock.calls.find(c => c[0] === 'review_native_requested')?.[1] as Record<string, unknown>;
+    expect(props).not.toHaveProperty('available');
+    expect(props).not.toHaveProperty('shown');
+  });
+});

@@ -245,6 +245,59 @@ HONESTY PIN: no reminder may promise an unavailable feature (the old `free_ai` k
 removed for this) — `utils/__tests__/reminderLogic.test.ts`. Day keys are LOCAL
 (`localDayKey`); `toISOString().slice(0, 10)` is banned by `dayKeyBan.test.ts`.
 
+## Review prompts (Q1.4 — CORE ONLY, flag `reviews` OFF, nothing wired)
+
+> **Nothing calls any of this yet.** No screen records a moment; no code path calls
+> `requestReview`. Q1.4 shipped only the pieces that survived three adversarial fleet rounds.
+> The firing path — when to ask, and how to guarantee the ask lands at a genuinely terminal
+> moment — is **Q1.4b**, which owns the flag flip:
+> `docs/superpowers/specs/2026-07-29-review-prompts-q1-4b-design.md`. That doc carries every
+> confirmed finding; read it before writing a single line of firing logic. Three rounds produced
+> the same defect class each time (**the dialog fires when it must not**), so the presentation
+> side gets its own design pass, not a fourth patch.
+
+### What ships today (reviewed, green, unused)
+
+`features/reviews/` calls `expo-store-review`'s `requestReview()` **directly** after a qualifying
+moment. There is deliberately **no pre-prompt of our own** — master-plan decision 4a (a sentiment
+gate) was SUPERSEDED 2026-07-29: the qualifying moments already are the sentiment filter, and an
+in-app gate that routes only happy users to the store is the review-gating pattern App Store
+Guideline 1.1.7 names as a rejection cause. Reasoning:
+`docs/superpowers/specs/2026-07-28-review-prompts-design.md` §0. **Do not re-add a sheet.**
+
+- **All rules are pure** in `logic/reviewPromptLogic.ts` (zero imports, `nowMs` injected):
+  ≥3 qualifying moments · 3-day install floor · 90-day cooldown · once per app version.
+  Eligibility returns a discriminated `reason`, so tests assert *why*, not just `false`.
+- **Constants are pinned to LITERAL values**, not referenced symbolically. Mutation-verified: the
+  symbolic-only version stayed green with the moments gate set to 0. Rate limiting must never be
+  dialable to nothing without a test going red.
+- **Three moment kinds are DECLARED** — `game_summary` · `drill_strong` · `streak_milestone` — but
+  none is produced yet; Q1.4b wires them and must re-earn the "producible" claim. (An earlier
+  fourth kind, `achievement_dismissed`, was removed precisely because three documents claimed it
+  and nothing produced it.) `streak_milestone` is a known problem: `StudyScreen` stays mounted
+  under the pushed trainer and the streak recomputes per answer, so it has no terminal screen.
+- **Streak milestones are a [7, 30, 100] ladder** (`crossedStreakMilestone`), never the raw streak
+  value against a high-water mark — that counted every day past 7 (a 30-day streak produced 24
+  moments).
+- **Only the STUDY-day streak may qualify.** `HomeScreen`'s identically-named server win/loss
+  streak can be NEGATIVE. `Record<keyof ReviewSignals, true>` does fail `tsc` on any added field
+  (mutation-verified, including optional) — but **that pin guards `ReviewSignals` only**. The
+  streak arrives as a bare `number`, so the type pin does *not* stop the wrong streak being
+  passed; a mutation run wired the server win/loss streak in and it passed `tsc` and 1,048 tests.
+  What holds today is arithmetic: milestones are all positive, so a negative streak can't cross.
+  A positive 7-game *poker* win streak would. **Q1.4b owns guaranteeing the caller.**
+- **Never over a celebration:** `EngagementContext.isCelebrating`, derived by the pure
+  `logic/celebration.ts#deriveIsCelebrating` so all three terms are pinned — inline, dropping
+  `enabled` or `celebrate` both survived mutation testing.
+- `nativeReview.ts` is native-only (lazy `require` behind a `Platform` check) and **never throws**;
+  `false` is a normal outcome, not an error. iOS caps the dialog at ~3/year and returns false on
+  TestFlight, so **we can never confirm a dialog appeared** — no copy may promise one, and Q1.4b
+  must not consume the rate-limit allowance on a `false` result.
+- `config/support.ts` is the ONE `SUPPORT_EMAIL` constant for TS call sites; `public/*.html` keeps
+  its literal, pinned by `legalSurfaces.test.ts`.
+- **`requestReview` must never be called from a button handler** — Apple's guidance forbids it for
+  user-initiated actions, and a tap-driven call is also the review-gating shape 1.1.7 prohibits.
+
 ## Motion System — `src/components/motion/`
 
 Reanimated 4 components layered ON TOP of the legacy `Animated` helpers in `theme/motion.ts` (both coexist; don't rewrite old screens wholesale):

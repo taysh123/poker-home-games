@@ -68,6 +68,7 @@ The owner's request assumed several things need *building*. The codebase says ot
   under the individual account; saying otherwise would misrepresent the seller of record.
 - **Review prompts (G):** iOS caps `requestReview` at ~3/year and may silently no-op — the
   design uses our own eligibility + sentiment pre-gate and never depends on the dialog showing.
+  **⛔ The sentiment pre-gate is SUPERSEDED (2026-07-29) — see the §4-ANSWERED item 4 note.**
 
 ## 3. The plan — three quality waves + a fix pack
 
@@ -112,7 +113,10 @@ Every slice: feature branch → TDD → gates (tsc · jest · expo export · lan
   FAQPage, wording passes the positioning pins); differentiated shell vs landing titles.
   Owner dashboard actions (documented in the slice): flip the old-domain 307 → 308, verify
   `tpoker-landing-xi` redirects. README/CLAUDE.md old-domain cleanup.
-- **Q1.4 Ratings & feedback (G) — M.** `expo-store-review` + pure `reviewPromptLogic`
+- **Q1.4 Ratings & feedback (G) — M.** ⛔ **PARTLY SUPERSEDED 2026-07-29** — the sentiment pre-gate
+  below is dropped (§4-ANSWERED item 4); Q1.4 shipped the reviewed core with `reviews` OFF and
+  **Q1.4b** owns the firing path + flag flip. Original text follows.
+  `expo-store-review` + pure `reviewPromptLogic`
   (TDD-first: qualifying moments = fresh game summary / drill ≥70% / achievement-unlock
   dismissed / 7-day streak; ≥3 qualifying moments, install-age floor, 90-day cooldown, once per
   version, never mid-task, never over a celebration — joins the existing sequencing). Sentiment
@@ -221,7 +225,21 @@ already folded in: the paywall preview dead-end, notification-tap dead route for
 3. **(Q3.3/3.4) → "Ranges"** naming; **full RFI family free**, advanced spots locked; owner
    authors/curates content. AMENDED by the content finding below: most v1 content already
    exists — see §4b.
-4. **(Q1.4) → (a).** Sentiment gate → store review / prefilled support email. In-app feedback
+4. **⛔ SUPERSEDED 2026-07-29 — (Q1.4) → the sentiment gate is DROPPED.** We call
+   `requestNativeReview()` directly at a qualifying moment; there is **no in-app pre-prompt**, no
+   sentiment capture, and no feedback branch (Profile already carries the support address).
+   Reasons: (i) the qualifying moments already ARE the sentiment filter — behavioural selection
+   beats asking; (ii) the sheet required an occlusion-geometry subsystem that an adversarial fleet
+   showed was inverted (it could rise over a **live game** and could **never** fire on a real
+   finished game); (iii) routing only happy users to the store is the review-gating pattern App
+   Store Guideline **1.1.7** names as a rejection cause — unacceptable on an individual account
+   that already took a 2.3.6 rejection, against the standing "store track is never blocked"
+   invariant. **Do not re-add a sheet.** Q1.4 shipped the reviewed CORE only (pure rules, store,
+   native wrapper, `isCelebrating`, `SUPPORT_EMAIL`) with the `reviews` flag **OFF** and no firing
+   path; **Q1.4b** owns the firing logic and the flag flip —
+   `docs/superpowers/specs/2026-07-29-review-prompts-q1-4b-design.md`.
+   *(Original decision, kept for provenance: "Sentiment gate → store review / prefilled support
+   email. In-app feedback...")* In-app feedback
    form deferred to its own later slice.
 5. **(Q2.7) → (a).** Locked lesson rows route to the paywall preview.
 6. **(Q1.2) → (a).** Splash cross-fade approved: SplashGate releases at EXIT_AT (900ms); the
@@ -265,7 +283,8 @@ Owner authoring is now OPTIONAL EXPANSION only: deeper MTT stacks (15–40bb), v
    premium-later" (matches the pinned benefit copy), or keep 100% free at flip time?
 3. **(Q3.3/3.4)** "Ranges" naming OK? And free-subset shape: full RFI family free, advanced
    spots locked — confirm, and confirm you'll author the sets (it's the decision-8 motion).
-4. **(Q1.4)** Feedback path v1 = prefilled support email (zero server). An in-app feedback form
+4. **(Q1.4)** ⛔ *Moot — the sentiment gate that would have routed to a feedback path is superseded
+   (§4-ANSWERED item 4). Kept only as the original question.* Feedback path v1 = prefilled support email (zero server). An in-app feedback form
    (bug/feature/comment → server) can be a later slice — want it pulled forward instead?
 5. **(Q2.7)** OK to route locked lesson rows to the paywall *preview* (second sanctioned
    tap-through; sells nothing)?

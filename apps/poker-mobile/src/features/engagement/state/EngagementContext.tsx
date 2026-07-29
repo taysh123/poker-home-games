@@ -7,6 +7,7 @@ import { useLocalGames } from '../../../context/LocalGamesContext';
 import { sessionNetCents } from '../../bankroll/logic/bankrollAnalytics';
 import { computeXp, rankForXp, xpAchievementCount, type RankInfo } from '../logic/xp';
 import { LOCAL_ACHIEVEMENTS, evaluate, eligibleKeys, findAchievement, isEarned } from '../logic/achievements';
+import { deriveIsCelebrating } from '../logic/celebration';
 import { localMonthKey } from '../../study/logic/localDay';
 import * as store from '../data/engagementStore';
 import { track } from '../../../utils/analytics';
@@ -32,6 +33,13 @@ type EngagementContextType = {
   rank: RankInfo;
   signals: EngagementSignals;
   localAchievements: LocalAchievementView[];
+  /**
+   * Q1.4 — true while ANY celebration this provider owns is on screen. The review-prompt host
+   * will consume this so no rating request lands over confetti. Includes `enabled` because both
+   * celebration renders below are gated on it: with `retention` OFF nothing can appear, and
+   * reporting "celebrating" there would suppress the review prompt forever.
+   */
+  isCelebrating: boolean;
 };
 
 const EngagementContext = createContext<EngagementContextType | null>(null);
@@ -176,7 +184,13 @@ export function EngagementProvider({ children }: { children: React.ReactNode }) 
     [signals, state.seenAchievements],
   );
 
-  const value: EngagementContextType = { enabled, isLoaded: stateLoaded, xpTotal, rank, signals, localAchievements };
+  const value: EngagementContextType = {
+    enabled, isLoaded: stateLoaded, xpTotal, rank, signals, localAchievements,
+    // Mirrors the render gates below exactly — if you change those, change this. Extracted to a
+    // pure fn so every term is pinned (logic/__tests__/celebration.test.ts); as an inline
+    // expression, dropping `enabled` or `celebrate` survived mutation testing.
+    isCelebrating: deriveIsCelebrating({ enabled, unlockQueueLength: unlockQueue.length, celebrate }),
+  };
 
   return (
     <EngagementContext.Provider value={value}>
@@ -205,6 +219,7 @@ export function useEngagement(): EngagementContextType {
         quizzesCompleted: 0, lessonsCompleted: 0,
       },
       localAchievements: [],
+      isCelebrating: false,
     };
   }
   return ctx;
