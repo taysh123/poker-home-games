@@ -187,6 +187,13 @@ export default function LoginScreen({ navigation }: Props) {
               style={styles.rememberRow}
               onPress={() => setRememberMe(v => !v)}
               activeOpacity={0.7}
+              accessibilityRole="checkbox"
+              accessibilityLabel="Stay signed in"
+              // The tick is drawn with a View + icon, so without this the control announced as
+              // plain text and its state — the whole point of a checkbox — was never conveyed.
+              // NOTE: react-native-web drops accessibilityState entirely, so this is inert on
+              // app.tpoker.app until the flat `aria-*` sweep lands (see CLAUDE.md). Native only.
+              accessibilityState={{ checked: rememberMe }}
             >
               <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
                 {rememberMe && <Ionicons name="checkmark" size={12} color={colors.background} />}

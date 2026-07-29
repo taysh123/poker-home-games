@@ -25,6 +25,7 @@ import { isFeatureEnabled } from '../config/features';
 import ErrorState from '../components/ErrorState';
 import { track } from '../utils/analytics';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import Segmented from '../components/Segmented';
 import SessionListItem from '../components/SessionListItem';
 import SkeletonCard from '../components/SkeletonCard';
 import SkeletonRow from '../components/SkeletonRow';
@@ -216,20 +217,16 @@ export default function StatsScreen({ embedded = false }: { embedded?: boolean }
       <Animated.View style={{ opacity, transform: [{ translateY }] }}>
 
         {/* ── Period Picker ── */}
-        <View style={periodStyles.row}>
-          {PERIODS.map(p => (
-            <TouchableOpacity
-              key={p.key}
-              style={[periodStyles.tab, period === p.key && periodStyles.tabActive]}
-              onPress={() => onPeriodChange(p.key)}
-              activeOpacity={0.7}
-            >
-              <Text style={[periodStyles.tabText, period === p.key && periodStyles.tabTextActive]}>
-                {p.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {/* The shared Segmented control rather than a hand-rolled row: it already supplies the
+            tablist/tab roles, the selected state and a 44px touch target, none of which the three
+            bare TouchableOpacitys here had. Reuse, so the a11y contract lives in one place. */}
+        <Segmented
+          options={PERIODS.map(p => p.label)}
+          selectedIndex={PERIODS.findIndex(p => p.key === period)}
+          onChange={i => onPeriodChange(PERIODS[i].key)}
+          accessibilityLabel="Stats period"
+          style={periodStyles.picker}
+        />
 
         {/* ── Hero P&L ── */}
         <View style={[styles.heroCard, periodLoading && { opacity: 0.6 }]}>
@@ -717,32 +714,13 @@ function AchievementBadge({ achievement, earned, progressText }: { achievement: 
   );
 }
 
+// Only the outer spacing survives the move to Segmented. The old `row` also set `gap: 8`, which
+// must NOT be passed through: Segmented positions its thumb at `index * (innerWidth / count)`, so
+// any gap between segments slides the labels out from under it. The tab/tabActive/tabText styles
+// are gone rather than kept "just in case" — they described a control that no longer exists.
 const periodStyles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    gap: 8,
+  picker: {
     marginBottom: 16,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 10,
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  tabActive: {
-    backgroundColor: colors.goldFaint,
-    borderColor: colors.goldMuted,
-  },
-  tabText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
-  tabTextActive: {
-    color: colors.goldLight,
   },
 });
 

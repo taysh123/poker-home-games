@@ -155,11 +155,10 @@ export function unacknowledgedTouchableNames(src: string, fileName = 'file.tsx')
 
 /**
  * Files permitted to still contain unroled touchables, and how many. Only ever lower these.
- * 47 across 17 files at the time of writing.
+ * 31 across 14 files — down from 47 across 17 when this ratchet was written.
  */
 const CEILING: Record<string, number> = {
-  'screens/HomeScreen.tsx': 14,                    // worst in the app — next up in the sweep
-  'screens/GroupDetailScreen.tsx': 5,
+  'screens/GroupDetailScreen.tsx': 5,              // worst remaining — next up in the sweep
   'screens/SessionsListScreen.tsx': 4,
   'features/solver/ui/SolverWorkspaceScreen.tsx': 4,
   'screens/InvitationsScreen.tsx': 3,
@@ -168,8 +167,6 @@ const CEILING: Record<string, number> = {
   'screens/NotificationsScreen.tsx': 2,
   'components/DetailSheet.tsx': 2,
   'components/RecapCard.tsx': 2,
-  'screens/LoginScreen.tsx': 1,                    // the "Stay signed in" checkbox — needs a ROLE, not a button
-  'screens/StatsScreen.tsx': 1,                    // period tabs — adopt the existing Segmented
   'screens/JoinGroupScreen.tsx': 1,
   'screens/JoinSessionScreen.tsx': 1,
   'screens/TrackScreen.tsx': 1,
