@@ -37,8 +37,13 @@ describe('requestNativeReview', () => {
   });
 
   it('never rejects, whatever the native layer does', async () => {
-    // The caller fires this from a button handler. A rejected promise there is an unhandled
-    // rejection in production; `false` is a completely normal outcome, not an error.
+    // A rejected promise here would be an unhandled rejection in production; `false` is a
+    // completely normal outcome, not an error.
+    //
+    // NOTE: this must NEVER be called from a button handler. Apple's guidance is explicit that
+    // requestReview is not for user-initiated actions, and a tap-driven call is also the
+    // review-gating shape Guideline 1.1.7 prohibits. Q1.4b drives it from an app-determined
+    // moment plus a timer.
     mockAvailable.mockImplementation(() => { throw new Error('sync throw'); });
     await expect(requestNativeReview()).resolves.toBe(false);
   });

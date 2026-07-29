@@ -45,7 +45,6 @@ import { ensureReminderPermission } from '../utils/reminders';
 import { localDayKey } from '../features/study/logic/localDay';
 import { track } from '../utils/analytics';
 import { showToast } from '../utils/toast';
-import { useReviewPrompt } from '../features/reviews/state/ReviewPromptContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocalSessionSummary'>;
 
@@ -112,14 +111,6 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
   // Confetti only when arriving fresh from ending the game — not when
   // revisiting an old summary from the games list.
   const justEnded = !!game.endedAt && Date.now() - new Date(game.endedAt).getTime() < 60_000;
-
-  // Q1.4 — a freshly-finished game is a qualifying moment. `justEnded` is a 60s wall-clock window,
-  // so backing out and re-opening within that minute would otherwise count the same game twice;
-  // the game id is passed as a persisted dedupe key rather than relying on a per-mount ref.
-  const { recordMoment } = useReviewPrompt();
-  React.useEffect(() => {
-    if (justEnded) recordMoment('game_summary', `local:${game.id}`);
-  }, [justEnded, game.id, recordMoment]);
 
   // Shareable image card (native only)
   const shareData: ShareCardData = {
@@ -215,10 +206,7 @@ export default function LocalSessionSummaryScreen({ route, navigation }: Props) 
         </View>
       </View>
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-      >
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <ContentContainer>
         {/* Cash games: a clean player list of who won and lost, up top where the felt used to be. */}
         {!podium && results.length > 0 && (

@@ -35,7 +35,7 @@ type EngagementContextType = {
   localAchievements: LocalAchievementView[];
   /**
    * Q1.4 — true while ANY celebration this provider owns is on screen. The review-prompt host
-   * consumes this so its sheet never rises over confetti. Includes `enabled` because both
+   * will consume this so no rating request lands over confetti. Includes `enabled` because both
    * celebration renders below are gated on it: with `retention` OFF nothing can appear, and
    * reporting "celebrating" there would suppress the review prompt forever.
    */

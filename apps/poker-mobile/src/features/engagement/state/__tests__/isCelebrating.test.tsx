@@ -1,12 +1,12 @@
 /**
  * `isCelebrating` wiring pin (Q1.4).
  *
- * The review-prompt host must never raise its sheet over a celebration. It cannot see
+ * The review-prompt host (Q1.4b) must never fire a rating request over a celebration. It cannot see
  * EngagementContext's internal unlockQueue / celebrate state, so the provider derives one
  * boolean for it. Two failure modes are pinned here:
  *
- *  1. It must be TRUE while an achievement unlock is queued — otherwise the sheet lands on top
- *     of the AchievementUnlock card.
+ *  1. It must be TRUE while an achievement unlock is queued — otherwise the OS rating dialog
+ *     lands on top of the AchievementUnlock card.
  *  2. It must be FALSE when `retention` is OFF. Both celebration renders in the provider are
  *     gated on `enabled` (EngagementContext.tsx:184,189), so with retention off nothing can
  *     appear — reporting "celebrating" there would suppress the review prompt forever for a

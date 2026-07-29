@@ -16,8 +16,11 @@ describe('PROD_FLAGS — Phase 1 launch state', () => {
     expect(PROD_FLAGS.immersive).toBe(true);
   });
 
-  it('turns review prompts ON (Q1.4 — the sheet asks a question and sells nothing)', () => {
-    expect(PROD_FLAGS.reviews).toBe(true);
+  it('keeps review prompts OFF — Q1.4 ships the core only, Q1.4b owns the flip', () => {
+    // Nothing records a moment and nothing calls requestReview yet. Flipping this alone would
+    // change no behaviour, but it must not drift ON before the firing path is designed and
+    // reviewed: three fleet rounds found ill-timed-dialog defects in that logic.
+    expect(PROD_FLAGS.reviews).toBe(false);
   });
 
   it('keeps paid/unsafe surfaces OFF (paywall is Subsystem 3)', () => {

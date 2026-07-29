@@ -245,7 +245,18 @@ HONESTY PIN: no reminder may promise an unavailable feature (the old `free_ai` k
 removed for this) — `utils/__tests__/reminderLogic.test.ts`. Day keys are LOCAL
 (`localDayKey`); `toISOString().slice(0, 10)` is banned by `dayKeyBan.test.ts`.
 
-## Review prompts (Q1.4, flag `reviews` ON) — NO in-app sheet
+## Review prompts (Q1.4 — CORE ONLY, flag `reviews` OFF, nothing wired)
+
+> **Nothing calls any of this yet.** No screen records a moment; no code path calls
+> `requestReview`. Q1.4 shipped only the pieces that survived three adversarial fleet rounds.
+> The firing path — when to ask, and how to guarantee the ask lands at a genuinely terminal
+> moment — is **Q1.4b**, which owns the flag flip:
+> `docs/superpowers/specs/2026-07-29-review-prompts-q1-4b-design.md`. That doc carries every
+> confirmed finding; read it before writing a single line of firing logic. Three rounds produced
+> the same defect class each time (**the dialog fires when it must not**), so the presentation
+> side gets its own design pass, not a fourth patch.
+
+### What ships today (reviewed, green, unused)
 
 `features/reviews/` calls `expo-store-review`'s `requestReview()` **directly** after a qualifying
 moment. There is deliberately **no pre-prompt of our own** — master-plan decision 4a (a sentiment
@@ -260,8 +271,11 @@ Guideline 1.1.7 names as a rejection cause. Reasoning:
 - **Constants are pinned to LITERAL values**, not referenced symbolically. Mutation-verified: the
   symbolic-only version stayed green with the moments gate set to 0. Rate limiting must never be
   dialable to nothing without a test going red.
-- **THREE moment kinds, all with real call sites** — `game_summary` · `drill_strong` (≥70%) ·
-  `streak_milestone`. The vocabulary pin means *producible*, not merely declared.
+- **Three moment kinds are DECLARED** — `game_summary` · `drill_strong` · `streak_milestone` — but
+  none is produced yet; Q1.4b wires them and must re-earn the "producible" claim. (An earlier
+  fourth kind, `achievement_dismissed`, was removed precisely because three documents claimed it
+  and nothing produced it.) `streak_milestone` is a known problem: `StudyScreen` stays mounted
+  under the pushed trainer and the streak recomputes per answer, so it has no terminal screen.
 - **Streak milestones are a [7, 30, 100] ladder** (`crossedStreakMilestone`), never the raw streak
   value against a high-water mark — that counted every day past 7 (a 30-day streak produced 24
   moments).
@@ -271,15 +285,14 @@ Guideline 1.1.7 names as a rejection cause. Reasoning:
 - **Never over a celebration:** `EngagementContext.isCelebrating`, derived by the pure
   `logic/celebration.ts#deriveIsCelebrating` so all three terms are pinned — inline, dropping
   `enabled` or `celebrate` both survived mutation testing.
-- Asking consumes the allowance: iOS caps the dialog at ~3/year and may silently no-op, so we
-  rate-limit the **ask** and can never observe the outcome. The analytics prop is `requested`
-  ("we issued the call"), never `available`. No copy anywhere promises a dialog appears.
-  Native-only; web never asks.
-- The host reads everything mutable from refs — its 500ms tick captures nothing. Moments recorded
-  before the store loads are queued and flushed, never dropped; game moments carry a persisted
-  dedupe key so re-entering a summary cannot double-count.
+- `nativeReview.ts` is native-only (lazy `require` behind a `Platform` check) and **never throws**;
+  `false` is a normal outcome, not an error. iOS caps the dialog at ~3/year and returns false on
+  TestFlight, so **we can never confirm a dialog appeared** — no copy may promise one, and Q1.4b
+  must not consume the rate-limit allowance on a `false` result.
 - `config/support.ts` is the ONE `SUPPORT_EMAIL` constant for TS call sites; `public/*.html` keeps
   its literal, pinned by `legalSurfaces.test.ts`.
+- **`requestReview` must never be called from a button handler** — Apple's guidance forbids it for
+  user-initiated actions, and a tap-driven call is also the review-gating shape 1.1.7 prohibits.
 
 ## Motion System — `src/components/motion/`
 

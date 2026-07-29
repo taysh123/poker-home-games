@@ -61,7 +61,6 @@ import {
   SettlementDto,
   GuestBalanceDto,
 } from '../api/settlementsApi';
-import { useReviewPrompt } from '../features/reviews/state/ReviewPromptContext';
 import {
   getSessionHandHistory,
   addHandRecord,
@@ -212,20 +211,6 @@ export default function SessionScreen({ route, navigation }: Props) {
   // End session modal — 0=closed, 1=confirm/skip, 2=final stacks, 3=game over summary
   const [endStep, setEndStep] = useState<0 | 1 | 2 | 3>(0);
   const [endSummary, setEndSummary] = useState<{ players: PlayerBalanceDto[]; settlements: SettlementDto[] } | null>(null);
-
-  // ── Q1.4 review prompt ──────────────────────────────────────────────────────────────────
-  // The moment is recorded when the step-3 summary is DISMISSED, never while it is open.
-  // Watching the endStep transition (rather than editing each close handler) catches every
-  // dismissal path — button, hardware back, onRequestClose — additively. The session id is the
-  // dedupe key so revisiting a finished session cannot re-count it.
-  const { recordMoment: recordReviewMoment } = useReviewPrompt();
-  const prevEndStepRef = useRef(endStep);
-  useEffect(() => {
-    if (prevEndStepRef.current === 3 && endStep !== 3) {
-      recordReviewMoment('game_summary', `session:${sessionId}`);
-    }
-    prevEndStepRef.current = endStep;
-  }, [endStep, sessionId, recordReviewMoment]);
   const [finalStacks, setFinalStacks] = useState<Record<string, string>>({});
   const [endLoading, setEndLoading] = useState(false);
   const [overrideBalance, setOverrideBalance] = useState(false);

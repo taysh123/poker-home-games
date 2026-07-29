@@ -40,7 +40,6 @@ import { tableDimensions } from '../../../utils/tableLayout';
 import { HoleCards } from '../../../components/table/PlayingCard';
 import { buildTrainerHand } from '../../../utils/trainerHand';
 import type { PokerPosition, PlayerAction } from '../../../utils/pokerTable';
-import { useReviewPrompt } from '../../reviews/state/ReviewPromptContext';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Rt = RouteProp<RootStackParamList, 'StudyTrainer'>;
@@ -70,10 +69,6 @@ export default function SpotTrainerScreen() {
   const [answered, setAnswered] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
   const [done, setDone] = useState(false);
-
-  // Q1.4 — a strong drill is a qualifying moment. The moment itself arms the request, so nothing
-  // needs to know which screen is on top.
-  const { recordMoment } = useReviewPrompt();
 
   const raiseLabel = spot.range.scenario === 'vs_RFI' ? 'Raise (3-bet)' : 'Raise';
   // Tier-honest label (Q1.1): derived from the dataset's own verification tier — the UI can
@@ -142,9 +137,6 @@ export default function SpotTrainerScreen() {
   function finishSession() {
     const acc = answered > 0 ? Math.round((correctCount / answered) * 100) : 0;
     track('study_trainer_finished', { mode, score_band: acc >= 80 ? '80-100' : acc >= 50 ? '50-79' : '0-49' });
-    // Q1.4 — a strong drill is a qualifying moment. The >=70% threshold matches the existing
-    // Celebration gate on the results screen below, so the moment and the confetti agree.
-    if (acc >= 70) recordMoment('drill_strong');
     setDone(true);
     // Contextual permission moment (0.3): the FIRST completed drill — the OS prompt fires at most
     // once ever (persisted marker inside), native-only, and only while reminders are enabled.

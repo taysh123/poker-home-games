@@ -75,9 +75,9 @@ export type AnalyticsEvent =
   | 'nudge_impression'
   | 'analytics_opt_out'
   | 'analytics_opt_in'
-  // Q1.4 — review prompts. ONE event: we ask the OS for its dialog and can never observe the
-  // outcome, so there is nothing else honest to record. Ids/counters/flags only.
-  | 'review_native_requested'
+  // (Q1.4's review event is deliberately NOT declared here — nothing produces it yet. It lands
+  //  with the firing path in Q1.4b. Declaring an event no code emits is the same defect class as
+  //  the 'achievement_dismissed' moment kind that three documents claimed and nothing produced.)
   | (string & {});
 
 export type AnalyticsProps = Record<string, string | number | boolean | null | undefined>;

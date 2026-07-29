@@ -28,7 +28,7 @@ export type FeatureFlag =
   | 'v2Splash'  // branded launch splash (BrandSplash overlay on cold start)
   | 'welcome'   // entry chooser — signed-out users pick "Continue as guest" / "Sign in" (no silent guest)
   | 'analytics' // Wave 0.2 — PostHog EU dispatch (kill-switch; consent-gated inside utils/analytics)
-  | 'reviews';  // Q1.4 — sentiment gate → native store review / prefilled support mail
+  | 'reviews';  // Q1.4 — native store-review request. Core only; nothing wired yet (see Q1.4b)
 
 /** Production defaults — nav5 + onboardingV2 ON (Subsystem 1 launch); study/content/retention ON (Phase 1 free-training-taste); immersive ON (felt surfaces — launch decision). */
 export const PROD_FLAGS: Record<FeatureFlag, boolean> = {
@@ -60,10 +60,12 @@ export const PROD_FLAGS: Record<FeatureFlag, boolean> = {
   // has made their explicit Welcome choice (consent latch in utils/analytics) AND a PostHog key
   // is configured at build time. Flag OFF ⇒ dispatch is a no-op regardless of consent.
   analytics: true,
-  // Q1.4 — review prompts ship ON (owner decision 2026-07-28). The flag stays a kill-switch.
-  // Nothing is promised to the user: iOS caps requestReview at ~3/year and may silently no-op,
-  // so the rate limiting is OURS (features/reviews/logic/reviewPromptLogic.ts), not the OS's.
-  reviews: true,
+  // Q1.4 — OFF, and there is nothing to switch on yet: this slice ships the reviewed CORE only
+  // (pure eligibility rules, store, native wrapper). No screen records a moment and no code path
+  // calls requestReview. Three adversarial fleet rounds found the same class of defect in the
+  // firing logic — an ill-timed OS dialog — so presentation was deferred to Q1.4b, which owns the
+  // flip. See docs/superpowers/specs/2026-07-29-review-prompts-q1-4b-design.md.
+  reviews: false,
 };
 
 /**
@@ -90,7 +92,7 @@ const BETA_FLAGS: Partial<Record<FeatureFlag, boolean>> = {
   paywall: false,         // OFF in beta — no production paywall
   coachScreenshot: false, // OFF — partial upload not exposed
   analytics: true,        // Wave 0.2 — same consent-gated dispatch as prod
-  reviews: true,          // Q1.4 — same sentiment gate as prod
+  reviews: false,         // Q1.4 — nothing to preview until Q1.4b wires a firing path
 };
 
 /** Dev-only previews. Does not affect production builds (`__DEV__ === false`). */
@@ -112,7 +114,7 @@ const DEV_OVERRIDES: Partial<Record<FeatureFlag, boolean>> = {
   mastery: true,   // V2.2 — preview mastery in dev (prod stays OFF)
   solver: true,    // Web-first — preview the solver workspace in dev (prod stays OFF)
   analytics: true, // Wave 0.2 — dev preview (sends still require consent + an EXPO_PUBLIC_POSTHOG_KEY)
-  reviews: true,   // Q1.4 — preview the sentiment gate in dev
+  // reviews stays OFF in dev too — there is no consumer to preview (Q1.4b).
   // coachScreenshot + publicSpots intentionally OFF in dev too (image pipeline / public sharing not built).
 
 };

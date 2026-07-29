@@ -5,6 +5,14 @@
  * lives here so it can be verified by test instead: iOS caps the native dialog at ~3 prompts/year
  * and may silently no-op, so we can never confirm our own rate limiting by observation.
  *
+ * STATUS (2026-07-29): this module is the reviewed CORE only. **Nothing calls it yet** — no screen
+ * records a moment and no code path calls `requestReview`. The firing logic (when to ask, and how
+ * to guarantee the ask lands at a genuinely terminal moment) is deferred to **Q1.4b**, which owns
+ * the `reviews` flag flip. Three adversarial fleet rounds found the same defect class in three
+ * different firing designs — an ill-timed OS dialog — so the presentation side gets its own design
+ * pass rather than a fourth patch. Findings carried forward:
+ * docs/superpowers/specs/2026-07-29-review-prompts-q1-4b-design.md.
+ *
  * DESIGN NOTE (2026-07-29): there is NO sentiment sheet. Master-plan decision 4a (a pre-prompt
  * asking "Enjoying T Poker?", routing happy users to the store and unhappy users to email) was
  * SUPERSEDED by the owner after the Q1.4 critic fleet. The qualifying moments below ARE the
@@ -139,9 +147,14 @@ export interface PresentInput {
 }
 
 /**
- * With the sheet gone there is no geometry here: we ask the OS to show ITS dialog, so there is no
- * protected region of ours to reason about. What remains is "let the moment's own celebration
- * finish first" — the OS dialog over live confetti is the one collision still worth preventing.
+ * There is no geometry here: we ask the OS to show ITS dialog, so there is no protected region of
+ * ours to reason about. What remains is "let the moment's own celebration finish first".
+ *
+ * ⚠️ NOT SUFFICIENT ON ITS OWN, and no consumer exists yet. The Q1.4 fleet proved a dwell check is
+ * necessary but nowhere near enough: a pending request must ALSO expire (the dwell is a minimum,
+ * never a maximum — an armed request survived a 48-hour wall-clock gap and fired mid-game), clear
+ * on backgrounding, and refuse to fire while a game is Active. Q1.4b owns those gates; do not wire
+ * this function to a firing path without them.
  */
 export function canPresentNow(input: PresentInput): boolean {
   if (input.dwellElapsedMs < input.requiredDwellMs) return false;

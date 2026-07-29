@@ -28,7 +28,6 @@ import { buildPackCatalog, availabilityOf, type Pack } from '../../premium/logic
 import LockNudge from './LockNudge';
 import { usePersona } from '../../persona/state/PersonaContext';
 import { trainOrderForFormat, type TrainKey } from '../../persona/logic/recommendations';
-import { useReviewPrompt } from '../../reviews/state/ReviewPromptContext';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
@@ -51,15 +50,6 @@ export default function StudyScreen() {
   const goalPct = Math.min(1, progress.dailyGoal > 0 ? stats.answeredToday / progress.dailyGoal : 0);
   const retention = isFeatureEnabled('retention');
   const freezeTokens = progress.freezeTokens ?? 0;
-
-  // Q1.4 — `progress.currentStreak` here is the STUDY-DAY streak, which is the only streak that
-  // may qualify as a positive moment. HomeScreen's identically-named server win/loss streak can be
-  // NEGATIVE ("3-game loss streak") and must never reach this call. The host keeps a high-water
-  // mark so a single milestone counts once, not on every render for the rest of the streak.
-  const { recordStreakMilestone } = useReviewPrompt();
-  useEffect(() => {
-    recordStreakMilestone(progress.currentStreak);
-  }, [progress.currentStreak, recordStreakMilestone]);
 
   const { isLoaded: contentLoaded, query } = useContent();
   const { isPremium } = useEntitlements();
