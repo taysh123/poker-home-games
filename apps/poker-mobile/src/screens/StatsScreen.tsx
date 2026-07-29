@@ -33,6 +33,8 @@ import AnimatedNumber from '../components/motion/AnimatedNumber';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { formatPL, formatDate, formatDuration, formatMinutes } from '../utils/formatters';
+import { useLatest } from '../hooks/useLatest';
+import { seenAchievementsKey } from '../features/engagement/logic/seenAchievements';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -49,6 +51,11 @@ export default function StatsScreen({ embedded = false }: { embedded?: boolean }
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  // `load` is a useCallback with an empty dependency array that feeds useFocusEffect, so it
+  // captured the FIRST render's user id forever. Unreachable today (AppNavigator swaps trees on
+  // sign-in/out, remounting this screen), but if that ever changes the achievement-celebration
+  // baseline would be written under the previous user's key. Read current, don't capture.
+  const userIdRef = useLatest(user?.userId);
   const [unlockQueue, setUnlockQueue] = useState<AchievementDto[]>([]);
   const [period, setPeriod] = useState<Period>('all');
   const periodRef = useRef<Period>('all');
@@ -88,7 +95,7 @@ export default function StatsScreen({ embedded = false }: { embedded?: boolean }
           if (!ach) return;
           // Celebrate achievements unlocked since this device last saw them.
           // First run establishes a baseline (no retroactive burst).
-          const key = `tpoker.seenAch.${user?.userId ?? 'anon'}`;
+          const key = seenAchievementsKey(userIdRef.current);
           try {
             const raw = await SecureStore.getItemAsync(key);
             if (raw == null) {
@@ -111,7 +118,10 @@ export default function StatsScreen({ embedded = false }: { embedded?: boolean }
       setPeriodLoading(false);
       setRefreshing(false);
     }
-  }, []);
+    // userIdRef is a useLatest ref with stable identity (pinned by hooks/__tests__/useLatest), so
+    // listing it satisfies exhaustive-deps while keeping load()'s identity stable — this callback
+    // feeds useFocusEffect, so an unstable identity would re-fire the load.
+  }, [userIdRef]);
 
   useFocusEffect(useCallback(() => {
     load(false, periodRef.current);
@@ -456,7 +466,11 @@ export default function StatsScreen({ embedded = false }: { embedded?: boolean }
       <AchievementUnlock
         achievements={unlockQueue}
         onDone={async () => {
-          const key = `tpoker.seenAch.${user?.userId ?? 'anon'}`;
+          // Same source as the READ in load(). These were two separate literals reading the user
+          // from two different scopes — load()'s was a stale capture, this one current — so the
+          // baseline could be written under one key and checked under another, replaying a
+          // user's entire badge history on every load. One helper, one source, no divergence.
+          const key = seenAchievementsKey(userIdRef.current);
           try {
             const raw = await SecureStore.getItemAsync(key);
             const seen: string[] = raw ? JSON.parse(raw) : [];
