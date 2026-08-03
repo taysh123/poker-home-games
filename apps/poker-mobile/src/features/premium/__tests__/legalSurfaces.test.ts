@@ -233,6 +233,16 @@ describe('repo-root PRIVACY.md — a pointer, not a second copy (Q1.6b)', () => 
     expect(privacyPointer).not.toMatch(/GDPR/);
     expect(privacyPointer).not.toMatch(/Railway/);
   });
+
+  it('names Tay Shofer, not the trade name, as copyright holder — same invariant as every other legal surface', () => {
+    // A fleet caught this gap: the "publisher identity" describe block above pins terms/privacy/
+    // pricing/refund.html, ProfileScreen.tsx, and this file's own LICENSE, but not PRIVACY.md's
+    // own new copyright line — the exact invariant this commit is supposed to protect had a silent
+    // hole in the one file it just rewrote.
+    const privacyPointer = readRoot('PRIVACY.md');
+    expect(privacyPointer).toMatch(/©\s*2026\s*Tay Shofer\s*·\s*T Poker/);
+    expect(privacyPointer).not.toMatch(/©\s*True Story Labs/);
+  });
 });
 
 describe('Terms link presence in-app', () => {
