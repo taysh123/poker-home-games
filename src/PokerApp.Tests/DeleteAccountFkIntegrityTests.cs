@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Xunit;
 using PokerApp.Application.Common.Interfaces;
 using PokerApp.Application.Features.Auth.Commands.DeleteAccount;
+using PokerApp.Application.Features.Settlements.Commands.CalculateSettlements;
+using PokerApp.Application.Services;
 using PokerApp.Domain.Entities;
 using PokerApp.Domain.Enums;
 using PokerApp.Infrastructure.Persistence;
@@ -223,6 +225,52 @@ public sealed class DeleteAccountFkIntegrityTests : IDisposable
             .FirstOrDefaultAsync(sp => sp.SessionId == session.Id && sp.GuestName == "Dan (guest)");
         Assert.NotNull(guest);
         Assert.Null(guest!.LinkedUserId);
+    }
+
+    [Fact]
+    public async Task Recalculating_after_a_deletion_cannot_destroy_the_survivors_settlements()
+    {
+        // The cross-user data loss this fix would otherwise have INTRODUCED. Deleting an account
+        // leaves the session with zero settlements, and SessionScreen auto-calls
+        // CalculateSettlements whenever a finished session has none — so without the guard the
+        // surviving player's receivable is destroyed with no user action, on next open.
+        //
+        // Revert-test: removing the hasDeletedPlayer guard makes this test go red, because the
+        // handler reaches the RemoveRange that deletes the surviving settlement.
+        var s = SeedFullGraph();
+
+        // A third player who is NOT deleted, owed money by someone who also is not deleted, so the
+        // surviving debt has nothing to do with the departing user.
+        var payer = User.Create("payer", "payer@example.com", "hash");
+        _ctx.Users.Add(payer);
+        _ctx.SessionPlayers.Add(SessionPlayer.CreateForUser(s.Session.Id, payer.Id));
+        var survivingDebt = Settlement.Create(s.Session.Id, payer.Id, s.Other.Id, 15m);
+        _ctx.Settlements.Add(survivingDebt);
+        // Only a FINISHED session is recalculable, and it is the state the auto-call fires in.
+        var seeded = _ctx.Sessions.First(x => x.Id == s.Session.Id);
+        seeded.Start();
+        seeded.End();
+        _ctx.SaveChanges();
+        _ctx.ChangeTracker.Clear();
+
+        await DeleteAsync(s.Leaving.Id);
+
+        // Finished, with an anonymised player present — exactly the auto-recalc state.
+        var session = await _ctx.Sessions.FirstAsync(x => x.Id == s.Session.Id);
+        Assert.Equal(SessionStatus.Finished, session.Status);
+        Assert.True(await _ctx.SessionPlayers.AnyAsync(sp =>
+            sp.SessionId == s.Session.Id && sp.UserId == null && sp.LinkedUserId == null && sp.GuestName == null));
+
+        var calc = new CalculateSettlementsCommandHandler(
+            _ctx, new FakeCurrentUser(s.Other.Id), new SettlementCalculatorService());
+
+        await Assert.ThrowsAsync<Application.Common.Exceptions.BadRequestException>(
+            () => calc.Handle(new CalculateSettlementsCommand(s.Session.Id), CancellationToken.None));
+
+        // The surviving player's money is still there, untouched, with its original amount.
+        var still = await _ctx.Settlements.FirstOrDefaultAsync(x => x.Id == survivingDebt.Id);
+        Assert.NotNull(still);
+        Assert.Equal(15m, still!.Amount);
     }
 
     [Fact]

@@ -47,6 +47,34 @@ public sealed class CalculateSettlementsCommandHandler(
             .Where(c => c.SessionId == request.SessionId)
             .ToListAsync(cancellationToken);
 
+        // ── Refuse to recalculate a session containing a DELETED player ──────────────────────
+        //
+        // An account deletion anonymises its SessionPlayer rows (UserId, LinkedUserId and
+        // GuestName all null — a row DeleteAccountCommandHandler leaves behind deliberately, so
+        // the session's participant list and everyone else's totals still reconcile).
+        //
+        // Such a player has no SettlementUserId, so the split below drops them from the balance
+        // pool. The remaining balances then no longer sum to zero, and SettlementCalculator walks
+        // debtors/creditors with `while (d < debtors.Count && c < creditors.Count)`, silently
+        // discarding whatever is left over when one list empties. Line ~83 would then DELETE the
+        // surviving pending settlements and replace them with that wrong set.
+        //
+        // This is not opt-in: SessionScreen auto-calls this command whenever a finished session
+        // has zero saved settlements — exactly the state account deletion leaves behind — so the
+        // counterparty's receivable would be destroyed with no user action, the next time they
+        // opened the session. Refusing keeps the settlements that were correct when they were
+        // computed, which is the only outcome that does not lose someone else's money.
+        //
+        // DEFERRED ALTERNATIVE (owner decision, 2026-08-03): preserve the departed party properly
+        // by making Settlement.PayerUserId/ReceiverUserId nullable and anonymising instead of
+        // deleting. That is richer but needs a migration plus a DTO change reaching the mobile
+        // client; this guard is the smaller change that removes the data loss now.
+        var hasDeletedPlayer = allPlayers.Any(sp =>
+            sp.UserId is null && sp.LinkedUserId is null && sp.GuestName is null);
+        if (hasDeletedPlayer)
+            throw new BadRequestException(
+                "This session includes a player whose account was deleted, so settlements can no longer be recalculated. The settlements already recorded are unchanged.");
+
         // Split: players with a SettlementUserId participate in formal (digital) settlements;
         // unlinked guests have no SettlementUserId and are handled manually outside the app.
         var linkedPlayers = allPlayers.Where(sp => sp.SettlementUserId.HasValue).ToList();
