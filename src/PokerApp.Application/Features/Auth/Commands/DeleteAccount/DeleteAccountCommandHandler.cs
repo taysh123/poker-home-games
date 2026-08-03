@@ -25,20 +25,25 @@ public sealed class DeleteAccountCommandHandler(
             throw new BadRequestException(
                 "You own one or more groups. Transfer ownership or delete the groups before deleting your account.");
 
-        // ── Every RESTRICT foreign key pointing at Users must be cleared before the delete ──
+        // ── Every RESTRICT foreign key pointing at Users must be cleared HERE or blocked UPSTREAM ──
         //
         // Cascading FKs (memberships, received invitations, refresh tokens, device tokens,
         // notifications, achievements, cloud backups, subscriptions/credits) are handled by the
-        // database. RESTRICT ones are not: each BLOCKS the delete until it is cleared here, and a
+        // database. RESTRICT ones are not: each BLOCKS the delete until it is dealt with, and a
         // missed one surfaces as a DbUpdateException that ExceptionHandlingMiddleware does not map
-        // — i.e. a bare 500 and "Failed to delete account." on a shipped build that Apple requires
-        // to offer working deletion (Review Guideline 5.1.1(v)).
+        // — i.e. a bare 500 carrying only a trace id, on a shipped build that Apple requires to
+        // offer working deletion (Review Guideline 5.1.1(v)).
         //
-        // The list below is derived from the EF model snapshot, NOT from memory. If a migration
-        // adds another RESTRICT FK to Users without updating this handler,
-        // DeleteAccountFkIntegrityTests fails on the constraint — that test runs on SQLite
-        // precisely because the InMemory provider enforces no referential integrity and would
-        // pass regardless.
+        // There are EIGHT such columns. Seven are cleared below; Groups.OwnerId is the eighth and
+        // is blocked upstream by the ownership precondition above — note that guard tests a
+        // DIFFERENT column (GroupMembers.Role) than the constraint it protects (Groups.OwnerId),
+        // an invariant three handlers maintain incidentally and nothing asserts.
+        //
+        // The set is pinned structurally by
+        // DeleteAccountFkIntegrityTests.Restrict_foreign_keys_to_User_match_the_acknowledged_set,
+        // which reads the EF MODEL — so a migration adding a ninth edge fails a test even though
+        // no seeded row exercises it. The seeded tests alone could not do that, and an earlier
+        // version of this comment wrongly claimed they could.
 
         var memberships = await context.GroupMembers
             .Where(m => m.UserId == userId).ToListAsync(cancellationToken);
@@ -79,14 +84,22 @@ public sealed class DeleteAccountCommandHandler(
 
         // Settlements name BOTH parties with required RESTRICT FKs, so they cannot be anonymized
         // without a schema change (nullable columns + a DTO/API change reaching the mobile client).
-        // They are removed instead: a settlement is DERIVED data — regenerable from the buy-ins and
-        // cash-outs above via "Recalculate settlements" — and it is the row that most directly
-        // names the departing user, which erasure should remove.
+        // They are removed instead — but read the real cost before extending this pattern.
         //
-        // TRADE-OFF, stated rather than buried: the counterparty loses this row's paid/pending
-        // status for debts involving the deleted user. Preserving it instead would mean making
-        // PayerUserId/ReceiverUserId nullable — a migration plus a cross-boundary DTO change — and
-        // is the owner's call, not one to make silently inside a compliance hotfix.
+        // TRADE-OFF, corrected after review. An earlier version of this comment called settlements
+        // "DERIVED data — regenerable via Recalculate settlements" and scoped the loss to a status
+        // flag. BOTH were false:
+        //   · Recalculation CANNOT restore them. Anonymising SessionPlayer.UserId makes
+        //     SettlementUserId null, and CalculateSettlements splits players on
+        //     SettlementUserId.HasValue — so the departed player leaves the balance pool entirely
+        //     and their debts are simply absent from any future calculation.
+        //   · The counterparty therefore loses the DEBT, not merely its paid/pending status.
+        //   · Settlements store only GUIDs, never a name, so calling their removal "more
+        //     erasure-correct" was backwards: this deletes the PII-free rows while the departing
+        //     user's display name survives in ActivityLog.ActorName, HandRecord.WinnerName and
+        //     other users' notification bodies, none of which this handler touches.
+        // Preserving instead means nullable columns + a cross-boundary DTO change. That is the
+        // owner's call, deliberately not made inside a compliance hotfix — see the PR.
         var settlements = await context.Settlements
             .Where(s => s.PayerUserId == userId || s.ReceiverUserId == userId)
             .ToListAsync(cancellationToken);

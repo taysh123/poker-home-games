@@ -24,8 +24,10 @@ namespace PokerApp.Tests;
 /// of bug here. Postgres-specific behaviour (types, collations, triggers) is NOT covered.
 ///
 /// Apple requires working in-app account deletion (App Store Review Guideline 5.1.1(v)), and the
-/// Danger Zone copy promises "permanently delete your account and all your data" — so a failing
-/// delete is a compliance defect, not only a bug.
+/// Danger Zone confirm copy (ProfileScreen.tsx:171) reads, verbatim: "This will permanently delete
+/// your account and all associated data. This cannot be undone." So a failing delete is a
+/// compliance defect, not only a bug. (An earlier draft quoted a paraphrase of that line as if it
+/// were the literal — pin literals, including when quoting your own product.)
 /// </summary>
 public sealed class DeleteAccountFkIntegrityTests : IDisposable
 {
@@ -61,7 +63,11 @@ public sealed class DeleteAccountFkIntegrityTests : IDisposable
     /// RESTRICT foreign key pointing at Users — i.e. one that BLOCKS the delete unless the handler
     /// clears it first. Derived from the EF model snapshot, not from assumption.
     /// </summary>
-    private (User leaving, User other, Session session, Settlement settlement) SeedFullGraph()
+    private sealed record Seeded(
+        User Leaving, User Other, Session Session,
+        Guid LeavingPlayerId, Guid BuyInId, Guid CashOutId, int PlayerCount);
+
+    private Seeded SeedFullGraph()
     {
         var leaving = User.Create("leaving", "leaving@example.com", "hash");
         var other = User.Create("other", "other@example.com", "hash");
@@ -97,8 +103,12 @@ public sealed class DeleteAccountFkIntegrityTests : IDisposable
         _ctx.Entry(cashOut).Property("UserId").CurrentValue = leaving.Id;
 
         // The blocker from the audit: settlements name both parties with required RESTRICT FKs.
-        var settlement = Settlement.Create(session.Id, leaving.Id, other.Id, 40m);
-        _ctx.Settlements.Add(settlement);
+        // BOTH directions are seeded. Seeding only the payer side left the handler's
+        // `|| s.ReceiverUserId == userId` clause vacuously "covered" — the OR'd assertion read as
+        // coverage while no row could ever satisfy its second half. In a home game the receiver is
+        // the winner, so the untested half was the more common production case.
+        _ctx.Settlements.Add(Settlement.Create(session.Id, leaving.Id, other.Id, 40m));
+        _ctx.Settlements.Add(Settlement.Create(session.Id, other.Id, leaving.Id, 25m));
 
         // An invitation the leaving user SENT (InvitedByUserId is RESTRICT and required).
         var third = User.Create("third", "third@example.com", "hash");
@@ -106,8 +116,9 @@ public sealed class DeleteAccountFkIntegrityTests : IDisposable
         _ctx.GroupInvitations.Add(GroupInvitation.Create(group.Id, leaving.Id, third.Id));
 
         _ctx.SaveChanges();
+        var playerCount = _ctx.SessionPlayers.Count(sp => sp.SessionId == session.Id);
         _ctx.ChangeTracker.Clear();
-        return (leaving, other, session, settlement);
+        return new Seeded(leaving, other, session, spLeaving.Id, buyIn.Id, cashOut.Id, playerCount);
     }
 
     private async Task DeleteAsync(Guid userId)
@@ -119,54 +130,91 @@ public sealed class DeleteAccountFkIntegrityTests : IDisposable
     [Fact]
     public async Task Deletion_succeeds_for_a_user_with_the_full_production_FK_graph()
     {
-        var (leaving, _, _, _) = SeedFullGraph();
+        var s = SeedFullGraph();
 
         // The whole point: this must not throw. Before the fix it threw DbUpdateException on
-        // SaveChanges (FK violation), surfacing to the live app as a generic 500 and
-        // "Failed to delete account." for exactly the users engaged enough to have settlements.
-        await DeleteAsync(leaving.Id);
+        // SaveChanges (FK violation), which ExceptionHandlingMiddleware does not map — so the live
+        // app returned a bare 500 whose body is the generic "An unexpected error occurred" shape
+        // with a trace id, for exactly the users engaged enough to have settlements.
+        await DeleteAsync(s.Leaving.Id);
 
-        Assert.Null(await _ctx.Users.FirstOrDefaultAsync(u => u.Id == leaving.Id));
+        Assert.Null(await _ctx.Users.FirstOrDefaultAsync(u => u.Id == s.Leaving.Id));
     }
 
     [Fact]
     public async Task Deletion_does_not_destroy_the_other_players_session_history()
     {
-        var (leaving, other, session, _) = SeedFullGraph();
+        var s = SeedFullGraph();
 
-        await DeleteAsync(leaving.Id);
+        await DeleteAsync(s.Leaving.Id);
 
         // The group, the session and the remaining player's row belong to people who did NOT ask
         // to be forgotten. Erasing one account must not erase their books.
-        Assert.NotNull(await _ctx.Sessions.FirstOrDefaultAsync(s => s.Id == session.Id));
-        Assert.NotNull(await _ctx.Users.FirstOrDefaultAsync(u => u.Id == other.Id));
-        Assert.True(await _ctx.SessionPlayers.AnyAsync(sp => sp.UserId == other.Id));
+        Assert.NotNull(await _ctx.Sessions.FirstOrDefaultAsync(x => x.Id == s.Session.Id));
+        Assert.NotNull(await _ctx.Users.FirstOrDefaultAsync(u => u.Id == s.Other.Id));
+        Assert.True(await _ctx.SessionPlayers.AnyAsync(sp => sp.UserId == s.Other.Id));
     }
 
     [Fact]
-    public async Task Deletion_clears_every_restrict_reference_to_the_user()
+    public async Task Deletion_clears_every_seeded_restrict_reference_to_the_user()
     {
-        var (leaving, _, _, _) = SeedFullGraph();
+        var s = SeedFullGraph();
 
-        await DeleteAsync(leaving.Id);
+        await DeleteAsync(s.Leaving.Id);
 
-        // Each assertion is one RESTRICT FK from the model snapshot. If a future migration adds
-        // another RESTRICT FK to Users and the handler is not updated, the FIRST test in this file
-        // fails on the constraint — this one then localises which reference was missed.
-        Assert.False(await _ctx.SessionPlayers.AnyAsync(sp => sp.UserId == leaving.Id));
-        Assert.False(await _ctx.SessionPlayers.AnyAsync(sp => sp.LinkedUserId == leaving.Id));
-        Assert.False(await _ctx.BuyIns.AnyAsync(b => b.UserId == leaving.Id));
-        Assert.False(await _ctx.CashOuts.AnyAsync(c => c.UserId == leaving.Id));
-        Assert.False(await _ctx.Settlements.AnyAsync(s => s.PayerUserId == leaving.Id || s.ReceiverUserId == leaving.Id));
-        Assert.False(await _ctx.GroupInvitations.AnyAsync(i => i.InvitedByUserId == leaving.Id));
+        // Each assertion is one RESTRICT FK from the model snapshot, in BOTH directions where the
+        // relationship has two (settlements). Scope, stated because an earlier version of this
+        // comment overclaimed: this test catches a NEW RESTRICT FK only if SeedFullGraph is also
+        // extended to write a row on that edge. The structural guarantee — that a new edge is
+        // noticed at all — is Restrict_foreign_keys_to_User_match_the_acknowledged_set below.
+        Assert.False(await _ctx.SessionPlayers.AnyAsync(sp => sp.UserId == s.Leaving.Id));
+        Assert.False(await _ctx.SessionPlayers.AnyAsync(sp => sp.LinkedUserId == s.Leaving.Id));
+        Assert.False(await _ctx.BuyIns.AnyAsync(b => b.UserId == s.Leaving.Id));
+        Assert.False(await _ctx.CashOuts.AnyAsync(c => c.UserId == s.Leaving.Id));
+        Assert.False(await _ctx.Settlements.AnyAsync(x => x.PayerUserId == s.Leaving.Id));
+        Assert.False(await _ctx.Settlements.AnyAsync(x => x.ReceiverUserId == s.Leaving.Id));
+        Assert.False(await _ctx.GroupInvitations.AnyAsync(i => i.InvitedByUserId == s.Leaving.Id));
+        // Groups.OwnerId is the sixth RESTRICT relationship. It is discharged by the ownership
+        // precondition rather than cleared here; asserted so the test's name is honest.
+        Assert.False(await _ctx.Groups.AnyAsync(g => g.OwnerId == s.Leaving.Id));
+    }
+
+    [Fact]
+    public async Task The_leavers_own_money_rows_are_ANONYMISED_not_deleted()
+    {
+        // The commit's central product decision, which the first version of these tests could not
+        // distinguish from deletion: every retention assertion was `Assert.False(Any(UserId == x))`,
+        // which is satisfied just as well by "row deleted". Mutation-verified: deleting the rows
+        // instead of anonymising them kept the whole suite green. These assertions are positive.
+        var s = SeedFullGraph();
+
+        await DeleteAsync(s.Leaving.Id);
+
+        var buyIn = await _ctx.BuyIns.FirstOrDefaultAsync(b => b.Id == s.BuyInId);
+        Assert.NotNull(buyIn);
+        Assert.Null(buyIn!.UserId);
+        Assert.Equal(100m, buyIn.Amount);          // the money is the point — it must be untouched
+        Assert.NotNull(buyIn.SessionPlayerId);     // still attributable to a seat at the table
+
+        var cashOut = await _ctx.CashOuts.FirstOrDefaultAsync(c => c.Id == s.CashOutId);
+        Assert.NotNull(cashOut);
+        Assert.Null(cashOut!.UserId);
+        Assert.Equal(60m, cashOut.Amount);
+
+        var player = await _ctx.SessionPlayers.FirstOrDefaultAsync(sp => sp.Id == s.LeavingPlayerId);
+        Assert.NotNull(player);
+        Assert.Null(player!.UserId);
+
+        // If any participant row were dropped the session would stop reconciling for everyone else.
+        Assert.Equal(s.PlayerCount, await _ctx.SessionPlayers.CountAsync(sp => sp.SessionId == s.Session.Id));
     }
 
     [Fact]
     public async Task The_anonymised_guest_row_survives_so_the_session_still_balances()
     {
-        var (leaving, _, session, _) = SeedFullGraph();
-
-        await DeleteAsync(leaving.Id);
+        var s = SeedFullGraph();
+        var session = s.Session;
+        await DeleteAsync(s.Leaving.Id);
 
         // A guest row linked to the leaving user represents a real person at a real table. Clearing
         // the LINK must not delete the player, or the session's participant list silently shrinks
@@ -175,6 +223,45 @@ public sealed class DeleteAccountFkIntegrityTests : IDisposable
             .FirstOrDefaultAsync(sp => sp.SessionId == session.Id && sp.GuestName == "Dan (guest)");
         Assert.NotNull(guest);
         Assert.Null(guest!.LinkedUserId);
+    }
+
+    [Fact]
+    public void Restrict_foreign_keys_to_User_match_the_acknowledged_set()
+    {
+        // THE REAL RATCHET. An earlier version of this file claimed, twice, that "a future
+        // migration adding a RESTRICT FK to Users fails this test". That was FALSE: the seeded
+        // tests only violate a constraint on a row the seed happens to insert, so a RESTRICT edge
+        // on a brand-new entity would sail through green. The claim was asserted in prose with no
+        // mechanism behind it — the exact class this project has shipped six times.
+        //
+        // This assertion reads the EF MODEL, so it fails on the migration rather than on the seed.
+        // Adding a RESTRICT/NoAction FK to Users now forces a deliberate edit here, which is the
+        // moment to ask "does DeleteAccountCommandHandler need to clear this?".
+        var restrictEdges = _ctx.Model.GetEntityTypes()
+            .SelectMany(e => e.GetForeignKeys())
+            .Where(fk => fk.PrincipalEntityType.ClrType == typeof(User)
+                      && (fk.DeleteBehavior == DeleteBehavior.Restrict
+                       || fk.DeleteBehavior == DeleteBehavior.NoAction))
+            .Select(fk => fk.DeclaringEntityType.ClrType.Name
+                          + "." + string.Join("+", fk.Properties.Select(p => p.Name)))
+            .OrderBy(x => x, StringComparer.Ordinal)
+            .ToArray();
+
+        // Literal, not derived from the handler — a list computed from the code under test would
+        // move with it. Every entry is either cleared by the handler or blocked upstream.
+        string[] acknowledged =
+        [
+            "BuyIn.UserId",                    // anonymised
+            "CashOut.UserId",                  // anonymised
+            "Group.OwnerId",                   // blocked upstream by the ownership precondition
+            "GroupInvitation.InvitedByUserId", // removed
+            "SessionPlayer.LinkedUserId",      // unlinked
+            "SessionPlayer.UserId",            // anonymised
+            "Settlement.PayerUserId",          // removed
+            "Settlement.ReceiverUserId",       // removed
+        ];
+
+        Assert.Equal(acknowledged, restrictEdges);
     }
 
     [Fact]

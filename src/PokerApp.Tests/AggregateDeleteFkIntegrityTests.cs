@@ -46,8 +46,9 @@ public sealed class AggregateDeleteFkIntegrityTests : IDisposable
     private sealed class FakeCurrentUser(Guid id, string name) : ICurrentUserService
     {
         public Guid UserId { get; } = id;
-        public string? Email => $"{name}@example.com";
         public string? Username { get; } = name;
+        // Derived from Username rather than capturing the parameter twice (CS9124).
+        public string? Email => $"{Username}@example.com";
         public bool IsAuthenticated => true;
     }
 
