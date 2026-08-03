@@ -1,4 +1,4 @@
-import { formatMoney } from './formatters';
+import { formatMoney, formatPL } from './formatters';
 
 /**
  * The two Home alert banners' copy, rendered AND announced from one place.
@@ -44,4 +44,32 @@ export function invitationsAlertCopy(count: number): AlertCopy {
 /** The accessible name for a title+subtitle banner: what a sighted user reads, in reading order. */
 export function alertLabel(copy: AlertCopy): string {
   return `${copy.title}. ${copy.sub}`;
+}
+
+/**
+ * The top-group chip's text, shown and spoken.
+ *
+ * `formatPL`, never a hand-rolled sign plus `formatMoney`: formatMoney applies `Math.abs`, so the
+ * chip rendered a LOSING top group as "₪450" with no minus at all. `topGroup` is chosen by
+ * most-profitable (a reduce over myGroupPL), and `showTopGroup` only excludes null/zero — so a user
+ * whose best group is still down reaches this branch and was told they were up.
+ *
+ * Extracted so that fix is PINNED. HomeScreen has no render harness, which is exactly how the bug
+ * survived: adding an accessible name is what exposed it, and a name asserted against a literal
+ * would never have noticed the visible half disagreeing.
+ */
+export function topGroupCopy(name: string, myGroupPL: number): AlertCopy {
+  return { title: `Top group: ${name}`, sub: formatPL(myGroupPL) };
+}
+
+/** The chip's single visible line: "Top group: Poker Crew -₪450". */
+export function topGroupText(name: string, myGroupPL: number): string {
+  const copy = topGroupCopy(name, myGroupPL);
+  return `${copy.title} ${copy.sub}`;
+}
+
+/** The chip's accessible name — the same words, comma-separated so the amount reads as its own clause. */
+export function topGroupLabel(name: string, myGroupPL: number): string {
+  const copy = topGroupCopy(name, myGroupPL);
+  return `${copy.title}, ${copy.sub}`;
 }

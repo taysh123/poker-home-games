@@ -1,4 +1,4 @@
-import { alertLabel, invitationsAlertCopy, settlementsAlertCopy } from '../homeAlerts';
+import { alertLabel, invitationsAlertCopy, settlementsAlertCopy, topGroupCopy, topGroupText } from '../homeAlerts';
 
 /**
  * Literals, not values rebuilt from formatMoney — a test that calls the code it guards moves with
@@ -40,6 +40,28 @@ describe('invitationsAlertCopy', () => {
   it('pluralises the count', () => {
     expect(invitationsAlertCopy(1).title).toBe('1 group invitation');
     expect(invitationsAlertCopy(3).title).toBe('3 group invitations');
+  });
+});
+
+describe('topGroupCopy — a losing top group must show and say a MINUS', () => {
+  it('keeps the sign on a loss', () => {
+    // The bug: `{pl > 0 ? '+' : ''}{formatMoney(pl)}` with formatMoney applying Math.abs rendered
+    // this as "₪450" — a loss displayed as a gain. Literal expectations, so the test cannot follow
+    // formatPL if formatPL changes.
+    expect(topGroupText('Poker Crew', -450)).toBe('Top group: Poker Crew -₪450');
+    expect(topGroupCopy('Poker Crew', -450).sub).toBe('-₪450');
+  });
+
+  it('keeps the plus on a win', () => {
+    expect(topGroupText('Poker Crew', 1200)).toBe('Top group: Poker Crew +₪1,200');
+  });
+
+  it('is announced with the same numbers it displays', () => {
+    // The standing rule in one assertion: the spoken name and the visible line are the same words,
+    // so a change to one that is not made to the other fails here.
+    const copy = topGroupCopy('Poker Crew', -450);
+    expect(`${copy.title}, ${copy.sub}`).toBe('Top group: Poker Crew, -₪450');
+    expect(topGroupText('Poker Crew', -450)).toBe('Top group: Poker Crew -₪450');
   });
 });
 

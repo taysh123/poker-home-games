@@ -189,11 +189,14 @@ export default function LoginScreen({ navigation }: Props) {
               activeOpacity={0.7}
               accessibilityRole="checkbox"
               accessibilityLabel="Stay signed in"
-              // The tick is drawn with a View + icon, so without this the control announced as
+              // The tick is drawn with a View + icon, so without a role the control announced as
               // plain text and its state — the whole point of a checkbox — was never conveyed.
-              // NOTE: react-native-web drops accessibilityState entirely, so this is inert on
-              // app.tpoker.app until the flat `aria-*` sweep lands (see CLAUDE.md). Native only.
               accessibilityState={{ checked: rememberMe }}
+              // The flat twin is REQUIRED, not deferred. An earlier comment here called the state
+              // "inert on web": that was false and the change was a net web REGRESSION. RNW drops
+              // accessibilityState but DOES emit role="checkbox", and an unmarked checkbox defaults
+              // to aria-checked false — so this box, which defaults ON, announced as UNCHECKED.
+              aria-checked={rememberMe}
             >
               <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
                 {rememberMe && <Ionicons name="checkmark" size={12} color={colors.background} />}

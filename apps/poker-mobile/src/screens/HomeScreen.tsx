@@ -43,7 +43,7 @@ import SessionListItem from '../components/SessionListItem';
 import GroupListItem from '../components/GroupListItem';
 import Card from '../components/Card';
 import { formatPL, formatDate, formatDuration, formatMinutes, timeAgo } from '../utils/formatters';
-import { alertLabel, invitationsAlertCopy, settlementsAlertCopy } from '../utils/homeAlerts';
+import { alertLabel, invitationsAlertCopy, settlementsAlertCopy, topGroupLabel, topGroupText } from '../utils/homeAlerts';
 import AnimatedNumber from '../components/motion/AnimatedNumber';
 import Screen from '../components/Screen';
 import Avatar from '../components/Avatar';
@@ -371,15 +371,11 @@ export default function HomeScreen() {
                   onPress={() => navigation.navigate('GroupDetail', { groupId: topGroup.id, groupName: topGroup.name })}
                   activeOpacity={0.75}
                   accessibilityRole="button"
-                  accessibilityLabel={`Top group: ${topGroup.name}, ${formatPL(topGroup.myGroupPL)}`}
+                  accessibilityLabel={topGroupLabel(topGroup.name, topGroup.myGroupPL)}
                 >
                   <Ionicons name="trophy-outline" size={12} color={colors.gold} />
                   <Text style={styles.topGroupText} numberOfLines={1}>
-                    {/* formatPL, not a hand-rolled sign + formatMoney: formatMoney applies Math.abs,
-                        so a LOSING top group rendered as "₪450" with no minus at all. Adding an
-                        accessible name exposed it — the name said "-₪450" while the chip said
-                        "₪450". Same helper both sides now, matching every other P&L in the app. */}
-                    Top group: {topGroup.name} {formatPL(topGroup.myGroupPL)}
+                    {topGroupText(topGroup.name, topGroup.myGroupPL)}
                   </Text>
                   <Ionicons name="chevron-forward" size={11} color={colors.goldMuted} />
                 </TouchableOpacity>
@@ -498,8 +494,11 @@ export default function HomeScreen() {
             onPress={() => navigation.navigate('NewGame', {})}
             activeOpacity={0.8}
             accessibilityRole="button"
-            // The visible text ends in an arrow glyph; the name says the destination instead.
-            accessibilityLabel="Quiet week — start a game"
+            // The visible words, minus the trailing arrow glyph, plus the destination APPENDED.
+            // An earlier version replaced them with "start a game", which breaks WCAG 2.5.3: a
+            // Voice Control user saying "tap deal someone in" would have matched nothing, because
+            // the name no longer contained the label they could see.
+            accessibilityLabel="Quiet week — deal someone in. Starts a new game."
           >
             <Ionicons name="sparkles-outline" size={16} color={colors.gold} />
             <Text style={styles.digestPromptText}>Quiet week — deal someone in →</Text>
@@ -838,18 +837,25 @@ export default function HomeScreen() {
                   isFirst={i === 0}
                 />
               ))}
-              {groups.length > 3 && (
+              {groups.length > 3 && (() => {
+                const moreGroupsText = `${groups.length - 3} more group${groups.length - 3 === 1 ? '' : 's'}`;
+                return (
                 <TouchableOpacity
                   style={[styles.moreRow]}
                   onPress={() => navigation.navigate('GroupsList')}
                   activeOpacity={0.7}
                   accessibilityRole="button"
-                  accessibilityLabel={`See ${groups.length - 3} more group${groups.length - 3 === 1 ? '' : 's'}`}
+                  // One string, shown and spoken. Written twice they immediately disagreed: the
+                  // name said "1 more group" while the row rendered "1 more groups" — the exact
+                  // defect this slice's own commit cites as its motivation, reintroduced by
+                  // pluralising only the half nobody can see.
+                  accessibilityLabel={`See ${moreGroupsText}`}
                 >
-                  <Text style={styles.moreText}>+{groups.length - 3} more groups</Text>
+                  <Text style={styles.moreText}>+{moreGroupsText}</Text>
                   <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
                 </TouchableOpacity>
-              )}
+                );
+              })()}
             </View>
           )}
         </View>

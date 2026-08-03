@@ -43,9 +43,14 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 const CHART_HEIGHT = 80;
 
 type Period = 'week' | 'month' | 'all';
+// Labels match GroupDetailScreen's leaderboard picker, which has used the shared Segmented since
+// it shipped. Segmented's label token is 15px inside a numberOfLines={1} segment, where the old
+// hand-rolled tabs were 12px — "This Month" truncated at a third of a narrow screen's width, and
+// sooner under OS font scaling. The hero label below still reads "This Month P&L" in full; it is
+// computed separately and unaffected.
 const PERIODS: { key: Period; label: string }[] = [
-  { key: 'week',  label: 'This Week' },
-  { key: 'month', label: 'This Month' },
+  { key: 'week',  label: 'Week' },
+  { key: 'month', label: 'Month' },
   { key: 'all',   label: 'All Time' },
 ];
 
@@ -217,9 +222,11 @@ export default function StatsScreen({ embedded = false }: { embedded?: boolean }
       <Animated.View style={{ opacity, transform: [{ translateY }] }}>
 
         {/* ── Period Picker ── */}
-        {/* The shared Segmented control rather than a hand-rolled row: it already supplies the
-            tablist/tab roles, the selected state and a 44px touch target, none of which the three
-            bare TouchableOpacitys here had. Reuse, so the a11y contract lives in one place. */}
+        {/* The shared Segmented control rather than a hand-rolled row: it supplies the tablist/tab
+            roles and a 44px touch target, neither of which the three bare TouchableOpacitys had.
+            Reuse, so the a11y contract lives in one place — and so a fix there reaches all seven
+            call sites, which is how the web selected-state gap below got closed for every one of
+            them rather than just this screen. */}
         <Segmented
           options={PERIODS.map(p => p.label)}
           selectedIndex={PERIODS.findIndex(p => p.key === period)}
