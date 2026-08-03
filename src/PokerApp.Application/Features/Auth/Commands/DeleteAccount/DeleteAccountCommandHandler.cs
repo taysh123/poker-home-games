@@ -40,10 +40,15 @@ public sealed class DeleteAccountCommandHandler(
         // an invariant three handlers maintain incidentally and nothing asserts.
         //
         // The set is pinned structurally by
-        // DeleteAccountFkIntegrityTests.Restrict_foreign_keys_to_User_match_the_acknowledged_set,
-        // which reads the EF MODEL — so a migration adding a ninth edge fails a test even though
-        // no seeded row exercises it. The seeded tests alone could not do that, and an earlier
-        // version of this comment wrongly claimed they could.
+        // DeleteAccountFkIntegrityTests.Foreign_keys_to_User_match_the_acknowledged_inventory_with_delete_behaviors,
+        // which reads the EF MODEL and pins EVERY FK whose principal is User, delete behavior
+        // included — so a migration adding a new edge fails a test even though no seeded row
+        // exercises it, INCLUDING the convention-default case (a nullable UserId + navigation
+        // with no explicit OnDelete gets ClientSetNull, which still blocks the delete at the
+        // database). Twice corrected: an earlier version claimed the seeded tests caught new
+        // edges (they cannot), and the version after that filtered the ratchet to
+        // Restrict/NoAction only, which a review agent beat with exactly the ClientSetNull
+        // default — reproducing this file's original 500 under a green ratchet.
 
         var memberships = await context.GroupMembers
             .Where(m => m.UserId == userId).ToListAsync(cancellationToken);

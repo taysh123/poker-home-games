@@ -49,28 +49,42 @@ public sealed class CalculateSettlementsCommandHandler(
 
         // ── Refuse to recalculate a session containing a DELETED player ──────────────────────
         //
-        // An account deletion anonymises its SessionPlayer rows (UserId, LinkedUserId and
-        // GuestName all null — a row DeleteAccountCommandHandler leaves behind deliberately, so
-        // the session's participant list and everyone else's totals still reconcile).
+        // Account deletion leaves TWO SessionPlayer shapes behind, both deliberate — the rows
+        // survive so the session's participant list and everyone else's totals still reconcile:
+        //   · the leaver's OWN row, anonymised (UserId null; GuestName was always null);
+        //   · a GUEST row that was LINKED to the leaver, unlinked (LinkedUserId null) with
+        //     GuestName KEPT — by shape now identical to an ordinary walk-in guest.
+        // Both are stamped with AccountDeletedAt at deletion time; for the guest shape that stamp
+        // is the ONLY signal, because no predicate over the surviving columns can distinguish it
+        // from a guest who never had an account. The all-null clause below is kept for rows
+        // anonymised by builds that predate the marker. HONEST LIMIT: a pre-marker LINKED-GUEST
+        // row is indistinguishable from a plain guest and is NOT caught.
         //
-        // Such a player has no SettlementUserId, so the split below drops them from the balance
+        // Either shape has no SettlementUserId, so the split below drops it from the balance
         // pool. The remaining balances then no longer sum to zero, and SettlementCalculator walks
         // debtors/creditors with `while (d < debtors.Count && c < creditors.Count)`, silently
-        // discarding whatever is left over when one list empties. Line ~83 would then DELETE the
-        // surviving pending settlements and replace them with that wrong set.
+        // discarding whatever is left over when one list empties — so recalculation fabricates a
+        // set that reassigns or drops survivors' receivables, and the RemoveRange of pending
+        // settlements below destroys whatever correct set existed.
         //
-        // This is not opt-in: SessionScreen auto-calls this command whenever a finished session
-        // has zero saved settlements — exactly the state account deletion leaves behind — so the
-        // counterparty's receivable would be destroyed with no user action, the next time they
-        // opened the session. Refusing keeps the settlements that were correct when they were
-        // computed, which is the only outcome that does not lose someone else's money.
+        // How that is REACHED (corrected after review — an earlier version of this comment
+        // claimed the auto-call destroys a surviving receivable "with no user action, on next
+        // open", but the two halves are mutually exclusive: SessionScreen only auto-calls when
+        // the saved-settlements list came back EMPTY):
+        //   · zero saved settlements + the auto-call ⇒ a WRONG set is fabricated with no user
+        //     action (there was nothing to destroy, but survivors now owe the wrong people);
+        //   · surviving settlements present ⇒ the auto-call does not fire; destruction requires
+        //     the manual Recalculate control, or the auto-call after a failed settlements GET.
+        // Both paths justify refusing: it keeps whatever settlements were correct when they were
+        // computed, and fabricates nothing.
         //
         // DEFERRED ALTERNATIVE (owner decision, 2026-08-03): preserve the departed party properly
         // by making Settlement.PayerUserId/ReceiverUserId nullable and anonymising instead of
         // deleting. That is richer but needs a migration plus a DTO change reaching the mobile
         // client; this guard is the smaller change that removes the data loss now.
         var hasDeletedPlayer = allPlayers.Any(sp =>
-            sp.UserId is null && sp.LinkedUserId is null && sp.GuestName is null);
+            sp.AccountDeletedAt is not null
+            || (sp.UserId is null && sp.LinkedUserId is null && sp.GuestName is null));
         if (hasDeletedPlayer)
             throw new BadRequestException(
                 "This session includes a player whose account was deleted, so settlements can no longer be recalculated. The settlements already recorded are unchanged.");
