@@ -47,11 +47,16 @@ public sealed class GetSessionBalancesQueryHandler(
 
         var playerBalances = players.Select(p =>
         {
+            // The legacy fallback requires b.UserId != null: this runs IN MEMORY, where
+            // null == null is TRUE for Guid?, so without it an ORPHANED row (both keys null —
+            // deletion residue) lands on every null-UserId seat (each guest, each anonymised
+            // seat), inflating their money. Orphaned rows are counted NOWHERE, mirroring the
+            // orphaned-money refusal in CalculateSettlements.
             var totalBuyIn = buyIns
-                .Where(b => b.SessionPlayerId == p.Id || (b.SessionPlayerId == null && b.UserId == p.UserId))
+                .Where(b => b.SessionPlayerId == p.Id || (b.SessionPlayerId == null && b.UserId != null && b.UserId == p.UserId))
                 .Sum(b => b.Amount);
             var totalCashOut = cashOuts
-                .Where(c => c.SessionPlayerId == p.Id || (c.SessionPlayerId == null && c.UserId == p.UserId))
+                .Where(c => c.SessionPlayerId == p.Id || (c.SessionPlayerId == null && c.UserId != null && c.UserId == p.UserId))
                 .Sum(c => c.Amount);
             return new PlayerBalanceDto(
                 p.Id,

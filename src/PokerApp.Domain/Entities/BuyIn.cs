@@ -21,4 +21,19 @@ public class BuyIn : BaseEntity
             Amount = amount,
             Timestamp = DateTime.UtcNow
         };
+
+    /// <summary>
+    /// Clears the direct user link on account deletion, keeping the AMOUNT and the SessionPlayer
+    /// link intact so the session still balances. Current rows are created without a UserId, but
+    /// legacy rows written before SessionPlayerId existed still carry one — and that column is a
+    /// RESTRICT foreign key, so it blocks the delete regardless of how the row was created.
+    /// </summary>
+    public void AnonymizeUser() => UserId = null;
+
+    /// <summary>
+    /// Re-keys a LEGACY row (attributed only by UserId) to its seat before the user link is
+    /// severed. Without this, AnonymizeUser orphans the amount from every balance projection and
+    /// the departed player's cash line comes out money-wrong (fleet-demonstrated sign inversion).
+    /// </summary>
+    public void AttributeToSeat(Guid sessionPlayerId) => SessionPlayerId = sessionPlayerId;
 }

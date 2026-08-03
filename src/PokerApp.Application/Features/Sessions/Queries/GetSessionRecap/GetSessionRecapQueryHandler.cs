@@ -65,17 +65,19 @@ public sealed class GetSessionRecapQueryHandler(
             .Select(h => new { h.WinnerName, h.PotAmount })
             .ToListAsync(cancellationToken);
 
-        // Compute per-player stats
+        // Compute per-player stats. The legacy fallback requires b.UserId != null — in memory
+        // null == null is TRUE, so an ORPHANED (both keys null) deletion-residue row would land
+        // on every null-UserId seat. Same fix as GetSessionBalancesQueryHandler.
         var stats = players.Select(p =>
         {
             var totalIn = buyIns
-                .Where(b => b.SessionPlayerId == p.Id || (b.SessionPlayerId == null && b.UserId == p.UserId))
+                .Where(b => b.SessionPlayerId == p.Id || (b.SessionPlayerId == null && b.UserId != null && b.UserId == p.UserId))
                 .Sum(b => b.Amount);
             var totalOut = cashOuts
-                .Where(c => c.SessionPlayerId == p.Id || (c.SessionPlayerId == null && c.UserId == p.UserId))
+                .Where(c => c.SessionPlayerId == p.Id || (c.SessionPlayerId == null && c.UserId != null && c.UserId == p.UserId))
                 .Sum(c => c.Amount);
             var buyInCount = buyIns.Count(b =>
-                b.SessionPlayerId == p.Id || (b.SessionPlayerId == null && b.UserId == p.UserId));
+                b.SessionPlayerId == p.Id || (b.SessionPlayerId == null && b.UserId != null && b.UserId == p.UserId));
             return new PlayerStat(p.DisplayName, p.IsGuest, totalOut - totalIn, buyInCount);
         }).ToList();
 

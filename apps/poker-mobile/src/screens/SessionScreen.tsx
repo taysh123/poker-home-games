@@ -74,6 +74,7 @@ import SkeletonCard from '../components/SkeletonCard';
 import { successNotification, errorNotification, lightTap } from '../utils/haptics';
 import { showToast } from '../utils/toast';
 import { confirmDialog } from '../utils/confirm';
+import { refusalMessage, isCashSeat, cashSeatName, cashSectionSubtitle, allSettledCopy, DEPARTED_PLAYER_LABEL } from '../utils/settlementsSection';
 import InviteSheet from '../components/InviteSheet';
 import { formatMoney, formatPL } from '../utils/formatters';
 import { computeFinalCount, decimalFinalCountModel } from '../local/finalCount';
@@ -236,6 +237,10 @@ export default function SessionScreen({ route, navigation }: Props) {
   const [markingPaidId, setMarkingPaidId] = useState<string | null>(null);
   const [settlementsLoaded, setSettlementsLoaded] = useState(false);
   const [guestBalances, setGuestBalances] = useState<GuestBalanceDto[]>([]);
+  // Server refused to calculate (HTTP 400, e.g. a deleted player at this table). Holds the
+  // server's explanation so the empty-settlements state can say WHY instead of rendering the
+  // "Everyone is even" all-clear, which would be a false money claim in exactly this case.
+  const [settlementsBlocked, setSettlementsBlocked] = useState<string | null>(null);
 
   // Export
   const [exporting, setExporting] = useState(false);
@@ -362,10 +367,10 @@ export default function SessionScreen({ route, navigation }: Props) {
           // Derive unlinked guest balances from already-loaded player + balance data
           if (balData) {
             const computed = sessionData.players
-              .filter(p => p.isGuest && !p.linkedUserId)
+              .filter(isCashSeat)
               .map(p => {
                 const bal = balData.players.find(b => b.sessionPlayerId === p.sessionPlayerId);
-                return { sessionPlayerId: p.sessionPlayerId, guestName: p.username, netBalance: bal?.profitLoss ?? 0 };
+                return { sessionPlayerId: p.sessionPlayerId, guestName: cashSeatName(p), netBalance: bal?.profitLoss ?? 0 };
               })
               .filter(g => g.netBalance !== 0);
             setGuestBalances(computed);
@@ -379,8 +384,13 @@ export default function SessionScreen({ route, navigation }: Props) {
                 setSettlements(recalc.settlements);
                 setGuestBalances(recalc.guestBalances);
                 setSettlementsLoaded(true);
-              } catch {
-                // silently fail — user can press Recalculate manually
+                setSettlementsBlocked(null);
+              } catch (e: any) {
+                // A 400 is the server REFUSING (deleted player at this table) — record its
+                // explanation so the section doesn't render a false "Everyone is even".
+                // Anything else stays silent — user can press Recalculate manually.
+                const refusal = refusalMessage(e?.response?.status, e?.response?.data?.message);
+                if (refusal) setSettlementsBlocked(refusal);
               }
             }
           }
@@ -558,8 +568,15 @@ export default function SessionScreen({ route, navigation }: Props) {
 
       const [balData, calcResult] = await Promise.all([
         getSessionBalances(token, sessionId).catch(() => null),
-        calculateSettlements(token, sessionId).catch(() => {
-          showToast('Settlements could not be calculated — tap Recalculate to retry.', 'info');
+        calculateSettlements(token, sessionId).catch((e: any) => {
+          const refusal = refusalMessage(e?.response?.status, e?.response?.data?.message);
+          if (refusal) {
+            // The server REFUSED — retrying cannot succeed, so don't promise one.
+            setSettlementsBlocked(refusal);
+            showToast(refusal, 'info');
+          } else {
+            showToast('Settlements could not be calculated — tap Recalculate to retry.', 'info');
+          }
           return { settlements: [], guestBalances: [] };
         }),
       ]);
@@ -649,9 +666,14 @@ export default function SessionScreen({ route, navigation }: Props) {
       const result = await calculateSettlements(token, sessionId);
       setSettlements(result.settlements);
       setGuestBalances(result.guestBalances);
+      setSettlementsBlocked(null);
       successNotification();
-    } catch {
-      showToast('Failed to calculate settlements.', 'error');
+    } catch (e: any) {
+      // Surface the server's explanation (the deleted-player guard writes one); the bare
+      // fallback previously discarded it and read as a transient fault inviting retries.
+      const refusal = refusalMessage(e?.response?.status, e?.response?.data?.message);
+      if (refusal) setSettlementsBlocked(refusal);
+      showToast(e?.response?.data?.message ?? 'Failed to calculate settlements.', 'error');
     } finally {
       setCalcLoading(false);
     }
@@ -1151,15 +1173,26 @@ export default function SessionScreen({ route, navigation }: Props) {
                       : <Ionicons name="share-outline" size={iconSize.xs} color={colors.gold} />}
                   </PressableScale>
                 )}
-                <PressableScale onPress={handleCalculateSettlements} disabled={calcLoading} hitSlop={8} haptic="light" accessibilityRole="button" accessibilityLabel="Recalculate settlements">
-                  {calcLoading
-                    ? <ActivityIndicator color={colors.gold} size="small" />
-                    : <Text style={styles.seeAll}>Recalculate</Text>}
-                </PressableScale>
+                {!(settlementsBlocked && settlements.length === 0) && (
+                  <PressableScale onPress={handleCalculateSettlements} disabled={calcLoading} hitSlop={8} haptic="light" accessibilityRole="button" accessibilityLabel="Recalculate settlements">
+                    {calcLoading
+                      ? <ActivityIndicator color={colors.gold} size="small" />
+                      : <Text style={styles.seeAll}>Recalculate</Text>}
+                  </PressableScale>
+                )}
               </View>
             </View>
 
-            {settlements.length === 0 ? (
+            {settlements.length === 0 && settlementsBlocked ? (
+              // The server REFUSED to calculate (deleted player at this table). Showing the
+              // "Everyone is even" all-clear here would be a false money claim — someone may
+              // genuinely be owed. Say why, in the server's own words, and promise nothing.
+              <View style={styles.evenCard}>
+                <Ionicons name="alert-circle" size={iconSize.lg} color={colors.warning} />
+                <Text style={styles.evenTitle}>Settlements unavailable</Text>
+                <Text style={styles.evenSub}>{settlementsBlocked}</Text>
+              </View>
+            ) : settlements.length === 0 ? (
               <View style={styles.evenCard}>
                 <Ionicons
                   name="checkmark-circle"
@@ -1181,10 +1214,12 @@ export default function SessionScreen({ route, navigation }: Props) {
                 </PressableScale>
               </View>
             ) : settlements.every(s => s.status === 'Confirmed') ? (
+              // The celebration copy is gated: with cash balances outstanding (guests, or a
+              // departed player's seat), settled digital rows are NOT a settled table.
               <View style={styles.evenCard}>
-                <Ionicons name="checkmark-circle" size={iconSize.lg} color={colors.success} />
-                <Text style={styles.evenTitle}>All settled up!</Text>
-                <Text style={styles.evenSub}>Everyone's even. See you next game.</Text>
+                <Ionicons name="checkmark-circle" size={iconSize.lg} color={guestBalances.length > 0 ? colors.textMuted : colors.success} />
+                <Text style={styles.evenTitle}>{allSettledCopy(guestBalances.length > 0).title}</Text>
+                <Text style={styles.evenSub}>{allSettledCopy(guestBalances.length > 0).sub}</Text>
                 <PressableScale onPress={handleCalculateSettlements} disabled={calcLoading} hitSlop={8} haptic="light" accessibilityRole="button" accessibilityLabel="Recalculate settlements">
                   {calcLoading
                     ? <ActivityIndicator color={colors.gold} size="small" />
@@ -1280,7 +1315,7 @@ export default function SessionScreen({ route, navigation }: Props) {
               </View>
             </View>
             <Text style={styles.cashSettleSubtitle}>
-              Guests can't receive digital transfers — settle these directly in cash.
+              {cashSectionSubtitle(guestBalances.some(g => g.guestName === DEPARTED_PLAYER_LABEL))}
             </Text>
             <View style={[styles.settlementList, { marginTop: spacing.sm }]}>
               {cashTransfers.map((ct, i) => {
