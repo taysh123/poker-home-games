@@ -639,6 +639,10 @@ export default function ProfileScreen({ navigation }: Props) {
             T Poker is a poker study app with a home-game scorekeeping tool, for adults
             (18+). It is not a gambling product — no wagering, and no money in the app.
           </Text>
+          {/* Studio credit, not a copyright line — the © below names the legal rights-holder,
+              Tay Shofer, per the individual-developer-account publisher decision. This byline
+              matches the wording on the splash/Welcome/Login screens. */}
+          <Text style={styles.madeBy}>Made by True Story Labs</Text>
           <Text style={styles.aboutMeta}>
             v{Constants.expoConfig?.version ?? '1.1.0'} · © Tay Shofer
           </Text>
@@ -795,6 +799,11 @@ const styles = StyleSheet.create({
     color: colors.textDim,
     lineHeight: 18,
     marginTop: 14,
+  },
+  madeBy: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 10,
   },
   aboutMeta: {
     fontSize: 11,

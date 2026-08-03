@@ -39,6 +39,9 @@ export function Footer() {
             <p className="mt-2 max-w-xs text-sm leading-relaxed text-textMuted">
               Learn poker properly. Keep the score straight on game night.
             </p>
+            {/* Studio credit, not a copyright line — the copyright bar below names the legal
+                rights-holder, SITE.company (Tay Shofer). Matches the mobile app's own byline. */}
+            <p className="mt-3 text-xs text-textDim">Made by True Story Labs</p>
             <a
               href={SITE.appUrl}
               target="_blank"

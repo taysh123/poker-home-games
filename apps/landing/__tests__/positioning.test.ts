@@ -158,6 +158,19 @@ describe('publisher identity — footer copyright is the legal name', () => {
   });
 });
 
+describe('footer brand column — studio credit (Q1.6 7ii)', () => {
+  // "Made by True Story Labs" in the brand column — matching the mobile app's own byline wording,
+  // added in the same slice, so the two additions do not drift into two different phrasings for
+  // one fact. Deliberately NOT "©": the copyright bar below already pins SITE.company as the legal
+  // rights-holder (Tay Shofer, tested above), and a bare "Made by" credit cannot be misread as
+  // naming TSL the copyright holder even if this line is moved.
+  it('credits True Story Labs as the studio, not as the copyright holder', () => {
+    const footer = read('components/blocks/Footer.tsx');
+    expect(footer).toMatch(/Made by True Story Labs/);
+    expect(footer).not.toMatch(/©\s*True Story Labs/);
+  });
+});
+
 describe('positioning — no operator idiom', () => {
   // Phrases that belong to gambling operators, not to a study app. "Play responsibly" in
   // particular implies there is something to play here for money. There isn't.

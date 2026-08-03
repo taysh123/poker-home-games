@@ -189,6 +189,15 @@ describe('publisher identity — legal name Tay Shofer, not the trade name (lock
     expect(profile).toMatch(/©\s*Tay Shofer/);
     expect(profile).not.toMatch(/©\s*True Story Labs/);
   });
+
+  it('Profile credits the studio brand as a byline (Q1.6 7i), never as a copyright holder', () => {
+    // "Made by True Story Labs" is a STUDIO credit, matching the byline already shown on the
+    // splash, Welcome and Login screens — it is deliberately not "©", so it cannot make TSL read
+    // as the rights-holder even if this line moves. The test above already pins that no © line in
+    // this file names the trade name; this pins that the credit exists at all.
+    const profile = read('../src/screens/ProfileScreen.tsx');
+    expect(profile).toMatch(/Made by True Story Labs/);
+  });
 });
 
 describe('Terms link presence in-app', () => {
