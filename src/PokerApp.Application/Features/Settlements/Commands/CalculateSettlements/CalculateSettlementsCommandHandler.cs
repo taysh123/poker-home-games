@@ -60,23 +60,30 @@ public sealed class CalculateSettlementsCommandHandler(
         // anonymised by builds that predate the marker. HONEST LIMIT: a pre-marker LINKED-GUEST
         // row is indistinguishable from a plain guest and is NOT caught.
         //
-        // Either shape has no SettlementUserId, so the split below drops it from the balance
-        // pool. The remaining balances then no longer sum to zero, and SettlementCalculator walks
-        // debtors/creditors with `while (d < debtors.Count && c < creditors.Count)`, silently
-        // discarding whatever is left over when one list empties — so recalculation fabricates a
-        // set that reassigns or drops survivors' receivables, and the RemoveRange of pending
-        // settlements below destroys whatever correct set existed.
+        // Either shape has no SettlementUserId, so the split below moves it out of the digital
+        // pool and into the cash-balance projection, like a walk-in guest. That is honest when
+        // computing a FIRST set — but recalculating over a RECORDED set matches the remaining
+        // debtors/creditors differently than when the departed player was still in the pool, so
+        // survivors' receivables get reassigned or dropped, and the RemoveRange of pending
+        // settlements below destroys the set that was correct when it was computed.
         //
-        // How that is REACHED (corrected after review — an earlier version of this comment
-        // claimed the auto-call destroys a surviving receivable "with no user action, on next
-        // open", but the two halves are mutually exclusive: SessionScreen only auto-calls when
-        // the saved-settlements list came back EMPTY):
-        //   · zero saved settlements + the auto-call ⇒ a WRONG set is fabricated with no user
-        //     action (there was nothing to destroy, but survivors now owe the wrong people);
-        //   · surviving settlements present ⇒ the auto-call does not fire; destruction requires
-        //     the manual Recalculate control, or the auto-call after a failed settlements GET.
-        // Both paths justify refusing: it keeps whatever settlements were correct when they were
-        // computed, and fabricates nothing.
+        // The guard is SCOPED to sessions that already have settlement rows (owner decision,
+        // 2026-08-04): refusing is only right when there is something recorded to protect.
+        // An unconditional refusal made a session whose player deleted MID-GAME (before any
+        // settlements existed) permanently unsettleable — this handler is the only producer of
+        // Settlement rows, so the whole table lost in-app settlement forever. With no rows
+        // recorded, the FIRST calculation runs instead: the departed player is carved out as a
+        // cash balance exactly like an ordinary walk-in guest (see the cash-balance projection
+        // below), so the survivors' transfers are computed on honest numbers and nothing is
+        // silently dropped. Scoping also makes the refusal message's closing sentence
+        // ("The settlements already recorded are unchanged.") true every time it is sent.
+        //
+        // How the destroyed-settlements harm is REACHED (corrected after review — an earlier
+        // version claimed the auto-call destroys a surviving receivable "with no user action, on
+        // next open", but the two halves are mutually exclusive: SessionScreen only auto-calls
+        // when the saved-settlements list came back EMPTY): with recorded settlements present,
+        // recalculation is reachable via the manual Recalculate control, or via the auto-call
+        // after a failed settlements GET. Both are refused here.
         //
         // DEFERRED ALTERNATIVE (owner decision, 2026-08-03): preserve the departed party properly
         // by making Settlement.PayerUserId/ReceiverUserId nullable and anonymising instead of
@@ -85,7 +92,9 @@ public sealed class CalculateSettlementsCommandHandler(
         var hasDeletedPlayer = allPlayers.Any(sp =>
             sp.AccountDeletedAt is not null
             || (sp.UserId is null && sp.LinkedUserId is null && sp.GuestName is null));
-        if (hasDeletedPlayer)
+        var hasRecordedSettlements = await context.Settlements
+            .AnyAsync(s => s.SessionId == request.SessionId, cancellationToken);
+        if (hasDeletedPlayer && hasRecordedSettlements)
             throw new BadRequestException(
                 "This session includes a player whose account was deleted, so settlements can no longer be recalculated. The settlements already recorded are unchanged.");
 
@@ -141,13 +150,17 @@ public sealed class CalculateSettlementsCommandHandler(
             s.Status.ToString()
         )).ToList();
 
-        // Compute net balance for each unlinked guest — callers must settle these in cash
+        // Compute net balance for each unlinked guest — callers must settle these in cash.
+        // A DELETED player's anonymised row also lands here (no SettlementUserId) and has no
+        // GuestName; it gets an honest placeholder rather than shipping null through a non-null
+        // DTO field. A departed LINKED guest keeps its real name — the host's record of who sat
+        // at the table.
         var guestBalanceDtos = unlinkedGuests
             .Select(sp =>
             {
                 var totalBuyIn = allBuyIns.Where(b => b.SessionPlayerId == sp.Id).Sum(b => b.Amount);
                 var totalCashOut = allCashOuts.Where(c => c.SessionPlayerId == sp.Id).Sum(c => c.Amount);
-                return new GuestBalanceDto(sp.Id, sp.GuestName!, totalCashOut - totalBuyIn);
+                return new GuestBalanceDto(sp.Id, sp.GuestName ?? "Departed player", totalCashOut - totalBuyIn);
             })
             .Where(g => g.NetBalance != 0)
             .ToList();

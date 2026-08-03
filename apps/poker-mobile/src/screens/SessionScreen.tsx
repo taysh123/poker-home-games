@@ -236,6 +236,10 @@ export default function SessionScreen({ route, navigation }: Props) {
   const [markingPaidId, setMarkingPaidId] = useState<string | null>(null);
   const [settlementsLoaded, setSettlementsLoaded] = useState(false);
   const [guestBalances, setGuestBalances] = useState<GuestBalanceDto[]>([]);
+  // Server refused to calculate (HTTP 400, e.g. a deleted player at this table). Holds the
+  // server's explanation so the empty-settlements state can say WHY instead of rendering the
+  // "Everyone is even" all-clear, which would be a false money claim in exactly this case.
+  const [settlementsBlocked, setSettlementsBlocked] = useState<string | null>(null);
 
   // Export
   const [exporting, setExporting] = useState(false);
@@ -379,8 +383,14 @@ export default function SessionScreen({ route, navigation }: Props) {
                 setSettlements(recalc.settlements);
                 setGuestBalances(recalc.guestBalances);
                 setSettlementsLoaded(true);
-              } catch {
-                // silently fail — user can press Recalculate manually
+                setSettlementsBlocked(null);
+              } catch (e: any) {
+                // A 400 is the server REFUSING (deleted player at this table) — record its
+                // explanation so the section doesn't render a false "Everyone is even".
+                // Anything else stays silent — user can press Recalculate manually.
+                if (e?.response?.status === 400) {
+                  setSettlementsBlocked(e?.response?.data?.message ?? 'Settlements can’t be calculated for this game.');
+                }
               }
             }
           }
@@ -558,8 +568,15 @@ export default function SessionScreen({ route, navigation }: Props) {
 
       const [balData, calcResult] = await Promise.all([
         getSessionBalances(token, sessionId).catch(() => null),
-        calculateSettlements(token, sessionId).catch(() => {
-          showToast('Settlements could not be calculated — tap Recalculate to retry.', 'info');
+        calculateSettlements(token, sessionId).catch((e: any) => {
+          if (e?.response?.status === 400) {
+            // The server REFUSED — retrying cannot succeed, so don't promise one.
+            const reason = e?.response?.data?.message ?? 'Settlements can’t be calculated for this game.';
+            setSettlementsBlocked(reason);
+            showToast(reason, 'info');
+          } else {
+            showToast('Settlements could not be calculated — tap Recalculate to retry.', 'info');
+          }
           return { settlements: [], guestBalances: [] };
         }),
       ]);
@@ -649,9 +666,15 @@ export default function SessionScreen({ route, navigation }: Props) {
       const result = await calculateSettlements(token, sessionId);
       setSettlements(result.settlements);
       setGuestBalances(result.guestBalances);
+      setSettlementsBlocked(null);
       successNotification();
-    } catch {
-      showToast('Failed to calculate settlements.', 'error');
+    } catch (e: any) {
+      // Surface the server's explanation (the deleted-player guard writes one); the bare
+      // fallback previously discarded it and read as a transient fault inviting retries.
+      if (e?.response?.status === 400) {
+        setSettlementsBlocked(e?.response?.data?.message ?? 'Settlements can’t be calculated for this game.');
+      }
+      showToast(e?.response?.data?.message ?? 'Failed to calculate settlements.', 'error');
     } finally {
       setCalcLoading(false);
     }
@@ -1159,7 +1182,16 @@ export default function SessionScreen({ route, navigation }: Props) {
               </View>
             </View>
 
-            {settlements.length === 0 ? (
+            {settlements.length === 0 && settlementsBlocked ? (
+              // The server REFUSED to calculate (deleted player at this table). Showing the
+              // "Everyone is even" all-clear here would be a false money claim — someone may
+              // genuinely be owed. Say why, in the server's own words, and promise nothing.
+              <View style={styles.evenCard}>
+                <Ionicons name="alert-circle" size={iconSize.lg} color={colors.warning} />
+                <Text style={styles.evenTitle}>Settlements unavailable</Text>
+                <Text style={styles.evenSub}>{settlementsBlocked}</Text>
+              </View>
+            ) : settlements.length === 0 ? (
               <View style={styles.evenCard}>
                 <Ionicons
                   name="checkmark-circle"

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Xunit;
 using PokerApp.Application.Common.Interfaces;
 using PokerApp.Application.Features.Auth.Commands.DeleteAccount;
+using PokerApp.Application.Features.Settlements;
 using PokerApp.Application.Features.Settlements.Commands.CalculateSettlements;
 using PokerApp.Application.Services;
 using PokerApp.Domain.Entities;
@@ -457,6 +458,155 @@ public sealed class DeleteAccountFkIntegrityTests : IDisposable
 
         var guest = Assert.Single(result.GuestBalances);
         Assert.Equal(-50m, guest.NetBalance);
+    }
+
+    /// <summary>
+    /// The MID-GAME deletion scenario (owner decision 2026-08-04): a player deletes their account
+    /// before the session ever had settlements calculated. The guard must NOT fire — there is
+    /// nothing recorded to protect, and refusing would leave the whole table permanently
+    /// unsettleable (CalculateSettlements is the only producer of Settlement rows). The departed
+    /// player's balance is surfaced as a cash line so the money still reconciles visibly.
+    /// Balance design: leaving −80, other +100, payer −20 — sums to zero, and forces one real
+    /// registered transfer (payer→other 20) so success is asserted on substance, not emptiness.
+    /// </summary>
+    private (Guid LeavingId, Guid OtherId, Guid PayerId, Guid SessionId) SeedUnsettledSession(bool leavingAsLinkedGuest)
+    {
+        var leaving = User.Create("leaving", "leaving@example.com", "hash");
+        var other = User.Create("other", "other@example.com", "hash");
+        var payer = User.Create("payer", "payer@example.com", "hash");
+        _ctx.Users.AddRange(leaving, other, payer);
+
+        var group = Group.Create("Thursday Game", null, other.Id);
+        _ctx.Groups.Add(group);
+        _ctx.GroupMembers.Add(GroupMember.Create(group.Id, other.Id, GroupRole.Owner));
+
+        var session = Session.Create("Session 1", other.Id, group.Id);
+        session.Start(); // Active — the deletion happens mid-game, before any settlements exist
+        _ctx.Sessions.Add(session);
+
+        var spLeaving = leavingAsLinkedGuest
+            ? SessionPlayer.CreateForGuest(session.Id, "Dan (guest)", leaving.Id)
+            : SessionPlayer.CreateForUser(session.Id, leaving.Id);
+        var spOther = SessionPlayer.CreateForUser(session.Id, other.Id);
+        var spPayer = SessionPlayer.CreateForUser(session.Id, payer.Id);
+        _ctx.SessionPlayers.AddRange(spLeaving, spOther, spPayer);
+
+        _ctx.BuyIns.Add(BuyIn.Create(session.Id, spLeaving.Id, 100m));
+        _ctx.BuyIns.Add(BuyIn.Create(session.Id, spOther.Id, 100m));
+        _ctx.BuyIns.Add(BuyIn.Create(session.Id, spPayer.Id, 100m));
+        _ctx.CashOuts.Add(CashOut.Create(session.Id, spLeaving.Id, 20m));   // net -80
+        _ctx.CashOuts.Add(CashOut.Create(session.Id, spOther.Id, 200m));    // net +100
+        _ctx.CashOuts.Add(CashOut.Create(session.Id, spPayer.Id, 80m));     // net -20
+
+        _ctx.SaveChanges();
+        _ctx.ChangeTracker.Clear();
+        return (leaving.Id, other.Id, payer.Id, session.Id);
+    }
+
+    private async Task<CalculateSettlementsResult> DeleteThenEndThenCalculateAsync(
+        Guid leavingId, Guid otherId, Guid sessionId)
+    {
+        await DeleteAsync(leavingId);
+
+        var session = await _ctx.Sessions.FirstAsync(x => x.Id == sessionId);
+        session.End();
+        await _ctx.SaveChangesAsync(CancellationToken.None);
+        _ctx.ChangeTracker.Clear();
+
+        var calc = new CalculateSettlementsCommandHandler(
+            _ctx, new FakeCurrentUser(otherId), new SettlementCalculatorService());
+        return await calc.Handle(new CalculateSettlementsCommand(sessionId), CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task First_calculation_after_a_deletion_succeeds_and_surfaces_the_departed_player()
+    {
+        var s = SeedUnsettledSession(leavingAsLinkedGuest: false);
+
+        var result = await DeleteThenEndThenCalculateAsync(s.LeavingId, s.OtherId, s.SessionId);
+
+        // The survivors' transfer is computed on the full pool minus the departed player, the
+        // same way an ordinary guest's cash balance is carved out today.
+        var transfer = Assert.Single(result.Settlements);
+        Assert.Equal(s.PayerId, transfer.PayerUserId);
+        Assert.Equal(s.OtherId, transfer.ReceiverUserId);
+        Assert.Equal(20m, transfer.Amount);
+
+        // The anonymised row has no GuestName; the cash line must still name it honestly rather
+        // than shipping a null through a non-null DTO field.
+        var departed = Assert.Single(result.GuestBalances);
+        Assert.Equal("Departed player", departed.GuestName);
+        Assert.Equal(-80m, departed.NetBalance);
+
+        Assert.Equal(1, await _ctx.Settlements.CountAsync(x => x.SessionId == s.SessionId));
+    }
+
+    [Fact]
+    public async Task First_calculation_after_a_linked_guest_deletion_keeps_the_guests_name_on_the_cash_line()
+    {
+        var s = SeedUnsettledSession(leavingAsLinkedGuest: true);
+
+        var result = await DeleteThenEndThenCalculateAsync(s.LeavingId, s.OtherId, s.SessionId);
+
+        var transfer = Assert.Single(result.Settlements);
+        Assert.Equal(20m, transfer.Amount);
+
+        // The guest row keeps its name deliberately — the host's record of who sat there — so
+        // the cash line stays attributable even though the linked account is gone.
+        var departed = Assert.Single(result.GuestBalances);
+        Assert.Equal("Dan (guest)", departed.GuestName);
+        Assert.Equal(-80m, departed.NetBalance);
+    }
+
+    [Fact]
+    public async Task Recalculation_is_refused_even_when_every_recorded_settlement_is_already_paid()
+    {
+        // The recorded-settlements check must count ANY status, not just Pending. A paid record
+        // is still a record: recalculating next to it would add a fresh wrong Pending set beside
+        // the confirmed one. (RemoveRange only clears Pending, so the paid rows themselves are
+        // never deleted — the harm is the fabricated additions.)
+        var s = SeedUnsettledSession(leavingAsLinkedGuest: false);
+        var session = _ctx.Sessions.First(x => x.Id == s.SessionId);
+        session.End();
+        var paid = Settlement.Create(s.SessionId, s.PayerId, s.OtherId, 20m);
+        paid.MarkAsPaid();
+        _ctx.Settlements.Add(paid);
+        _ctx.SaveChanges();
+        _ctx.ChangeTracker.Clear();
+
+        await DeleteAsync(s.LeavingId);
+
+        var calc = new CalculateSettlementsCommandHandler(
+            _ctx, new FakeCurrentUser(s.OtherId), new SettlementCalculatorService());
+        var ex = await Assert.ThrowsAsync<Application.Common.Exceptions.BadRequestException>(
+            () => calc.Handle(new CalculateSettlementsCommand(s.SessionId), CancellationToken.None));
+        Assert.Contains("account was deleted", ex.Message);
+    }
+
+    [Fact]
+    public async Task When_deletion_removed_every_recorded_settlement_the_survivors_can_recalculate()
+    {
+        // Every settlement named the leaver (a two-party digital settle-up), so deletion removes
+        // them all. With nothing left to protect, the guard must let the survivors rebuild their
+        // picture rather than freezing the session on rows that no longer exist.
+        var s = SeedUnsettledSession(leavingAsLinkedGuest: false);
+        var session = _ctx.Sessions.First(x => x.Id == s.SessionId);
+        session.End();
+        _ctx.Settlements.Add(Settlement.Create(s.SessionId, s.LeavingId, s.OtherId, 80m));
+        _ctx.SaveChanges();
+        _ctx.ChangeTracker.Clear();
+
+        await DeleteAsync(s.LeavingId);
+        Assert.Equal(0, await _ctx.Settlements.CountAsync(x => x.SessionId == s.SessionId));
+
+        var calc = new CalculateSettlementsCommandHandler(
+            _ctx, new FakeCurrentUser(s.OtherId), new SettlementCalculatorService());
+        var result = await calc.Handle(new CalculateSettlementsCommand(s.SessionId), CancellationToken.None);
+
+        var transfer = Assert.Single(result.Settlements);
+        Assert.Equal(20m, transfer.Amount);
+        var departed = Assert.Single(result.GuestBalances);
+        Assert.Equal("Departed player", departed.GuestName);
     }
 
     [Fact]
