@@ -1,8 +1,10 @@
 import {
   CALC_BLOCKED_FALLBACK,
+  DEPARTED_PLAYER_LABEL,
   refusalMessage,
   isCashSeat,
   cashSeatName,
+  cashSectionSubtitle,
   allSettledCopy,
 } from '../settlementsSection';
 
@@ -62,6 +64,23 @@ describe('cashSeatName — honest labels on cash lines', () => {
     // Must stay equal to the GuestBalanceDto placeholder in
     // CalculateSettlementsCommandHandler — one seat, one label on both surfaces.
     expect(cashSeatName({ isGuest: false, username: 'Unknown' })).toBe('Departed player');
+    expect(DEPARTED_PLAYER_LABEL).toBe('Departed player');
+  });
+});
+
+describe('cashSectionSubtitle — the guest rationale may not be claimed over a departed seat', () => {
+  it('keeps the shipped guest copy when every cash line is a guest', () => {
+    expect(cashSectionSubtitle(false)).toBe(
+      "Guests can't receive digital transfers — settle these directly in cash.",
+    );
+  });
+
+  it('drops the guest attribution when a departed registered player is among the cash lines', () => {
+    // Fleet finding (2026-08-04): "Paul → Departed player" rendered under a sentence about
+    // guests — a wrong-context claim on a money surface (copy-honesty rule 1).
+    expect(cashSectionSubtitle(true)).toBe(
+      "These players can't receive digital transfers — settle directly in cash.",
+    );
   });
 });
 

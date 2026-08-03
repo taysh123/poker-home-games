@@ -86,12 +86,21 @@ public sealed class DeleteAccountCommandHandler(
 
         // Legacy money rows can carry a direct UserId (RESTRICT). Amounts and SessionPlayer links
         // are kept so the session still balances for everyone else at that table. A legacy row
-        // whose ONLY attribution is that UserId must first be re-keyed to the leaver's surviving
-        // seat — anonymising it as-is orphans the amount from every balance projection, and the
-        // departed player's cash line comes out money-wrong (fleet-demonstrated: +20 reported
-        // where the truth was −80). A row that cannot be re-keyed (no seat in that session) is
-        // left orphaned deliberately; CalculateSettlements refuses such sessions rather than
-        // computing a set that silently ignores real money.
+        // whose ONLY attribution is that UserId must first be re-keyed to the leaver's OWN
+        // surviving seat — anonymising it as-is orphans the amount from every balance projection,
+        // and the departed player's cash line comes out money-wrong (fleet-demonstrated: +20
+        // reported where the truth was −80).
+        //
+        // Rows that cannot be re-keyed are left orphaned DELIBERATELY, and CalculateSettlements
+        // refuses such sessions rather than computing a set that silently ignores real money.
+        // That includes the linked-guest-only shape: if the leaver's only seat in the session is
+        // a guest seat linked to them, the legacy row is NOT re-keyed onto it — legacy rows
+        // predate guest seats entirely (the AddGuestPlayers migration introduced guest seats,
+        // LinkedUserId and SessionPlayerId together, backfilling by the same (SessionId, UserId)
+        // key used here), and a linked guest is a DIFFERENT physical person who merely settles
+        // as the linked user, so re-keying would merge the account holder's money into another
+        // person's cash line. A loud refusal beats fabricated attribution; contradictory data
+        // stays contradictory.
         var buyIns = await context.BuyIns
             .Where(b => b.UserId == userId).ToListAsync(cancellationToken);
         foreach (var b in buyIns)

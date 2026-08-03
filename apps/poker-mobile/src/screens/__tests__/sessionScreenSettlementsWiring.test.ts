@@ -50,6 +50,11 @@ describe('SessionScreen wiring — deletion-guard client behavior', () => {
     expect(count('allSettledCopy(')).toBeGreaterThanOrEqual(1);
   });
 
+  it('derives the cash-section subtitle from the parties instead of always claiming guests', () => {
+    expect(count('cashSectionSubtitle(')).toBeGreaterThanOrEqual(1);
+    expect(code).not.toContain("Guests can't receive digital transfers");
+  });
+
   it('hides the header Recalculate control while the section says recalculation is impossible', () => {
     expect(code).toContain('!(settlementsBlocked && settlements.length === 0) &&');
   });

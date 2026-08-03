@@ -98,18 +98,26 @@ public sealed class CalculateSettlementsCommandHandler(
             throw new BadRequestException(
                 "This session includes a player whose account was deleted, so settlements can no longer be recalculated. The settlements already recorded are unchanged.");
 
-        // Orphaned money: a legacy row (attributed only by UserId) whose account was deleted and
-        // could not be re-keyed to a seat (DeleteAccountCommandHandler backfills when the leaver
-        // has a seat; this shape means they did not). The amount belongs to no balance
-        // projection, so ANY computed set would silently ignore real money — refuse regardless
-        // of whether settlements are recorded. This fires only for deletion residue: every
-        // factory sets SessionPlayerId, so a (null, null) money row has no other origin.
+        // Orphaned money: a row attributed to no seat and no user. The amount belongs to no
+        // balance projection, so ANY computed set would silently ignore real money — refuse
+        // regardless of whether settlements are recorded. TWO known origins (an earlier version
+        // of this comment claimed deletion was the only one; a review agent refuted that by
+        // reproducing the second with the real handlers):
+        //   · deletion residue — a legacy row (UserId-only attribution) whose account was
+        //     deleted with no own seat in the session to re-key onto (DeleteAccountCommandHandler
+        //     backfills when a seat exists);
+        //   · the RemovePlayer race — BuyIn/CashOut.SessionPlayerId is ON DELETE SET NULL, and a
+        //     money row committed concurrently with RemovePlayer's seat delete survives its
+        //     RemoveRange and gets SET NULL'd. That producer PREDATES this guard (live builds
+        //     silently dropped the amount instead); closing it is recorded in the pre-Q2 audit
+        //     doc as its own slice. Because the second origin exists, the message below must not
+        //     claim an account deletion it cannot prove.
         var hasOrphanedMoney =
             allBuyIns.Any(b => b.SessionPlayerId == null && b.UserId == null)
             || allCashOuts.Any(c => c.SessionPlayerId == null && c.UserId == null);
         if (hasOrphanedMoney)
             throw new BadRequestException(
-                "Money in this session can no longer be attributed to a player because an account was deleted, so settlements can't be calculated.");
+                "Some money in this session can no longer be attributed to a player, so settlements can't be calculated.");
 
         // Split: players with a SettlementUserId participate in formal (digital) settlements;
         // unlinked guests have no SettlementUserId and are handled manually outside the app.

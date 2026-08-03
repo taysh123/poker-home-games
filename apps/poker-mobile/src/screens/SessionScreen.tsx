@@ -74,7 +74,7 @@ import SkeletonCard from '../components/SkeletonCard';
 import { successNotification, errorNotification, lightTap } from '../utils/haptics';
 import { showToast } from '../utils/toast';
 import { confirmDialog } from '../utils/confirm';
-import { refusalMessage, isCashSeat, cashSeatName, allSettledCopy } from '../utils/settlementsSection';
+import { refusalMessage, isCashSeat, cashSeatName, cashSectionSubtitle, allSettledCopy, DEPARTED_PLAYER_LABEL } from '../utils/settlementsSection';
 import InviteSheet from '../components/InviteSheet';
 import { formatMoney, formatPL } from '../utils/formatters';
 import { computeFinalCount, decimalFinalCountModel } from '../local/finalCount';
@@ -1315,7 +1315,7 @@ export default function SessionScreen({ route, navigation }: Props) {
               </View>
             </View>
             <Text style={styles.cashSettleSubtitle}>
-              Guests can't receive digital transfers — settle these directly in cash.
+              {cashSectionSubtitle(guestBalances.some(g => g.guestName === DEPARTED_PLAYER_LABEL))}
             </Text>
             <View style={[styles.settlementList, { marginTop: spacing.sm }]}>
               {cashTransfers.map((ct, i) => {

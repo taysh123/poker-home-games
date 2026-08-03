@@ -628,6 +628,101 @@ public sealed class DeleteAccountFkIntegrityTests : IDisposable
     }
 
     [Fact]
+    public async Task Orphaned_money_does_not_leak_into_other_seats_in_the_balances_endpoint()
+    {
+        // Fleet finding (2026-08-04, disposition round): the legacy fallback
+        // `b.SessionPlayerId == null && b.UserId == p.UserId` runs IN MEMORY, where null == null
+        // is TRUE for Guid? — so an orphaned (null, null) row landed on EVERY seat whose UserId
+        // is null: each walk-in guest and each anonymised seat, once per seat. A guest whose
+        // true buy-in was 50 rendered as 150. The balances endpoint drives SessionScreen's
+        // reload cash derivation, so the very session CalculateSettlements refuses was still
+        // shown with money-wrong lines.
+        var host = User.Create("host", "host@example.com", "hash");
+        var leaving = User.Create("leaving", "leaving@example.com", "hash");
+        _ctx.Users.AddRange(host, leaving);
+        var session = Session.Create("Ancient game", host.Id);
+        session.Start();
+        session.End();
+        _ctx.Sessions.Add(session);
+        var spHost = SessionPlayer.CreateForUser(session.Id, host.Id);
+        var spGuest = SessionPlayer.CreateForGuest(session.Id, "Walk-in Willie");
+        _ctx.SessionPlayers.AddRange(spHost, spGuest);
+        _ctx.BuyIns.Add(BuyIn.Create(session.Id, spGuest.Id, 50m));
+
+        // The leaver's legacy row: no seat in this session, so deletion orphans it to (null, null).
+        var legacy = BuyIn.Create(session.Id, spGuest.Id, 100m);
+        _ctx.BuyIns.Add(legacy);
+        _ctx.Entry(legacy).Property("UserId").CurrentValue = leaving.Id;
+        _ctx.Entry(legacy).Property("SessionPlayerId").CurrentValue = null;
+        _ctx.SaveChanges();
+        _ctx.ChangeTracker.Clear();
+
+        await DeleteAsync(leaving.Id);
+
+        var balances = await new Application.Features.Sessions.Queries.GetSessionBalances.GetSessionBalancesQueryHandler(
+                _ctx, new FakeCurrentUser(host.Id))
+            .Handle(new Application.Features.Sessions.Queries.GetSessionBalances.GetSessionBalancesQuery(session.Id), CancellationToken.None);
+
+        var guest = balances.Players.Single(p => p.IsGuest);
+        Assert.Equal(50m, guest.TotalBuyIn);
+
+        // The anonymised-shape hazard is the same null==null match; the host seat (UserId set)
+        // must also be untouched by the orphan.
+        var hostRow = balances.Players.Single(p => !p.IsGuest);
+        Assert.Equal(0m, hostRow.TotalBuyIn);
+
+        // GetSessionRecap carries the identical in-memory fallback — same seed, same pin
+        // (the guest's true P&L is −50; the leak reported −150).
+        var recap = await new Application.Features.Sessions.Queries.GetSessionRecap.GetSessionRecapQueryHandler(
+                _ctx, new FakeCurrentUser(host.Id))
+            .Handle(new Application.Features.Sessions.Queries.GetSessionRecap.GetSessionRecapQuery(session.Id), CancellationToken.None);
+        var recapGuest = recap.Players.Single(p => p.IsGuest);
+        Assert.Equal(-50m, recapGuest.ProfitLoss);
+    }
+
+    [Fact]
+    public async Task A_departed_player_who_is_OWED_money_gets_a_positive_cash_line()
+    {
+        // Quadrant pin (fleet verification round): the committed suite pinned only the negative
+        // (−80, departed owes) line. This pins the CREDITOR side with the mixed mirror shape —
+        // a LEGACY cash-out plus a modern buy-in — so a future transform that only affects
+        // positive balances (or only legacy cash-outs) goes red.
+        var s = SeedUnsettledSession(leavingAsLinkedGuest: false);
+
+        // Reshape into the mirror: the leaver's cash-out becomes legacy (UserId-only), and their
+        // net flips to +80 by swapping the amounts (buy-in 20, cash-out 100). Survivors flip to
+        // keep the table at zero: other −100 (buy 200, cash 100), payer +20 (buy 80, cash 100).
+        var leavingSeatId = _ctx.SessionPlayers.First(sp => sp.SessionId == s.SessionId && sp.UserId == s.LeavingId).Id;
+        foreach (var b in _ctx.BuyIns.Where(x => x.SessionId == s.SessionId).ToList()) _ctx.BuyIns.Remove(b);
+        foreach (var c in _ctx.CashOuts.Where(x => x.SessionId == s.SessionId).ToList()) _ctx.CashOuts.Remove(c);
+        var otherSeatId = _ctx.SessionPlayers.First(sp => sp.SessionId == s.SessionId && sp.UserId == s.OtherId).Id;
+        var payerSeatId = _ctx.SessionPlayers.First(sp => sp.SessionId == s.SessionId && sp.UserId == s.PayerId).Id;
+        _ctx.BuyIns.Add(BuyIn.Create(s.SessionId, leavingSeatId, 20m));
+        var legacyCashOut = CashOut.Create(s.SessionId, leavingSeatId, 100m);
+        _ctx.CashOuts.Add(legacyCashOut);
+        _ctx.Entry(legacyCashOut).Property("UserId").CurrentValue = s.LeavingId;
+        _ctx.Entry(legacyCashOut).Property("SessionPlayerId").CurrentValue = null;
+        _ctx.BuyIns.Add(BuyIn.Create(s.SessionId, otherSeatId, 200m));
+        _ctx.CashOuts.Add(CashOut.Create(s.SessionId, otherSeatId, 100m));
+        _ctx.BuyIns.Add(BuyIn.Create(s.SessionId, payerSeatId, 80m));
+        _ctx.CashOuts.Add(CashOut.Create(s.SessionId, payerSeatId, 100m));
+        _ctx.SaveChanges();
+        _ctx.ChangeTracker.Clear();
+
+        var result = await DeleteThenEndThenCalculateAsync(s.LeavingId, s.OtherId, s.SessionId);
+
+        // other −100, payer +20 in the digital pool → other pays payer 20; the departed line is
+        // POSITIVE 80 (the table owes the departed seat in cash). Sum: −100 + 20 + 80 = 0.
+        var transfer = Assert.Single(result.Settlements);
+        Assert.Equal(s.OtherId, transfer.PayerUserId);
+        Assert.Equal(s.PayerId, transfer.ReceiverUserId);
+        Assert.Equal(20m, transfer.Amount);
+        var departed = Assert.Single(result.GuestBalances);
+        Assert.Equal("Departed player", departed.GuestName);
+        Assert.Equal(80m, departed.NetBalance);
+    }
+
+    [Fact]
     public async Task Recalculation_is_refused_even_when_every_recorded_settlement_is_already_paid()
     {
         // The recorded-settlements check must count ANY status, not just Pending. A paid record

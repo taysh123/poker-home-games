@@ -31,13 +31,27 @@ export function isCashSeat(p: { isGuest: boolean; linkedUserId?: string; userId?
 }
 
 /**
- * Label for a cash seat. MUST stay equal to the server's GuestBalanceDto
- * placeholder in CalculateSettlementsCommandHandler ("Departed player") so the
- * same seat carries one label whether the list came from a calculation result or
- * a client-side reload derivation.
+ * MUST stay equal to the server's GuestBalanceDto placeholder in
+ * CalculateSettlementsCommandHandler ("Departed player") so the same seat
+ * carries one label whether the list came from a calculation result or a
+ * client-side reload derivation.
  */
+export const DEPARTED_PLAYER_LABEL = 'Departed player';
+
+/** Label for a cash seat: the recorded guest name, or the departed placeholder. */
 export function cashSeatName(p: { isGuest: boolean; username: string }): string {
-  return p.isGuest ? p.username : 'Departed player';
+  return p.isGuest ? p.username : DEPARTED_PLAYER_LABEL;
+}
+
+/**
+ * Subtitle for the Cash Settlements section. The guest-specific rationale is a
+ * false claim when a cash line belongs to a DEPARTED registered player (deleted
+ * account) — copy-honesty rule 1: a claim must be true for who actually sees it.
+ */
+export function cashSectionSubtitle(hasDepartedSeat: boolean): string {
+  return hasDepartedSeat
+    ? "These players can't receive digital transfers — settle directly in cash."
+    : "Guests can't receive digital transfers — settle these directly in cash.";
 }
 
 /**
