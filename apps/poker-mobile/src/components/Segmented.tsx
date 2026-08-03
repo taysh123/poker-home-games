@@ -87,6 +87,12 @@ export default function Segmented({ options, selectedIndex, onChange, style, acc
             onPress={() => onChange(i)}
             accessibilityRole="tab"
             accessibilityState={{ selected: isSelected }}
+            // The flat twin is NOT redundant. react-native-web drops accessibilityState entirely,
+            // but it DOES emit role="tab" — and ARIA defaults an unmarked tab to aria-selected
+            // false, so on web every segment reported "not selected", including the active one.
+            // That is worse than no role at all, which is what these controls had before. CLAUDE.md
+            // requires this twin for any accessibilityState carrying checked/selected.
+            aria-selected={isSelected}
             accessibilityLabel={label}
           >
             <Text style={[styles.label, isSelected && styles.labelSelected]} numberOfLines={1}>

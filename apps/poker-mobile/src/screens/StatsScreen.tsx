@@ -25,6 +25,7 @@ import { isFeatureEnabled } from '../config/features';
 import ErrorState from '../components/ErrorState';
 import { track } from '../utils/analytics';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import Segmented from '../components/Segmented';
 import SessionListItem from '../components/SessionListItem';
 import SkeletonCard from '../components/SkeletonCard';
 import SkeletonRow from '../components/SkeletonRow';
@@ -42,9 +43,14 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 const CHART_HEIGHT = 80;
 
 type Period = 'week' | 'month' | 'all';
+// Labels match GroupDetailScreen's leaderboard picker, which has used the shared Segmented since
+// it shipped. Segmented's label token is 15px inside a numberOfLines={1} segment, where the old
+// hand-rolled tabs were 12px — "This Month" truncated at a third of a narrow screen's width, and
+// sooner under OS font scaling. The hero label below still reads "This Month P&L" in full; it is
+// computed separately and unaffected.
 const PERIODS: { key: Period; label: string }[] = [
-  { key: 'week',  label: 'This Week' },
-  { key: 'month', label: 'This Month' },
+  { key: 'week',  label: 'Week' },
+  { key: 'month', label: 'Month' },
   { key: 'all',   label: 'All Time' },
 ];
 
@@ -216,20 +222,18 @@ export default function StatsScreen({ embedded = false }: { embedded?: boolean }
       <Animated.View style={{ opacity, transform: [{ translateY }] }}>
 
         {/* ── Period Picker ── */}
-        <View style={periodStyles.row}>
-          {PERIODS.map(p => (
-            <TouchableOpacity
-              key={p.key}
-              style={[periodStyles.tab, period === p.key && periodStyles.tabActive]}
-              onPress={() => onPeriodChange(p.key)}
-              activeOpacity={0.7}
-            >
-              <Text style={[periodStyles.tabText, period === p.key && periodStyles.tabTextActive]}>
-                {p.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {/* The shared Segmented control rather than a hand-rolled row: it supplies the tablist/tab
+            roles and a 44px touch target, neither of which the three bare TouchableOpacitys had.
+            Reuse, so the a11y contract lives in one place — and so a fix there reaches all seven
+            call sites, which is how the web selected-state gap below got closed for every one of
+            them rather than just this screen. */}
+        <Segmented
+          options={PERIODS.map(p => p.label)}
+          selectedIndex={PERIODS.findIndex(p => p.key === period)}
+          onChange={i => onPeriodChange(PERIODS[i].key)}
+          accessibilityLabel="Stats period"
+          style={periodStyles.picker}
+        />
 
         {/* ── Hero P&L ── */}
         <View style={[styles.heroCard, periodLoading && { opacity: 0.6 }]}>
@@ -717,32 +721,13 @@ function AchievementBadge({ achievement, earned, progressText }: { achievement: 
   );
 }
 
+// Only the outer spacing survives the move to Segmented. The old `row` also set `gap: 8`, which
+// must NOT be passed through: Segmented positions its thumb at `index * (innerWidth / count)`, so
+// any gap between segments slides the labels out from under it. The tab/tabActive/tabText styles
+// are gone rather than kept "just in case" — they described a control that no longer exists.
 const periodStyles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    gap: 8,
+  picker: {
     marginBottom: 16,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 10,
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  tabActive: {
-    backgroundColor: colors.goldFaint,
-    borderColor: colors.goldMuted,
-  },
-  tabText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
-  tabTextActive: {
-    color: colors.goldLight,
   },
 });
 

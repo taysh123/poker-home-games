@@ -115,6 +115,25 @@ describe('LoginScreen — guest escape hatch', () => {
     expect(screen.getByRole('button', { name: /continue as guest/i })).toBeTruthy();
   });
 
+  it('a11y: "Stay signed in" is a checkbox that reports its own state', async () => {
+    // It was a bare TouchableOpacity: no role at all, so it announced as plain text and its
+    // checked/unchecked state — the entire point of the control — was never conveyed. This is the
+    // one control on this screen that decides whether the session survives a restart.
+    await renderLogin();
+    const box = screen.getByRole('checkbox', { name: 'Stay signed in' });
+    expect(box.props.accessibilityState).toMatchObject({ checked: true }); // defaults on
+    expect(screen.getByText('Stay signed in')).toBeTruthy(); // spoken name matches what is shown
+  });
+
+  it('a11y: toggling "Stay signed in" flips the announced state, not just the tick', async () => {
+    // Pins the STATE against the interaction. A checkbox whose accessibilityState never changes is
+    // indistinguishable, to a screen reader, from one that does nothing.
+    await renderLogin();
+    fireEvent.press(screen.getByRole('checkbox', { name: 'Stay signed in' }));
+    expect(screen.getByRole('checkbox', { name: 'Stay signed in' }).props.accessibilityState)
+      .toMatchObject({ checked: false });
+  });
+
   it('guest already inside the app (modal over MainTabs): dismisses, never resets their place', async () => {
     const nav = await renderLogin({ navigation: makeNavigation({ routesBeneath: ['MainTabs'] }) });
     fireEvent.press(screen.getByText('Continue as guest'));

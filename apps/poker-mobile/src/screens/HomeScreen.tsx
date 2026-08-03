@@ -42,7 +42,8 @@ import StatWidget from '../components/StatWidget';
 import SessionListItem from '../components/SessionListItem';
 import GroupListItem from '../components/GroupListItem';
 import Card from '../components/Card';
-import { formatPL, formatMoney, formatDate, formatDuration, formatMinutes, timeAgo } from '../utils/formatters';
+import { formatPL, formatDate, formatDuration, formatMinutes, timeAgo } from '../utils/formatters';
+import { alertLabel, invitationsAlertCopy, settlementsAlertCopy, topGroupLabel, topGroupText } from '../utils/homeAlerts';
 import AnimatedNumber from '../components/motion/AnimatedNumber';
 import Screen from '../components/Screen';
 import Avatar from '../components/Avatar';
@@ -369,10 +370,12 @@ export default function HomeScreen() {
                   style={styles.topGroupChip}
                   onPress={() => navigation.navigate('GroupDetail', { groupId: topGroup.id, groupName: topGroup.name })}
                   activeOpacity={0.75}
+                  accessibilityRole="button"
+                  accessibilityLabel={topGroupLabel(topGroup.name, topGroup.myGroupPL)}
                 >
                   <Ionicons name="trophy-outline" size={12} color={colors.gold} />
                   <Text style={styles.topGroupText} numberOfLines={1}>
-                    Top group: {topGroup.name} {topGroup.myGroupPL > 0 ? '+' : ''}{formatMoney(topGroup.myGroupPL)}
+                    {topGroupText(topGroup.name, topGroup.myGroupPL)}
                   </Text>
                   <Ionicons name="chevron-forward" size={11} color={colors.goldMuted} />
                 </TouchableOpacity>
@@ -490,6 +493,12 @@ export default function HomeScreen() {
             style={styles.digestPromptCard}
             onPress={() => navigation.navigate('NewGame', {})}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            // The visible words, minus the trailing arrow glyph, plus the destination APPENDED.
+            // An earlier version replaced them with "start a game", which breaks WCAG 2.5.3: a
+            // Voice Control user saying "tap deal someone in" would have matched nothing, because
+            // the name no longer contained the label they could see.
+            accessibilityLabel="Quiet week — deal someone in. Starts a new game."
           >
             <Ionicons name="sparkles-outline" size={16} color={colors.gold} />
             <Text style={styles.digestPromptText}>Quiet week — deal someone in →</Text>
@@ -503,6 +512,8 @@ export default function HomeScreen() {
             style={styles.liveBanner}
             onPress={() => openSession(s)}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={`Live now: ${s.sessionName}, ${s.groupName ?? 'Solo game'}`}
           >
             <View style={styles.liveBannerLeft}>
               <View style={styles.livePillRow}>
@@ -527,53 +538,52 @@ export default function HomeScreen() {
         )}
 
         {/* ── Pending Settlements Alert ── */}
-        {pendingSettlements.length > 0 && (
-          <TouchableOpacity
-            style={styles.settlementsAlert}
-            onPress={() => navigation.navigate('PendingSettlements')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.alertIconWrap}>
-              <Ionicons name="cash-outline" size={18} color={colors.error} />
-            </View>
-            <View style={styles.alertContent}>
-              <Text style={styles.alertTitle}>
-                {pendingSettlements.length} pending settlement{pendingSettlements.length !== 1 ? 's' : ''}
-              </Text>
-              <Text style={styles.alertSub}>
-                {(() => {
-                  const owes = pendingSettlements.filter(s => s.payerUserId === user?.userId).reduce((sum, s) => sum + s.amount, 0);
-                  const owed = pendingSettlements.filter(s => s.receiverUserId === user?.userId).reduce((sum, s) => sum + s.amount, 0);
-                  if (owes > 0 && owed > 0) return `You owe ${formatMoney(owes)} · Owed ${formatMoney(owed)}`;
-                  if (owes > 0) return `You owe ${formatMoney(owes)}`;
-                  if (owed > 0) return `You're owed ${formatMoney(owed)}`;
-                  return 'Tap to view and settle up';
-                })()}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
-          </TouchableOpacity>
-        )}
+        {pendingSettlements.length > 0 && (() => {
+          // Computed once and used for BOTH the two visible lines and the composed name — the
+          // banner is a single accessibility element, so its name has to carry what both lines say.
+          const copy = settlementsAlertCopy(pendingSettlements, user?.userId);
+          return (
+            <TouchableOpacity
+              style={styles.settlementsAlert}
+              onPress={() => navigation.navigate('PendingSettlements')}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={alertLabel(copy)}
+            >
+              <View style={styles.alertIconWrap}>
+                <Ionicons name="cash-outline" size={18} color={colors.error} />
+              </View>
+              <View style={styles.alertContent}>
+                <Text style={styles.alertTitle}>{copy.title}</Text>
+                <Text style={styles.alertSub}>{copy.sub}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
+            </TouchableOpacity>
+          );
+        })()}
 
         {/* ── Pending Invitations Banner ── */}
-        {invitations.length > 0 && (
-          <TouchableOpacity
-            style={styles.invitationsAlert}
-            onPress={() => navigation.navigate('Invitations')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.inviteIconWrap}>
-              <Ionicons name="mail-outline" size={18} color={colors.gold} />
-            </View>
-            <View style={styles.alertContent}>
-              <Text style={styles.alertTitle}>
-                {invitations.length} group invitation{invitations.length !== 1 ? 's' : ''}
-              </Text>
-              <Text style={styles.alertSub}>Tap to view and respond</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
-          </TouchableOpacity>
-        )}
+        {invitations.length > 0 && (() => {
+          const copy = invitationsAlertCopy(invitations.length);
+          return (
+            <TouchableOpacity
+              style={styles.invitationsAlert}
+              onPress={() => navigation.navigate('Invitations')}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={alertLabel(copy)}
+            >
+              <View style={styles.inviteIconWrap}>
+                <Ionicons name="mail-outline" size={18} color={colors.gold} />
+              </View>
+              <View style={styles.alertContent}>
+                <Text style={styles.alertTitle}>{copy.title}</Text>
+                <Text style={styles.alertSub}>{copy.sub}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
+            </TouchableOpacity>
+          );
+        })()}
 
         {/* ── Today's drill — improvers lead with study (1.3; goal-led, pool-honest) ── */}
         {showDrill && (
@@ -602,6 +612,8 @@ export default function HomeScreen() {
           style={styles.newGameCard}
           onPress={() => navigation.navigate('NewGame', {})}
           activeOpacity={0.88}
+          accessibilityRole="button"
+          accessibilityLabel="Start a Game. Deal in your crew for tonight"
         >
           <View style={styles.newGameLeft}>
             <View style={styles.newGameIconWrap}>
@@ -620,6 +632,8 @@ export default function HomeScreen() {
           style={styles.tournamentCard}
           onPress={() => navigation.navigate('LocalNewGame', { mode: 'tournament' })}
           activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Host a Tournament. Blind clock, buy-in tracking, podium — runs on this device"
         >
           <View style={styles.newGameLeft}>
             <View style={styles.tournamentIconWrap}>
@@ -640,7 +654,11 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionRow}>
             <Text style={styles.sectionTitle}>Your Numbers</Text>
-            <TouchableOpacity onPress={() => goToStats(navigation)}>
+            <TouchableOpacity
+              onPress={() => goToStats(navigation)}
+              accessibilityRole="button"
+              accessibilityLabel="See your full stats"
+            >
               <Text style={styles.seeAll}>Full stats</Text>
             </TouchableOpacity>
           </View>
@@ -699,7 +717,13 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionRow}>
             <Text style={styles.sectionTitle}>Recent Sessions</Text>
-            <TouchableOpacity onPress={() => goToSessions(navigation)}>
+            <TouchableOpacity
+              onPress={() => goToSessions(navigation)}
+              accessibilityRole="button"
+              // "See all" appears twice on this screen. Derived from the child <Text> alone, both
+              // announced identically and a screen-reader user could not tell them apart.
+              accessibilityLabel="See all sessions"
+            >
               <Text style={styles.seeAll}>See all</Text>
             </TouchableOpacity>
           </View>
@@ -726,6 +750,8 @@ export default function HomeScreen() {
                 style={styles.sessionsEmptyCta}
                 onPress={() => navigation.navigate('NewGame', {})}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Start a Game"
               >
                 <Text style={styles.sessionsEmptyCtaText}>Start a Game</Text>
               </TouchableOpacity>
@@ -757,7 +783,11 @@ export default function HomeScreen() {
           <View style={styles.sectionRow}>
             <Text style={styles.sectionTitle}>My Groups</Text>
             {groups.length > 0 && (
-              <TouchableOpacity onPress={() => navigation.navigate('GroupsList')}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('GroupsList')}
+                accessibilityRole="button"
+                accessibilityLabel="See all groups"
+              >
                 <Text style={styles.seeAll}>See all</Text>
               </TouchableOpacity>
             )}
@@ -786,6 +816,8 @@ export default function HomeScreen() {
                 style={styles.emptyBtn}
                 onPress={() => navigation.navigate('CreateGroup')}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Create Group"
               >
                 <Ionicons name="add" size={16} color={colors.background} />
                 <Text style={styles.emptyBtnText}>Create Group</Text>
@@ -805,16 +837,25 @@ export default function HomeScreen() {
                   isFirst={i === 0}
                 />
               ))}
-              {groups.length > 3 && (
+              {groups.length > 3 && (() => {
+                const moreGroupsText = `${groups.length - 3} more group${groups.length - 3 === 1 ? '' : 's'}`;
+                return (
                 <TouchableOpacity
                   style={[styles.moreRow]}
                   onPress={() => navigation.navigate('GroupsList')}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  // One string, shown and spoken. Written twice they immediately disagreed: the
+                  // name said "1 more group" while the row rendered "1 more groups" — the exact
+                  // defect this slice's own commit cites as its motivation, reintroduced by
+                  // pluralising only the half nobody can see.
+                  accessibilityLabel={`See ${moreGroupsText}`}
                 >
-                  <Text style={styles.moreText}>+{groups.length - 3} more groups</Text>
+                  <Text style={styles.moreText}>+{moreGroupsText}</Text>
                   <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
                 </TouchableOpacity>
-              )}
+                );
+              })()}
             </View>
           )}
         </View>
@@ -852,6 +893,8 @@ export default function HomeScreen() {
                             style={[styles.activityRow, i > 0 && styles.activityBorder]}
                             onPress={onPress}
                             activeOpacity={0.7}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${item.description}, ${item.groupName}, ${timeAgo(item.createdAt)}`}
                           >
                             <Avatar name={item.actorName} size={28} />
                             <View style={[styles.activityIcon, { backgroundColor: cfg.bg }]}>
