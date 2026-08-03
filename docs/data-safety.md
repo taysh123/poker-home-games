@@ -47,8 +47,11 @@ third-party integrations change.
 | Refresh token | **SHA-256** (hex) of 64 random bytes (512-bit entropy) | `RefreshToken.TokenHash` in PostgreSQL | `src/PokerApp.Infrastructure/Identity/JwtService.cs` |
 | Access token | JWT, HMAC-SHA256 signed, 15-min expiry | not stored server-side | `JwtService.GenerateAccessToken` |
 
-Plain-text passwords are never stored or logged. `PRIVACY.md`, `public/privacy.html`,
-`docs/HANDOFF.md`, and `README.md` all state this correctly.
+Plain-text passwords are never stored or logged. `public/privacy.html` — the canonical served
+policy — states this correctly. `PRIVACY.md` (repo root) is a pointer to that page as of Q1.6b and
+no longer restates policy content itself, by design (see that file). `docs/HANDOFF.md` and
+`README.md` do not currently mention password hashing at all; the claim that they did was already
+inaccurate before this note was corrected, and is left for a future pass rather than expanded here.
 
 > **Note re: "password" as a Data Safety type** — Google's data-type taxonomy has no
 > field for passwords/credentials collected solely for authentication, so password is

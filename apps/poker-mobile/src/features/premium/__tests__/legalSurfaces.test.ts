@@ -14,6 +14,8 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
 const read = (rel: string) => readFileSync(resolve(__dirname, '../../../../public', rel), 'utf8');
+/** apps/poker-mobile/src/features/premium/__tests__ -> repo root is six levels up. */
+const readRoot = (rel: string) => readFileSync(resolve(__dirname, '../../../../../..', rel), 'utf8');
 
 const terms = read('terms.html');
 const privacy = read('privacy.html');
@@ -197,6 +199,39 @@ describe('publisher identity — legal name Tay Shofer, not the trade name (lock
     // this file names the trade name; this pins that the credit exists at all.
     const profile = read('../src/screens/ProfileScreen.tsx');
     expect(profile).toMatch(/Made by True Story Labs/);
+  });
+
+  it('the repo-root LICENSE names the legal copyright holder, not the git username placeholder (Q1.6b)', () => {
+    // "tay123" is the GitHub username `create-github-repo` (or similar tooling) filled in by
+    // default when the license was generated — never corrected. Same publisher-identity invariant
+    // as every other surface in this describe block.
+    const license = readRoot('LICENSE');
+    expect(license).toMatch(/Copyright \(c\) 2026 Tay Shofer/);
+    expect(license).not.toMatch(/tay123/);
+  });
+});
+
+describe('repo-root PRIVACY.md — a pointer, not a second copy (Q1.6b)', () => {
+  // The master plan's Q1.6 flagged this: PRIVACY.md at the repo root was a full DUPLICATE of
+  // apps/poker-mobile/public/privacy.html (the page actually served at
+  // https://app.tpoker.app/privacy.html), carrying its own "keep both in sync — the two must not
+  // drift" comment. A comment asking a human to remember to keep two documents in sync is not a
+  // guarantee — it is exactly the shape of claim this repo's standing rules say needs a test, and
+  // there wasn't one. The fix removes the SECOND COPY rather than promising to maintain it: if
+  // there is only one body of policy text, it cannot drift from itself.
+  it('points at the canonical served page instead of restating the policy', () => {
+    const privacyPointer = readRoot('PRIVACY.md');
+    expect(privacyPointer).toMatch(/https:\/\/app\.tpoker\.app\/privacy\.html/);
+  });
+
+  it('does not duplicate the real policy\'s substantive body — that duplication was the drift risk', () => {
+    // Structural, not just "shorter": these terms only belong in the ONE real policy. Their
+    // presence here would mean the duplication grew back, whatever the file's line count says.
+    const privacyPointer = readRoot('PRIVACY.md');
+    expect(privacyPointer).not.toMatch(/PostHog/);
+    expect(privacyPointer).not.toMatch(/bcrypt/);
+    expect(privacyPointer).not.toMatch(/GDPR/);
+    expect(privacyPointer).not.toMatch(/Railway/);
   });
 });
 
