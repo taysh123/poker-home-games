@@ -29,4 +29,11 @@ public class BuyIn : BaseEntity
     /// RESTRICT foreign key, so it blocks the delete regardless of how the row was created.
     /// </summary>
     public void AnonymizeUser() => UserId = null;
+
+    /// <summary>
+    /// Re-keys a LEGACY row (attributed only by UserId) to its seat before the user link is
+    /// severed. Without this, AnonymizeUser orphans the amount from every balance projection and
+    /// the departed player's cash line comes out money-wrong (fleet-demonstrated sign inversion).
+    /// </summary>
+    public void AttributeToSeat(Guid sessionPlayerId) => SessionPlayerId = sessionPlayerId;
 }

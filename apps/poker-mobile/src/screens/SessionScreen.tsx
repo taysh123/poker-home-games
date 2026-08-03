@@ -74,6 +74,7 @@ import SkeletonCard from '../components/SkeletonCard';
 import { successNotification, errorNotification, lightTap } from '../utils/haptics';
 import { showToast } from '../utils/toast';
 import { confirmDialog } from '../utils/confirm';
+import { refusalMessage, isCashSeat, cashSeatName, allSettledCopy } from '../utils/settlementsSection';
 import InviteSheet from '../components/InviteSheet';
 import { formatMoney, formatPL } from '../utils/formatters';
 import { computeFinalCount, decimalFinalCountModel } from '../local/finalCount';
@@ -366,10 +367,10 @@ export default function SessionScreen({ route, navigation }: Props) {
           // Derive unlinked guest balances from already-loaded player + balance data
           if (balData) {
             const computed = sessionData.players
-              .filter(p => p.isGuest && !p.linkedUserId)
+              .filter(isCashSeat)
               .map(p => {
                 const bal = balData.players.find(b => b.sessionPlayerId === p.sessionPlayerId);
-                return { sessionPlayerId: p.sessionPlayerId, guestName: p.username, netBalance: bal?.profitLoss ?? 0 };
+                return { sessionPlayerId: p.sessionPlayerId, guestName: cashSeatName(p), netBalance: bal?.profitLoss ?? 0 };
               })
               .filter(g => g.netBalance !== 0);
             setGuestBalances(computed);
@@ -388,9 +389,8 @@ export default function SessionScreen({ route, navigation }: Props) {
                 // A 400 is the server REFUSING (deleted player at this table) — record its
                 // explanation so the section doesn't render a false "Everyone is even".
                 // Anything else stays silent — user can press Recalculate manually.
-                if (e?.response?.status === 400) {
-                  setSettlementsBlocked(e?.response?.data?.message ?? 'Settlements can’t be calculated for this game.');
-                }
+                const refusal = refusalMessage(e?.response?.status, e?.response?.data?.message);
+                if (refusal) setSettlementsBlocked(refusal);
               }
             }
           }
@@ -569,11 +569,11 @@ export default function SessionScreen({ route, navigation }: Props) {
       const [balData, calcResult] = await Promise.all([
         getSessionBalances(token, sessionId).catch(() => null),
         calculateSettlements(token, sessionId).catch((e: any) => {
-          if (e?.response?.status === 400) {
+          const refusal = refusalMessage(e?.response?.status, e?.response?.data?.message);
+          if (refusal) {
             // The server REFUSED — retrying cannot succeed, so don't promise one.
-            const reason = e?.response?.data?.message ?? 'Settlements can’t be calculated for this game.';
-            setSettlementsBlocked(reason);
-            showToast(reason, 'info');
+            setSettlementsBlocked(refusal);
+            showToast(refusal, 'info');
           } else {
             showToast('Settlements could not be calculated — tap Recalculate to retry.', 'info');
           }
@@ -671,9 +671,8 @@ export default function SessionScreen({ route, navigation }: Props) {
     } catch (e: any) {
       // Surface the server's explanation (the deleted-player guard writes one); the bare
       // fallback previously discarded it and read as a transient fault inviting retries.
-      if (e?.response?.status === 400) {
-        setSettlementsBlocked(e?.response?.data?.message ?? 'Settlements can’t be calculated for this game.');
-      }
+      const refusal = refusalMessage(e?.response?.status, e?.response?.data?.message);
+      if (refusal) setSettlementsBlocked(refusal);
       showToast(e?.response?.data?.message ?? 'Failed to calculate settlements.', 'error');
     } finally {
       setCalcLoading(false);
@@ -1174,11 +1173,13 @@ export default function SessionScreen({ route, navigation }: Props) {
                       : <Ionicons name="share-outline" size={iconSize.xs} color={colors.gold} />}
                   </PressableScale>
                 )}
-                <PressableScale onPress={handleCalculateSettlements} disabled={calcLoading} hitSlop={8} haptic="light" accessibilityRole="button" accessibilityLabel="Recalculate settlements">
-                  {calcLoading
-                    ? <ActivityIndicator color={colors.gold} size="small" />
-                    : <Text style={styles.seeAll}>Recalculate</Text>}
-                </PressableScale>
+                {!(settlementsBlocked && settlements.length === 0) && (
+                  <PressableScale onPress={handleCalculateSettlements} disabled={calcLoading} hitSlop={8} haptic="light" accessibilityRole="button" accessibilityLabel="Recalculate settlements">
+                    {calcLoading
+                      ? <ActivityIndicator color={colors.gold} size="small" />
+                      : <Text style={styles.seeAll}>Recalculate</Text>}
+                  </PressableScale>
+                )}
               </View>
             </View>
 
@@ -1213,10 +1214,12 @@ export default function SessionScreen({ route, navigation }: Props) {
                 </PressableScale>
               </View>
             ) : settlements.every(s => s.status === 'Confirmed') ? (
+              // The celebration copy is gated: with cash balances outstanding (guests, or a
+              // departed player's seat), settled digital rows are NOT a settled table.
               <View style={styles.evenCard}>
-                <Ionicons name="checkmark-circle" size={iconSize.lg} color={colors.success} />
-                <Text style={styles.evenTitle}>All settled up!</Text>
-                <Text style={styles.evenSub}>Everyone's even. See you next game.</Text>
+                <Ionicons name="checkmark-circle" size={iconSize.lg} color={guestBalances.length > 0 ? colors.textMuted : colors.success} />
+                <Text style={styles.evenTitle}>{allSettledCopy(guestBalances.length > 0).title}</Text>
+                <Text style={styles.evenSub}>{allSettledCopy(guestBalances.length > 0).sub}</Text>
                 <PressableScale onPress={handleCalculateSettlements} disabled={calcLoading} hitSlop={8} haptic="light" accessibilityRole="button" accessibilityLabel="Recalculate settlements">
                   {calcLoading
                     ? <ActivityIndicator color={colors.gold} size="small" />

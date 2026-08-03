@@ -28,4 +28,10 @@ public class CashOut : BaseEntity
     /// legacy-column reasoning applies.
     /// </summary>
     public void AnonymizeUser() => UserId = null;
+
+    /// <summary>
+    /// Re-keys a LEGACY row to its seat before the user link is severed.
+    /// See <see cref="BuyIn.AttributeToSeat"/> — same orphaned-money reasoning applies.
+    /// </summary>
+    public void AttributeToSeat(Guid sessionPlayerId) => SessionPlayerId = sessionPlayerId;
 }

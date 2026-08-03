@@ -28,8 +28,8 @@ public sealed class DeleteAccountCommandHandler(
         // ── Every RESTRICT foreign key pointing at Users must be cleared HERE or blocked UPSTREAM ──
         //
         // Cascading FKs (memberships, received invitations, refresh tokens, device tokens,
-        // notifications, achievements, cloud backups, subscriptions/credits) are handled by the
-        // database. RESTRICT ones are not: each BLOCKS the delete until it is dealt with, and a
+        // device bindings, notifications, achievements, cloud backups, subscriptions/credits —
+        // the 11 Cascade entries in the pinned inventory) are handled by the database. RESTRICT ones are not: each BLOCKS the delete until it is dealt with, and a
         // missed one surfaces as a DbUpdateException that ExceptionHandlingMiddleware does not map
         // — i.e. a bare 500 carrying only a trace id, on a shipped build that Apple requires to
         // offer working deletion (Review Guideline 5.1.1(v)).
@@ -71,6 +71,13 @@ public sealed class DeleteAccountCommandHandler(
         var sessionPlayers = await context.SessionPlayers
             .Where(sp => sp.UserId == userId || sp.LinkedUserId == userId)
             .ToListAsync(cancellationToken);
+
+        // The leaver's seat per session, captured BEFORE AnonymizeUser nulls the UserId that
+        // identifies it. Legacy money rows below are re-keyed onto these seats.
+        var ownSeatBySession = sessionPlayers
+            .Where(sp => sp.UserId == userId)
+            .ToDictionary(sp => sp.SessionId, sp => sp.Id);
+
         foreach (var sp in sessionPlayers)
         {
             if (sp.UserId == userId) sp.AnonymizeUser();
@@ -78,14 +85,30 @@ public sealed class DeleteAccountCommandHandler(
         }
 
         // Legacy money rows can carry a direct UserId (RESTRICT). Amounts and SessionPlayer links
-        // are kept so the session still balances for everyone else at that table.
+        // are kept so the session still balances for everyone else at that table. A legacy row
+        // whose ONLY attribution is that UserId must first be re-keyed to the leaver's surviving
+        // seat — anonymising it as-is orphans the amount from every balance projection, and the
+        // departed player's cash line comes out money-wrong (fleet-demonstrated: +20 reported
+        // where the truth was −80). A row that cannot be re-keyed (no seat in that session) is
+        // left orphaned deliberately; CalculateSettlements refuses such sessions rather than
+        // computing a set that silently ignores real money.
         var buyIns = await context.BuyIns
             .Where(b => b.UserId == userId).ToListAsync(cancellationToken);
-        foreach (var b in buyIns) b.AnonymizeUser();
+        foreach (var b in buyIns)
+        {
+            if (b.SessionPlayerId is null && ownSeatBySession.TryGetValue(b.SessionId, out var seat))
+                b.AttributeToSeat(seat);
+            b.AnonymizeUser();
+        }
 
         var cashOuts = await context.CashOuts
             .Where(c => c.UserId == userId).ToListAsync(cancellationToken);
-        foreach (var c in cashOuts) c.AnonymizeUser();
+        foreach (var c in cashOuts)
+        {
+            if (c.SessionPlayerId is null && ownSeatBySession.TryGetValue(c.SessionId, out var seat))
+                c.AttributeToSeat(seat);
+            c.AnonymizeUser();
+        }
 
         // Settlements name BOTH parties with required RESTRICT FKs, so they cannot be anonymized
         // without a schema change (nullable columns + a DTO/API change reaching the mobile client).

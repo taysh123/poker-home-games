@@ -169,7 +169,7 @@ public sealed class DeleteAccountFkIntegrityTests : IDisposable
         // relationship has two (settlements). Scope, stated because an earlier version of this
         // comment overclaimed: this test catches a NEW RESTRICT FK only if SeedFullGraph is also
         // extended to write a row on that edge. The structural guarantee — that a new edge is
-        // noticed at all — is Restrict_foreign_keys_to_User_match_the_acknowledged_set below.
+        // noticed at all — is Foreign_keys_to_User_match_the_acknowledged_inventory_with_delete_behaviors below.
         Assert.False(await _ctx.SessionPlayers.AnyAsync(sp => sp.UserId == s.Leaving.Id));
         Assert.False(await _ctx.SessionPlayers.AnyAsync(sp => sp.LinkedUserId == s.Leaving.Id));
         Assert.False(await _ctx.BuyIns.AnyAsync(b => b.UserId == s.Leaving.Id));
@@ -559,6 +559,75 @@ public sealed class DeleteAccountFkIntegrityTests : IDisposable
     }
 
     [Fact]
+    public async Task Legacy_money_rows_follow_the_seat_so_the_departed_cash_line_stays_honest()
+    {
+        // Fleet finding (2026-08-04): a LEGACY money row (UserId set, SessionPlayerId null — the
+        // pre-SessionPlayerId shape this file already seeds for the FK fix) is orphaned by
+        // AnonymizeUser: the amount vanishes from BOTH balance projections, and the departed
+        // cash line comes out money-WRONG — the probe reported +20 (host owes the departed
+        // player!) where the true balance is −80. Deletion must first re-attribute the legacy
+        // row to the leaver's surviving seat, then anonymise.
+        var s = SeedUnsettledSession(leavingAsLinkedGuest: false);
+
+        // Reshape the leaver's buy-in into the legacy form: UserId carries the attribution,
+        // SessionPlayerId is null. (Their cash-out stays modern — mixed shapes are realistic.)
+        var legacyBuyIn = _ctx.BuyIns.First(b => b.SessionId == s.SessionId
+            && _ctx.SessionPlayers.Any(sp => sp.Id == b.SessionPlayerId && sp.UserId == s.LeavingId));
+        _ctx.Entry(legacyBuyIn).Property("UserId").CurrentValue = s.LeavingId;
+        _ctx.Entry(legacyBuyIn).Property("SessionPlayerId").CurrentValue = null;
+        _ctx.SaveChanges();
+        _ctx.ChangeTracker.Clear();
+
+        var result = await DeleteThenEndThenCalculateAsync(s.LeavingId, s.OtherId, s.SessionId);
+
+        var transfer = Assert.Single(result.Settlements);
+        Assert.Equal(20m, transfer.Amount);
+
+        // The whole point: with the legacy 100 re-attributed, the departed line is the TRUE −80,
+        // not the +20 computed from the modern cash-out alone.
+        var departed = Assert.Single(result.GuestBalances);
+        Assert.Equal("Departed player", departed.GuestName);
+        Assert.Equal(-80m, departed.NetBalance);
+    }
+
+    [Fact]
+    public async Task Unattributable_money_after_a_deletion_refuses_calculation()
+    {
+        // Belt for the case re-attribution cannot handle: the leaver has legacy money rows but
+        // NO SessionPlayer row in the session (corrupt/ancient data). After deletion the amount
+        // is attached to nothing — no honest calculation exists, so the handler must refuse
+        // rather than emit a set that silently ignores real money. Note the leaver leaves NO
+        // deleted-player shape here (no SessionPlayer row at all), so the deleted-player guard
+        // cannot catch this — only the orphaned-money check can.
+        var host = User.Create("host", "host@example.com", "hash");
+        var leaving = User.Create("leaving", "leaving@example.com", "hash");
+        _ctx.Users.AddRange(host, leaving);
+        var session = Session.Create("Ancient game", host.Id);
+        session.Start();
+        session.End();
+        _ctx.Sessions.Add(session);
+        var spHost = SessionPlayer.CreateForUser(session.Id, host.Id);
+        _ctx.SessionPlayers.Add(spHost);
+        _ctx.BuyIns.Add(BuyIn.Create(session.Id, spHost.Id, 100m));
+
+        // Legacy row attributed ONLY by UserId, to a user with no seat in this session.
+        var legacy = BuyIn.Create(session.Id, spHost.Id, 100m);
+        _ctx.BuyIns.Add(legacy);
+        _ctx.Entry(legacy).Property("UserId").CurrentValue = leaving.Id;
+        _ctx.Entry(legacy).Property("SessionPlayerId").CurrentValue = null;
+        _ctx.SaveChanges();
+        _ctx.ChangeTracker.Clear();
+
+        await DeleteAsync(leaving.Id);
+
+        var calc = new CalculateSettlementsCommandHandler(
+            _ctx, new FakeCurrentUser(host.Id), new SettlementCalculatorService());
+        var ex = await Assert.ThrowsAsync<Application.Common.Exceptions.BadRequestException>(
+            () => calc.Handle(new CalculateSettlementsCommand(session.Id), CancellationToken.None));
+        Assert.Contains("attributed", ex.Message);
+    }
+
+    [Fact]
     public async Task Recalculation_is_refused_even_when_every_recorded_settlement_is_already_paid()
     {
         // The recorded-settlements check must count ANY status, not just Pending. A paid record
@@ -636,9 +705,6 @@ public sealed class DeleteAccountFkIntegrityTests : IDisposable
             .OrderBy(x => x, StringComparer.Ordinal)
             .ToArray();
 
-        // Literal, not derived from the handler — a list computed from the code under test would
-        // move with it. Every entry is cleared by the handler, blocked upstream, or handled by
-        // the database (Cascade/SetNull), as noted.
         // Literal, not derived from the handler — a list computed from the code under test would
         // move with it. Restrict edges are each cleared by the handler or blocked upstream;
         // Cascade edges are handled by the database and are pinned so a NEW cascade (which would

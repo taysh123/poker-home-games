@@ -98,6 +98,19 @@ public sealed class CalculateSettlementsCommandHandler(
             throw new BadRequestException(
                 "This session includes a player whose account was deleted, so settlements can no longer be recalculated. The settlements already recorded are unchanged.");
 
+        // Orphaned money: a legacy row (attributed only by UserId) whose account was deleted and
+        // could not be re-keyed to a seat (DeleteAccountCommandHandler backfills when the leaver
+        // has a seat; this shape means they did not). The amount belongs to no balance
+        // projection, so ANY computed set would silently ignore real money — refuse regardless
+        // of whether settlements are recorded. This fires only for deletion residue: every
+        // factory sets SessionPlayerId, so a (null, null) money row has no other origin.
+        var hasOrphanedMoney =
+            allBuyIns.Any(b => b.SessionPlayerId == null && b.UserId == null)
+            || allCashOuts.Any(c => c.SessionPlayerId == null && c.UserId == null);
+        if (hasOrphanedMoney)
+            throw new BadRequestException(
+                "Money in this session can no longer be attributed to a player because an account was deleted, so settlements can't be calculated.");
+
         // Split: players with a SettlementUserId participate in formal (digital) settlements;
         // unlinked guests have no SettlementUserId and are handled manually outside the app.
         var linkedPlayers = allPlayers.Where(sp => sp.SettlementUserId.HasValue).ToList();
