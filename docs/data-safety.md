@@ -47,8 +47,17 @@ third-party integrations change.
 | Refresh token | **SHA-256** (hex) of 64 random bytes (512-bit entropy) | `RefreshToken.TokenHash` in PostgreSQL | `src/PokerApp.Infrastructure/Identity/JwtService.cs` |
 | Access token | JWT, HMAC-SHA256 signed, 15-min expiry | not stored server-side | `JwtService.GenerateAccessToken` |
 
-Plain-text passwords are never stored or logged. `PRIVACY.md`, `public/privacy.html`,
-`docs/HANDOFF.md`, and `README.md` all state this correctly.
+Plain-text passwords are never stored or logged. `public/privacy.html` — the canonical served
+policy — states this correctly. `PRIVACY.md` (repo root) is a pointer to that page as of Q1.6b and
+no longer restates policy content itself, by design (see that file).
+
+A fleet caught a false claim in an earlier version of this paragraph: it said `docs/HANDOFF.md`
+and `README.md` "do not currently mention password hashing at all." That was wrong — both name
+`BCrypt` in their Auth row (`README.md`'s Architecture table, `HANDOFF.md`'s "§3 Technology
+Stack" table). What's actually true, and narrower: neither spells out the specific *never-stored-
+in-plaintext* guarantee the way `privacy.html` does — they name the algorithm, not the promise.
+Left as-is rather than expanded, since adding that sentence to two more files is exactly the kind
+of duplication this slice exists to reduce, not grow.
 
 > **Note re: "password" as a Data Safety type** — Google's data-type taxonomy has no
 > field for passwords/credentials collected solely for authentication, so password is

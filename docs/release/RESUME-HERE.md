@@ -1,6 +1,6 @@
 # ▶️ RESUME HERE — T Poker status
 
-> **Read this first when you come back.** _Last updated: 2026-08-03, after Q1.6._
+> **Read this first when you come back.** _Last updated: 2026-08-03, after Q1.6b — Q1 is closed._
 >
 > This file describes CURRENT state only. It used to carry ~150 lines of a dead Paddle-gated
 > launch plan under a "historical, don't act on it" banner — and a new session read the banner,
@@ -28,21 +28,28 @@ adversarial critic fleet before every PR, owner merges.
 `tpoker.app` as the single public entry point), Q1.4 core (review-prompt rules, flag OFF — firing
 path is Q1.4b, not yet started), Q1.5a/Q1.5b parts 1–2 (a11y tokens + component contracts + the
 AST-measured role ratchet, now 31 unroled touchables across 14 files, down from the pre-Q1.5 debt),
-**Q1.6 PARTIAL** (this slice — the TSL byline rows and this rewrite; two of the master plan's four
-Q1.6 sub-items are still open, listed below — do not read "Q1.6" as fully closed).
+Q1.6 + Q1.6b (TSL byline rows, this rewrite, LICENSE and PRIVACY.md cleanup). **Q1 is fully
+closed** as of Q1.6b, owner-confirmed 2026-08-03.
 
-**Next up, per the master plan:** Q2.1–Q2.7 (bankroll calendar → bankroll live → training-stats
-capture → progress dashboard → "how it works" tour → premium desirability), then Q3.1–Q3.7. Full
-detail lives in the master-plan doc — not duplicated here, so this file can't drift from it.
+Deliberately NOT part of that close: the TSL byline consolidation into one shared constant (see
+below) is tracked as its own small future slice, not a Q1 blocker — the owner decided Q1's
+definition of done doesn't require it.
 
-### Q1.6 — what landed this slice, and what is STILL OPEN
+**Next: Q2** (bankroll calendar → bankroll live → training-stats capture → progress dashboard →
+"how it works" tour → premium desirability), then Q3. Q2 has a real design fork (per the owner,
+2026-08-03) — **stop and check in with the owner before building anything in it**; do not start
+from this doc alone. Full slice detail lives in the master-plan doc — not duplicated here, so this
+file can't drift from it.
+
+### Q1.6 + Q1.6b — CLOSED, what landed and the one thing deliberately left out
 
 The master plan (`2026-07-27-product-quality-master-plan.md:131-133`) defines Q1.6 as four
-sub-items. This slice did two of them. Stated plainly here because a flat "Q1.6 shipped" line
-almost shipped in an earlier draft of this rewrite — the exact failure mode this file exists to
-stop, reproduced inside the fix itself, caught by adversarial review before merge.
+sub-items. Stated in detail here because a flat "Q1.6 shipped" line almost shipped in an earlier
+draft of this rewrite — the exact failure mode this file exists to stop, reproduced inside the fix
+itself, caught by adversarial review before merge. Three of the four items are done; the fourth is
+a deliberate, owner-confirmed deferral, not an oversight.
 
-**Landed this slice:**
+**Landed:**
 - **7(i)** "Made by True Story Labs" byline row in Profile's About & Support card — a studio
   credit, not a copyright line; the existing `© Tay Shofer` line is untouched and still the sole
   copyright holder (the app ships under the owner's *individual* developer account, so the legal
@@ -53,17 +60,25 @@ stop, reproduced inside the fix itself, caught by adversarial review before merg
   metadata rejection; it does not get touched again without a specific reason.
 - This RESUME-HERE.md rewrite — the master plan's "supersede-banner on the stale plan doc" item,
   done as a full rewrite instead of a banner (see the top of this file for why).
+- **Q1.6b — `LICENSE`**: was `Copyright (c) 2026 tay123` (a tooling-filled GitHub username
+  placeholder, never corrected); now `Tay Shofer`, matching the copyright-holder invariant pinned
+  everywhere else.
+- **Q1.6b — `PRIVACY.md`** (repo root): was a full duplicate of
+  `apps/poker-mobile/public/privacy.html` carrying a "keep both in sync — the two must not drift"
+  comment that nothing enforced. Rewritten as a genuine pointer to the canonical served page
+  (`https://app.tpoker.app/privacy.html`); the duplication — and the drift risk that comment
+  promised to prevent but couldn't — is gone structurally, not just fixed-in-place. Pinned:
+  `legalSurfaces.test.ts` asserts the pointer names the canonical URL, never re-duplicates the
+  real policy's body (PostHog/bcrypt/GDPR/Railway as proxies), and still names Tay Shofer as
+  copyright holder.
 
-**STILL OPEN from the master plan's Q1.6, not started:**
-- **`LICENSE`** (repo root) still reads `Copyright (c) 2026 tay123` — not yet `Tay Shofer`.
-- **`PRIVACY.md`** (repo root) is still a full duplicate of `apps/poker-mobile/public/privacy.html`
-  with its own "keep both in sync — the two must not drift" banner — not yet turned into a pointer
-  at the canonical page, so the silent-drift risk the master plan called out to kill is still live.
-- The TSL byline consolidation into one shared constant — the byline exists as FIVE independent
-  literals now, not four: the original splash/Welcome/Login/in-app-Landing "BY TRUE STORY LABS"
-  bylines, plus this slice's two NEW "Made by True Story Labs" rows use different capitalization
-  and wording from the other four. Consolidating was already deferred before this slice added a
-  fifth variant to the pile — flagged again, more urgently, not fixed here.
+**Deliberately deferred, not a Q1 blocker:** the TSL byline consolidation into one shared
+constant. The byline exists as FIVE independent literals now, not four: the original
+splash/Welcome/Login/in-app-Landing "BY TRUE STORY LABS" bylines, plus Q1.6's two new "Made by
+True Story Labs" rows use different capitalization and wording from the other four. Consolidating
+was already deferred before Q1.6 added a fifth variant to the pile. Real, and worth doing, but the
+owner decided (2026-08-03) it doesn't gate Q1's close — pick it up as its own small slice whenever
+the drift actually bites.
 
 ## Owner-only open items
 
