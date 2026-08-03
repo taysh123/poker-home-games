@@ -28,14 +28,21 @@ adversarial critic fleet before every PR, owner merges.
 `tpoker.app` as the single public entry point), Q1.4 core (review-prompt rules, flag OFF — firing
 path is Q1.4b, not yet started), Q1.5a/Q1.5b parts 1–2 (a11y tokens + component contracts + the
 AST-measured role ratchet, now 31 unroled touchables across 14 files, down from the pre-Q1.5 debt),
-**Q1.6** (this slice — branding rows, see below, plus this rewrite).
+**Q1.6 PARTIAL** (this slice — the TSL byline rows and this rewrite; two of the master plan's four
+Q1.6 sub-items are still open, listed below — do not read "Q1.6" as fully closed).
 
 **Next up, per the master plan:** Q2.1–Q2.7 (bankroll calendar → bankroll live → training-stats
 capture → progress dashboard → "how it works" tour → premium desirability), then Q3.1–Q3.7. Full
 detail lives in the master-plan doc — not duplicated here, so this file can't drift from it.
 
-### Q1.6 — what landed this slice
+### Q1.6 — what landed this slice, and what is STILL OPEN
 
+The master plan (`2026-07-27-product-quality-master-plan.md:131-133`) defines Q1.6 as four
+sub-items. This slice did two of them. Stated plainly here because a flat "Q1.6 shipped" line
+almost shipped in an earlier draft of this rewrite — the exact failure mode this file exists to
+stop, reproduced inside the fix itself, caught by adversarial review before merge.
+
+**Landed this slice:**
 - **7(i)** "Made by True Story Labs" byline row in Profile's About & Support card — a studio
   credit, not a copyright line; the existing `© Tay Shofer` line is untouched and still the sole
   copyright holder (the app ships under the owner's *individual* developer account, so the legal
@@ -44,13 +51,19 @@ detail lives in the master-plan doc — not duplicated here, so this file can't 
   (`apps/landing`) — `SITE.company` and the footer's `©` bar are untouched, still `Tay Shofer`.
 - **NOT 7(iii)** — store listing copy stays locked verbatim. It was rewritten once after a 2.3.6
   metadata rejection; it does not get touched again without a specific reason.
-- This RESUME-HERE.md rewrite.
+- This RESUME-HERE.md rewrite — the master plan's "supersede-banner on the stale plan doc" item,
+  done as a full rewrite instead of a banner (see the top of this file for why).
 
-Deliberately NOT done here (larger, separate scope): the master plan's original Q1.6 also
-described "TSL byline → one shared constant + pins on all four surfaces" — the byline already
-exists as four independent literals (splash, Welcome, Login, in-app Landing screen). Consolidating
-those into one constant is real but wasn't asked for in this slice; it's a candidate for its own
-small slice if the drift ever bites.
+**STILL OPEN from the master plan's Q1.6, not started:**
+- **`LICENSE`** (repo root) still reads `Copyright (c) 2026 tay123` — not yet `Tay Shofer`.
+- **`PRIVACY.md`** (repo root) is still a full duplicate of `apps/poker-mobile/public/privacy.html`
+  with its own "keep both in sync — the two must not drift" banner — not yet turned into a pointer
+  at the canonical page, so the silent-drift risk the master plan called out to kill is still live.
+- The TSL byline consolidation into one shared constant — the byline exists as FIVE independent
+  literals now, not four: the original splash/Welcome/Login/in-app-Landing "BY TRUE STORY LABS"
+  bylines, plus this slice's two NEW "Made by True Story Labs" rows use different capitalization
+  and wording from the other four. Consolidating was already deferred before this slice added a
+  fifth variant to the pile — flagged again, more urgently, not fixed here.
 
 ## Owner-only open items
 
@@ -88,7 +101,7 @@ Things only the owner can act on — nothing here blocks shipping the rest of th
 |-----|---------------|
 | `docs/superpowers/specs/2026-07-27-product-quality-master-plan.md` | The plan of record — Q0 through Q3, sizes, owner decisions. Read this for "what's next," not this file. |
 | `docs/superpowers/specs/2026-07-18-free-first-split-design.md` | Design of record for the free-first split + ship invariants (§5.6). |
-| `docs/release/dual-store-submission.md` | iOS/Android 1.2.0 submission plan — the Android 14-day closed-test gate, screenshot regen timing, both stores' step lists. Currently open in the editor; keep it as the live source for Android testing status rather than this file. |
+| `docs/release/dual-store-submission.md` | iOS/Android 1.2.0 submission plan — the Android 14-day closed-test gate, screenshot regen timing, both stores' step lists. Keep it as the live source for Android testing status rather than this file. |
 | `docs/release/seo-indexing.md` | Full detail behind the three open Vercel/Search Console actions above. |
 | `docs/store-release.md` | Full App Store + Play submission checklist; publisher identity decision (seller name = Tay Shofer, TSL is an in-app byline only). |
 | `docs/google-oauth-fix.md` | Native iOS/Android Google OAuth client setup — required pre-store step, not yet applied. |

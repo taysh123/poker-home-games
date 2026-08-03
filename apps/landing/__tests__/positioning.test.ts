@@ -167,7 +167,14 @@ describe('footer brand column — studio credit (Q1.6 7ii)', () => {
   it('credits True Story Labs as the studio, not as the copyright holder', () => {
     const footer = read('components/blocks/Footer.tsx');
     expect(footer).toMatch(/Made by True Story Labs/);
-    expect(footer).not.toMatch(/©\s*True Story Labs/);
+    // Not just "no © directly touching the phrase" — no © anywhere on the SAME line/paragraph
+    // as the byline. An adjacency-only check would pass a rewrite like
+    // "© Made by True Story Labs" or "Made by True Story Labs ©" that still reads as a
+    // copyright claim once spoken aloud or skimmed, just not in the one exact spot the regex
+    // anchored to.
+    const bylineLine = footer.split('\n').find(l => l.includes('Made by True Story Labs'));
+    expect(bylineLine).toBeTruthy();
+    expect(bylineLine).not.toMatch(/©/);
   });
 });
 
