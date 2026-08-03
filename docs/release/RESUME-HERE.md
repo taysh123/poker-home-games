@@ -1,206 +1,119 @@
-# ▶️ RESUME HERE — T Poker launch status
+# ▶️ RESUME HERE — T Poker status
 
-> **Read this first when you come back.** _Last updated: 2026-07-19._
+> **Read this first when you come back.** _Last updated: 2026-08-03, after Q1.6._
 >
-> ⚠️ **Strategy changed — this doc's Paddle-gated plan below (§1–§7) is SUPERSEDED and kept only for history.**
-> Web payments are dead (Paddle rejects poker). We pivoted to a **free-first app-store launch**; app-store
-> billing comes later behind the existing `IBillingVerifier` seam. Current design of record:
-> [`docs/superpowers/specs/2026-07-18-free-first-split-design.md`](../superpowers/specs/2026-07-18-free-first-split-design.md).
+> This file describes CURRENT state only. It used to carry ~150 lines of a dead Paddle-gated
+> launch plan under a "historical, don't act on it" banner — and a new session read the banner,
+> skipped past it anyway, and treated the dead plan as live. The fix here is not another banner:
+> the dead plan is gone from this file. If you need it for archaeology, it is in git history and
+> in `docs/superpowers/specs/2026-06-25-tpoker-launch-design.md` / the free-first pivot design
+> below — not here.
 
-## 🚨 STANDING SUBMISSION PRINCIPLE (2026-07-23) — education-first, never a "game"
+## Where we actually are
 
-We submit under the owner's **existing individual Apple Developer account**. Gambling /
-real-money-gaming classification requires an **organization** account, and simulated-gambling
-apps draw heightened scrutiny — so the **education + utility classification must be
-unmistakable**, and nothing store-facing may read as a poker *game*.
+**iOS 1.1.1 is LIVE on the App Store.** T Poker ships **free-first**: home-game manager, groups,
+stats, daily quiz, 3 starter lessons, 10 shared practice questions/day. Premium (full lessons,
+unlimited practice, AI Coach, Cloud Sync, advanced bankroll) is **"Coming soon", not purchasable**
+— CI-pinned honesty guards keep it that way. Web payments are dead (Paddle rejected poker as
+gambling); app-store billing comes later behind the existing `IBillingVerifier` seam. Design of
+record: `docs/superpowers/specs/2026-07-18-free-first-split-design.md`.
 
-T Poker is: a poker **strategy-education** app (lessons, daily quiz, decision drills, placement
-test) **plus a scorekeeping utility** (buy-in ledger + settlement calculator) for private home
-games. Money is only *recorded* between friends who settle in person — the app never moves,
-holds, wagers, or pays out anything.
+Building toward **1.2.0**, executing the plan of record —
+`docs/superpowers/specs/2026-07-27-product-quality-master-plan.md` (approved 2026-07-27, all 10
+owner questions answered 2026-07-28). Execution order: **Q0 → Q1 → Q2 → Q3**, one PR per slice,
+adversarial critic fleet before every PR, owner merges.
 
-Apply everywhere: screenshots lead with learning; listing copy leads with lessons/drills and
-calls the manager a ledger; iOS primary category **Education** (secondary Reference), Play type
-**App** (never Games ▸ Card/Casino); 18+ and "not a gambling product" stated prominently;
-reviewer notes state it explicitly with a guest-mode walkthrough.
+**Shipped:** Waves 0/1/2 of the earlier product-evolution plan, then from the current master plan
+— Q0 (engine-truth fixes), Q1.1 (tier-honest copy), Q1.2 (splash substrate), Q1.3 (SEO/indexing,
+`tpoker.app` as the single public entry point), Q1.4 core (review-prompt rules, flag OFF — firing
+path is Q1.4b, not yet started), Q1.5a/Q1.5b parts 1–2 (a11y tokens + component contracts + the
+AST-measured role ratchet, now 31 unroled touchables across 14 files, down from the pre-Q1.5 debt),
+**Q1.6 PARTIAL** (this slice — the TSL byline rows and this rewrite; two of the master plan's four
+Q1.6 sub-items are still open, listed below — do not read "Q1.6" as fully closed).
 
-👉 **Checklist of what's done vs. what you still need to do:
-[`store-submission-readiness.md`](store-submission-readiness.md)** — start there when you work
-the submission track.
+**Next up, per the master plan:** Q2.1–Q2.7 (bankroll calendar → bankroll live → training-stats
+capture → progress dashboard → "how it works" tour → premium desirability), then Q3.1–Q3.7. Full
+detail lives in the master-plan doc — not duplicated here, so this file can't drift from it.
 
-## ✅ Where we actually are (2026-07-19)
+### Q1.6 — what landed this slice, and what is STILL OPEN
 
-Everything below is **merged to `main`, deployed, and production-verified healthy** (Railway API + Vercel web/landing).
+The master plan (`2026-07-27-product-quality-master-plan.md:131-133`) defines Q1.6 as four
+sub-items. This slice did two of them. Stated plainly here because a flat "Q1.6 shipped" line
+almost shipped in an earlier draft of this rewrite — the exact failure mode this file exists to
+stop, reproduced inside the fix itself, caught by adversarial review before merge.
 
-- **All launch code is merged** — frozen stack #4 → #5 → #6 → #14 → #11, then the free-first split (**PR #20**),
-  the docs-reality update (**PR #21**), and store screenshots + a lessons-ingest fix (**PR #22**). No open PRs.
-- **Free-first split is live:** home-game manager, groups, stats, daily quiz, **three starter lessons**
-  (LM-01/LM-05/LM-04, verified rendering in prod), and **10 shared practice questions/day** (Spot + Decision
-  trainer draw from ONE pool, resets at local midnight) — all free. Premium (full lesson library, unlimited
-  practice, AI Coach, Cloud Sync, advanced bankroll) is **"Coming soon", not purchasable** — a CI-pinned honesty
-  config guarantees **zero** live/chargeable features. AI Coach makes **zero** API calls (coach flag off + mock
-  provider + no Anthropic key). Ship invariants: `docs/superpowers/specs/2026-07-18-free-first-split-design.md` §5.6.
-- **Education-first framing** shipped: onboarding leads Learn → Practice → Play → Track; store copy leads with the
-  study pillar (`docs/store-release.md`).
-- **Store screenshots DONE** — study-first (Spot Trainer → Lessons → daily quiz, then game-night shots) at all
-  three store sizes in `apps/poker-mobile/store-assets/screenshots/{play-phone,ios-6.7,ios-5.5}/`. Regenerate the
-  three study shots with the Playwright harness `store-assets/store-shots.mjs` (see that dir's README).
-- **Two fixes shipped this round:** the Decision Trainer no longer bypasses the daily cap (one shared pool of 10),
-  and the 3 free lessons now actually ingest (they were silently quarantined → "No lessons yet").
+**Landed this slice:**
+- **7(i)** "Made by True Story Labs" byline row in Profile's About & Support card — a studio
+  credit, not a copyright line; the existing `© Tay Shofer` line is untouched and still the sole
+  copyright holder (the app ships under the owner's *individual* developer account, so the legal
+  entity on every surface must stay the legal name — `legalSurfaces.test.ts` pins this).
+- **7(ii)** Matching "Made by True Story Labs" line in the landing footer's brand column
+  (`apps/landing`) — `SITE.company` and the footer's `©` bar are untouched, still `Tay Shofer`.
+- **NOT 7(iii)** — store listing copy stays locked verbatim. It was rewritten once after a 2.3.6
+  metadata rejection; it does not get touched again without a specific reason.
+- This RESUME-HERE.md rewrite — the master plan's "supersede-banner on the stale plan doc" item,
+  done as a full rewrite instead of a banner (see the top of this file for why).
 
-## ⏭️ WHEN I COME BACK — remaining path to store launch (no billing needed)
+**STILL OPEN from the master plan's Q1.6, not started:**
+- **`LICENSE`** (repo root) still reads `Copyright (c) 2026 tay123` — not yet `Tay Shofer`.
+- **`PRIVACY.md`** (repo root) is still a full duplicate of `apps/poker-mobile/public/privacy.html`
+  with its own "keep both in sync — the two must not drift" banner — not yet turned into a pointer
+  at the canonical page, so the silent-drift risk the master plan called out to kill is still live.
+- The TSL byline consolidation into one shared constant — the byline exists as FIVE independent
+  literals now, not four: the original splash/Welcome/Login/in-app-Landing "BY TRUE STORY LABS"
+  bylines, plus this slice's two NEW "Made by True Story Labs" rows use different capitalization
+  and wording from the other four. Consolidating was already deferred before this slice added a
+  fifth variant to the pile — flagged again, more urgently, not fixed here.
 
-1. **`eas login`** on this machine (`npx eas-cli login` from `apps/poker-mobile`) — EAS credentials didn't travel
-   with the machine; required before any `eas build`.
-2. **Business / entity decision** — talk to the accountant about whether to launch under a personal account or a
-   registered entity (tax + store-account ownership). Free launch takes no payments, so this is not a hard blocker,
-   but decide before creating the final store listings under a publisher name.
-3. **Native store setup:** create the iOS + Android Google OAuth clients for `com.tpoker.app`, set the client-ID
-   env vars, and apply the not-yet-applied iOS reversed-client-ID URL scheme to `app.json`
-   (`docs/google-oauth-fix.md` §4; `docs/store-release.md` Steps 3 + 8). Then `eas build --profile production`.
-4. **Screenshots:** ✅ study-first set is committed at all store sizes. Optional polish: a designer pass, or capture
-   the three study shots on the iPad size too (only phone sizes are done).
-5. **Submit** per `docs/store-release.md` — category Lifestyle/Utilities + **Education** secondary; reviewer note
-   frames it as a poker **study** app + scorekeeping tool, **not** gambling. Play: "App (not game)".
-6. **Later (post-launch):** wire real app-store billing behind the `IBillingVerifier` seam; only then flip any
-   `comingSoon` in `features/premium/config.ts`. Also the domain-migration follow-ups (§6 below).
+## Owner-only open items
 
----
+Things only the owner can act on — nothing here blocks shipping the rest of the master plan.
 
----
+- **Android: 0 of 12 closed-test testers recruited.** Play requires ≥12 testers opted in for
+  ≥14 continuous days before "Promote to Production" unlocks (`docs/release/dual-store-submission.md`
+  §2) — the longest lead time in the whole 1.2.0 release, and it does not depend on which build is
+  in the track. **Current plan: pay for testers once the 1.2.0 builds are ready**, rather than
+  starting the clock now on an interim build. Worth knowing this diverges from that doc's own
+  recommendation ("start the clock today, off `main`, with whatever build is ready, since updating
+  the build never resets the 14-day window") — paying for testers after 1.2.0 is a legitimate
+  choice, it just means Android's 14-day clock starts later than it technically could.
+- **Three Vercel / Search Console actions open**, from Q1.3 (`docs/release/seo-indexing.md` §§1–3):
+  1. Flip the `poker-home-games-three.vercel.app` → `app.tpoker.app` redirect from 307 (temporary)
+     to 308 (permanent) in the Vercel dashboard — the old domain won't consolidate out of the
+     index without it.
+  2. Confirm `tpoker-landing-xi.vercel.app` (the landing's early deploy URL) redirects to
+     `tpoker.app` rather than serving a duplicate copy.
+  3. In Google Search Console: verify both `tpoker.app` and `app.tpoker.app` properties, request a
+     temporary removal on `app.tpoker.app` to speed up the `noindex` taking effect, submit
+     `tpoker.app/sitemap.xml`, and re-check coverage in ~2 weeks.
+- **Two splash taste calls still owed, by the assistant, to the owner** — asked here explicitly so
+  they don't sit open silently:
+  1. Is **~1.2s** the right splash duration (`components/brand/BrandSplash.tsx`'s `SPLASH.EXIT_AT`
+     timing)? Still exactly what it was when this was first raised.
+  2. Should **`logo.png`** appear on `WelcomeScreen`? Still absent from that screen today.
+- **Branch protection on `main` is enabled** (since 2026-07-29) with all 5 CI checks required.
+  Before that, every CI gate was advisory only — worth remembering if an old PR from before that
+  date ever needs re-examining for how it actually got merged.
 
-> 🕰️ **Everything from here down (§1–§7) is HISTORICAL** — the pre-merge, Paddle-gated plan. All five PRs have
-> since merged and the Paddle path is abandoned. Kept for provenance; do not act on it. The current plan is the
-> banner at the top of this file.
+## Key pointers
 
-## 1. Where we are — all code built, frozen in PRs
+| Doc | What it's for |
+|-----|---------------|
+| `docs/superpowers/specs/2026-07-27-product-quality-master-plan.md` | The plan of record — Q0 through Q3, sizes, owner decisions. Read this for "what's next," not this file. |
+| `docs/superpowers/specs/2026-07-18-free-first-split-design.md` | Design of record for the free-first split + ship invariants (§5.6). |
+| `docs/release/dual-store-submission.md` | iOS/Android 1.2.0 submission plan — the Android 14-day closed-test gate, screenshot regen timing, both stores' step lists. Keep it as the live source for Android testing status rather than this file. |
+| `docs/release/seo-indexing.md` | Full detail behind the three open Vercel/Search Console actions above. |
+| `docs/store-release.md` | Full App Store + Play submission checklist; publisher identity decision (seller name = Tay Shofer, TSL is an in-app byline only). |
+| `docs/google-oauth-fix.md` | Native iOS/Android Google OAuth client setup — required pre-store step, not yet applied. |
+| `docs/release/store-submission-readiness.md` | Checklist of what's done vs. still needed for the submission track. |
+| `docs/release/backlog-tickets.md` | Deferred hardening/auth tickets (single active session, Cloud Sync xmin hardening, tombstone compaction). |
+| `docs/release/localization-plan.md` | Hebrew/RTL blueprint — post-launch, not started. |
 
-**Five launch PRs are frozen (do NOT merge until launch). They merge in order → #4 → #5 → #6 → #14 → #11.**
+## Superseded — kept as a pointer only, not reproduced
 
-| PR | What it is | Base | Status |
-|----|-----------|------|--------|
-| **#4** | **Launch buildout** — full redesign + 4 premium features (all flag-gated OFF) | `main` | 🧊 **open, FROZEN** |
-| **#5** | **Coach + Study quality** — hand/format-aware AI Coach (mock/flags-off); Study upgrades | `feature/launch-buildout` | 🧊 **open, FROZEN** |
-| **#6** | **Lottie polish** — 6 animations wired (celebration/achievement/success/loading/empty/splash) | `feature/coach-study-quality` | 🧊 **open, FROZEN** |
-| **#14** | **Entry experience** — BrandSplash 2.0 (~1.2s, skippable, reduced-motion safe) + **Welcome chooser** (explicit "Continue as guest" / "Sign in" — no more silent guest; guest data zero-write pinned) + auth polish + navy web shell. Flags `v2Splash`/`welcome` ON-at-launch, each a kill-switch. Gates: tsc 0 · jest 620 · axe 0 · Playwright 10/10 vs real web export; adversarially reviewed (fixes landed) | `feature/lottie-polish` | 🧊 **open, FROZEN** |
-| **#11** | **Security hardening** — all 7 audit fixes: **H2/H3/H4** billing + **H1/M2/M1** auth-pipeline + **L2/L7/L8** validators (TDD; dotnet 181 · jest 528 · tsc 0; gitleaks-clean) | `main` | 🧊 **open, FROZEN** |
-
-**Already merged to `main`:** **#7** docs/OAuth · **#9** legal + pricing pages (Paddle policies) · **#10** landing
-anti-gambling (deployed) · **#12** these RESUME/docs updates.
-
-- **Merge order at launch: #4 → #5 → #6 → #14 → #11.** The feature stack retargets as each lands (#14 stacks on
-  #6's branch); **#11** (security) is independent of the stack and merges last so its fixes deploy with everything.
-  Each merge: gitleaks + all gates green.
-- **Safety posture (why production is stable right now):** every new surface is behind an **OFF flag**, the **AI Coach
-  uses the mock provider** (no Anthropic calls), the **honesty flip is HELD** (store/benefit badges stay "Coming
-  soon"), and **no real-money billing is wired**. Production behaves exactly as before until you flip flags in §4.
-
-## 2. The blocker — Paddle (re-reviewing the landing)
-
-**Paddle first REJECTED `poker-home-games-three.vercel.app` as "Gambling"** (they reviewed the raw web app). Fixed:
-the marketing **landing site** (`apps/landing`) now frames T Poker unmistakably as **home-game management + poker
-study — NOT a gambling product, no real-money wagering, 18+** (trust banner, meta description, footer disclaimer,
-18+ FAQ, softened hero). It is **deployed at `https://tpoker-landing-xi.vercel.app`** and **RESUBMITTED to Paddle**.
-
-- **Status: under review — up to ~3 working days.** Nothing else blocks launch.
-- Going live is technically impossible until Paddle approves (no live Paddle keys exist yet). Email/password +
-  Google sign-in, guest mode, and all free features work today, independently of Paddle.
-
-## 3. What you've already done (external prep) ✅
-
-- ✅ **GitHub 2FA** enabled.
-- ✅ **Google + Apple developer accounts** owned.
-- ✅ **Anthropic API key** obtained + a **spend limit set** — stored securely, **NOT in Railway yet** (you add it
-  during AI-Coach activation in the launch sequence).
-- ✅ **Google Login verified working on web** (`poker-home-games-three.vercel.app` → signs in to Home). The whole
-  chain — app code, Google Console, backend — is confirmed. *(Expo Go can't do Google sign-in — SDK-54 limitation,
-  not a bug; see `google-oauth-fix.md`.)*
-
-## 4. The exact launch sequence (when Paddle approves)
-
-Follow **`docs/release/go-live-runbook.md`** for every dashboard click + exact env-var name. The **order**:
-
-1. **Paddle approves** → in the Paddle dashboard, go **sandbox → live**: create the live product + 2 prices
-   ($8.99/mo, $79.99/yr), the live API key, client token, and webhook signing secret. Set the `Paddle__*` vars on
-   Railway + the `EXPO_PUBLIC_PADDLE_*` vars on Vercel.
-2. **One real test purchase** (small, refundable) end-to-end → confirm the webhook verifies (HTTP 200) and the
-   entitlement grants; then **refund** it and confirm it revokes. *(Proves live billing works.)*
-3. **Honesty flip (HELD)** → flip the "Coming soon" benefits to live **only once they're real and billing is wired**.
-4. **Merge the PRs → #4 → #5 → #6 → #14 → #11** to `main` — each with a **full gitleaks scan + all gates green**
-   (tsc · jest · expo export · dotnet build/test · landing build). *(Merging is your action.)*
-5. **Deploy + set the Railway rate-limit config.** Railway auto-deploys `main`. ⚠️ **Confirm
-   `ASPNETCORE_ENVIRONMENT=Production` is set on Railway** — it is the **one** setting that enables
-   `app.UseForwardedHeaders`, so the new **per-IP rate limiting** (from PR #11) reads the **real** client IP.
-   **Add NO forwarded-headers/proxy variable** — the proxy hop count is `ForwardLimit = 1` **in code** (one hop =
-   Railway's edge); do **not** set `KnownProxies`. **If `ASPNETCORE_ENVIRONMENT` is missing/`Development`:** the
-   app sees Railway's proxy IP for everyone → all users share **one** rate-limit bucket → **login lockout under
-   load.** Detail: runbook **Part 4 Step 3b** + **`docs/release/security-hardening-deploy.md`**. *(The landing is
-   already deployed at `tpoker-landing-xi.vercel.app` — no separate landing deploy is needed at launch.)*
-6. **Activate the AI Coach** → put the **Anthropic key on Railway** (`CoachAiSettings__ApiKey`), set
-   **`CoachAiSettings__Provider=anthropic`**, and **set the model to Haiku** (`claude-haiku-4-5-20251001`) —
-   **NOT Sonnet.** ⚠️ The shipped default is Sonnet, which costs multiples more; the 100/month economics assume
-   Haiku. Then flip the `coach` flag.
-7. **Live.** 🎉
-
-> Everything above is **documented, not executed** — `go-live-runbook.md` has the beginner-friendly detail (every
-> Paddle action, every env var, the live-HMAC verification, the test-purchase + refund procedure, and the Railway
-> forwarded-headers step).
-
-## 5. Still-pending external prep you can do meanwhile
-
-None of these block launch, but they move it forward:
-
-- **Chase Paddle** — the critical path; the landing re-review is the blocker.
-- **Accountant consultation** — tax/business setup for taking payments.
-- **Store submission prep** — accounts are owned; the remaining steps (listings, credentials, and the **native
-  iOS/Android Google OAuth setup**) are documented. The native OAuth is a **required pre-store step**: create iOS +
-  Android OAuth clients for `com.tpoker.app`, set the env vars, and add the iOS reversed-client-ID URL scheme to
-  `app.json` (a ready-to-apply snippet — **not yet applied**). See `google-oauth-fix.md` §4 and `store-release.md`
-  (Steps 3 + 8).
-
-## 6. Post-launch backlog (NOT blockers — deliberately deferred)
-
-- **Hebrew / RTL localization** — English launches first; Hebrew is a post-launch update. ~5–8 weeks, RTL-dominated.
-  Full blueprint in `localization-plan.md`.
-- **"Single active session" / device-login management** — post-launch auth feature. `backlog-tickets.md`.
-- **Cloud Sync `xmin` concurrency hardening** — low priority; self-heals today. `backlog-tickets.md`.
-- **Cloud Sync tombstone compaction** — only matters at scale. `backlog-tickets.md`.
-- **Study content authoring** — grow the question pool + richer explanations (`study-content-spec.md`).
-- **Repo hygiene** — remove committed build output `src/PokerApp.API/out2/` and gitignore `out*/`
-  (one-line PR; found during the 2026-07-07 CI/case-sensitivity scan — harmless, just clutter).
-- **Domain-migration follow-ups (tpoker.app, deferred 2026-07-16 — do RIGHT AFTER the stack merges;
-  all four values live in frozen-PR-owned files and currently work via the old domain's 307 redirects):**
-  1. `AppNavigator.tsx` linking `prefixes`: add `https://app.tpoker.app` (keep the old vercel domain
-     for already-shared invite links). Native-only concern — web invite routing is path-based.
-  2. `app.json` android `intentFilters` host → `app.tpoker.app` — part of the pre-store native OAuth
-     task (§5), together with serving `assetlinks.json` on the new domain.
-  3. `PaywallScreen.tsx` + `ProfileScreen.tsx` privacy/terms `Linking.openURL` absolutes →
-     `https://app.tpoker.app/*.html`.
-  4. `Program.cs` CORS hardcoded fallback → add `https://app.tpoker.app` (defense-in-depth only —
-     Railway `AllowedOrigins__0` is the operative fix and is already part of the migration).
-  Plus docs: CLAUDE.md deployment section + go-live-runbook env table still name
-  `poker-home-games-three.vercel.app` — update both post-merge.
-- **Security recommendations (deferred; NOT in PR #11)** — considered and consciously left as recommendations:
-  **M3** refresh-token in web `localStorage` (→ HttpOnly cookie), **L1** Google `email_verified`, **L3** AddPlayer
-  consent, **L4/L6** config, npm audit-fix (can break Expo). Full detail: memory `security-audit`.
-
-## 7. Key pointers — where the important docs live
-
-> "On main" = you can open it now. "In PR #N" = it lands on `main` when that PR merges at launch.
-
-| Doc | Path | Where | What it's for |
-|-----|------|-------|---------------|
-| **Go-live runbook** | `docs/release/go-live-runbook.md` | in **PR #4** | Step-by-step for Paddle live + AI Coach + the Railway rate-limit step (§4 detail) |
-| **Security deploy note** | `docs/release/security-hardening-deploy.md` | in **PR #11** | The exact Railway `ASPNETCORE_ENVIRONMENT` / forwarded-headers config for the rate-limit fix |
-| **Google OAuth fix** | `docs/google-oauth-fix.md` | ✅ **on main** | Web-verified; the required native store OAuth setup |
-| **Store release guide** | `docs/store-release.md` | ✅ **on main** | Full App Store + Play submission checklist |
-| **Landing deploy** | `docs/release/landing-deploy.md` | in **PR #4** | Deploying the marketing site (already done → tpoker-landing-xi.vercel.app) |
-| **Localization plan** | `docs/release/localization-plan.md` | in **PR #5** | Hebrew/RTL blueprint + effort estimate |
-| **Backlog tickets** | `docs/release/backlog-tickets.md` | in **PR #4** | The deferred hardening/auth tickets |
-| **Study content spec** | `docs/content/study-content-spec.md` | in **PR #5** | The standard for authoring quiz content |
-
----
-
-**✅ Everything is safely backed up to GitHub — you can close VS Code.** All 4 launch PRs (#4 / #5 / #6 / #11) are
-pushed and frozen; the merged work (#7 / #9 / #10 / #12) is on `main`; nothing important lives only on your machine.
-When you're back, start at **⏭️ WHEN I COME BACK** at the top. 👋
+The original Paddle-gated launch plan (five frozen PRs, a Paddle re-review, a "when Paddle
+approves" launch sequence) is **dead**. Paddle rejected the product as gambling; the free-first
+pivot (2026-07-18) replaced it entirely, and every one of those PRs has long since merged or been
+abandoned. If you need the details: `git log` on this file before 2026-07-19, or
+`docs/superpowers/specs/2026-06-25-tpoker-launch-design.md` for the original design. Do not act on
+anything Paddle-shaped you find in either — it does not apply to the current free-first product.
