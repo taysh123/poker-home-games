@@ -87,24 +87,59 @@ describe('alertLabel — the banner is one element, so the name carries both lin
  * Source checks, the same tradeoff already accepted for GroupsListScreen's wiring pin
  * (utils/__tests__/groupRow.test.ts's "both group rows are wired to the shared helper"). They
  * prove the call sites exist; they cannot prove what HomeScreen renders at runtime.
+ *
+ * A FIRST VERSION of these two assertions shipped and did not actually close the gap — caught by
+ * an adversarial fleet run on the commit that added them. Both defects and their fixes:
+ *  - The topGroupText check was unanchored (`toMatch(/\{\s*topGroupText\(/)`), so a plain COMMENT
+ *    mentioning "topGroupText(" satisfied it while the real Text body stayed hand-rolled. Fixed by
+ *    requiring the call inside the exact JSX span between the Text's `style={styles.topGroupText}`
+ *    and its closing tag — a comment elsewhere in the file can't land inside that span.
+ *  - The banned-pattern check only named ONE spelling of the old bug (`myGroupPL > 0 ? '+'`); a
+ *    trivial rewrite (`>= 0`, string concatenation, a differently-named ternary) reintroduced the
+ *    identical wiring bug undetected. Fixed structurally instead of textually: `formatMoney` is not
+ *    imported by this file at all, so the bug's one required ingredient is simply unavailable
+ *    however it's spelled.
+ *  - The "+N more groups" check counted occurrences of the substring `more group${` — but the REAL
+ *    historical bug (commit 28ae7fe's parent) had the visible-Text half as a bare string literal
+ *    with no `${` interpolation at all, so reverting to that exact shape left the count at "1" and
+ *    the test green. Fixed by counting the shared VARIABLE's identifier instead of a text shape:
+ *    `moreGroupsText` must appear exactly 3 times (one declaration, two uses) regardless of which
+ *    string syntax either use employs.
  */
+/** Matches theme/__tests__/rawColorBan.test.ts's own stripComments — the same reason applies here:
+ * a source check must measure what SHIPS, not prose about it. */
+function stripComments(src: string): string {
+  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+}
+
 describe('HomeScreen is wired to homeAlerts, not re-implementing it inline', () => {
   const read = () => readFileSync(resolve(__dirname, '..', '..', 'screens', 'HomeScreen.tsx'), 'utf8');
 
   it('the top-group chip calls topGroupLabel/topGroupText, not a hand-rolled formatMoney + sign', () => {
-    const src = read();
-    expect(src).toMatch(/accessibilityLabel=\{\s*topGroupLabel\(/);
-    expect(src).toMatch(/\{\s*topGroupText\(/);
-    // The exact shape that shipped the bug: a ternary '+' sign glued to formatMoney's Math.abs
-    // output, right where the top-group chip's copy lives.
-    expect(src).not.toMatch(/topGroup\.myGroupPL\s*>\s*0\s*\?\s*'\+'/);
+    // Comments are stripped BEFORE the span is extracted. A first version of this test anchored
+    // the match to the JSX span but read it verbatim, so a comment placed INSIDE that span
+    // (e.g. `{/* mirrors topGroupText( from homeAlerts.ts */}`) satisfied the check on its own
+    // text, with the real render body left hand-rolled underneath it — caught by revert-testing
+    // this exact shape, not merely reasoned about.
+    const src = stripComments(read());
+
+    const labelBlock = src.match(/style=\{styles\.topGroupChip\}[\s\S]*?accessibilityLabel=\{[^}]*\}/);
+    expect(labelBlock?.[0] ?? '').toMatch(/topGroupLabel\(/);
+
+    const textBlock = src.match(/style=\{styles\.topGroupText\}[\s\S]*?<\/Text>/);
+    expect(textBlock?.[0] ?? '').toMatch(/topGroupText\(/);
+
+    // Structural, not textual: formatMoney applies Math.abs and is the one ingredient the old bug
+    // needed. However the ternary was spelled, it cannot exist here if formatMoney isn't imported.
+    expect(src).not.toMatch(/\bformatMoney\b/);
   });
 
-  it('"+N more groups" has exactly ONE plural expression, shared by the label and the visible text', () => {
-    // Two independent `more group${...}` expressions is the defect itself, whether or not they
-    // happen to agree today — the point is that nothing stops them drifting apart.
-    const src = read();
-    const occurrences = src.match(/more group\$\{/g) ?? [];
-    expect(occurrences.length).toBe(1);
+  it('"+N more groups" uses ONE shared variable, referenced by both the label and the visible text', () => {
+    // Counts the identifier itself rather than a text shape (template literal vs. string literal),
+    // so it cannot be fooled by which syntax either call site happens to use. Comments stripped for
+    // the same reason as the test above — an occurrence inside a comment isn't a real use.
+    const src = stripComments(read());
+    expect(src.match(/\bconst moreGroupsText\s*=/g) ?? []).toHaveLength(1);
+    expect(src.match(/\bmoreGroupsText\b/g) ?? []).toHaveLength(3); // declaration + label + visible text
   });
 });
