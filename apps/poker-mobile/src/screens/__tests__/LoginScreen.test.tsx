@@ -1,3 +1,6 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
 
@@ -132,6 +135,21 @@ describe('LoginScreen — guest escape hatch', () => {
     fireEvent.press(screen.getByRole('checkbox', { name: 'Stay signed in' }));
     expect(screen.getByRole('checkbox', { name: 'Stay signed in' }).props.accessibilityState)
       .toMatchObject({ checked: false });
+  });
+
+  it('a11y: the flat aria-checked twin exists in source — a rendered test cannot see it', () => {
+    // Mutation-confirmed hole: jest-expo runs REAL react-native, not react-native-web, and RN's
+    // own View.js merges the flat prop into accessibilityState via
+    // `checked: ariaChecked ?? accessibilityState?.checked` before any test can read it. That
+    // means deleting `aria-checked` while `accessibilityState={{ checked: rememberMe }}` survives
+    // makes EVERY test above still pass — the merge silently backfills the identical value, so a
+    // render assertion cannot tell "twin present" from "twin absent" in this environment. The one
+    // place the twin actually matters — react-native-web, which drops accessibilityState entirely
+    // and reads only the flat prop — is never exercised by a jest-expo render. A source check is
+    // the only thing that can catch its removal, and it is the same tradeoff this repo already
+    // accepted for GroupsListScreen's wiring pin (utils/__tests__/groupRow.test.ts).
+    const src = readFileSync(join(__dirname, '..', 'LoginScreen.tsx'), 'utf8');
+    expect(src).toMatch(/aria-checked=\{\s*rememberMe\s*\}/);
   });
 
   it('guest already inside the app (modal over MainTabs): dismisses, never resets their place', async () => {
