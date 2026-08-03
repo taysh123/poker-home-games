@@ -21,4 +21,11 @@ public class CashOut : BaseEntity
             Amount = amount,
             Timestamp = DateTime.UtcNow
         };
+
+    /// <summary>
+    /// Clears the direct user link on account deletion, keeping the AMOUNT and the SessionPlayer
+    /// link intact so the session still balances. See <see cref="BuyIn.AnonymizeUser"/> — same
+    /// legacy-column reasoning applies.
+    /// </summary>
+    public void AnonymizeUser() => UserId = null;
 }

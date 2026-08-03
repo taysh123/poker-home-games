@@ -23,4 +23,11 @@ public class SessionPlayer : BaseEntity
         => new() { SessionId = sessionId, GuestName = guestName, LinkedUserId = linkedUserId };
 
     public void AnonymizeUser() => UserId = null;
+
+    /// <summary>
+    /// Clears the guest→account link when the linked account is deleted. The PLAYER ROW SURVIVES:
+    /// a guest row represents a real person who sat at a real table, so dropping it would shrink
+    /// the session's participant list and stop the other players' totals reconciling.
+    /// </summary>
+    public void UnlinkUser() => LinkedUserId = null;
 }
