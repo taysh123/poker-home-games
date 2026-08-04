@@ -27,6 +27,13 @@ public class SessionConfiguration : IEntityTypeConfiguration<Session>
         builder.Property(s => s.Notes)
             .HasMaxLength(500);
 
+        // Optimistic concurrency: EF adds this to the WHERE clause of every UPDATE, so the losing
+        // writer of two racing state transitions matches zero rows and throws instead of
+        // committing over the winner. Application-managed (see Session.Version) — deliberately not
+        // IsRowVersion(), which is inert on both PostgreSQL and SQLite.
+        builder.Property(s => s.Version)
+            .IsConcurrencyToken();
+
         builder.HasMany<HandRecord>()
             .WithOne(h => h.Session)
             .HasForeignKey(h => h.SessionId)

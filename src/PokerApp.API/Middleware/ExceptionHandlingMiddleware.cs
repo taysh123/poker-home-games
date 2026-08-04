@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using PokerApp.Application.Common.Exceptions;
 
 namespace PokerApp.API.Middleware;
@@ -58,6 +59,17 @@ public class ExceptionHandlingMiddleware(
             UnauthorizedAccessException => (
                 HttpStatusCode.Forbidden,
                 new ErrorResponse("Access denied.", null)),
+
+            // A lost optimistic-concurrency race is a CONFLICT, not a server fault: the row this
+            // request read was changed by someone else before it could write, so its UPDATE matched
+            // zero rows (audit 2026-08-03, HIGH #3). The handlers that own a user-facing race —
+            // EndSession, JoinSessionByToken — translate this into their own ConflictException with
+            // specific copy and never reach here. This is the safety net for every OTHER writer of
+            // a row carrying a concurrency token (renaming a session, editing notes, starting one,
+            // AddBuyIn's Draft auto-start), which would otherwise surface a bare 500.
+            DbUpdateConcurrencyException => (
+                HttpStatusCode.Conflict,
+                new ErrorResponse("This was changed by someone else while you were working on it. Refresh and try again.", null)),
 
             _ => (
                 HttpStatusCode.InternalServerError,
