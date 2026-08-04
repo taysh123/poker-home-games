@@ -9,7 +9,7 @@ Several of its slice sizes and owner decisions rest on assumptions the audit and
 pass falsify. Building from the brief unchanged would ship wrong estimates and at least one
 decision made on false premises.
 
-**Status:** Wave A complete (bankroll+calendar, premium preview). Wave B pending (stats
+**Status:** Wave A complete (bankroll+calendar, premium preview). Wave B complete (stats
 dashboard, app tour). Checkpointed per-wave — quota has repeatedly killed this action.
 
 ---
@@ -161,6 +161,112 @@ entity, endpoint, migration, or sync path. 11 files under `features/bankroll/` +
 7. **Does the preview need the legal/support row** the paywall-ON branch has? (Grounding read:
    yes — it's a public commercial-claims surface either way, and `legalSurfaces.test.ts` already
    believes it's there.)
+
+---
+
+## Pillar: Training stats + Progress dashboard (brief Q2.4 / Q2.5)
+
+### What exists today
+
+All training data is **client-only** — there is no backend Study feature and no `studyApi`.
+
+- **`StudyProgress` is schema v2** (`types.ts:60-95`): `totalAnswered`, `totalCorrect`,
+  `dailyGoal`, **`dailyCounts: Record<string, number>` (count only — no correct)**,
+  `currentStreak`, `longestStreak`, freeze fields, `dailyLimitCounters`, `quizzesCompleted?`,
+  `lessonsCompleted?`, `completedLessonIds?`. **No per-category, per-scenario, per-position, or
+  per-day-correct data exists anywhere.**
+- **Store**: single key `tpoker.study.v1`, `SUPPORTED_VERSIONS = new Set([1, 2])`, quarantine on
+  corrupt. **Not account-scoped** (persona and coach stores *are* — `byAccount`).
+- **Mastery engine is ALREADY BUILT and fully tested but dark**: `MASTERY_CONFIG` (Proficient
+  10 attempts/70%, Mastered 20/85%, 30-day inactivity decay), `applyAttempt`/`masteryByKey`,
+  `attemptStore`, `MasteryContext` mounted unconditionally in `App.tsx:165`. `mastery: false` in
+  PROD_FLAGS, so `record()` is a literal no-op and every prod user's mastery file is empty.
+- **Placement baseline IS stored** and account-scoped (`byAccount`), and is **write-once
+  enforced in the store**: `PersonaContext.tsx:95` `if (current.placement) return f;`.
+- **StatsScreen** (authed-only, 941 lines) renders, in order: period picker → hero P&L + W/L/E →
+  "Key Numbers" (4 cards) → **"Streak"** (server win/loss streak, can be negative) → "P&L Trend"
+  (private `PLBarChart`) → "Live Now" → "Session History" → "Achievements".
+- **No reusable chart component exists** — `components/` has only `ProgressBar.tsx`.
+
+### Brief deltas
+
+| Brief claim | Reality | Impact |
+|---|---|---|
+| "per-day {answered, correct} — one line in `recordAnswer`" | `dailyCounts` is read as a **number at 8 sites**; reshaping it is not additive. And `studyStore.ts:16` hardcodes `SUPPORTED_VERSIONS = {1,2}` — bumping to v3 without adding 3 means **every v3 file the app writes is quarantined on next load: silent loss of the user's streak** | **DIFFERENT + BIGGER** — needs a new parallel map (`dailyCorrect?`), a version-set edit, and 4 test-pin edits. "One line" is wrong |
+| "`recordQuizFinished` persists the per-category breakdown" | `runBreakdown` is real but called **inside `ResultsView`'s render** — display-only, discarded on unmount. And `quizFinished.test.ts:44-49` **explicitly pins** that it must *not* touch `dailyCounts`/`totalAnswered`/`currentStreak` | **SAME SIZE, decision attached** — you must consciously keep or break that pin |
+| (implicit) quiz answers already feed the training numbers | **They do not.** In prod, quiz per-question outcomes go **nowhere** — `answer()` only calls the flag-dark `mastery.record`. Accuracy/Answered/streak/daily-goal are **Spot+Decision only**. Completing the daily quiz **does not start a streak**, while `StudyScreen.tsx:100` says "Train a spot today to start a streak" | **BIGGER** — the headline free feature contributes zero to the dashboard's numbers. If quiz starts counting, **existing users' visible streaks and goal numbers change** |
+| "Spot answers record into the mastery-shaped aggregate" (new work) | The aggregate is **already built and tested end to end**. Missing: a Spot producer, and the prod flag | **SMALLER build, BIGGER decision** — flip a prod flag or write into StudyProgress instead |
+| "strong/weak categories once ≥N attempts (mastery thresholds reused)" | Thresholds are Proficient 10/70%, Mastered 20/85%. Free metering is 10 practice/day shared + 1 quiz/day | **DIFFERENT** — a free user needs **days of perfect attendance for ONE category to reach Proficient**, weeks for Mastered. Sparse data is the **default week-one view**, not an edge case — and 30-day decay silently regresses categories |
+| "placement baseline → retake your level check arc" | Retake is blocked by a **deliberate store-level anti-farming invariant** (write-once, with a comment saying that one-time-ness is what justifies leaving it out of the study meters) | **BIGGER / partly BLOCKED** — reversing an invariant, not adding UI |
+| Q2.5 is screenshot-impacting via "Training on StatsScreen" | **The `09-stats` shot is captured as a GUEST** → `store-shots.mjs` clicks "Continue as guest", so `TrackScreen` renders **`GuestStatsScreen`**, not `StatsScreen`. A Training section on StatsScreen appears in **zero** store screenshots. The harness also seeds no `tpoker.study.v1`, so any training panel would capture its **zero state** | **DIFFERENT** — to move a shot you must target `GuestStatsScreen` and/or `StudyScreen`, and the harness seed is part of the slice |
+| (implicit) "Training" slots cleanly beside existing sections | StatsScreen already has a section literally titled **"Streak"** driven by the **server win/loss streak, which can be negative** — a different quantity from the study-day streak. The Q1.4b design already flagged this identically-named-streak collision | **DIFFERENT** — placement matters; adjacency reads as one number contradicting another |
+| (implicit) training stats are per-user like the rest of Stats | `tpoker.study.v1` is **device-global, survives logout, shared by every account on the device** — same class as the bankroll leak. Placement (persona) *is* account-scoped | **DIFFERENT** — an authed Training panel would show device data beside server data. Either scope the store (a migration) or say "on this device" (GuestStatsScreen already uses that precedent) |
+| (audit) XP monotonicity violated | Confirmed **and narrowed**: `bankroll` is prod-OFF, so the live prod regression vector is **deleting a finished local game (−15 XP)**, reachable by every guest. **Fix material exists** — `deleteGame` tombstones rather than erases, so a true lifetime count is reconstructible; `LocalGamesContext` just doesn't expose the raw file | **SMALLER than "rewrite XP"** — one exposed counter + one clamp + discriminating tests |
+
+### Slices
+
+Capture splits into three independent ~1–1.5d pieces (store shape / quiz / spot); the dashboard
+into three (pure logic / StudyScreen UI / Stats UI); plus two decision-gated ones (placement
+retake, XP clamp). Total ~8–10 days — roughly the brief's M+L, but as two slices it **hides two
+owner decisions that block the middle of the work**.
+
+### Open questions (owner)
+
+1. **Does the daily quiz count as study?** Today it contributes nothing to accuracy/answered/
+   streak/goal. Making it count changes numbers existing users have already seen, and breaks a
+   deliberate pin. Leaving it out means the dashboard's "study volume" silently excludes the
+   headline free feature.
+2. **Placement retake** — reverse the write-once anti-farming invariant, meter the retake (then
+   it stops being a fair assessment), or ship baseline-only?
+3. **Scope `tpoker.study.v1` by account** (a migration) or label the panel "on this device"?
+4. **Mastery**: flip the prod flag to light the existing engine, or write a parallel aggregate
+   into StudyProgress and import `MASTERY_CONFIG` purely?
+5. **XP clamp** — fixing monotonicity changes a number some users have already seen. Clamp
+   silently, or accept the one-time correction?
+
+---
+
+## Pillar: "How T Poker works" app tour (brief Q2.6)
+
+### What exists today
+
+**No tour/walkthrough/coachmark/tooltip code of any kind. No `tour` flag, no tour storage key,
+no tour analytics event. From scratch.** But strong precedents exist:
+
+- **Two-tree registration** is 3 mechanical edits (1 type line + 1 `<Stack.Screen>` per tree).
+- **Correct one-shot precedent**: `PersonaContext` — updater-based, serialized, **account-scoped**
+  (`byAccount`, with a guest→account claim already implemented), and `recordPlacement` is
+  **write-once enforced in the store**, gated in UI on **live state** (`showPlacement`).
+  Second correct precedent: `requestReminderPermissionOnce` reads its marker **at decision time**.
+- **Buggy precedent**: `hasSeenOnboarding` — raw `storage.setItemAsync`, read-and-cached at
+  `AppNavigator.tsx:492-496`.
+- **Only pager in the repo**: `OnboardingScreen.tsx:100-122` (paging `ScrollView` + animated dots).
+
+### Brief deltas
+
+| Brief claim | Reality | Impact |
+|---|---|---|
+| "registered in both trees **like PersonaQuiz**" | PersonaQuiz is **not a screen precedent** — it's a second route *name* onto the same component, branching on `route.name` | **SMALLER** — routing is ~15 min; the "M" must come from content/gating |
+| "re-openable from **Profile**" | **ProfileScreen is authed-only — guests can never reach it.** (Proof of the trap: NotificationPreferences and CurrencyPicker are registered in the guest tree but only reachable from Profile — dead routes for guests.) The real both-trees precedent is `StudyScreen.tsx:239-247` | **DIFFERENT/BIGGER** — a guest-reachable entry is **mandatory**, or the entire guest cohort the tour is aimed at can never reopen it |
+| "one-shot key set at the funnel's **four exit seams** — funnel untouched" | All four seams call **one function** (`markSeen()`), so it's one edit, not four — and "untouched" is false if you write there at all | **SMALLER as stated**, but the trigger is wrong anyway (next row) |
+| "**Offered once post-funnel**" | A first-run user who taps **"Sign in"** on Welcome goes Login → authed tree and **never runs the funnel**, so never trips any seam. That entire cohort silently never gets the tour | **DIFFERENT** — the funnel exit cannot be the trigger; gate on tour-state alone |
+| (audit) the tour would inherit the staleness bug | **Confirmed and worse** — the cached `hasSeenOnboarding` feeds four consumers including whether the Onboarding route is registered at all. There's also a **restart-surviving variant**: the sign-in-first user never wrote the key, so their first logout replays the funnel *forever* | **DIFFERENT** — correct pattern exists in-repo: add `tourSeenAt` to `Persona`, write-once `markTourSeen()` modelled on `recordPlacement`, gate on live state like `showPlacement` |
+| (implicit) a one-shot via the usual storage helper is fine | **`utils/storage.ts` routes every `setItemAsync` to sessionStorage on web whenever `_sessionMode` is on** — set by any remember-me=false login and **never reset**. So on `app.tpoker.app` a storage one-shot can **evaporate when the tab closes** | **DIFFERENT** — dictates the storage choice: use the AsyncStorage-backed persona file |
+| "Extends the Wave-1 funnel; **zero duplication**" | **Three product explainers already exist**: the marketing site's `HOW_IT_WORKS`, the in-app `LANDING_SECTIONS` (7 one-idea sections with honesty chips derived from `premium/config.ts`), and the funnel's promise step + legacy slides | **BIGGER** — "zero duplication" is only achievable by making the tour **read a shared content module**; hand-writing four cards is a copy-drift defect on arrival (rule 5) |
+| "**4-card visual** tour" | No reusable carousel exists, and the only real product screenshots are **deliberately excluded from native binaries** (`landingImages.ts` is an empty stub — "~650KB … must never ship inside the iOS/Android binaries") | **DIFFERENT** — "visual" isn't free on native: either icon/illustration (cheap) or reverse a deliberate binary-size decision. A taste+size decision the brief never names |
+| card 4 = "Track + Premium-coming" | `bankroll` is OFF so Track is Sessions+Stats only; premium is comingSoon everywhere. And `tierHonesty.test.ts` is a literal allow-list **scoped to `features/study/ui` only** — a new tour file under `screens/` is covered by **no honesty test** | **BIGGER** — needs its own honesty test, and copy must be **derived** from flags + config, not hand-written |
+| (implicit) self-contained, no ripple | `store-shots.mjs` seeds `hasSeenOnboarding` + a fixed `SEED_PERSONA` to bypass first-run. **A tour offer gated on a field absent from that seed will render over the captured screenshots.** Also `a11yRoleRatchet` defaults new files to a ceiling of 0 unroled touchables | **BIGGER by a few hours** — harness seed and a11y roles are mandatory |
+
+### Open questions (owner)
+
+1. **Guest entry point** — Profile can't serve guests. Put the re-open row on StudyScreen (the
+   existing both-trees precedent), GuestHome, or both?
+2. **Trigger** — if not the funnel exit (which misses the sign-in-first cohort), is it "first
+   arrival at Home for anyone who hasn't seen it"?
+3. **Content source** — extract `LANDING_SECTIONS` into a platform-neutral shared module (kills
+   the fourth-copy drift), or accept hand-written tour copy with its own honesty test?
+4. **Visual treatment on native** — icons/illustrations (cheap, ships now) or reverse the
+   deliberate ~650KB screenshot-exclusion decision?
 
 ---
 
