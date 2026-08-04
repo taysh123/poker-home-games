@@ -61,7 +61,23 @@ public sealed class JoinSessionByTokenCommandHandler(
             await context.ActivityLogs.AddAsync(activity, cancellationToken);
         }
 
-        await context.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Someone else redeemed this single-use token between the IsActive check above and this
+            // write. Same mechanism, and same reason the `IsActive` check cannot stand alone, as
+            // EndSession's guard: both racers read `UsedAt IS NULL` before either committed. The
+            // seat queued above rolls back with the failed transaction, so one token still seats
+            // exactly one player.
+            // Copy names only a cause that can actually occur. SessionInviteToken.Revoke() bumps
+            // the same token, but it has NO caller anywhere in the product, so "used or revoked"
+            // would advertise an operation that cannot happen. If a revoke endpoint is ever added,
+            // widen this sentence in the same change.
+            throw new ConflictException("This invite link was just used by someone else.");
+        }
 
         return new JoinSessionByTokenResponse(session.Id, session.Name, session.Status.ToString(), sessionPlayer.Id, session.GroupId);
     }

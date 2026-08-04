@@ -69,7 +69,35 @@ public sealed class EndSessionCommandHandler(
             await context.ActivityLogs.AddAsync(activity, cancellationToken);
         }
 
-        await context.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Another end-game submit committed between this handler's read of `session` above and
+            // this write, so the session's Version no longer matches the one this request read and
+            // the UPDATE matched zero rows. The `Status != Active` check cannot catch that on its
+            // own: both racers read Active before either committed (audit 2026-08-03, HIGH #3).
+            //
+            // Crucially, SaveChanges is a single transaction, so the CashOut rows queued above roll
+            // back with it. That is the whole point — otherwise both requests write a full
+            // FinalStacks set, and every settlement projection sums CashOut rows per seat with no
+            // dedupe, so the duplicate silently DOUBLES that player's cash-out.
+            //
+            // COPY: "ended or changed", not "ended" — the dominant cause is a second end, but this
+            // catch fires whenever the Session row this request read no longer matches, so the
+            // sentence must not assert an ending that may not have happened.
+            //
+            // A concurrent DELETE reaches here only when NO final stacks were submitted. With
+            // stacks — the real "End Game & Settle" shape — the CashOut insert's foreign-key
+            // violation wins the batch first, surfacing as a DbUpdateException (not a
+            // DbUpdateConcurrencyException), which nothing maps and which therefore 500s. That is a
+            // pre-existing gap in the delete-vs-write race, not something this guard introduced;
+            // it is recorded in the T0.2 fleet disposition rather than papered over here.
+            throw new ConflictException(
+                "This session was already ended or changed by someone else. Refresh to see the latest.");
+        }
 
         // Award any newly-earned achievements for the session creator
         var newAchievementKeys = await achievementEvaluator.EvaluateAsync(userId, request.SessionId, cancellationToken);
