@@ -146,16 +146,18 @@ export async function endSession(
   );
 }
 
+// Add a registered user (by userId — requires a shared group) or a named guest. Guest→account
+// linking at add-time is not supported by the server (audit 2026-08-05, HIGH #1), so there is no
+// linkedUserId parameter here.
 export async function addPlayer(
   token: string,
   sessionId: string,
   userId?: string,
   guestName?: string,
-  linkedUserId?: string,
 ): Promise<AddPlayerResponse> {
   const { data } = await api.post<AddPlayerResponse>(
     `/api/sessions/${sessionId}/players`,
-    { userId, guestName, linkedUserId },
+    { userId, guestName },
     { headers: authHeader(token) },
   );
   return data;

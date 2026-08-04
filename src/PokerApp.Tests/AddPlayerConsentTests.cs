@@ -132,6 +132,56 @@ public sealed class AddPlayerConsentTests : IDisposable
     }
 
     [Fact]
+    public async Task A_stranger_cannot_be_seated_via_a_linked_guest_seat()
+    {
+        // HIGH #1, the SIDE door. SettlementUserId is `LinkedUserId ?? UserId`, so a guest seat
+        // carrying a LinkedUserId lands a REGISTERED account in the formal settlement ledger
+        // exactly as a by-userId add would — buy-ins recorded against them, a real Settlement row
+        // persisted naming them. And self-removal is keyed on `sp.UserId == callerId`, which is
+        // NULL on a guest row, so the linked victim cannot even leave. The by-userId gate above
+        // closed the front door; this path walked in the side one. Linking at add-time is now
+        // refused outright — no client sends it (every addPlayer call site passes only userId or
+        // guestName), so a consented linking flow, if ever built, is its own slice.
+        var attacker = AddUser("attacker");
+        var victim = AddUser("victim");                              // shares NO group with attacker
+        var session = Session.Create("Standalone night", attacker.Id); // GroupId null: the attack path
+        _ctx.Sessions.Add(session);
+        _ctx.SaveChanges();
+        _ctx.ChangeTracker.Clear();
+
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            AddPlayerAsync(attacker.Id, new AddPlayerCommand(session.Id, null, "V", victim.Id)));
+
+        Assert.False(await _ctx.SessionPlayers.AnyAsync(sp => sp.LinkedUserId == victim.Id));
+        Assert.False(await _ctx.SessionPlayers.AnyAsync(sp => sp.UserId == victim.Id));
+    }
+
+    [Fact]
+    public async Task Linking_a_guest_is_not_an_account_existence_oracle()
+    {
+        // The by-userId gate made "absent" and "unreachable" indistinguishable so the endpoint
+        // stops confirming whether an arbitrary account exists. The linked-guest path had its own
+        // bare existence check — present id created a seat, absent id threw NotFound — which is the
+        // same oracle by another door. Refusing the input BEFORE any lookup collapses both to one
+        // response: same exception type, no seat, nothing observable about the id.
+        var attacker = AddUser("attacker");
+        var victim = AddUser("victim");
+        var session = Session.Create("Standalone", attacker.Id);
+        _ctx.Sessions.Add(session);
+        _ctx.SaveChanges();
+        _ctx.ChangeTracker.Clear();
+
+        var absent = await Assert.ThrowsAnyAsync<Exception>(() =>
+            AddPlayerAsync(attacker.Id, new AddPlayerCommand(session.Id, null, "p1", Guid.NewGuid())));
+        var present = await Assert.ThrowsAnyAsync<Exception>(() =>
+            AddPlayerAsync(attacker.Id, new AddPlayerCommand(session.Id, null, "p2", victim.Id)));
+
+        Assert.IsType<BadRequestException>(absent);
+        Assert.IsType<BadRequestException>(present);        // SAME type as absent — existence not leaked
+        Assert.False(await _ctx.SessionPlayers.AnyAsync()); // neither attempt created a seat
+    }
+
+    [Fact]
     public async Task A_user_can_always_remove_their_own_seat_even_mid_game_in_a_GROUP_session()
     {
         // THE LOAD-BEARING PROPERTY. Recourse for the residual case the group gate cannot cover.

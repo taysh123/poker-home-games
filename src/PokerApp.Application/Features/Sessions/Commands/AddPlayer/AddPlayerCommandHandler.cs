@@ -15,6 +15,20 @@ public sealed class AddPlayerCommandHandler(
     {
         var callerId = currentUserService.UserId;
 
+        // CONSENT GATE, side door (audit 2026-08-05, HIGH #1). Linking a guest seat to a registered
+        // account is REFUSED at add-time. SettlementUserId is `LinkedUserId ?? UserId`, so a guest
+        // seat carrying a LinkedUserId lands that account in the FORMAL settlement ledger exactly as
+        // a by-userId add would — but the guest branch only ever ran a bare existence check, so this
+        // path re-opened the very hole the by-userId gate below closes: any stranger could be seated
+        // (and, because self-removal keys on UserId — null on a guest row — could not even leave),
+        // and that existence check was itself an account-existence oracle. No client sends
+        // LinkedUserId at add-time (every addPlayer call site passes only userId or guestName), so
+        // this is a hard rejection, not a gated path; a consented linking flow, if ever built, is its
+        // own slice. Rejected on the INPUT before any lookup, so it leaks neither session nor account
+        // existence — absent and present linked ids get the identical 400.
+        if (request.LinkedUserId.HasValue)
+            throw new BadRequestException("Linking a guest to a registered account is not supported.");
+
         var session = await context.Sessions
             .FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken)
             ?? throw new NotFoundException(nameof(Session), request.SessionId);
@@ -41,15 +55,8 @@ public sealed class AddPlayerCommandHandler(
             if (duplicateGuest)
                 throw new ConflictException($"A guest named '{request.GuestName}' is already in this session.");
 
-            if (request.LinkedUserId.HasValue)
-            {
-                var linkedUserExists = await context.Users
-                    .AnyAsync(u => u.Id == request.LinkedUserId.Value, cancellationToken);
-                if (!linkedUserExists)
-                    throw new NotFoundException(nameof(User), request.LinkedUserId.Value);
-            }
-
-            sessionPlayer = SessionPlayer.CreateForGuest(request.SessionId, request.GuestName, request.LinkedUserId);
+            // LinkedUserId is rejected at the top of this handler, so a guest is always unlinked here.
+            sessionPlayer = SessionPlayer.CreateForGuest(request.SessionId, request.GuestName);
         }
         else
         {
