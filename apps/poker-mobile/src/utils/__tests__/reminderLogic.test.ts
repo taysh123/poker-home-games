@@ -77,6 +77,48 @@ describe('game_day one-shot (2.4 — the pre-session moment)', () => {
   });
 });
 
+describe('streak_risk is a ONE-SHOT for today, not a repeating trigger (pre-Q2 audit fix)', () => {
+  // The bug: {hour: 20, repeats: true} with no fireAtMs. Eligibility (streakAlive &&
+  // !goalMetToday) is re-evaluated ONLY on app mount/foreground — a DAILY-VARYING signal — so a
+  // user who goes dark after the reminder is scheduled got it firing every night forever,
+  // regardless of whether the streak later died or the day's goal was later met by other means.
+
+  it('emits a one-shot fireAtMs for TODAY at hour 20 local, while the fire hour is still ahead', () => {
+    // NOW = 2026-07-25 12:00 local < 20:00.
+    const specs = eligibleReminders(prefs(), signals({ streakAlive: true, goalMetToday: false }));
+    const sr = specs.find(s => s.kind === 'streak_risk');
+    expect(sr).toBeDefined();
+    expect(sr?.hour).toBe(20);
+    expect(sr?.fireAtMs).toBe(new Date(2026, 6, 25, 20, 0, 0, 0).getTime());
+  });
+
+  it('skips once today\'s hour 20 has already passed — never fires instantly, never fires stale', () => {
+    // A repeating trigger scheduled after 20:00 would still fire nightly forever from that point;
+    // a one-shot in the past would fire INSTANTLY (game_day's own documented platform behavior).
+    // Both are wrong here — skip, exactly like game_day's past-hour case.
+    const evening = new Date(2026, 6, 25, 20, 30, 0, 0).getTime();
+    const specs = eligibleReminders(prefs(), signals({ streakAlive: true, goalMetToday: false, nowMs: evening }));
+    expect(specs.some(s => s.kind === 'streak_risk')).toBe(false);
+  });
+
+  it('a stale schedule cannot outlive the day it was made for — the next eligible day computes its own fireAtMs', () => {
+    // The bug's core failure mode: ONE scheduling call must not describe more than one night.
+    // Two different "now"s a day apart, both still eligible, must each get THAT day's 20:00 —
+    // proving there is no way for a single call's output to cover both nights (unlike
+    // {repeats:true}, which would).
+    const day1 = eligibleReminders(prefs(), signals({ streakAlive: true, goalMetToday: false, nowMs: NOW }));
+    const day2 = eligibleReminders(prefs(), signals({
+      streakAlive: true, goalMetToday: false,
+      nowMs: new Date(2026, 6, 26, 12, 0, 0, 0).getTime(),
+    }));
+    const fire1 = day1.find(s => s.kind === 'streak_risk')?.fireAtMs;
+    const fire2 = day2.find(s => s.kind === 'streak_risk')?.fireAtMs;
+    expect(fire1).toBe(new Date(2026, 6, 25, 20, 0, 0, 0).getTime());
+    expect(fire2).toBe(new Date(2026, 6, 26, 20, 0, 0, 0).getTime());
+    expect(fire1).not.toBe(fire2);
+  });
+});
+
 describe('honesty — reminders never promise unavailable features (Wave 0.3 pin)', () => {
   // The dormant free_ai reminder push-advertised "Your free analysis is waiting" while the AI
   // Coach is "Coming soon" with zero API calls (critique blocker). With the `reminders` flag now
