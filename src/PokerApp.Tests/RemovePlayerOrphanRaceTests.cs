@@ -219,6 +219,13 @@ public sealed class RemovePlayerOrphanRaceTests : IDisposable
         Assert.True(cleanupIndex > 0, "Expected a 'var buyIns' cleanup read in the handler.");
         Assert.True(cleanupIndex > lastGuardIndex,
             "Expected the BuyIns/CashOuts cleanup to run AFTER both guard clauses, not nested inside either.");
+        // Position alone doesn't catch RE-nesting the cleanup one level deeper (still textually
+        // after the guards, but inside a NEW `if (session.Status == Active)` wrapping it back to
+        // Active-only) — the exact shape that survived the ordering check above when probed.
+        // session.Status == appears exactly once in the fixed handler (the first guard clause); a
+        // second occurrence between the guards and the cleanup is that reintroduced conditional.
+        var between = src[lastGuardIndex..cleanupIndex];
+        Assert.DoesNotContain("session.Status ==", between);
 
         // Exactly one BuyIns removal and one CashOuts removal — not duplicated per-branch (which
         // is the shape of the regression this pin exists to catch: cleanup copy-pasted back into
