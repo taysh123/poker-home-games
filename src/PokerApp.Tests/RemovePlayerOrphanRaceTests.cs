@@ -27,12 +27,19 @@ namespace PokerApp.Tests;
 /// it makes the WHOLE session permanently unsettleable, with a refusal message that (falsely, for
 /// this shape) implies an account was deleted.
 ///
-/// THE FIX does not try to win the race with locking — it collapses the window instead. Both
-/// buy-in and cash-out cleanup now runs as ExecuteDeleteAsync (bypasses the change tracker,
-/// queries the LIVE database) as the LAST statement before the seat is removed, so cleanup always
-/// reflects whatever is actually in the database at removal time — not a snapshot read earlier in
-/// the handler. Applied uniformly to BOTH the Active and Draft branches; the Draft branch
-/// previously had NO cleanup at all.
+/// THE FIX moves the buy-in and cash-out cleanup OUT of the Active-only branch so it runs
+/// unconditionally for BOTH branches — the Draft branch previously had NO cleanup at all, which is
+/// the always-reproducible half of the defect and what these tests pin.
+///
+/// It does NOT close the race window, and must not be read as doing so. The cleanup is still a
+/// snapshot read (`ToListAsync`) followed by `RemoveRange` through the change tracker, in the same
+/// SaveChanges as the seat delete — so a money row committed between that read and the commit is
+/// still not covered. The handler says exactly this in its own HONEST LIMIT note; closing it fully
+/// needs serializable isolation or locking coordinated with AddBuyIn, which that slice scoped out.
+/// (An earlier version of this comment claimed the cleanup "runs as ExecuteDeleteAsync (bypasses
+/// the change tracker, queries the LIVE database) ... not a snapshot read" — false on every
+/// specific since PR #78 shipped, contradicted by the handler's own note and by this file's own
+/// structural pin below, which asserts `RemoveRange`. Corrected 2026-08-05; the pin is unchanged.)
 /// </summary>
 public sealed class RemovePlayerOrphanRaceTests : IDisposable
 {
@@ -143,7 +150,7 @@ public sealed class RemovePlayerOrphanRaceTests : IDisposable
     public async Task Removing_a_guest_with_no_money_from_an_active_session_still_works()
     {
         // Baseline regression: the common case (no race, no money at all) must be unaffected by
-        // the ExecuteDeleteAsync rewrite.
+        // the cleanup rewrite.
         var host = User.Create("host", "host@example.com", "hash");
         _ctx.Users.Add(host);
         var session = Session.Create("Home game", host.Id);
