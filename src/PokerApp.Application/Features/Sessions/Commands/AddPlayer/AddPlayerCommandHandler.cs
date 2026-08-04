@@ -55,10 +55,34 @@ public sealed class AddPlayerCommandHandler(
         {
             var userId = request.UserId!.Value;
 
-            var userExists = await context.Users
-                .AnyAsync(u => u.Id == userId, cancellationToken);
+            // CONSENT GATE (audit 2026-08-05, HIGH #1). A registered user may only be seated in a
+            // session's financial ledger by someone they ALREADY SHARE A GROUP WITH — joining a
+            // group is the consent gesture. Before this, any account could be created, used to
+            // open a standalone session, and then used to seat any stranger found through the
+            // (then unscoped) user search: buy-ins recorded against them, a real Settlement row
+            // persisted naming them, and no way for them to get out.
+            //
+            // The rule is deliberately the same for group and standalone sessions. A standalone
+            // session has no group to check, and that is exactly the attack path — so the test is
+            // "does the TARGET share a group with the CALLER", which is also precisely the set
+            // SearchUsersQueryHandler now returns, so a legitimate client can only ever offer
+            // people it can actually add.
+            //
+            // NotFoundException, not Unauthorized: this handler already throws NotFound for a
+            // genuinely absent user, so reusing it makes "does not exist" and "exists but is not
+            // reachable by you" indistinguishable — the endpoint stops confirming whether an
+            // arbitrary account exists. (A non-existent user has no memberships, so `reachable`
+            // subsumes the old existence check.)
+            //
+            // Guests are untouched — see the GuestName branch above. No account, no victim, and
+            // add-by-name is the "they're sitting right here" fast path CLAUDE.md protects.
+            var reachable = await context.GroupMembers
+                .AnyAsync(mine => mine.UserId == callerId
+                    && context.GroupMembers.Any(theirs =>
+                        theirs.GroupId == mine.GroupId && theirs.UserId == userId),
+                    cancellationToken);
 
-            if (!userExists)
+            if (!reachable)
                 throw new NotFoundException(nameof(User), userId);
 
             var alreadyAdded = await context.SessionPlayers

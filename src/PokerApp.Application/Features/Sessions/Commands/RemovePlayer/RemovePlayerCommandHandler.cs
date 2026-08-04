@@ -19,23 +19,44 @@ public sealed class RemovePlayerCommandHandler(
             .FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken)
             ?? throw new NotFoundException(nameof(Session), request.SessionId);
 
-        bool hasAccess;
-        if (session.GroupId.HasValue)
-            hasAccess = await context.GroupMembers
-                .AnyAsync(m => m.GroupId == session.GroupId.Value && m.UserId == callerId, cancellationToken);
-        else
-            hasAccess = session.CreatorId == callerId;
-        if (!hasAccess)
-            throw new UnauthorizedException("You do not have access to this session.");
-
         var sessionPlayer = await context.SessionPlayers
             .FirstOrDefaultAsync(sp => sp.Id == request.SessionPlayerId && sp.SessionId == request.SessionId, cancellationToken)
             ?? throw new NotFoundException(nameof(SessionPlayer), request.SessionPlayerId);
 
-        if (session.Status == SessionStatus.Active && !sessionPlayer.IsGuest)
-            throw new ConflictException("Cannot remove a registered player from an active session.");
-        if (session.Status != SessionStatus.Active && session.Status != SessionStatus.Draft)
-            throw new ConflictException("Players can only be removed from Draft or Active sessions.");
+        // SELF-REMOVAL IS ALWAYS PERMITTED — any session status, and independent of the access
+        // check below. It is the recourse that completes the AddPlayer consent gate: someone
+        // seated without being asked can always leave (audit 2026-08-05, HIGH #1).
+        //
+        // It must bypass ACCESS, not just status. In a standalone session `hasAccess` is
+        // `session.CreatorId == callerId`, so the person in the seat — who by definition is not
+        // the creator — would be rejected before the status guard was ever reached. A standalone
+        // session is precisely what an attacker creates (no group required), so an access-only
+        // bypass would leave the property failing exactly where it is needed.
+        //
+        // Keyed on "this seat is MINE", never on the caller merely asking: a stranger still gets
+        // the Unauthorized below, or the recourse would itself become an attack.
+        //
+        // CONSEQUENCE, deliberate: this deletes the seat's buy-ins/cash-outs, like every other
+        // removal. Leaving orphaned money behind is the defect PR #78 fixed, and a seat the user
+        // never consented to should not leave money attributed to nobody.
+        var isSelfRemoval = sessionPlayer.UserId == callerId;
+
+        if (!isSelfRemoval)
+        {
+            bool hasAccess;
+            if (session.GroupId.HasValue)
+                hasAccess = await context.GroupMembers
+                    .AnyAsync(m => m.GroupId == session.GroupId.Value && m.UserId == callerId, cancellationToken);
+            else
+                hasAccess = session.CreatorId == callerId;
+            if (!hasAccess)
+                throw new UnauthorizedException("You do not have access to this session.");
+
+            if (session.Status == SessionStatus.Active && !sessionPlayer.IsGuest)
+                throw new ConflictException("Cannot remove a registered player from an active session.");
+            if (session.Status != SessionStatus.Active && session.Status != SessionStatus.Draft)
+                throw new ConflictException("Players can only be removed from Draft or Active sessions.");
+        }
 
         // Money-row cleanup now applies to BOTH branches, unconditionally — the Draft branch
         // previously had NONE at all. That gap is the actual, always-reproducible defect: whenever
