@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Xunit;
 using PokerApp.Application.Common.Exceptions;
 using PokerApp.Application.Common.Interfaces;
+using PokerApp.Application.Features.Sessions.Commands.AddBuyIn;
 using PokerApp.Application.Features.Sessions.Commands.EndSession;
 using PokerApp.Application.Features.Sessions.Commands.JoinSessionByToken;
 using PokerApp.Domain.Entities;
@@ -79,6 +80,10 @@ public sealed class EndSessionConcurrencyTests : IDisposable
     private static Task EndAsync(AppDbContext ctx, Guid callerId, Guid sessionId, params FinalStackItem[] stacks) =>
         new EndSessionCommandHandler(ctx, new FakeCurrentUser(callerId), new NoAchievements(), new NoNotifications())
             .Handle(new EndSessionCommand(sessionId, stacks), CancellationToken.None);
+
+    private static Task BuyInAsync(AppDbContext ctx, Guid callerId, Guid sessionId, Guid seatId, decimal amount) =>
+        new AddBuyInCommandHandler(ctx, new FakeCurrentUser(callerId))
+            .Handle(new AddBuyInCommand(sessionId, seatId, amount), CancellationToken.None);
 
     private static Task JoinAsync(AppDbContext ctx, Guid callerId, string token) =>
         new JoinSessionByTokenCommandHandler(ctx, new FakeCurrentUser(callerId))
@@ -168,6 +173,47 @@ public sealed class EndSessionConcurrencyTests : IDisposable
         Assert.Equal(1, await check.SessionPlayers.CountAsync(sp => sp.SessionId == seed.SessionId && sp.UserId != null));
         Assert.True(await check.SessionPlayers.AnyAsync(sp => sp.SessionId == seed.SessionId && sp.UserId == alice));
         Assert.False(await check.SessionPlayers.AnyAsync(sp => sp.SessionId == seed.SessionId && sp.UserId == bob));
+    }
+
+    [Fact]
+    public async Task Two_concurrent_first_buyins_on_a_draft_session_both_record()
+    {
+        // REGRESSION PIN, and the reason only End() advances the token. AddBuyIn auto-starts a
+        // Draft session as a side effect of the first buy-in (`if (Draft) session.Start()`), so an
+        // earlier draft of this slice — which bumped the token in Start() too — turned two
+        // concurrent FIRST buy-ins into a race: the loser's UPDATE matched zero rows and, because
+        // SaveChanges is one transaction, its BUY-IN ROW ROLLED BACK WITH IT. Real money, silently
+        // dropped, on the live-session critical path, reported to the host as a vague "changed by
+        // someone else" (found against real PostgreSQL by the T0.2 review fleet).
+        //
+        // Nothing about starting a session needs serialising: both racers want the same end state
+        // and neither decision depends on winning. Ending does. Both buy-ins must land.
+        var host = User.Create("host", "host@example.com", "hash");
+        Guid sessionId, seatA, seatB;
+        using (var ctx = NewContext())
+        {
+            ctx.Users.Add(host);
+            var session = Session.Create("Friday night", host.Id);   // Draft — not started
+            ctx.Sessions.Add(session);
+            var a = SessionPlayer.CreateForGuest(session.Id, "Guest A");
+            var b = SessionPlayer.CreateForGuest(session.Id, "Guest B");
+            ctx.SessionPlayers.AddRange(a, b);
+            ctx.SaveChanges();
+            (sessionId, seatA, seatB) = (session.Id, a.Id, b.Id);
+        }
+
+        using var slow = NewContext();
+        using var fast = NewContext();
+
+        // Both requests read the session while it is still Draft, so both will auto-start it.
+        await slow.Sessions.FirstAsync(s => s.Id == sessionId);
+
+        await BuyInAsync(fast, host.Id, sessionId, seatA, 100m);
+        await BuyInAsync(slow, host.Id, sessionId, seatB, 100m);   // must NOT throw
+
+        using var check = NewContext();
+        Assert.Equal(2, await check.BuyIns.CountAsync(b => b.SessionId == sessionId));
+        Assert.Equal(SessionStatus.Active, (await check.Sessions.FirstAsync(s => s.Id == sessionId)).Status);
     }
 
     [Fact]

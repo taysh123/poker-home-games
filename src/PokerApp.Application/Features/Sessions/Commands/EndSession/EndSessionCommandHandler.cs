@@ -85,10 +85,16 @@ public sealed class EndSessionCommandHandler(
             // FinalStacks set, and every settlement projection sums CashOut rows per seat with no
             // dedupe, so the duplicate silently DOUBLES that player's cash-out.
             //
-            // COPY: "ended or changed", not "ended" — this fires whenever the Session row this
-            // request read no longer matches, which a concurrent DELETE also produces (an UPDATE
-            // matching zero rows). The dominant case is a second end, so it is named first, but the
+            // COPY: "ended or changed", not "ended" — the dominant cause is a second end, but this
+            // catch fires whenever the Session row this request read no longer matches, so the
             // sentence must not assert an ending that may not have happened.
+            //
+            // A concurrent DELETE reaches here only when NO final stacks were submitted. With
+            // stacks — the real "End Game & Settle" shape — the CashOut insert's foreign-key
+            // violation wins the batch first, surfacing as a DbUpdateException (not a
+            // DbUpdateConcurrencyException), which nothing maps and which therefore 500s. That is a
+            // pre-existing gap in the delete-vs-write race, not something this guard introduced;
+            // it is recorded in the T0.2 fleet disposition rather than papered over here.
             throw new ConflictException(
                 "This session was already ended or changed by someone else. Refresh to see the latest.");
         }

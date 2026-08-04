@@ -17,16 +17,28 @@ public class ExceptionHandlingMiddleware(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Unhandled exception. TraceId: {TraceId}. Message: {Message}. InnerException: {InnerMessage}",
-                context.TraceIdentifier, ex.Message, ex.InnerException?.Message);
-            await HandleExceptionAsync(context, ex);
+            // Severity follows the mapped status, not the fact that an exception was thrown. Every
+            // 4xx here is an EXPECTED, handled outcome — a validation failure, a 404, and now a lost
+            // optimistic-concurrency race, which this slice deliberately made routine. Logging those
+            // at Error as "Unhandled" made them indistinguishable from genuine faults in Railway's
+            // logs, which would have defeated the point of turning the race into a 409 at all.
+            // Only the unmapped 5xx branch is a server fault.
+            var (statusCode, error) = Map(ex, context.TraceIdentifier);
+
+            if (statusCode >= HttpStatusCode.InternalServerError)
+                logger.LogError(ex, "Unhandled exception. TraceId: {TraceId}. Message: {Message}. InnerException: {InnerMessage}",
+                    context.TraceIdentifier, ex.Message, ex.InnerException?.Message);
+            else
+                logger.LogInformation("Handled {Exception} -> {Status}. TraceId: {TraceId}. Message: {Message}",
+                    ex.GetType().Name, (int)statusCode, context.TraceIdentifier, ex.Message);
+
+            await WriteAsync(context, statusCode, error);
         }
     }
 
-    private static Task HandleExceptionAsync(HttpContext context, Exception exception)
+    private static (HttpStatusCode StatusCode, ErrorResponse Error) Map(Exception exception, string traceId)
     {
-        var traceId = context.TraceIdentifier;
-        var (statusCode, error) = exception switch
+        return exception switch
         {
             BadRequestException bre => (
                 HttpStatusCode.BadRequest,
@@ -65,8 +77,15 @@ public class ExceptionHandlingMiddleware(
             // zero rows (audit 2026-08-03, HIGH #3). The handlers that own a user-facing race —
             // EndSession, JoinSessionByToken — translate this into their own ConflictException with
             // specific copy and never reach here. This is the safety net for every OTHER writer of
-            // a row carrying a concurrency token (renaming a session, editing notes, starting one,
-            // AddBuyIn's Draft auto-start), which would otherwise surface a bare 500.
+            // a row carrying a concurrency token (renaming a session, editing notes), which would
+            // otherwise surface a bare 500.
+            //
+            // NOTE for future readers: a 409 here is NOT proof that a concurrent WRITE happened. EF
+            // raises this exception for any UPDATE/DELETE that matches zero rows — including a row
+            // deleted meanwhile, or a detached entity attached with a key that never existed, which
+            // is a programming bug that deserves a 500. No such shape exists in this codebase today
+            // (the only DbSet-level attach/update usage was checked), but if one is introduced this
+            // mapping will quietly turn it into a 409.
             DbUpdateConcurrencyException => (
                 HttpStatusCode.Conflict,
                 new ErrorResponse("This was changed by someone else while you were working on it. Refresh and try again.", null)),
@@ -75,7 +94,10 @@ public class ExceptionHandlingMiddleware(
                 HttpStatusCode.InternalServerError,
                 new ErrorResponse($"An unexpected error occurred. TraceId: {traceId}", null))
         };
+    }
 
+    private static Task WriteAsync(HttpContext context, HttpStatusCode statusCode, ErrorResponse error)
+    {
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = (int)statusCode;
 

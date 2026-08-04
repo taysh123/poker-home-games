@@ -16,25 +16,38 @@ public class Session : BaseEntity
     public DateTime? EndedAt { get; private set; }
 
     /// <summary>
-    /// Optimistic concurrency token guarding this session's STATE TRANSITIONS, bumped by
-    /// <see cref="Start"/> and <see cref="End"/> (audit 2026-08-03, HIGH #3). EF puts the value
-    /// read by THIS request into the UPDATE's WHERE clause, so a second writer that read the same
-    /// value matches zero rows and gets a <c>DbUpdateConcurrencyException</c> instead of silently
-    /// committing on top of the first.
+    /// Optimistic concurrency token guarding the ONE transition that writes money: <see cref="End"/>
+    /// (audit 2026-08-03, HIGH #3). EF puts the value read by THIS request into the UPDATE's WHERE
+    /// clause, so a second writer that read the same value matches zero rows and gets a
+    /// <c>DbUpdateConcurrencyException</c> instead of silently committing a second full set of
+    /// cash-outs on top of the first.
     ///
-    /// Managed here in the domain, NOT via EF's <c>IsRowVersion()</c> or Npgsql's <c>xmin</c>.
-    /// <c>IsRowVersion()</c> marks the property store-generated, which self-updates only on a
-    /// provider that actually generates it (SQL Server). On PostgreSQL (production) and SQLite
-    /// (tests) nothing would ever change it: the token would sit at 0 forever and every check
-    /// would compare 0 to 0 and pass — a guard that cannot fail, which reads as coverage while
-    /// protecting nothing. <c>xmin</c> is a PostgreSQL system column SQLite does not have, so it
-    /// could not be exercised by a test either. Incrementing it in the domain behaves identically
-    /// on both providers, which is precisely why the race is provable in EndSessionConcurrencyTests.
+    /// ONLY <see cref="End"/> bumps it, and that is load-bearing rather than an omission.
+    /// <see cref="Start"/> deliberately does NOT: <c>AddBuyInCommandHandler</c> auto-starts a Draft
+    /// session as a side effect of the first buy-in, so bumping there made two concurrent FIRST
+    /// buy-ins race — the loser's buy-in row rolled back with the rejected UPDATE and a real money
+    /// row was silently dropped (proven against PostgreSQL by the T0.2 review fleet; pinned by
+    /// Two_concurrent_first_buyins_on_a_draft_session_both_record). Nothing about starting a session
+    /// needs serialising: both racers want the same end state (Active) and neither decision depends
+    /// on winning. Ending does — it is gated on a status check and writes CashOut rows behind it.
+    /// Cosmetic edits (<see cref="UpdateName"/>, <see cref="UpdateNotes"/>) likewise do not bump it.
+    /// Every one of those writers is still CHECKED against the token (EF adds a concurrency token to
+    /// the WHERE clause of every UPDATE of this row), so they lose to a concurrent end — they just
+    /// cannot cause a conflict for each other.
     ///
-    /// Cosmetic edits (<see cref="UpdateName"/>, <see cref="UpdateNotes"/>) deliberately do NOT
-    /// bump it — renaming a session concurrently with anything else is harmless, and bumping there
-    /// would only manufacture conflicts. They are still CHECKED against it (EF adds every
-    /// concurrency token to the WHERE clause), so a rename racing a genuine transition is refused.
+    /// Managed here in the domain, not by the provider, and the two provider-native options were
+    /// rejected for DIFFERENT reasons (both verified by execution, not assumed):
+    /// <c>IsRowVersion()</c> marks the property store-generated, which self-updates only where the
+    /// store actually generates it (SQL Server). On PostgreSQL it is genuinely INERT — with the
+    /// shipped <c>DEFAULT 0</c> column the token stays 0, the check compares 0 to 0, and both racers
+    /// commit: a guard that cannot fail, which reads as coverage while protecting nothing. On SQLite
+    /// it does not sit at 0, it fails loudly — EF omits a store-generated property from the INSERT
+    /// and every seed hits <c>NOT NULL constraint failed: Sessions.Version</c>.
+    /// Npgsql's <c>xmin</c> (<c>UseXminAsConcurrencyToken()</c>) would actually WORK in production —
+    /// it is a real rowversion — but it is a PostgreSQL system column SQLite does not have, so the
+    /// suite could never exercise the guard at all, and it is <c>[Obsolete]</c> in Npgsql 8.
+    /// Incrementing in the domain behaves identically on both providers, which is precisely why the
+    /// race is provable in EndSessionConcurrencyTests instead of merely simulated.
     /// </summary>
     public int Version { get; private set; }
 
@@ -69,20 +82,16 @@ public class Session : BaseEntity
     {
         Status = SessionStatus.Active;
         StartedAt = DateTime.UtcNow;
-        Transition();
+        // No Version bump — see the Version doc. AddBuyIn auto-starts a Draft session, so bumping
+        // here makes two concurrent first buy-ins race and silently drops the loser's money row.
+        SetUpdatedAt();
     }
 
     public void End()
     {
         Status = SessionStatus.Finished;
         EndedAt = DateTime.UtcNow;
-        Transition();
-    }
-
-    /// <summary>Marks a state transition: advances the concurrency token and the timestamp.</summary>
-    private void Transition()
-    {
-        Version++;
+        Version++;   // the money-writing transition — see the Version doc
         SetUpdatedAt();
     }
 

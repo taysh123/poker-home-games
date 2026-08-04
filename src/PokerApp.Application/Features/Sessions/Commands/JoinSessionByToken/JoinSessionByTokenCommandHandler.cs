@@ -72,9 +72,11 @@ public sealed class JoinSessionByTokenCommandHandler(
             // EndSession's guard: both racers read `UsedAt IS NULL` before either committed. The
             // seat queued above rolls back with the failed transaction, so one token still seats
             // exactly one player.
-            // "used or revoked": the token row changing is what this detects, and Revoke() bumps
-            // the same token, so the sentence must cover both rather than assert a use.
-            throw new ConflictException("This invite link was just used or revoked by someone else.");
+            // Copy names only a cause that can actually occur. SessionInviteToken.Revoke() bumps
+            // the same token, but it has NO caller anywhere in the product, so "used or revoked"
+            // would advertise an operation that cannot happen. If a revoke endpoint is ever added,
+            // widen this sentence in the same change.
+            throw new ConflictException("This invite link was just used by someone else.");
         }
 
         return new JoinSessionByTokenResponse(session.Id, session.Name, session.Status.ToString(), sessionPlayer.Id, session.GroupId);
