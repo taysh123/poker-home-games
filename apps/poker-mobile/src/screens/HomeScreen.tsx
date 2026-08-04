@@ -43,7 +43,7 @@ import SessionListItem from '../components/SessionListItem';
 import GroupListItem from '../components/GroupListItem';
 import Card from '../components/Card';
 import { formatPL, formatDate, formatDuration, formatMinutes, timeAgo } from '../utils/formatters';
-import { alertLabel, invitationsAlertCopy, settlementsAlertCopy, topGroupLabel, topGroupText } from '../utils/homeAlerts';
+import { alertLabel, invitationsAlertCopy, settlementsAlertCopy, topGroupLabel, topGroupText, heroSessionsBadgeText, heroStatsErrorCopy } from '../utils/homeAlerts';
 import AnimatedNumber from '../components/motion/AnimatedNumber';
 import Screen from '../components/Screen';
 import Avatar from '../components/Avatar';
@@ -142,9 +142,11 @@ export default function HomeScreen() {
       const token = await SecureStore.getItemAsync('accessToken');
       if (!token) return;
       const [groupsData, statsData, invData, pendingData, notifData, activityData, digestData] = await Promise.all([
-        getMyGroups(token),
-        getMyStats(token),
-        getMyInvitations(token),
+        getMyGroups(token).catch(() => [] as MyGroupDto[]),
+        // No fallback array here: null distinguishes "failed to load" from a real zero-stats
+        // user, which the hero card renders as an honest error state — see statsError below.
+        getMyStats(token).catch(() => null),
+        getMyInvitations(token).catch(() => [] as PendingInvitationDto[]),
         getMyPendingSettlements(token).catch(() => [] as MyPendingSettlementDto[]),
         getMyNotifications(token).catch(() => null),
         getCrossGroupActivity(token).catch(() => [] as CrossGroupActivityDto[]),
@@ -229,6 +231,9 @@ export default function HomeScreen() {
     : null;
   const showTopGroup = topGroup != null && topGroup.myGroupPL != null && topGroup.myGroupPL !== 0;
 
+  // A failed getMyStats leaves `stats` null after loading finishes — distinct from a genuine
+  // new user (whose stats load successfully with real zeros). See heroStatsErrorCopy.
+  const statsError = !statsLoading && stats === null;
   const plValue = stats?.totalProfitLoss ?? 0;
   const plColor = plValue > 0 ? colors.success : plValue < 0 ? colors.error : colors.textMuted;
   const winRate = stats && stats.totalSessionsPlayed > 0
@@ -319,12 +324,16 @@ export default function HomeScreen() {
             <Text style={styles.heroLabel}>Lifetime P&L</Text>
             <View style={styles.heroBadge}>
               <Text style={styles.heroBadgeText}>
-                {stats?.totalSessionsPlayed ?? 0} session{(stats?.totalSessionsPlayed ?? 0) !== 1 ? 's' : ''}
+                {heroSessionsBadgeText(statsError, stats?.totalSessionsPlayed)}
               </Text>
             </View>
           </View>
           {statsLoading ? (
             <SkeletonCard height={48} borderRadius={8} style={{ marginTop: 8, width: '60%' }} />
+          ) : statsError ? (
+            <Text style={[typography.h2, { color: colors.textMuted, marginTop: 8 }]} numberOfLines={1} adjustsFontSizeToFit>
+              {heroStatsErrorCopy.title}
+            </Text>
           ) : (
             <AnimatedNumber
               value={plValue}
@@ -336,6 +345,10 @@ export default function HomeScreen() {
           )}
           {statsLoading ? (
             <SkeletonCard height={14} borderRadius={4} style={{ marginTop: 10, width: '40%' }} />
+          ) : statsError ? (
+            <TouchableOpacity onPress={() => loadAll()} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={alertLabel(heroStatsErrorCopy)}>
+              <Text style={styles.heroSub}>{heroStatsErrorCopy.sub}</Text>
+            </TouchableOpacity>
           ) : (
             <>
               <Text style={styles.heroSub}>
@@ -676,7 +689,7 @@ export default function HomeScreen() {
             <View style={styles.statsGrid}>
               <StatWidget
                 label="Sessions"
-                value={String(stats?.totalSessionsPlayed ?? 0)}
+                value={stats ? String(stats.totalSessionsPlayed) : '—'}
                 ionicon="layers-outline"
                 accentColor={colors.gold}
                 delay={0}

@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
-import { alertLabel, invitationsAlertCopy, settlementsAlertCopy, topGroupCopy, topGroupText } from '../homeAlerts';
+import { alertLabel, invitationsAlertCopy, settlementsAlertCopy, topGroupCopy, topGroupText, heroSessionsBadgeText, heroStatsErrorCopy } from '../homeAlerts';
 
 /**
  * Literals, not values rebuilt from formatMoney — a test that calls the code it guards moves with
@@ -75,6 +75,30 @@ describe('alertLabel — the banner is one element, so the name carries both lin
   });
 });
 
+describe('heroSessionsBadgeText — a load failure must not look like a genuine zero', () => {
+  // The bug (pre-Q2 audit, HomeScreen.tsx:160): `stats?.totalSessionsPlayed ?? 0` renders
+  // "0 sessions" identically for a genuine new user AND a failed load — a returning user with
+  // real history sees confidently wrong data after a network blip.
+  it('shows the real, pluralised count when stats loaded', () => {
+    expect(heroSessionsBadgeText(false, 0)).toBe('0 sessions');
+    expect(heroSessionsBadgeText(false, 1)).toBe('1 session');
+    expect(heroSessionsBadgeText(false, 5)).toBe('5 sessions');
+  });
+
+  it('shows an honest placeholder on a load failure, never a number', () => {
+    expect(heroSessionsBadgeText(true, 0)).toBe('—');
+    // Even if a stale/partial count were somehow available, an error state must not imply data.
+    expect(heroSessionsBadgeText(true, 7)).toBe('—');
+  });
+});
+
+describe('heroStatsErrorCopy — the hero P&L error state, literal-pinned', () => {
+  it('never claims a number — it says loading failed', () => {
+    expect(heroStatsErrorCopy.title).toBe("Couldn't load your stats");
+    expect(heroStatsErrorCopy.sub).toBe('Check your connection and tap to retry.');
+  });
+});
+
 /**
  * A pinned FUNCTION only removes drift if the SCREEN actually calls it. HomeScreen.tsx has no
  * render harness, so nothing above proves that — mutation-confirmed: reverting the top-group chip
@@ -141,5 +165,37 @@ describe('HomeScreen is wired to homeAlerts, not re-implementing it inline', () 
     const src = stripComments(read());
     expect(src.match(/\bconst moreGroupsText\s*=/g) ?? []).toHaveLength(1);
     expect(src.match(/\bmoreGroupsText\b/g) ?? []).toHaveLength(3); // declaration + label + visible text
+  });
+
+  it('three of the seven Promise.all loads have their own .catch — one failing call must not blank the batch', () => {
+    // Pre-Q2 audit finding: getMyGroups/getMyStats/getMyInvitations had no independent .catch,
+    // so any ONE of their failures rejected the whole Promise.all into the outer silent catch{},
+    // even though the other four calls already degrade independently.
+    const src = stripComments(read());
+    // Non-greedy up to `]);` specifically — several calls inside cast `as XDto[]`, which itself
+    // contains `])`, so a naive `\]\)` stop would truncate the match after the first such cast.
+    const block = src.match(/Promise\.all\(\[[\s\S]*?\]\);/)?.[0] ?? '';
+    expect(block).toMatch(/getMyGroups\(token\)\.catch\(/);
+    expect(block).toMatch(/getMyStats\(token\)\.catch\(/);
+    expect(block).toMatch(/getMyInvitations\(token\)\.catch\(/);
+  });
+
+  it('the hero session badge is wired to heroSessionsBadgeText, not a hand-rolled ?? 0', () => {
+    const src = stripComments(read());
+    expect(src).toMatch(/heroSessionsBadgeText\(/);
+    // The exact bug shape this replaces — must not survive alongside the fix.
+    expect(src).not.toMatch(/stats\?\.totalSessionsPlayed\s*\?\?\s*0/);
+  });
+
+  it('the hero P&L renders heroStatsErrorCopy instead of a false ₪0 "Break even" on a load failure', () => {
+    const src = stripComments(read());
+    // The derived signal: stats failed to load if loading finished and stats is still null.
+    expect(src).toMatch(/statsError\s*=\s*!statsLoading\s*&&\s*stats\s*===\s*null/);
+    // The value/sub block must branch on it BEFORE reaching the real AnimatedNumber render —
+    // anchored to the hero card's own JSX span so a comment elsewhere can't satisfy this.
+    const heroBlock = src.match(/heroCardInner[\s\S]*?AnimatedNumber/)?.[0] ?? '';
+    expect(heroBlock).toMatch(/statsError/);
+    expect(src).toMatch(/heroStatsErrorCopy\.title/);
+    expect(src).toMatch(/heroStatsErrorCopy\.sub/);
   });
 });

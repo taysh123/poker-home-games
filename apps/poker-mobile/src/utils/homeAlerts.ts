@@ -73,3 +73,21 @@ export function topGroupLabel(name: string, myGroupPL: number): string {
   const copy = topGroupCopy(name, myGroupPL);
   return `${copy.title}, ${copy.sub}`;
 }
+
+/**
+ * The hero card's session-count badge. A LOAD FAILURE must render an honest placeholder, never a
+ * number — `stats?.totalSessionsPlayed ?? 0` shipped "0 sessions" identically for a genuine new
+ * user and a failed load, so a returning user saw confidently wrong data after a network blip.
+ */
+export function heroSessionsBadgeText(statsError: boolean, sessionCount: number | null | undefined): string {
+  if (statsError) return '—';
+  const n = sessionCount ?? 0;
+  return `${n} session${n !== 1 ? 's' : ''}`;
+}
+
+/** The hero P&L card's error state, in place of the animated value + "Break even"/"in the
+ * green"/"Keep grinding" copy — none of which is true when the number underneath is unknown. */
+export const heroStatsErrorCopy: AlertCopy = {
+  title: "Couldn't load your stats",
+  sub: 'Check your connection and tap to retry.',
+};
