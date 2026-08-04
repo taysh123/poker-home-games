@@ -356,6 +356,7 @@ and the legal/support row the flag-OFF branch currently lacks.
 | # | Slice | Days | Depends on | 📸 |
 |---|---|---|---|---|
 | S1 | **StudyProgress v3 schema + version-set fix** | 1 | none — **blocks S2–S8** | no |
+| S1b | **Account-scope `tpoker.study.v1`** (owner Q4: reuse B1's pattern) | 1 | B1 (pattern), S1 | no |
 | S2 | Quiz counts for streak + volume, + copy fix | 1.5 | S1 | no |
 | S3 | Spot answers record scenario/position | 1 | S1 | no |
 | S4 | XP monotonicity clamp | 1 | none | no |
@@ -535,32 +536,34 @@ four pillars touched. Constraints that shape it:
 
 ---
 
-## 8. Open questions for the owner
+## 8. Open questions — ALL ANSWERED (owner, 2026-08-05)
 
-Nothing below blocks starting Tier 0 or Pillar 1's first slices.
-
-1. **Local-game prefill** (defers B-slice) — a `LocalGame` has no notion of which seat is "me"
-   (`LocalPlayer` is `{id, name}`, and the CTA renders for guests). Ask which seat each time, or
-   persist a "this is me" marker (schema v5)? *Recommendation: ask-each-time, no schema change.*
-   Also note cloud sessions have **no** Log-to-Bankroll path at all today.
-2. **`coach_teaser` is unshippable as specified** — `isTriggerEligible` returns `coachEnabled` for
-   every coach-surface trigger and `coach` is false in prod, so the card can never render. Add a
-   "teaser allowed while the feature is dark" eligibility axis, or move it off the coach surface?
-3. **Placement retake** — blocked by a deliberate **write-once anti-farming invariant enforced in
-   the store**, not missing UI. Reverse it, meter the retake (then it stops being a fair
-   assessment), or ship baseline-only? *Recommendation: baseline-only for Q2.*
-4. **Account-scope `tpoker.study.v1`?** Same device-global leak class as bankroll. Scope it (a
-   migration, ~1 day, and B1 will have just built the pattern) or label the panel "on this
-   device"? *Recommendation: scope it, reusing B1's pattern while it's fresh.*
-5. **Mastery** — flip the prod flag to light the already-built engine, or write a parallel
-   aggregate into StudyProgress and import `MASTERY_CONFIG` purely?
-6. **Screenshot slots** — does a bankroll shot displace one of Play's 01–08, or ride at 09/10 and
-   be invisible on Play?
-7. **"Which lands first"** needs a committed, publishable order across the three remaining premium
-   benefits. Is there one, and is it firm enough to publish? A published order that slips is a new
-   honesty liability of exactly the tracked class.
-8. **Exact privacy-policy wording** (§T0.5) — approve the draft text before it ships, and confirm
-   consistency with the store privacy declarations.
+1. **Local-game prefill → ask-each-time, no schema change.** Do not persist a "this is me" marker.
+   The **cloud-session gap** (no Log-to-Bankroll path at all from `SessionScreen`) is recorded as
+   a **separate later item, explicitly NOT folded into Q2.**
+2. **`coach_teaser` → move it OFF the coach surface.** Do *not* add a "teaser while dark"
+   eligibility axis. Owner reasoning: *"It's a teaser, not the coach — it shouldn't depend on the
+   coach flag. Keep it simple; we revisit when the coach actually goes live."*
+3. **Placement retake → baseline-only for Q2.** **Do NOT weaken the write-once anti-farming
+   invariant.**
+4. **Account-scope `tpoker.study.v1` → YES**, reusing B1's pattern while it is fresh. Same
+   device-global leak class as bankroll; *"do it right once rather than label around it."*
+   → Added as slice **S1b** (§4).
+5. **Mastery → defer the choice to the S-slices, and default toward whichever is HONEST and
+   testable rather than whichever is less work.** If the already-built engine's output can be
+   trusted and pinned, lighting the flag is fine; if it cannot, the parallel aggregate importing
+   `MASTERY_CONFIG` purely is safer. **Bring both options with a recommendation when we get there.**
+6. **Screenshot slots → decide at §7, owner lean recorded: bankroll EARNS a visible slot.** It is
+   now a headline free pillar, so plan for it to **displace the weakest of Play's current 01–08**
+   rather than hide at 09/10. **Deliverable at §7: name the weakest shot so the owner can confirm
+   the swap.**
+7. **"Which lands first" → owner supplies a firm publishable order when we reach P6.**
+   **Do not hand-write it before then, and do not publish an order that might slip** — that is a
+   new honesty liability of exactly the tracked class. **P6's ordering copy is HELD** until the
+   owner confirms.
+8. **Privacy-policy wording → draft approved in principle.** Before it ships: **confirm
+   consistency with the Apple and Google privacy declarations**, and **show the final exact text
+   in the T0.5 PR.** *"Don't ship a legal-surface claim I haven't seen in final form."*
 
 ---
 
