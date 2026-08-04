@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using PokerApp.Application.Common.Exceptions;
 using PokerApp.Application.Common.Interfaces;
 using PokerApp.Domain.Entities;
@@ -11,7 +12,8 @@ public sealed class EndSessionCommandHandler(
     IApplicationDbContext context,
     ICurrentUserService currentUserService,
     IAchievementEvaluator achievementEvaluator,
-    INotificationService notificationService) : IRequestHandler<EndSessionCommand>
+    INotificationService notificationService,
+    ILogger<EndSessionCommandHandler> logger) : IRequestHandler<EndSessionCommand>
 {
     public async Task Handle(EndSessionCommand request, CancellationToken cancellationToken)
     {
@@ -99,8 +101,32 @@ public sealed class EndSessionCommandHandler(
                 "This session was already ended or changed by someone else. Refresh to see the latest.");
         }
 
-        // Award any newly-earned achievements for the session creator
-        var newAchievementKeys = await achievementEvaluator.EvaluateAsync(userId, request.SessionId, cancellationToken);
+        // ── Everything below this line is a BEST-EFFORT SIDE EFFECT ────────────────────────────
+        // The session end and its cash-outs are already durably committed above. Nothing here may
+        // turn a request that succeeded into a failure the caller sees (audit 2026-08-03, HIGH #7).
+        //
+        // Awarding achievements was the one step in this tail that ran unguarded, while the
+        // notification blocks below it had been wrapped from the start. The evaluator writes
+        // UserAchievement rows, so a unique-index race on (UserId, AchievementKey) — the same user
+        // ending two different sessions at once — throws DbUpdateException. Nothing maps that, so
+        // the caller got a bare 500 for a game night the server had already closed out, and the
+        // client showed an error over a finished session. Same defect class as PR #74 and PR #78.
+        //
+        // LOGGED, not silently swallowed: a failure here means a player did not get an achievement
+        // they earned. That is invisible to everyone unless it is recorded, and a systematic
+        // failure (a broken evaluator, not a one-off race) would otherwise never surface at all.
+        IReadOnlyList<string> newAchievementKeys = [];
+        try
+        {
+            newAchievementKeys = await achievementEvaluator.EvaluateAsync(userId, request.SessionId, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Achievement evaluation failed after session {SessionId} was ended by user {UserId}. " +
+                "The session end itself is committed and unaffected; any achievements earned in it were not awarded.",
+                request.SessionId, userId);
+        }
 
         // Notify the creator about each newly unlocked achievement (best-effort)
         if (newAchievementKeys.Count > 0)
@@ -122,7 +148,14 @@ public sealed class EndSessionCommandHandler(
                         cancellationToken: cancellationToken);
                 }
             }
-            catch { /* notifications are non-critical */ }
+            catch (Exception ex)
+            {
+                // Non-critical (the session ended regardless) but no longer SILENT — the same
+                // reasoning as the achievement guard above: an unrecorded failure here is a
+                // notification nobody knows was never sent.
+                logger.LogWarning(ex,
+                    "Achievement-unlock notifications failed after session {SessionId} ended.", request.SessionId);
+            }
         }
 
         // Notify all registered players that the session ended (best-effort)
@@ -145,6 +178,10 @@ public sealed class EndSessionCommandHandler(
                     cancellationToken);
             }
         }
-        catch { /* notifications are non-critical */ }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex,
+                "Session-ended notifications failed after session {SessionId} ended.", request.SessionId);
+        }
     }
 }

@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 using PokerApp.Application.Common.Exceptions;
 using PokerApp.Application.Common.Interfaces;
@@ -78,7 +79,8 @@ public sealed class EndSessionConcurrencyTests : IDisposable
     }
 
     private static Task EndAsync(AppDbContext ctx, Guid callerId, Guid sessionId, params FinalStackItem[] stacks) =>
-        new EndSessionCommandHandler(ctx, new FakeCurrentUser(callerId), new NoAchievements(), new NoNotifications())
+        new EndSessionCommandHandler(ctx, new FakeCurrentUser(callerId), new NoAchievements(), new NoNotifications(),
+                NullLogger<EndSessionCommandHandler>.Instance)
             .Handle(new EndSessionCommand(sessionId, stacks), CancellationToken.None);
 
     private static Task BuyInAsync(AppDbContext ctx, Guid callerId, Guid sessionId, Guid seatId, decimal amount) =>
