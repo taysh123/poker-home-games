@@ -1,0 +1,100 @@
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Xunit;
+using PokerApp.Application.Common.Interfaces;
+using PokerApp.Application.Features.Sessions.Commands.RemovePlayer;
+using PokerApp.Application.Features.Settlements.Commands.CalculateSettlements;
+using PokerApp.Application.Services;
+using PokerApp.Domain.Entities;
+using PokerApp.Domain.Enums;
+using PokerApp.Infrastructure.Persistence;
+
+namespace PokerApp.Tests;
+
+/// PROBE ONLY — is the self-removal escape hatch abusable by the person it protects?
+public sealed class ZZProbeSelfRemovalAbuseTests : IDisposable
+{
+    private readonly SqliteConnection _conn;
+    private readonly AppDbContext _ctx;
+
+    public ZZProbeSelfRemovalAbuseTests()
+    {
+        _conn = new SqliteConnection("DataSource=:memory:");
+        _conn.Open();
+        _ctx = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(_conn).Options);
+        _ctx.Database.EnsureCreated();
+    }
+    public void Dispose() { _ctx.Dispose(); _conn.Dispose(); }
+
+    private sealed class FakeCurrentUser(Guid id) : ICurrentUserService
+    {
+        public Guid UserId { get; } = id;
+        public string? Email => "x@example.com";
+        public string? Username => "x";
+        public bool IsAuthenticated => true;
+    }
+
+    private User AddUser(string n)
+    {
+        var u = User.Create(n, $"{n}@example.com", "h");
+        _ctx.Users.Add(u);
+        return u;
+    }
+
+    [Fact]
+    public async Task PROBE7_A_debtor_can_self_remove_from_a_FINISHED_settled_session_and_erase_the_debt_on_recalculation()
+    {
+        var host = AddUser("host");
+        var loser = AddUser("loser");
+        var group = Group.Create("Thursday", null, host.Id);
+        _ctx.Groups.Add(group);
+        _ctx.GroupMembers.Add(GroupMember.Create(group.Id, host.Id, GroupRole.Owner));
+        _ctx.GroupMembers.Add(GroupMember.Create(group.Id, loser.Id, GroupRole.Member));
+
+        var session = Session.Create("Group night", host.Id, group.Id);
+        session.Start();
+        _ctx.Sessions.Add(session);
+        var hostSeat = SessionPlayer.CreateForUser(session.Id, host.Id);
+        var loserSeat = SessionPlayer.CreateForUser(session.Id, loser.Id);
+        _ctx.SessionPlayers.AddRange(hostSeat, loserSeat);
+        _ctx.BuyIns.Add(BuyIn.Create(session.Id, hostSeat.Id, 100m));
+        _ctx.BuyIns.Add(BuyIn.Create(session.Id, loserSeat.Id, 500m));
+        _ctx.CashOuts.Add(CashOut.Create(session.Id, hostSeat.Id, 600m));
+        _ctx.CashOuts.Add(CashOut.Create(session.Id, loserSeat.Id, 0m));
+        session.End();
+        _ctx.SaveChanges();
+        _ctx.ChangeTracker.Clear();
+
+        var calc = new CalculateSettlementsCommandHandler(
+            _ctx, new FakeCurrentUser(host.Id), new SettlementCalculatorService());
+
+        await calc.Handle(new CalculateSettlementsCommand(session.Id), CancellationToken.None);
+        _ctx.ChangeTracker.Clear();
+
+        var before = await _ctx.Settlements.Where(s => s.SessionId == session.Id).ToListAsync();
+        System.Console.WriteLine($"PROBE7 before: {before.Count} settlement(s); loser owes {before.Where(s => s.PayerUserId == loser.Id).Sum(s => s.Amount)}");
+        Assert.Contains(before, s => s.PayerUserId == loser.Id && s.Amount == 500m);
+
+        // The debtor removes THEIR OWN seat from a FINISHED, already-settled session.
+        // Pre-fix this threw ConflictException ("Players can only be removed from Draft or
+        // Active sessions"); the self-removal branch now skips that guard entirely.
+        await new RemovePlayerCommandHandler(_ctx, new FakeCurrentUser(loser.Id))
+            .Handle(new RemovePlayerCommand(session.Id, loserSeat.Id), CancellationToken.None);
+        _ctx.ChangeTracker.Clear();
+
+        Assert.Null(await _ctx.SessionPlayers.FirstOrDefaultAsync(sp => sp.Id == loserSeat.Id));
+        Assert.Empty(await _ctx.BuyIns.Where(b => b.SessionId == session.Id && b.Amount == 500m).ToListAsync());
+
+        // Any group member can now recalculate. The orphaned-money guard does NOT fire
+        // (RemovePlayer deleted the rows outright), so recalculation succeeds on a
+        // silently-unbalanced pool.
+        var after = await calc.Handle(new CalculateSettlementsCommand(session.Id), CancellationToken.None);
+        _ctx.ChangeTracker.Clear();
+
+        var persistedAfter = await _ctx.Settlements.Where(s => s.SessionId == session.Id).ToListAsync();
+        System.Console.WriteLine($"PROBE7 after: {persistedAfter.Count} settlement(s); loser owes {persistedAfter.Where(s => s.PayerUserId == loser.Id).Sum(s => s.Amount)}");
+        System.Console.WriteLine($"PROBE7 host now shows net: {after.Settlements.Count} rows, guest balances {after.GuestBalances.Count}");
+
+        Assert.DoesNotContain(persistedAfter, s => s.PayerUserId == loser.Id);
+    }
+}

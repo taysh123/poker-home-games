@@ -308,6 +308,11 @@ public class SessionsController(IMediator mediator) : ControllerBase
 public sealed record CreateSessionRequest(string Name, decimal? ChipRatio, decimal? DefaultBuyIn);
 public sealed record EndSessionRequest(IReadOnlyList<EndSessionFinalStack>? FinalStacks);
 public sealed record EndSessionFinalStack(Guid SessionPlayerId, decimal Amount);
+// LinkedUserId stays on the wire ON PURPOSE, even though the handler REJECTS it (400): the
+// command must still CARRY it so AddPlayerCommandHandler's consent guard can refuse it (audit
+// 2026-08-05, HIGH #1). Deleting this field would make System.Text.Json silently DROP an incoming
+// linkedUserId and seat an unlinked guest with 201 instead of returning 400 — a silent contract
+// change no unit test (they build the command directly) would catch. Do not remove it.
 public sealed record AddPlayerRequest(Guid? UserId, string? GuestName, Guid? LinkedUserId = null);
 public sealed record AddBuyInRequest(Guid SessionPlayerId, decimal Amount);
 public sealed record AddCashOutRequest(Guid SessionPlayerId, decimal Amount);
