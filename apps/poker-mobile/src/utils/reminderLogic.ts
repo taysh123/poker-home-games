@@ -62,13 +62,27 @@ export function eligibleReminders(prefs: ReminderPrefs, signals: ReminderSignals
   }
 
   // Only nudge about a streak if it's actually alive AND today's goal isn't met yet.
+  //
+  // ONE-SHOT for TODAY only — never a repeating trigger (pre-Q2 audit fix). Both goalMetToday
+  // and streakAlive are DAILY-VARYING signals, but eligibility is only ever re-evaluated on app
+  // mount/foreground; a {hour: 20, repeats: true} trigger, once scheduled, kept firing every
+  // night forever regardless of whether the streak later died or the goal was later met by other
+  // means — for any user who went dark after the reminder was scheduled, false from ~day 2.
+  // Mirrors game_day's fireAtMs pattern: skipped once today's fire hour has passed (a past DATE
+  // trigger fires instantly on both platforms), so a stale eligibility check produces silence,
+  // never a lie. If still eligible next time the app foregrounds, THAT day computes its own
+  // fireAtMs — one scheduling call can never describe more than one night.
   if (prefs.streakRisk && signals.streakAlive && !signals.goalMetToday) {
-    out.push({
-      kind: 'streak_risk',
-      title: '🔥 Your streak is at risk',
-      body: 'Drill one spot before midnight to keep your streak alive.',
-      hour: 20,
-    });
+    const fireAtMs = localDayHourMs(localDayKeyFor(signals.nowMs), 20);
+    if (fireAtMs != null && fireAtMs > signals.nowMs) {
+      out.push({
+        kind: 'streak_risk',
+        title: '🔥 Your streak is at risk',
+        body: 'Drill one spot before midnight to keep your streak alive.',
+        hour: 20,
+        fireAtMs,
+      });
+    }
   }
 
   // Game-day one-shot: only while the fire moment is still ahead — a past DATE trigger fires
@@ -90,6 +104,17 @@ export function eligibleReminders(prefs: ReminderPrefs, signals: ReminderSignals
   }
 
   return out;
+}
+
+/** Today's 'YYYY-MM-DD' from LOCAL components of the given epoch ms — mirrors
+ * features/study/logic/localDay.ts#localDayKey without importing it, keeping this module
+ * dependency-free (it stays zero-import, pure, nowMs-injected throughout). Deliberately NOT the
+ * UTC-based ISO-string slice this repo bans repo-wide (dayKeyBan.test.ts) — that shortcut flips
+ * the day at 02:00–03:00 Israel time, not local midnight. */
+function localDayKeyFor(ms: number): string {
+  const d = new Date(ms);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
 /** 'YYYY-MM-DD' + hour → epoch ms via LOCAL components. `new Date('YYYY-MM-DD')` is UTC midnight
