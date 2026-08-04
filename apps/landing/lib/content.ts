@@ -14,7 +14,6 @@ export const HERO = {
     'Lessons, daily quizzes, and decision drills that sharpen how you think about poker. When friends come over, T Poker keeps the buy-in ledger and does the settlement math. No wagering, no money in the app — study and scorekeeping only.',
   primaryCta: 'Start Free',
   primaryNote: 'Free — no account needed.',
-  storeNote: 'Mobile apps coming soon',
 } as const;
 
 /**

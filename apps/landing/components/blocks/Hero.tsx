@@ -129,7 +129,7 @@ export function Hero() {
             </div>
 
             <div className="mt-9">
-              <StoreBadges note={HERO.storeNote} />
+              <StoreBadges />
             </div>
           </div>
 
