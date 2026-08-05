@@ -5,6 +5,7 @@ using Xunit;
 using PokerApp.Application.Common.Interfaces;
 using PokerApp.Application.Features.Sessions.Queries.GetSessionHandHistory;
 using PokerApp.Domain.Entities;
+using PokerApp.Domain.Enums;
 using PokerApp.Infrastructure.Persistence;
 
 namespace PokerApp.Tests;
@@ -54,17 +55,59 @@ public sealed class HandHistoryPrivacyTests : IDisposable
     [Fact]
     public void The_hand_history_DTO_exposes_no_account_identifier()
     {
-        // Pinned on the SHAPE, not on one property name: any Guid member that is not the hand's own
-        // id would put an account identifier back on the wire under a new name.
+        // Shape guard, now with ONE acknowledged exception. `CreatedByUserId` came back as a
+        // transitional field so builds shipped before IsMine keep their delete-hand button (see
+        // HandRecordDto) — but it is only ever the CALLER'S OWN id, which is the property the test
+        // below pins behaviourally. Any OTHER Guid member would be a new identifier on the wire
+        // under a new name, which is how the original defect was possible at all.
         var offenders = typeof(HandRecordDto).GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(p => (p.PropertyType == typeof(Guid) || p.PropertyType == typeof(Guid?))
-                        && p.Name != nameof(HandRecordDto.Id))
+                        && p.Name != nameof(HandRecordDto.Id)
+                        && p.Name != nameof(HandRecordDto.CreatedByUserId))
             .Select(p => p.Name)
             .ToArray();
 
         Assert.Empty(offenders);
-        Assert.DoesNotContain(typeof(HandRecordDto).GetProperties(),
-            p => p.Name.Contains("CreatedBy", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task The_transitional_creator_id_is_only_ever_the_callers_own()
+    {
+        // THE PRIVACY PROPERTY, pinned behaviourally rather than by the field's absence — because
+        // the field is back, and a later "simplification" to `h.CreatedByUserId` would restore the
+        // original defect (another player's raw account id, served to everyone in the session)
+        // while every shape check stayed green.
+        var host = User.Create("host", "host@example.com", "hash");
+        var mate = User.Create("mate", "mate@example.com", "hash");
+        _ctx.Users.AddRange(host, mate);
+        var group = Group.Create("Thursday", null, host.Id);
+        _ctx.Groups.Add(group);
+        _ctx.GroupMembers.Add(GroupMember.Create(group.Id, host.Id, GroupRole.Owner));
+        _ctx.GroupMembers.Add(GroupMember.Create(group.Id, mate.Id, GroupRole.Member));
+        var session = Session.Create("Friday night", host.Id, group.Id);
+        session.Start();
+        _ctx.Sessions.Add(session);
+        _ctx.HandRecords.Add(HandRecord.Create(session.Id, "Dan", 120m, null, host.Id));
+        _ctx.HandRecords.Add(HandRecord.Create(session.Id, "Ann", 80m, null, mate.Id));
+        _ctx.SaveChanges();
+        _ctx.ChangeTracker.Clear();
+
+        var asHost = await new GetSessionHandHistoryQueryHandler(_ctx, new FakeCurrentUser(host.Id))
+            .Handle(new GetSessionHandHistoryQuery(session.Id), CancellationToken.None);
+
+        // Own hand: the caller's own id — which they already have, so nothing is disclosed.
+        Assert.Equal(host.Id, asHost.Single(h => h.WinnerName == "Dan").CreatedByUserId);
+        // Someone else's hand: EMPTY, never mate's id. This is the assertion that matters.
+        Assert.Equal(Guid.Empty, asHost.Single(h => h.WinnerName == "Ann").CreatedByUserId);
+        Assert.DoesNotContain(asHost, h => h.CreatedByUserId == mate.Id);
+
+        // And symmetrically for the other member, so the rule is not accidentally host-only.
+        var asMate = await new GetSessionHandHistoryQueryHandler(_ctx, new FakeCurrentUser(mate.Id))
+            .Handle(new GetSessionHandHistoryQuery(session.Id), CancellationToken.None);
+
+        Assert.Equal(mate.Id, asMate.Single(h => h.WinnerName == "Ann").CreatedByUserId);
+        Assert.Equal(Guid.Empty, asMate.Single(h => h.WinnerName == "Dan").CreatedByUserId);
+        Assert.DoesNotContain(asMate, h => h.CreatedByUserId == host.Id);
     }
 
     [Fact]

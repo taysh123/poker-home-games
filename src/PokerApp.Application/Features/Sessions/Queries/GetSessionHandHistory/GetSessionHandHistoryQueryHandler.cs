@@ -33,7 +33,13 @@ public sealed class GetSessionHandHistoryQueryHandler(
             .AsNoTracking()
             .Where(h => h.SessionId == request.SessionId)
             .OrderBy(h => h.CreatedAt)
-            .Select(h => new HandRecordDto(h.Id, h.WinnerName, h.PotAmount, h.Note, h.CreatedByUserId == userId, h.CreatedAt))
+            // The transitional CreatedByUserId is the CALLER'S OWN id or nothing — never the raw
+            // author id. Same predicate as IsMine, so the two cannot disagree, and no identifier
+            // the caller did not already have leaves the database. See HandRecordDto.
+            .Select(h => new HandRecordDto(h.Id, h.WinnerName, h.PotAmount, h.Note,
+                h.CreatedByUserId == userId,
+                h.CreatedByUserId == userId ? userId : Guid.Empty,
+                h.CreatedAt))
             .ToListAsync(cancellationToken);
     }
 }
