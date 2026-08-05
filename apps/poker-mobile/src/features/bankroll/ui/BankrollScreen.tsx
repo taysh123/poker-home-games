@@ -25,6 +25,7 @@ import { formatCents, formatCentsSigned } from '../../../utils/money';
 import { formatDate, formatMinutes } from '../../../utils/formatters';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
 import { useBankroll } from '../state/BankrollContext';
+import { formatTagsLine } from '../logic/logSessionForm';
 import {
   summarize,
   advancedStats,
@@ -249,6 +250,9 @@ function SessionRow({ session, onPress }: { session: BankrollSession; onPress: (
   const net = sessionNetCents(session);
   const netColor = net > 0 ? colors.success : net < 0 ? colors.error : colors.textMuted;
   const isMtt = session.gameType === 'tournament';
+  const metaBits = [session.notes?.trim() || null, formatTagsLine(session.tags)].filter(
+    (b): b is string => Boolean(b),
+  );
   return (
     <PressableScale onPress={onPress} haptic="light">
       <Card padding={spacing.md} style={styles.row}>
@@ -267,6 +271,9 @@ function SessionRow({ session, onPress }: { session: BankrollSession; onPress: (
             {formatDate(session.startedAt)}
             {session.source === 'external' ? ' · external' : ''}
           </Text>
+          {metaBits.length > 0 && (
+            <Text style={styles.rowSub} numberOfLines={1}>{metaBits.join(' · ')}</Text>
+          )}
         </View>
         <Text style={[styles.rowNet, { color: netColor }]}>{formatCentsSigned(net)}</Text>
       </Card>

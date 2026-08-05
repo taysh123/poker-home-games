@@ -19,27 +19,14 @@ import { radii } from '../../../theme/radii';
 import { confirmDialog } from '../../../utils/confirm';
 import { showToast } from '../../../utils/toast';
 import { track } from '../../../utils/analytics';
-import { isFeatureEnabled } from '../../../config/features';
 import type { RootStackParamList } from '../../../navigation/AppNavigator';
 import { useBankroll } from '../state/BankrollContext';
 import type { BankrollGameType, BankrollSource } from '../types';
-import type { CreateSessionInput } from '../data/bankrollStore';
+import { buildSessionInput, shouldShowNativeDatePicker } from '../logic/logSessionForm';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Rt = RouteProp<RootStackParamList, 'LogSession'>;
 
-/** Parse money input to integer cents; empty → 0; invalid → null. Allows 0 (e.g. busted payout). */
-function toCents(input: string): number | null {
-  const t = input.trim().replace(/,/g, '');
-  if (t === '') return 0;
-  if (!/^\d+(\.\d{1,2})?$/.test(t)) return null;
-  const [w, f = ''] = t.split('.');
-  return parseInt(w, 10) * 100 + parseInt(f.padEnd(2, '0') || '0', 10);
-}
-function toCount(input: string): number {
-  const n = parseInt(input.trim() || '0', 10);
-  return Number.isFinite(n) && n >= 0 ? n : 0;
-}
 // LOCAL day — the UTC shortcut pre-filled yesterday's date after midnight in UTC+ timezones.
 const todayStr = () => localDayKey();
 
@@ -67,7 +54,10 @@ export default function LogSessionScreen() {
   const [tBuyIn, setTBuyIn] = useState(existing?.tournament ? String(existing.tournament.buyInCents / 100) : '');
   const [tFee, setTFee] = useState(existing?.tournament ? String(existing.tournament.feeCents / 100) : '');
   const [tRebuy, setTRebuy] = useState(existing?.tournament ? String(existing.tournament.rebuyCents / 100) : '');
+  // Real count (B2, audit 2026-08-05) — previously fabricated as `rebuyCents > 0 ? 1 : 0`.
+  const [tRebuyCount, setTRebuyCount] = useState(existing?.tournament?.rebuyCount ? String(existing.tournament.rebuyCount) : '');
   const [tAddOn, setTAddOn] = useState(existing?.tournament ? String(existing.tournament.addOnCents / 100) : '');
+  const [tAddOnCount, setTAddOnCount] = useState(existing?.tournament?.addOnCount ? String(existing.tournament.addOnCount) : '');
   const [tPayout, setTPayout] = useState(existing?.tournament ? String(existing.tournament.payoutCents / 100) : '');
   const [tBounty, setTBounty] = useState(existing?.tournament ? String(existing.tournament.bountyCents / 100) : '');
   const [tEntrants, setTEntrants] = useState(existing?.tournament?.entrants ? String(existing.tournament.entrants) : '');
@@ -78,59 +68,16 @@ export default function LogSessionScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const isCash = gameType === 'cash';
-  const useNativeDate = isFeatureEnabled('polish') && Platform.OS !== 'web';
-
-  function build(): CreateSessionInput | null {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { setError('Enter a valid date (YYYY-MM-DD).'); return null; }
-    const startedAt = new Date(`${date}T12:00:00`).toISOString();
-    const feesCents = toCents(fees);
-    if (feesCents === null) { setError('Fees must be a number.'); return null; }
-
-    const common = {
-      gameType,
-      source,
-      startedAt,
-      venue: venue.trim() || undefined,
-      durationMinutes: durationMin.trim() ? toCount(durationMin) : undefined,
-      notes: notes.trim() || undefined,
-      tags: tags.split(',').map(t => t.trim()).filter(Boolean),
-      feesCents,
-    };
-
-    if (isCash) {
-      const buyInCents = toCents(cashBuyIn);
-      const cashOutCents = toCents(cashOut);
-      if (buyInCents === null || cashOutCents === null) { setError('Buy-in and cash-out must be numbers.'); return null; }
-      if (buyInCents <= 0) { setError('Cash buy-in is required.'); return null; }
-      return { ...common, cash: { buyInCents, cashOutCents } };
-    }
-
-    const buyInCents = toCents(tBuyIn);
-    const feeC = toCents(tFee);
-    const rebuyCents = toCents(tRebuy);
-    const addOnCents = toCents(tAddOn);
-    const payoutCents = toCents(tPayout);
-    const bountyCents = toCents(tBounty);
-    if ([buyInCents, feeC, rebuyCents, addOnCents, payoutCents, bountyCents].some(v => v === null)) {
-      setError('Tournament amounts must be numbers.'); return null;
-    }
-    if ((buyInCents ?? 0) <= 0) { setError('Tournament buy-in is required.'); return null; }
-    return {
-      ...common,
-      tournament: {
-        buyInCents: buyInCents!, feeCents: feeC!,
-        rebuyCount: rebuyCents! > 0 ? 1 : 0, rebuyCents: rebuyCents!,
-        addOnCount: addOnCents! > 0 ? 1 : 0, addOnCents: addOnCents!,
-        bountyCents: bountyCents!, payoutCents: payoutCents!,
-        entrants: tEntrants.trim() ? toCount(tEntrants) : undefined,
-        finishPlace: tFinish.trim() ? toCount(tFinish) : undefined,
-      },
-    };
-  }
+  const useNativeDate = shouldShowNativeDatePicker(Platform.OS);
 
   async function save() {
-    const input = build();
-    if (!input) return;
+    const result = buildSessionInput({
+      gameType, source, date, venue, durationMin, notes, tags, fees,
+      cashBuyIn, cashOut,
+      tBuyIn, tFee, tRebuy, tRebuyCount, tAddOn, tAddOnCount, tPayout, tBounty, tEntrants, tFinish,
+    });
+    if (result.error !== undefined) { setError(result.error); return; }
+    const input = result.input;
     if (editingId) {
       await updateSession(editingId, input);
       showToast('Session updated.', 'success');
@@ -207,8 +154,14 @@ export default function LogSessionScreen() {
             <>
               <AppTextInput label="Buy-in" value={tBuyIn} onChangeText={setTBuyIn} keyboardType="decimal-pad" prefix="₪" placeholder="0" />
               <AppTextInput label="Fee / rake" value={tFee} onChangeText={setTFee} keyboardType="decimal-pad" prefix="₪" placeholder="0" />
-              <AppTextInput label="Rebuys (total)" value={tRebuy} onChangeText={setTRebuy} keyboardType="decimal-pad" prefix="₪" placeholder="0" />
-              <AppTextInput label="Add-ons (total)" value={tAddOn} onChangeText={setTAddOn} keyboardType="decimal-pad" prefix="₪" placeholder="0" />
+              <View style={styles.pairRow}>
+                <View style={styles.pairItem}><AppTextInput label="Rebuys (total)" value={tRebuy} onChangeText={setTRebuy} keyboardType="decimal-pad" prefix="₪" placeholder="0" /></View>
+                <View style={styles.pairItem}><AppTextInput label="# of rebuys" value={tRebuyCount} onChangeText={setTRebuyCount} keyboardType="number-pad" placeholder="0" /></View>
+              </View>
+              <View style={styles.pairRow}>
+                <View style={styles.pairItem}><AppTextInput label="Add-ons (total)" value={tAddOn} onChangeText={setTAddOn} keyboardType="decimal-pad" prefix="₪" placeholder="0" /></View>
+                <View style={styles.pairItem}><AppTextInput label="# of add-ons" value={tAddOnCount} onChangeText={setTAddOnCount} keyboardType="number-pad" placeholder="0" /></View>
+              </View>
               <AppTextInput label="Payout / winnings" value={tPayout} onChangeText={setTPayout} keyboardType="decimal-pad" prefix="₪" placeholder="0" />
               <AppTextInput label="Bounties (optional)" value={tBounty} onChangeText={setTBounty} keyboardType="decimal-pad" prefix="₪" placeholder="0" />
               <View style={styles.pairRow}>
