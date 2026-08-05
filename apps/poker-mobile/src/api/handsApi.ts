@@ -12,6 +12,11 @@ export type HandRecordDto = {
    * Replaces `createdByUserId`, which shipped the raw account GUID of whoever logged the hand to
    * every session participant (audit 2026-08-03, HIGH #4). The server computes this from the same
    * rule it enforces on delete, so the button can no longer disagree with the endpoint.
+   *
+   * NOTE: the response ALSO still carries a transitional `createdByUserId`, populated only with
+   * the caller's own id (empty for anyone else's hand), purely so builds shipped before this field
+   * existed keep their delete button. It is deliberately NOT typed here — new code must use
+   * `isMine`. It is removed once the old install base turns over.
    */
   isMine: boolean;
   createdAt: string;
