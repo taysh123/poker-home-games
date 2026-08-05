@@ -55,9 +55,9 @@ export function isInTheMoney(s: BankrollSession): boolean {
 }
 
 export interface BankrollFilter {
-  /** Inclusive lower bound on startedAt (ISO 8601). */
+  /** Inclusive lower bound on startedAt (ISO 8601; a bare 'YYYY-MM-DD' day key works too). */
   from?: string;
-  /** Inclusive upper bound on startedAt (ISO 8601). */
+  /** Inclusive upper bound on startedAt (ISO 8601; a bare 'YYYY-MM-DD' day key works too). */
   to?: string;
   gameType?: BankrollGameType;
   source?: BankrollSource;
@@ -67,10 +67,34 @@ export interface BankrollFilter {
   tags?: string[];
 }
 
+const BARE_DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Start/end of the given LOCAL calendar day, as ISO instants. `startedAt` is a UTC instant, so a
+ * bare 'YYYY-MM-DD' bound compared directly against it as a STRING is only safe when startedAt's
+ * UTC date happens to match the local day — true for noon-anchored data (buildSessionInput
+ * converts local noon to UTC ISO) but false for anything logged in the early-morning local hours:
+ * local Aug 5 00:05 in Israel (UTC+3) is UTC Aug 4 21:05, whose date prefix is "2026-08-04", not
+ * "2026-08-05" — so a naive prefix compare silently drops it from EITHER bound, not just `to`.
+ * Converting both bounds to real ISO instants first makes the compare correct regardless of
+ * time-of-day. LOCAL Date components only, never toISOString().slice() (banned by
+ * dayKeyBan.test.ts).
+ */
+function startOfLocalDayIso(dayKey: string): string {
+  const [y, m, d] = dayKey.split('-').map(Number);
+  return new Date(y, m - 1, d, 0, 0, 0, 0).toISOString();
+}
+function endOfLocalDayIso(dayKey: string): string {
+  const [y, m, d] = dayKey.split('-').map(Number);
+  return new Date(y, m - 1, d, 23, 59, 59, 999).toISOString();
+}
+
 export function filterSessions(sessions: BankrollSession[], f: BankrollFilter = {}): BankrollSession[] {
+  const from = f.from && BARE_DAY_KEY.test(f.from) ? startOfLocalDayIso(f.from) : f.from;
+  const to = f.to && BARE_DAY_KEY.test(f.to) ? endOfLocalDayIso(f.to) : f.to;
   return sessions.filter(s => {
-    if (f.from && s.startedAt < f.from) return false;
-    if (f.to && s.startedAt > f.to) return false;
+    if (from && s.startedAt < from) return false;
+    if (to && s.startedAt > to) return false;
     if (f.gameType && s.gameType !== f.gameType) return false;
     if (f.source && s.source !== f.source) return false;
     if (f.bankrollId && (s.bankrollId ?? DEFAULT_BANKROLL_ID) !== f.bankrollId) return false;

@@ -146,6 +146,32 @@ describe('filterSessions', () => {
   });
 });
 
+describe('filterSessions — bare day-key `to` bound (B3 fix)', () => {
+  // Local time, no 'Z' suffix — same construction buildSessionInput uses (local wall-clock,
+  // parsed as local time by `new Date(...)`, then converted to the UTC ISO string that's stored).
+  const late = (localDateTime: string) => cash(5000, 9000, { startedAt: new Date(localDateTime).toISOString() });
+
+  it('a bare day-key `to` INCLUDES a session late that same local day (previously silently excluded)', () => {
+    const sessions = [late('2026-08-05T23:00:00')];
+    expect(filterSessions(sessions, { to: '2026-08-05' })).toHaveLength(1);
+  });
+
+  it('a bare day-key `to` still EXCLUDES a session on the following local day', () => {
+    const sessions = [late('2026-08-06T00:30:00')];
+    expect(filterSessions(sessions, { to: '2026-08-05' })).toHaveLength(0);
+  });
+
+  it('from === to === the same bare day key returns exactly that single day (previously always 0)', () => {
+    const sessions = [
+      late('2026-08-04T23:59:00'), // day before -> excluded
+      late('2026-08-05T00:05:00'), // target day, early -> included
+      late('2026-08-05T23:00:00'), // target day, late -> included (the fix)
+      late('2026-08-06T00:05:00'), // day after -> excluded
+    ];
+    expect(filterSessions(sessions, { from: '2026-08-05', to: '2026-08-05' })).toHaveLength(2);
+  });
+});
+
 describe('bankrollOverTime', () => {
   it('accumulates net chronologically from the starting bankroll', () => {
     const sessions = [
