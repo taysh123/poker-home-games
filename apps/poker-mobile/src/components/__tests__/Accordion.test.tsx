@@ -1,6 +1,8 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 
+import Accordion from '../Accordion';
+
 // Motion layer → plain Views (recipes stay real — they're pure).
 jest.mock('../../components/motion/PressableScale', () => {
   const { Pressable } = require('react-native');
@@ -20,8 +22,6 @@ jest.mock('@expo/vector-icons', () => {
   const { View } = require('react-native');
   return { Ionicons: ({ name }: { name?: string }) => <View testID={`icon-${name}`} /> };
 });
-
-import Accordion from '../Accordion';
 
 const ITEMS = [
   { id: 'gambling', title: 'Is T Poker a gambling product?', body: 'No — it never touches real money.' },

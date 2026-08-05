@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import * as SecureStore from '../utils/storage';
 import { loginApi, registerApi, logoutApi, googleLoginApi, appleLoginApi, AuthUser, AuthResponse } from '../api/authApi';
-import { identifyAnalyticsUser, resetAnalyticsIdentity } from '../utils/analytics';
+import { identifyAnalyticsUser, resetAnalyticsIdentity, track, consumeSignupIntent } from '../utils/analytics';
 import { registerUnauthenticatedCallback } from '../api/apiClient';
 import { registerForPushAsync, unregisterPushAsync } from '../hooks/usePushNotifications';
-import { track, consumeSignupIntent } from '../utils/analytics';
+
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

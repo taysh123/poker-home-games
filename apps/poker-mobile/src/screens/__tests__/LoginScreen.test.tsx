@@ -4,6 +4,9 @@ import { join } from 'path';
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
 
+import LoginScreen from '../LoginScreen';
+import * as mockedStorage from '../../utils/storage';
+
 // ── Mocks: hermetic render (no reanimated/moti/expo natives, no real storage) ──
 
 jest.mock('@react-native-async-storage/async-storage', () =>
@@ -56,9 +59,6 @@ jest.mock('@expo/vector-icons', () => {
   const { View } = require('react-native');
   return { Ionicons: ({ name }: { name?: string }) => <View testID={`icon-${name}`} /> };
 });
-
-import LoginScreen from '../LoginScreen';
-import * as mockedStorage from '../../utils/storage';
 
 function makeNavigation({ routesBeneath = ['Welcome'] }: { routesBeneath?: string[] } = {}) {
   return {

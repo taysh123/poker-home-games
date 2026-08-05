@@ -6,9 +6,9 @@
  */
 import { convertCalibratedRows, datasetScopeLine, spotVerdict, tierLabel, type CalibratedRangeRow } from '../rangeConvert';
 import { CALIBRATED_DATASET } from '../../data/calibratedRanges';
-import type { PreflopRange } from '../../types';
+import type { PreflopRange, RangeDataset } from '../../types';
 import { allHands } from '../handGrid';
-import type { RangeDataset } from '../../types';
+
 
 /** Fabricate a complete 169-hand scenario: every hand folds unless overridden. */
 function scenarioRows(

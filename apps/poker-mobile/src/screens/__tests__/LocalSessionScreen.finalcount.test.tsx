@@ -1,6 +1,8 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
 
+import LocalSessionScreen from '../LocalSessionScreen';
+
 // ── Hermetic render harness for the money-critical end-game gate ──
 // (First screen test for The Final Count; the shape is reused for SessionScreen in PR B.)
 
@@ -73,8 +75,6 @@ jest.mock('../../context/LocalGamesContext', () => ({
     finishTournamentEarly: jest.fn(),
   }),
 }));
-
-import LocalSessionScreen from '../LocalSessionScreen';
 
 /** Active cash game: Alex + Dana each bought in ₪20 ⇒ ₪40 (4000 cents) remaining on the table. */
 function activeCashGame() {

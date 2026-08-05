@@ -878,7 +878,7 @@ export default function HomeScreen() {
           const items = crossGroupActivity.slice(0, 8);
           const todayStart = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
           const weekAgo = todayStart - 6 * 24 * 60 * 60 * 1000;
-          const buckets: Array<{ label: string; data: typeof items }> = [
+          const buckets: { label: string; data: typeof items }[] = [
             { label: 'TODAY',     data: items.filter(x => new Date(x.createdAt).getTime() >= todayStart) },
             { label: 'THIS WEEK', data: items.filter(x => { const t = new Date(x.createdAt).getTime(); return t >= weekAgo && t < todayStart; }) },
             { label: 'EARLIER',   data: items.filter(x => new Date(x.createdAt).getTime() < weekAgo) },

@@ -3,6 +3,11 @@
  * and surfaces ServerCoachError unchanged (so CoachContext can map it to a CoachError). Fail-closed
  * when there is no signed-in token.
  */
+import * as SecureStore from '../../../../utils/storage';
+import { analyzeHand, ServerCoachError } from '../../../../api/monetizationApi';
+import { serverCoachProvider } from '../serverCoachProvider';
+import type { CoachInput } from '../../types';
+
 jest.mock('../../../../utils/storage', () => ({ getItemAsync: jest.fn() }));
 jest.mock('../../../../api/monetizationApi', () => ({
   __esModule: true,
@@ -12,11 +17,6 @@ jest.mock('../../../../api/monetizationApi', () => ({
     constructor(reason: string) { super(reason); this.reason = reason; this.name = 'ServerCoachError'; }
   },
 }));
-
-import * as SecureStore from '../../../../utils/storage';
-import { analyzeHand, ServerCoachError } from '../../../../api/monetizationApi';
-import { serverCoachProvider } from '../serverCoachProvider';
-import type { CoachInput } from '../../types';
 
 const mockGetToken = SecureStore.getItemAsync as jest.Mock;
 const mockAnalyze = analyzeHand as jest.Mock;

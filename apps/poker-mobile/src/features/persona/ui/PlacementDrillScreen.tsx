@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, AccessibilityInfo } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,7 +31,7 @@ import {
   skillFromPlacement,
   placementLevelCopy,
 } from '../logic/placement';
-import { AccessibilityInfo } from 'react-native';
+
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Phase = 'intro' | 'run' | 'result';

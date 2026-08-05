@@ -3,8 +3,6 @@
  * proven against actual workbook-derived data (11 events → 9 export tables), plus parsing, validation,
  * vendor-neutral adapter mapping, and flag-gated loading.
  */
-jest.mock('../../config/features', () => ({ isFeatureEnabled: jest.fn() }));
-
 import { isFeatureEnabled } from '../../config/features';
 import {
   buildAnalyticsContract,
@@ -16,6 +14,8 @@ import {
 } from '../contract';
 import { mapToExportRecord, missingRequired } from '../adapter';
 import { loadAnalyticsContract, __resetAnalyticsContractForTests } from '../contractStore';
+
+jest.mock('../../config/features', () => ({ isFeatureEnabled: jest.fn() }));
 
 const realArtifact = require('../../../assets/content/0.8.1/analytics_contract.json') as AnalyticsContractData;
 const mockFlag = isFeatureEnabled as jest.Mock;

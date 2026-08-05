@@ -1,6 +1,9 @@
 import React from 'react';
 import { render, screen, act } from '@testing-library/react-native';
 
+import LoginScreen from '../LoginScreen';
+import RegisterScreen from '../RegisterScreen';
+
 // Hermetic render — BOTH auth providers forced available so we can assert their ORDER.
 // Guideline 4.8 (and Apple's HIG) want Sign in with Apple to be at least as prominent as
 // other third-party sign-in buttons; on a 4.8.0 resubmission we pin it ABOVE Google.
@@ -59,9 +62,6 @@ jest.mock('@expo/vector-icons', () => {
   const { View } = require('react-native');
   return { Ionicons: ({ name }: { name?: string }) => <View testID={`icon-${name}`} /> };
 });
-
-import LoginScreen from '../LoginScreen';
-import RegisterScreen from '../RegisterScreen';
 
 function makeNavigation() {
   return {

@@ -1,7 +1,9 @@
 import {
   emptyProgress, recordAnswer, computeStreaks, studyStats,
   setDailyGoal, computeStreaksWithFreeze, autoFreezeMissedDay, refreshFreezeTokens, isoWeekKey,
+  recordQuizCompleted, recordLessonCompleted,
 } from '../progress';
+
 
 describe('recordAnswer', () => {
   it('increments totals and per-day counts', () => {
@@ -119,9 +121,6 @@ describe('isoWeekKey', () => {
     expect(isoWeekKey('2026-06-15')).not.toBe(isoWeekKey('2026-06-22'));
   });
 });
-
-// ── Task 3 — Phase 1 additive fields ──
-import { recordQuizCompleted, recordLessonCompleted } from '../progress';
 
 describe('emptyProgress — Phase 1 additive fields', () => {
   it('defaults daily-limit counters and completion counters', () => {

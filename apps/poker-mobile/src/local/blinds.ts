@@ -4,7 +4,7 @@
 
 import type { BlindLevel, BlindPreset, TournamentClock } from './types';
 
-const BASE_BLINDS: Array<[number, number]> = [
+const BASE_BLINDS: [number, number][] = [
   [25, 50], [50, 100], [75, 150], [100, 200], [150, 300],
   [200, 400], [300, 600], [400, 800], [600, 1200], [800, 1600],
   [1000, 2000], [1500, 3000],

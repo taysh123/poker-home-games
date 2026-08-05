@@ -1,6 +1,9 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
 
+import BrandSplash from '../BrandSplash';
+import { SPLASH } from '../splashTimeline';
+
 // Reanimated → official mock (shared values apply instantly; no native driver).
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
 
@@ -14,9 +17,6 @@ jest.mock('../../../hooks/useReducedMotion', () => ({
   useReducedMotion: () => mockReduced,
   useReducedMotionState: () => ({ reduced: mockReduced, ready: mockMotionReady }),
 }));
-
-import BrandSplash from '../BrandSplash';
-import { SPLASH } from '../splashTimeline';
 
 const advance = (ms: number) => act(() => { jest.advanceTimersByTime(ms); });
 

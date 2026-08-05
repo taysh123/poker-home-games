@@ -3,13 +3,6 @@
  * account-scoped map (coachStore's byAccount precedent), quarantine-on-corrupt (never silently
  * clear), and the guest→account claim used when a guest signs in for the first time.
  */
-const mockMem = new Map<string, string>();
-jest.mock('@react-native-async-storage/async-storage', () => ({
-  getItem: jest.fn(async (k: string) => mockMem.get(k) ?? null),
-  setItem: jest.fn(async (k: string, v: string) => { mockMem.set(k, v); }),
-  removeItem: jest.fn(async (k: string) => { mockMem.delete(k); }),
-}));
-
 import { emptyPersona } from '../../types';
 import {
   STORAGE_KEY,
@@ -20,6 +13,13 @@ import {
   withPersona,
   claimGuestPersona,
 } from '../personaStore';
+
+const mockMem = new Map<string, string>();
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn(async (k: string) => mockMem.get(k) ?? null),
+  setItem: jest.fn(async (k: string, v: string) => { mockMem.set(k, v); }),
+  removeItem: jest.fn(async (k: string) => { mockMem.delete(k); }),
+}));
 
 const T0 = '2026-07-22T10:00:00.000Z';
 

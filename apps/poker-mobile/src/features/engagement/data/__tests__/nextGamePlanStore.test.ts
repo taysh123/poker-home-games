@@ -1,3 +1,6 @@
+import { loadNextGamePlan, saveNextGamePlan, clearNextGamePlan } from '../nextGamePlanStore';
+import type { NextGamePlan } from '../../logic/nextGamePlan';
+
 let mockStore: Record<string, string> = {};
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
@@ -7,9 +10,6 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
     removeItem: jest.fn((k: string) => { delete mockStore[k]; return Promise.resolve(); }),
   },
 }));
-
-import { loadNextGamePlan, saveNextGamePlan, clearNextGamePlan } from '../nextGamePlanStore';
-import type { NextGamePlan } from '../../logic/nextGamePlan';
 
 const plan: NextGamePlan = { mode: 'tournament', crew: ['Alex', 'Dana'], gameDay: '2026-08-01', createdDayKey: '2026-07-25', origin: 'local' };
 

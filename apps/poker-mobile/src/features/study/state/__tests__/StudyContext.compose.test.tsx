@@ -11,6 +11,8 @@
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react-native';
 
+import { StudyProvider, useStudy } from '../StudyContext';
+
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
@@ -21,8 +23,6 @@ jest.mock('../../../../context/EntitlementsContext', () => ({
 jest.mock('../../../../config/features', () => ({
   isFeatureEnabled: () => false,
 }));
-
-import { StudyProvider, useStudy } from '../StudyContext';
 
 type Ctx = ReturnType<typeof useStudy>;
 let ctx: Ctx;

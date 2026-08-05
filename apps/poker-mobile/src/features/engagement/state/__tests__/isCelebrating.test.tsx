@@ -16,6 +16,8 @@ import React from 'react';
 import { Text } from 'react-native';
 import { render, waitFor } from '@testing-library/react-native';
 
+import { EngagementProvider, useEngagement } from '../EngagementContext';
+
 // Mounting the real provider (four mocked pillar contexts + an async store load) is heavy, and
 // under parallel workers it can exceed jest's 5s default and fail as a TIMEOUT rather than an
 // assertion. Scoped to this file — the repo-wide default is deliberately left alone.
@@ -54,8 +56,6 @@ jest.mock('../../../study/state/StudyContext', () => ({ useStudy: () => ({ progr
 jest.mock('../../../bankroll/state/BankrollContext', () => ({ useBankroll: () => ({ sessions: [], isLoaded: true }) }));
 jest.mock('../../../coach/state/CoachContext', () => ({ useCoach: () => ({ history: [], isLoaded: true }) }));
 jest.mock('../../../../context/LocalGamesContext', () => ({ useLocalGames: () => ({ games: [], isLoaded: true }) }));
-
-import { EngagementProvider, useEngagement } from '../EngagementContext';
 
 const STORE_KEY = 'tpoker.engagement.v1';
 

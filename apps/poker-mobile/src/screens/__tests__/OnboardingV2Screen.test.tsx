@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Quiet Luxury funnel (Wave 1, slices 1.1+1.2) â€” the behavioral contract of the FIRST
  * IMPRESSION screen. Pins: promise â†’ goal â†’ skill â†’ format â†’ name â†’ router flow; every answer
  * commits via PersonaContext + emits a typed funnel event; the exit contract (markSeen THEN
@@ -8,6 +8,8 @@
  */
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react-native';
+
+import OnboardingV2Screen from '../OnboardingV2Screen';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
@@ -69,8 +71,6 @@ jest.mock('@expo/vector-icons', () => {
   const { View } = require('react-native');
   return { Ionicons: ({ name }: { name?: string }) => <View testID={`icon-${name}`} /> };
 });
-
-import OnboardingV2Screen from '../OnboardingV2Screen';
 
 function makeNavigation() {
   return { reset: jest.fn(), navigate: jest.fn(), goBack: jest.fn(), canGoBack: jest.fn().mockReturnValue(true) } as any;

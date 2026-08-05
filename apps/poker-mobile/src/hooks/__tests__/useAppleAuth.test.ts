@@ -8,6 +8,8 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 
+import { useAppleAuth, type AppleAuthResult } from '../useAppleAuth';
+
 const mockSignInAsync = jest.fn();
 const mockIsAvailableAsync = jest.fn();
 jest.mock('expo-apple-authentication', () => ({
@@ -19,8 +21,6 @@ jest.mock('expo-apple-authentication', () => ({
 jest.mock('expo-crypto', () => ({
   randomUUID: () => 'nonce-1234',
 }));
-
-import { useAppleAuth, type AppleAuthResult } from '../useAppleAuth';
 
 describe('useAppleAuth', () => {
   beforeEach(() => {
