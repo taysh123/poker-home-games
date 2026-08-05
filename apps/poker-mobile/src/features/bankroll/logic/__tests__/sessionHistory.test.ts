@@ -31,10 +31,15 @@ describe('historyPage', () => {
     expect(page.hasMore).toBe(true);
   });
 
-  it('clamps a visibleCount past the end instead of padding with undefined', () => {
+  it('clamps a visibleCount past the end instead of reporting a negative remainder', () => {
+    // `remaining` is the assertion that gives this test teeth. Array.slice already refuses to
+    // pad past the end, so length/hasMore hold with or without the clamp — only `remaining`
+    // distinguishes them, and an unclamped count yields -996 here, which would render as
+    // "Show -996 more" the moment any caller trusted it.
     const page = historyPage(items(3), 999);
     expect(page.visible).toHaveLength(3);
     expect(page.visible).not.toContain(undefined);
+    expect(page.remaining).toBe(0);
     expect(page.hasMore).toBe(false);
   });
 
