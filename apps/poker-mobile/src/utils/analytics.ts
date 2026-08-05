@@ -151,6 +151,16 @@ function startClientIfAllowed(): void {
 }
 
 function dispatch(entry: BufferedEvent): void {
+  // OPTED OUT ⇒ FORFEIT, not merely "don't send now". Without this the entry stays queued at the
+  // head of the buffer, and the first client constructed later drains it — publishing events the
+  // user generated while sharing was explicitly OFF (audit 2026-08-03, HIGH #6). This is the path
+  // that actually leaks: the opt-out state usually arrives from PERSISTED STORAGE at launch, so
+  // setAnalyticsOptOut() is never called in that session and a cursor bump there alone misses it.
+  //
+  // Deliberately BEFORE the gate check, because the two closed-gate reasons differ: pre-consent
+  // events are kept on purpose (consent covers the session's funnel and drains them), whereas an
+  // opted-out window must never be published retroactively.
+  if (optedOut) { drained = buffer.length; return; }
   if (!gateNow()) return;
   startClientIfAllowed();
   if (!client) return;
@@ -181,6 +191,15 @@ export async function initAnalytics(): Promise<void> {
       storage.getItemAsync(OPT_OUT_KEY),
     ]);
     optedOut = optOutV === '1';
+    // FORFEIT THE PRE-INIT BACKLOG. `optedOut` is only known AFTER the awaited read above, and
+    // App.tsx fires initAnalytics() un-awaited while the navigator mounts — so anything tracked in
+    // that window buffered with optedOut still false and dispatch()'s forfeit never saw it. Without
+    // this line a persisted opt-out still leaks retroactively on the next opt-in, which is the very
+    // defect this slice exists to close (audit 2026-08-03, HIGH #6).
+    //
+    // Deliberately conditional: when the user is NOT opted out, the pre-consent funnel must stay
+    // buffered so consent can drain it, which is separately pinned.
+    if (optedOut) drained = buffer.length;
     if (consentV === '1') {
       consentGranted = true;
     } else {
@@ -195,7 +214,14 @@ export async function initAnalytics(): Promise<void> {
       }
     }
   } catch {
-    /* storage unavailable → stay dark (fail-closed) */
+    // Storage unavailable (web with cookies blocked throws SecurityError; SecureStore can throw on
+    // keychain errors) ⇒ the persisted preference is UNKNOWN, so assume opted out. Without this the
+    // read simply never ran, `optedOut` kept its default of false, and the very next
+    // grantAnalyticsConsent() — which WelcomeScreen calls on every signed-out launch — opened the
+    // gate for a user whose stored preference was sharing OFF. The old comment here already claimed
+    // "fail-closed"; it was only true until consent was granted in memory.
+    optedOut = true;
+    drained = buffer.length;
   }
   startClientIfAllowed();
 }
@@ -218,6 +244,16 @@ export async function setAnalyticsOptOut(nextOptedOut: boolean): Promise<void> {
   if (nextOptedOut) {
     if (wasSendable) track('analytics_opt_out'); // recorded in the buffer; not sent (gate now closed)
     void client?.optOut();
+    // FORFEIT EVERYTHING BUFFERED UP TO THIS MOMENT. Not redundant with dispatch()'s forfeit: the
+    // opt_out marker above is tracked only `if (wasSendable)`, so when the gate was ALREADY closed
+    // (no consent yet, flag off, or no key) nothing is dispatched and nothing else would clear the
+    // backlog — a later consent + opt-in would then publish it.
+    //
+    // I deleted this line once, on the reasoning that removing it left the suite green. That was
+    // wrong: GREEN MEANS UNPINNED, NOT NO-EFFECT. A probe proved the difference — with the line,
+    // an event tracked pre-consent then opted out never reaches capture(); without it, it does.
+    // Restored and pinned by "opting out with the gate already closed forfeits the backlog".
+    drained = buffer.length;
   } else {
     void client?.optIn();
     startClientIfAllowed();

@@ -119,6 +119,89 @@ describe('analytics dispatch — consent-gated PostHog (real module, mocked SDK)
     expect(mockCapture).toHaveBeenCalledWith('study_lesson_completed', expect.anything());
   });
 
+  it('never sends events buffered while opted out, even when the client starts later', async () => {
+    // THE UNTESTED PRECONDITION (audit 2026-08-03, HIGH #6). The opt-out test above cannot reach
+    // this: it calls grantAnalyticsConsent() first, so a client already EXISTS, and
+    // startClientIfAllowed() then returns at its `if (client) return` guard — the drain loop never
+    // runs and nothing can leak. That asymmetry is the whole defect.
+    //
+    // The real-world case is the app OPENING already opted out (persisted from a prior session):
+    // no client is ever constructed, so dispatch() returns before advancing `drained`, every
+    // event tracked during the opted-out window stays queued at the head of the buffer, and
+    // opting back in constructs the client for the first time — whose drain loop then sends the
+    // whole backlog, including events generated while sharing was explicitly OFF.
+    mockMem.set('tpoker.analytics.consent.v1', '1');
+    mockMem.set('tpoker.analytics.optout.v1', '1');
+
+    await initAnalytics();
+    expect(mockPostHogCtor).not.toHaveBeenCalled();   // gate closed: no client exists yet
+
+    track('study_quiz_completed', { pct: 90 });        // tracked while sharing is OFF
+    track('study_lesson_completed');
+
+    await setAnalyticsOptOut(false);                   // client is constructed HERE
+
+    // Opting back in must not retroactively publish the opted-out window.
+    expect(mockCapture).not.toHaveBeenCalledWith('study_quiz_completed', expect.anything());
+    expect(mockCapture).not.toHaveBeenCalledWith('study_lesson_completed', expect.anything());
+
+    // ...and sharing genuinely resumes from now on, so this is not "fixed" by staying dark.
+    mockCapture.mockClear();
+    track('study_spot_answered', { mode: 'spot', correct: true });
+    expect(mockCapture).toHaveBeenCalledWith('study_spot_answered', expect.anything());
+  });
+
+  it('forfeits the backlog buffered before the persisted opt-out is even known', async () => {
+    // App.tsx fires initAnalytics() UN-AWAITED while the navigator mounts, and `optedOut` is only
+    // assigned after an awaited storage read — so events tracked in that window buffered with
+    // optedOut still false and dispatch()'s forfeit never saw them. A persisted opt-out therefore
+    // still leaked retroactively on the next opt-in, which is the defect this slice exists to close.
+    //
+    // This also kills the weaker `drained++` form of the forfeit: TWO events sit un-drained before
+    // the state is known, so a per-entry increment leaves one behind.
+    mockMem.set('tpoker.analytics.consent.v1', '1');
+    mockMem.set('tpoker.analytics.optout.v1', '1');
+
+    const init = initAnalytics();                     // deliberately not awaited yet
+    track('study_quiz_completed', { pct: 90 });
+    track('local_game_started');
+    await init;
+
+    await setAnalyticsOptOut(false);
+
+    expect(mockCapture).not.toHaveBeenCalledWith('study_quiz_completed', expect.anything());
+    expect(mockCapture).not.toHaveBeenCalledWith('local_game_started', expect.anything());
+  });
+
+  it('opting out with the gate already closed forfeits the backlog', async () => {
+    // The opt_out marker is only tracked `if (wasSendable)`. With the gate already closed there is
+    // no marker, no dispatch, and nothing else to clear the buffer — so the cursor bump inside
+    // setAnalyticsOptOut is load-bearing, not redundant. (Deleting it left the suite green, which
+    // proved only that it was UNPINNED. This is the pin.)
+    await initAnalytics();                            // no consent marker: gate closed
+    track('welcome_shown', { firstRun: true });        // buffered pre-consent
+    await setAnalyticsOptOut(true);                    // explicit "don't share", gate still closed
+    await grantAnalyticsConsent();
+    await setAnalyticsOptOut(false);
+
+    expect(mockCapture).not.toHaveBeenCalledWith('welcome_shown', expect.anything());
+  });
+
+  it('an unreadable storage layer is treated as opted out, not as consent', async () => {
+    // Web with cookies blocked throws SecurityError; SecureStore can throw on keychain errors. The
+    // read then never runs, so `optedOut` kept its default of false and the very next
+    // grantAnalyticsConsent() — which WelcomeScreen calls on every signed-out launch — opened the
+    // gate for a user whose stored preference was sharing OFF.
+    const storageMock = jest.requireMock('../storage');
+    storageMock.getItemAsync.mockRejectedValueOnce(new Error('SecurityError'));
+
+    await initAnalytics();
+    await grantAnalyticsConsent();
+    track('study_quiz_completed', { pct: 90 });
+
+    expect(mockCapture).not.toHaveBeenCalled();
+  });
+
   it('opt-out persists across restarts', async () => {
     await grantAnalyticsConsent();
     await setAnalyticsOptOut(true);
