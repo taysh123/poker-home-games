@@ -1442,7 +1442,7 @@ export default function SessionScreen({ route, navigation }: Props) {
                       <Text style={styles.handPot}>{formatMoney(h.potAmount)} pot</Text>
                       {h.note && <Text style={styles.handNote}>{h.note}</Text>}
                     </View>
-                    {h.createdByUserId === user?.userId && isActive && (
+                    {h.isMine && isActive && (
                       <PressableScale onPress={() => handleDeleteHand(h.id)} hitSlop={8} haptic="light" accessibilityRole="button" accessibilityLabel="Delete hand record">
                         <View style={styles.handDeleteWrap}><Ionicons name="trash-outline" size={13} color={colors.error} /></View>
                       </PressableScale>

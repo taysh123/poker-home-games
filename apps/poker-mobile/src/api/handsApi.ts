@@ -7,7 +7,13 @@ export type HandRecordDto = {
   winnerName: string;
   potAmount: number;
   note: string | null;
-  createdByUserId: string;
+  /**
+   * Whether the signed-in user logged this hand — the server's answer, not an id to compare.
+   * Replaces `createdByUserId`, which shipped the raw account GUID of whoever logged the hand to
+   * every session participant (audit 2026-08-03, HIGH #4). The server computes this from the same
+   * rule it enforces on delete, so the button can no longer disagree with the endpoint.
+   */
+  isMine: boolean;
   createdAt: string;
 };
 
@@ -22,14 +28,21 @@ export async function getSessionHandHistory(token: string, sessionId: string): P
   return data;
 }
 
+/**
+ * The create endpoint returns its own narrower shape — notably NO `isMine`, which only the
+ * history endpoint computes. Typing it as HandRecordDto claimed a field the server never sends;
+ * callers refetch the history after adding, so nothing depended on the wider type.
+ */
+export type AddedHandRecordDto = Omit<HandRecordDto, 'isMine'> & { sessionId: string };
+
 export async function addHandRecord(
   token: string,
   sessionId: string,
   winnerName: string,
   potAmount: number,
   note?: string,
-): Promise<HandRecordDto> {
-  const { data } = await api.post<HandRecordDto>(
+): Promise<AddedHandRecordDto> {
+  const { data } = await api.post<AddedHandRecordDto>(
     `/api/sessions/${sessionId}/hands`,
     { winnerName, potAmount, note: note || null },
     { headers: authHeader(token) },
