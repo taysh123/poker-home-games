@@ -190,6 +190,23 @@ preserved, plus a `claimGuestBankroll()` mirroring the shipped pure function `cl
 - **Recorded decision:** existing beta data has no owner attribution, so it lands in the guest
   scope and is claimed by the first sign-in. That is the behaviour testers would expect — noted
   here so it is a decision on record, not a surprise a tester reports.
+- **SIGNED OFF (owner, 2026-08-05) — known property of the claim pattern, shared by bankroll,
+  persona AND coach, not bankroll-specific:** `claimGuestBankroll` never clears the guest bucket
+  after a claim (matching `claimGuestPersona` byte-for-byte). If UserA plays a guest session on a
+  device and later signs in (claiming it), then logs out, and UserB signs in **fresh** on the same
+  device with no bankroll data of their own, UserB inherits that **same original guest bucket** —
+  not UserA's post-claim account data, but the guest history itself. Verified by the B1 review
+  fleet by execution; independently confirmed to be the identical shape already shipping in
+  `claimGuestPersona`/personaStore (no fleet-run equivalent check exists for coach, since
+  `coachStore` deliberately has no claim function at all — AI credits are device-bound for guests
+  by design, a fraud-prevention seam, not an oversight). Bounded by the same load-bearing guard
+  that protects everything else: the claim only ever fires when the *receiving* account has none
+  of its own data, so a returning account with real history can never be overwritten by it — only
+  a genuinely fresh account can inherit a stale guest bucket. Accepted as-is: two different real
+  people sharing one physical device's guest mode, with the first later registering, is rare, and
+  the existing recourse bounds the blast radius. **If this is ever fixed, it is a cross-cutting
+  change to the shared claim pattern across all three features (persona/coach/bankroll), not a
+  bankroll-only patch** — do not re-flag it as a new B1 defect.
 
 ### B2 — Log-form honesty + prod-safe date input
 
@@ -203,6 +220,15 @@ preserved, plus a `claimGuestBankroll()` mirroring the shipped pure function `cl
 - **SB/BB stakes inputs are NOT in this slice.** The schema fields exist, but *nothing reads
   them* — shipping the inputs alone repeats the exact write-only-data defect class the audit just
   flagged for `rebuyCount`. They return when a read surface (bb/100, per-stake grouping) exists.
+- **Fleet-found (2026-08-05), deferred — not fixed in this slice:** `parseMoneyCents` has no
+  upper-bound/safe-integer guard; an extremely large pasted string (e.g. `99999999999999999999`)
+  parses to a finite-but-imprecise float that passes validation and would silently corrupt a
+  stored amount. Verified reproducible by the review fleet. Not a regression: `utils/money.ts`'s
+  canonical `parseAmountToCents` has the byte-identical unbounded regex, so this mirrors an
+  existing accepted pattern rather than introducing a new one. A real fix belongs at the shared
+  canonical helper (or a common wrapper both call), not duplicated ad hoc in this file — out of
+  scope for a "bankroll-scoped, small" slice. Recommend a dedicated follow-up slice touching both
+  call sites; *engineering call, made here — say so if you'd rather fix it in this PR instead.*
 
 ### B3 — Pure calendar logic
 
