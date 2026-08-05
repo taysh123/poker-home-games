@@ -220,6 +220,15 @@ preserved, plus a `claimGuestBankroll()` mirroring the shipped pure function `cl
 - **SB/BB stakes inputs are NOT in this slice.** The schema fields exist, but *nothing reads
   them* — shipping the inputs alone repeats the exact write-only-data defect class the audit just
   flagged for `rebuyCount`. They return when a read surface (bb/100, per-stake grouping) exists.
+- **Fleet-found (2026-08-05), deferred — not fixed in this slice:** `parseMoneyCents` has no
+  upper-bound/safe-integer guard; an extremely large pasted string (e.g. `99999999999999999999`)
+  parses to a finite-but-imprecise float that passes validation and would silently corrupt a
+  stored amount. Verified reproducible by the review fleet. Not a regression: `utils/money.ts`'s
+  canonical `parseAmountToCents` has the byte-identical unbounded regex, so this mirrors an
+  existing accepted pattern rather than introducing a new one. A real fix belongs at the shared
+  canonical helper (or a common wrapper both call), not duplicated ad hoc in this file — out of
+  scope for a "bankroll-scoped, small" slice. Recommend a dedicated follow-up slice touching both
+  call sites; *engineering call, made here — say so if you'd rather fix it in this PR instead.*
 
 ### B3 — Pure calendar logic
 
