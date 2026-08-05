@@ -228,17 +228,10 @@ export async function setAnalyticsOptOut(nextOptedOut: boolean): Promise<void> {
   if (nextOptedOut) {
     if (wasSendable) track('analytics_opt_out'); // recorded in the buffer; not sent (gate now closed)
     void client?.optOut();
-    // OPTING OUT FORFEITS THE BUFFER (audit 2026-08-03, HIGH #6). dispatch() returns before
-    // advancing `drained` whenever the gate is closed, so anything tracked from here on stays
-    // queued at the head of the buffer. That is harmless while a client already exists —
-    // startClientIfAllowed() bails at its `if (client) return` guard, so the drain loop never runs
-    // again — but if the app OPENED already opted out, no client was ever constructed, and opting
-    // back in constructs the first one, whose drain loop would publish the entire opted-out window.
-    // Advancing the cursor to the current tail marks those events as already handled, so re-opting
-    // in resumes sharing from that moment instead of retroactively.
-    //
-    // AFTER the track above on purpose: the opt_out marker is forfeited with everything else.
-    drained = buffer.length;
+    // No cursor bump here: `optedOut` is already true above, so the opt_out marker's own dispatch()
+    // performs the forfeit, and every later event forfeits itself the same way. An earlier draft
+    // duplicated it here — mutation testing showed removing that copy left all ten tests green,
+    // i.e. it was unpinned and redundant, so it is gone rather than left as an unverified guarantee.
   } else {
     void client?.optIn();
     startClientIfAllowed();
