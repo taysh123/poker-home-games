@@ -198,17 +198,21 @@ git commit -m "feat(bankroll): month-grid layout logic (B5)"
 
 ---
 
-### Task 2: Heat-cell visual encoding + the colour-alone pins
+### Task 2: Heat encoding — month-scoped levels, cell visuals, and the colour-alone pins
 
 **Files:**
 - Create: `apps/poker-mobile/src/features/bankroll/logic/heatCell.ts`
+- Modify: `apps/poker-mobile/src/features/bankroll/logic/calendar.ts` (add `monthHeatLevels`)
 - Test: `apps/poker-mobile/src/features/bankroll/logic/__tests__/heatCell.test.ts`
+- Test: `apps/poker-mobile/src/features/bankroll/logic/__tests__/calendar.test.ts` (extend)
 
 **Interfaces:**
-- Consumes: `DayHeatLevel` from `features/bankroll/logic/calendar`; `colors` from `theme/colors`; `formatCentsSigned` from `utils/money`.
-- Produces: `HeatCellKind = 'none' | 'even' | 'win' | 'loss'`, `HeatCellVisual { kind, step }`, `heatCellVisual(bucket, levelCount?)`, `heatCellStyle(v)`, `heatCellTextColor(v)`, `dayCellLabel(dayKey, dayNumber, bucket)`.
+- Consumes: `DayHeatLevel`, `heatmapLevels` from `features/bankroll/logic/calendar`; `localMonthKey` from `features/study/logic/localDay`; `colors` from `theme/colors`; `formatCents` from `utils/money`; `monthLabel` from `./monthGrid`.
+- Produces: `monthHeatLevels(sessions, monthKey, levelCount?): DayHeatLevel[]`; `HeatCellKind = 'none' | 'even' | 'win' | 'loss'`, `HeatCellVisual { kind, step }`, `heatCellVisual(bucket, levelCount?)`, `heatCellStyle(v)`, `heatCellTextColor(v)`, `dayCellLabel(dayKey, dayNumber, bucket)`.
 
-This task carries the B4 decision's teeth: a test proves losers are never solid-filled and that `kind` alone (no colour) separates every state.
+This task carries the B4 decision's teeth: tests prove losers are never solid-filled, that `kind` alone (no colour) separates every state, and that **the ramp is scoped to the visible month**.
+
+**Why `monthHeatLevels` is a function and not two lines in the screen:** `heatmapLevels` scales relative to the largest `|netCents|` in whatever set it is handed. Passing the full dataset would measure every month against the all-time best day, flattening a normal month to step 1 everywhere. Screens are not unit-tested in this repo, so leaving the scoping inline in `BankrollScreen` would make it unpinnable — a future refactor could pass the full set and nothing would go red. Moving it into `calendar.ts` makes the decision testable.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -413,19 +417,90 @@ export function dayCellLabel(dayKey: string, dayNumber: number, bucket: DayHeatL
 Run: `cd apps/poker-mobile && TZ=Asia/Jerusalem npx jest src/features/bankroll/logic/__tests__/heatCell.test.ts --ci`
 Expected: PASS, 13 tests.
 
-- [ ] **Step 5: Revert-test the load-bearing pin**
+- [ ] **Step 5: Add `monthHeatLevels` to `calendar.ts` with its scoping pin**
 
-Temporarily give losing cells a solid fill — change the `'loss'` branch of `heatCellStyle` to
+Append to `apps/poker-mobile/src/features/bankroll/logic/calendar.ts`:
+
+```typescript
+/**
+ * Heat levels for ONE local month, scaled against that month's own biggest day (B5).
+ *
+ * The scoping is the point. `heatmapLevels` ramps relative to the largest |netCents| in the set
+ * it is given, so handing it the full history would measure every month against the all-time
+ * best day — one huge night in March would flatten every other month to step 1. A month view
+ * should read "within this month", so the filter belongs here, next to the ramp it affects,
+ * where it can be tested. Do NOT inline this in a screen: screens are not unit-tested here, so
+ * a future refactor passing the unscoped set would go unnoticed.
+ */
+export function monthHeatLevels(
+  sessions: BankrollSession[],
+  monthKey: string,
+  levelCount = 4,
+): DayHeatLevel[] {
+  return heatmapLevels(
+    sessions.filter(s => localMonthKey(new Date(s.startedAt)) === monthKey),
+    levelCount,
+  );
+}
+```
+
+Append these tests to `apps/poker-mobile/src/features/bankroll/logic/__tests__/calendar.test.ts`, and add `monthHeatLevels` to its import list:
+
+```typescript
+describe('monthHeatLevels — the ramp is scoped to the visible month (B5 pin)', () => {
+  it('returns only the requested month, ignoring every other month', () => {
+    const sessions = [day('2026-06-10T12:00:00', 1000), day('2026-07-10T12:00:00', 2000)];
+    const levels = monthHeatLevels(sessions, '2026-06');
+    expect(levels.map(l => l.dayKey)).toEqual(['2026-06-10']);
+  });
+
+  it('scales against THIS month\'s biggest day, not the all-time biggest', () => {
+    // March holds a huge outlier; June's best day is modest. Scoped, June's best is still
+    // top-of-ramp. Unscoped it would collapse to step 1 — the exact bug this pins.
+    const sessions = [
+      day('2026-03-02T12:00:00', 1_000_000), // all-time outlier, a different month
+      day('2026-06-10T12:00:00', 10_000),    // June's best
+      day('2026-06-11T12:00:00', 5_000),     // half of June's best
+    ];
+    const byDay = Object.fromEntries(
+      monthHeatLevels(sessions, '2026-06').map(l => [l.dayKey, l.level]),
+    );
+    expect(byDay['2026-06-10']).toBe(4);
+    expect(byDay['2026-06-11']).toBe(2);
+
+    // Prove the unscoped call really would have flattened it — otherwise this test asserts nothing.
+    const unscoped = Object.fromEntries(heatmapLevels(sessions).map(l => [l.dayKey, l.level]));
+    expect(unscoped['2026-06-10']).toBe(1);
+  });
+
+  it('is empty for a month with no sessions', () => {
+    expect(monthHeatLevels([day('2026-06-10T12:00:00', 1000)], '2026-07')).toEqual([]);
+  });
+});
+```
+
+- [ ] **Step 6: Run both suites**
+
+Run: `cd apps/poker-mobile && TZ=Asia/Jerusalem npx jest src/features/bankroll/logic/__tests__/heatCell.test.ts src/features/bankroll/logic/__tests__/calendar.test.ts --ci`
+Expected: PASS.
+
+- [ ] **Step 7: Revert-test both load-bearing pins**
+
+**(a) Losers stay hollow.** Change the `'loss'` branch of `heatCellStyle` to
 `{ backgroundColor: colors.errorFaint, borderColor: LOSS_BORDER[v.step - 1], borderWidth: LOSS_WIDTH[v.step - 1] }`.
+Expected: FAIL — `losing cells are HOLLOW` goes red, nothing else does.
 
-Run: `cd apps/poker-mobile && TZ=Asia/Jerusalem npx jest src/features/bankroll/logic/__tests__/heatCell.test.ts --ci`
-Expected: FAIL — `losing cells are HOLLOW` goes red and nothing else does. Restore the original branch and confirm `git diff` on the file is clean before continuing.
+**(b) The ramp stays month-scoped.** Change `monthHeatLevels` to drop its filter:
+`return heatmapLevels(sessions, levelCount);`
+Expected: FAIL — `returns only the requested month…` and `scales against THIS month's biggest day…` go red.
 
-- [ ] **Step 6: Commit**
+Restore both and confirm `git diff` on the two source files is clean before committing.
+
+- [ ] **Step 8: Commit**
 
 ```bash
-git add apps/poker-mobile/src/features/bankroll/logic/heatCell.ts apps/poker-mobile/src/features/bankroll/logic/__tests__/heatCell.test.ts
-git commit -m "feat(bankroll): heat-cell encoding with the colour-alone pins (B5)"
+git add apps/poker-mobile/src/features/bankroll/logic/heatCell.ts apps/poker-mobile/src/features/bankroll/logic/calendar.ts apps/poker-mobile/src/features/bankroll/logic/__tests__/heatCell.test.ts apps/poker-mobile/src/features/bankroll/logic/__tests__/calendar.test.ts
+git commit -m "feat(bankroll): heat encoding with month-scoped ramp and colour-alone pins (B5)"
 ```
 
 ---
@@ -805,7 +880,7 @@ Add to the import block:
 
 ```tsx
 import { localMonthKey } from '../../study/logic/localDay';
-import { monthBuckets, heatmapLevels } from '../logic/calendar';
+import { monthBuckets, monthHeatLevels } from '../logic/calendar';
 import { SESSION_PAGE_SIZE, historyPage } from '../logic/sessionHistory';
 import BankrollMonthCalendar from './BankrollMonthCalendar';
 import BankrollMonthStrip from './BankrollMonthStrip';
@@ -824,14 +899,11 @@ After the existing `const history = useMemo(...)` block:
 
 ```tsx
 const months = useMemo(() => monthBuckets(filtered), [filtered]);
-const monthLevels = useMemo(
-  () => heatmapLevels(filtered.filter(s => localMonthKey(new Date(s.startedAt)) === monthKey)),
-  [filtered, monthKey],
-);
+const monthLevels = useMemo(() => monthHeatLevels(filtered, monthKey), [filtered, monthKey]);
 const page = useMemo(() => historyPage(history, visibleCount), [history, visibleCount]);
 ```
 
-**Why filter to the month before calling `heatmapLevels`:** the ramp is relative to the largest `|netCents|` in the set it is given. Passing the whole dataset would scale every month against the all-time best day, so a normal month would render almost entirely at step 1. Scoping to the visible month makes the ramp mean "within this month" — which is what a month view should say.
+The month scoping lives inside `monthHeatLevels` (Task 2), **not** inline here — screens are not unit-tested in this repo, so an inline filter would be unpinnable and a future refactor could quietly pass the unscoped set. Import `monthHeatLevels` from `../logic/calendar` rather than `heatmapLevels`.
 
 - [ ] **Step 3: Reset paging when the filter changes**
 
@@ -960,4 +1032,8 @@ Include: the B4 decision link, the colour-alone pins and how they were revert-te
 
 - **Year heatmap** — B6. It uses the SVG house pattern, is never tappable, and its luminance ramp must use fill lightness/opacity on plain `<Rect>`s, **never SVG filter primitives** (patchy on Android while react-native-web renders them fine). B6's fleet must confirm on a real Android path.
 - **Day → history filtering** — B7, alongside the date-range and tags filter UI. `onSelectDay` is already threaded for it.
-- **List virtualization** — deliberately deferred; see Task 3's scope note.
+- **List virtualization** — deliberately deferred; see Task 3's scope note. **Recorded follow-up
+  (owner, 2026-08-05):** if year-scale data ever makes incremental reveal insufficient, the real
+  fix is converting the history to a `FlatList` (`renderItem` with a memoized row, stable
+  `keyExtractor` — never index). That is a restructure of `BankrollScreen`'s single `ScrollView`,
+  so it gets its own slice rather than riding along here.

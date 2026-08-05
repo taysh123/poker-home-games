@@ -272,6 +272,14 @@ tappable** (one `<Svg accessibilityRole="image">`, drill-in via a month affordan
 first commit, no ceiling raise. B7 is genuinely presentational — all six filter fields and
 `filterSessions` already exist and are pinned.
 
+B5's implementation plan: `docs/superpowers/plans/2026-08-05-b5-month-calendar.md`.
+
+**Recorded follow-up, NOT in Q2 (owner, 2026-08-05):** B5's history pagination is **incremental
+reveal, not virtualization** — it caps how many rows mount, it does not recycle them.
+`BankrollScreen` is one `ScrollView` with several sections, so a genuine `FlatList` conversion is a
+restructure and gets its own slice. Revisit only if year-scale data makes the cap insufficient; say
+"incremental reveal" in any copy or PR, never imply the list is virtualized.
+
 ### B9 — Flip the flag
 
 One line in `config/features.ts` + one `expectedOn` entry. **Track already leads with Bankroll**
