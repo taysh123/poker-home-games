@@ -43,7 +43,15 @@ jobs:
         run: dotnet test PokerApp.sln --nologo
 
   mobile:
-    name: Mobile · tsc + jest
+    # NAME LISTS EVERY GATE ON PURPOSE. This job runs three: typecheck, lint and unit tests. While
+    # it was called "tsc + jest", a lint-budget breach failed it and read as an unrelated tsc/jest
+    # failure, costing a full round to diagnose (T0.4, 2026-08-05). A check's name is the first
+    # thing anyone sees when it goes red, so it has to say what actually ran.
+    #
+    # RENAMING THIS CHANGES THE REQUIRED-CHECK CONTEXT. Branch protection on `main` requires checks
+    # by exact name, so the required entry must be updated to match in the same change — otherwise
+    # the old context never reports and every PR blocks forever, including this one.
+    name: Mobile · tsc + lint + jest
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -65,8 +73,14 @@ jobs:
         # react-hooks/rules-of-hooks is an ERROR — a violation crashes at runtime and is invisible
         # to tsc, jest and the web export. Severity is pinned by
         # src/config/__tests__/eslintRules.test.ts so it cannot be silently downgraded.
-        # NOTE: `main` has no branch protection / required checks, so a red job does not itself
-        # block a merge — that is an owner setting, not something this file can assert.
+        #
+        # `main` IS branch-protected now, and this job is a REQUIRED check — a red run genuinely
+        # blocks the merge. (An earlier version of this comment said the opposite; that was true
+        # when it was written and silently stopped being true.)
+        #
+        # The ceiling is a TOTAL, so this step can fail because of a file the failure never names.
+        # Fix the cause; do not raise the number — the backlog is meant to shrink only. Headroom as
+        # of 2026-08-05: 119 used of 200.
         run: npm run lint
       - name: Unit tests
         # Positive-offset TZ (matches the user base): jest's local-day/month pins are UTC-blind on
