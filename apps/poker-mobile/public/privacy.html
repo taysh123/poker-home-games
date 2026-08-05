@@ -65,8 +65,11 @@
         To understand which features help players and which need work, we collect anonymous
         usage events — for example "a quiz was completed" or "a game night was started" —
         using <strong>PostHog</strong>, processed and stored on servers in the
-        <strong>European Union</strong>. Collection begins only after you make your explicit
-        choice on the welcome screen, and you can switch it off any time in
+        <strong>European Union</strong>. Nothing is sent before you make your choice on the
+        welcome screen. Two events from that screen itself — that it appeared, and which option
+        you picked — are held on your device until then and sent only once you choose; if you
+        close the app without choosing, they are discarded and never leave your device. You can
+        switch sharing off any time in
         <strong>Profile → Privacy → "Share anonymous usage analytics"</strong>.
       </p>
       <p><strong>What these events include:</strong> the feature used, screen flow, app version,

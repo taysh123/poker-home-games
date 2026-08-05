@@ -14,8 +14,13 @@
   typed events (feature usage, screen flow, app version, platform, coarse device type).
   PostHog-side autocapture, session replay, heatmaps, and web vitals are **OFF** (owner-verified
   2026-07-22) — nothing beyond our `capture` calls flows.
-- Collection starts only AFTER the user's explicit Welcome choice; the Profile → Privacy toggle
-  turns it off any time (both CI-pinned).
+- TRANSMISSION starts only AFTER the user's explicit Welcome choice; the Profile → Privacy toggle
+  turns it off any time (both CI-pinned). Precise version (corrected 2026-08-05, matching
+  privacy.html): the welcome screen's own two events — that it appeared, and which option was
+  picked — are RECORDED in an in-memory buffer just before the choice and sent only once the
+  choice is made. If the user closes the app without choosing they are discarded and never leave
+  the device. Nothing is persisted and nothing is transmitted pre-choice, so the DECLARED DATA
+  TYPES are unaffected — this is a timing precision, not a new collection category.
 - Guests: a random app-scoped PostHog ID, never linked to identity. Signed-in users:
   `identify(userId)` links events to the account id; `reset()` on logout.
 - NEVER collected (privacy-policy pinned list): game amounts, buy-ins/settlements, player
@@ -27,7 +32,7 @@
 
 | Category | Collected? | Shared? | Optional? | Purpose | Notes |
 |---|---|---|---|---|---|
-| App activity → App interactions | ✅ | ❌ | ✅ | Analytics | Typed feature-usage events only. "Shared" = No: PostHog is a data processor acting on our behalf (Play's definition excludes service providers). Optional = Yes: starts only after the Welcome choice; Profile toggle disables. |
+| App activity → App interactions | ✅ | ❌ | ✅ | Analytics | Typed feature-usage events only. "Shared" = No: PostHog is a data processor acting on our behalf (Play's definition excludes service providers). Optional = Yes: nothing is transmitted before the Welcome choice (the screen's own two events are buffered in memory and sent only if the user chooses, discarded otherwise); Profile toggle disables. |
 | Device or other IDs | ✅ | ❌ | ✅ | Analytics | PostHog's random app-scoped ID. NOT the Advertising ID (we never read it). |
 | Personal info → User IDs | ✅ | ❌ | ✅ | Analytics | Signed-in users only (account id via identify). |
 | Personal info → Email, Name | ✅ | ❌ | ✅ | App functionality, Account management | Account signup only (pre-existing; unrelated to analytics). Guests: not collected. |
