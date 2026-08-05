@@ -4,6 +4,27 @@ describe('WEEKDAY_INITIALS', () => {
   it('is seven Sunday-first column headers', () => {
     expect(WEEKDAY_INITIALS).toEqual(['S', 'M', 'T', 'W', 'T', 'F', 'S']);
   });
+
+  it('AGREES with the column each date actually lands in — the header and the grid offset are separate constants', () => {
+    // The literal test above only restates the source line; it has zero power to detect the
+    // headers and the grid DISAGREEING. The realistic bad edit is "make the calendar
+    // Monday-first like the rest of the world": someone rotates WEEKDAY_INITIALS and its
+    // literal test, never noticing that monthGridCells derives its offset from getDay() (which
+    // is Sunday-based). Every date then sits one column off its header letter, silently.
+    //
+    // This pin derives the expected letter from the real Date rather than from the constant,
+    // so a one-sided change to either side goes red.
+    const INITIAL_OF_DAY = ['S', 'M', 'T', 'W', 'T', 'F', 'S']; // getDay() 0..6 -> Sunday..Saturday
+    for (const monthKey of ['2026-01', '2026-02', '2026-06', '2026-08', '2028-02']) {
+      const cells = monthGridCells(monthKey);
+      cells.forEach((dayKey, index) => {
+        if (!dayKey) return;
+        const [y, m, d] = dayKey.split('-').map(Number);
+        const column = index % 7;
+        expect(WEEKDAY_INITIALS[column]).toBe(INITIAL_OF_DAY[new Date(y, m - 1, d).getDay()]);
+      });
+    }
+  });
 });
 
 describe('shiftMonth', () => {

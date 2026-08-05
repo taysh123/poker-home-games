@@ -40,6 +40,16 @@ export const colors = {
   aiPurple: '#C46EE8', // same hue as the Epic achievement rarity — promoted to a token
   aiPurpleFaint: 'rgba(196,110,232,0.10)',
 
+  // Calendar heat ramp (B5). These alphas are NOT arbitrary — each is the lowest value that
+  // still clears WCAG 1.4.11's 3:1 non-text floor over `background`, while keeping the day
+  // number on top of it above 4.5:1. Measured: 0.55 -> 3.20:1 (light text 4.71:1), 0.75 ->
+  // 4.88:1, 0.85 -> 5.92:1, solid gold -> 7.76:1 (dark text on all three). Alphas between 0.60
+  // and 0.70 are unusable: the fill is dark enough to sink light text below 4.5:1 but not light
+  // enough to carry dark text, so the ramp deliberately steps over that band.
+  goldHeat1: 'rgba(201,168,76,0.55)',
+  goldHeat2: 'rgba(201,168,76,0.75)',
+  goldHeat3: 'rgba(201,168,76,0.85)',
+
   // Podium accents. 1st place uses `gold`; 2nd/3rd had no token and were duplicated as literals
   // across SessionScreen and GroupDetailScreen. NOT interchangeable with textMuted (#8E9BAA) —
   // visually adjacent to silver but semantically body copy; collapsing them tints 2nd place as
