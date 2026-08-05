@@ -138,7 +138,32 @@ public class AchievementEvaluator(AppDbContext context) : IAchievementEvaluator
             await context.UserAchievements.AddAsync(ua, cancellationToken);
         }
 
-        await context.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch
+        {
+            // MY FAILURE MUST STAY MINE. This evaluator shares the REQUEST'S DbContext — DI resolves
+            // IApplicationDbContext to the same scoped AppDbContext that EndSessionCommandHandler
+            // and NotificationService hold (DependencyInjection.cs: "the DI container resolves the
+            // same scoped instance"). EF does NOT revert the change tracker when SaveChanges fails,
+            // so without this the rows queued above stay Added and the NEXT SaveChanges in the
+            // request — NotificationService writing its own rows — re-attempts them. Two proven
+            // consequences, both discovered by the T0.3 review fleet once EndSession began swallowing
+            // this exception instead of dying on it:
+            //   · a unique-index race re-throws inside the notification path, so the "session ended"
+            //     notification for every OTHER player is destroyed;
+            //   · a TRANSIENT failure is worse — the row gets COMMITTED by that unrelated
+            //     notification transaction, while EndSession has already logged it as not awarded.
+            // Detaching leaves the caller's context exactly as it found it, so the rest of the
+            // request proceeds untouched. The throw still propagates; the caller decides what it means.
+            foreach (var entry in context.ChangeTracker.Entries<UserAchievement>()
+                         .Where(e => e.State == EntityState.Added))
+                entry.State = EntityState.Detached;
+            throw;
+        }
+
         return newly.AsReadOnly();
     }
 }

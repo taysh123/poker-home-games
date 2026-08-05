@@ -110,15 +110,35 @@ public sealed class EndSessionCommandHandler(
         // UserAchievement rows, so a unique-index race on (UserId, AchievementKey) — the same user
         // ending two different sessions at once — throws DbUpdateException. Nothing maps that, so
         // the caller got a bare 500 for a game night the server had already closed out, and the
-        // client showed an error over a finished session. Same defect class as PR #74 and PR #78.
+        // client showed an error over a finished session. That shares PR #74's shape — an unmapped
+        // DB exception surfacing as a bare 500 on a user-critical path — though there the PRIMARY
+        // operation failed, whereas here the request had already committed. (An earlier version of
+        // this comment also claimed PR #78; that one is a data-integrity omission with no 500 and no
+        // best-effort step, so the comparison did not hold and was removed.)
         //
         // LOGGED, not silently swallowed: a failure here means a player did not get an achievement
         // they earned. That is invisible to everyone unless it is recorded, and a systematic
         // failure (a broken evaluator, not a one-off race) would otherwise never surface at all.
+        //
+        // The evaluator detaches its own failed writes before rethrowing — see AchievementEvaluator.
+        // Without that, swallowing here left its rows tracked as Added on the SHARED request context
+        // and the notification saves below re-attempted them, destroying every other player's
+        // "session ended" notification.
         IReadOnlyList<string> newAchievementKeys = [];
         try
         {
-            newAchievementKeys = await achievementEvaluator.EvaluateAsync(userId, request.SessionId, cancellationToken);
+            newAchievementKeys = await achievementEvaluator.EvaluateAsync(userId, request.SessionId, cancellationToken)
+                                 ?? [];
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // The caller hung up (a client backgrounding the app right after the End Game tap lands
+            // exactly here). Expected, not a server fault — logging it at Error would page on a user
+            // closing the app, and contradicts the severity rule this slice's predecessor wrote into
+            // ExceptionHandlingMiddleware: severity follows the outcome, not the fact that something threw.
+            logger.LogInformation(
+                "Achievement evaluation was cancelled after session {SessionId} ended. The session end is committed.",
+                request.SessionId);
         }
         catch (Exception ex)
         {
