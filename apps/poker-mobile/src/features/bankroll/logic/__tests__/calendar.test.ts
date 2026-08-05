@@ -115,4 +115,28 @@ describe('heatmapLevels', () => {
     const sessions = [day('2026-06-01T12:00:00', 5000)];
     expect(heatmapLevels(sessions, 10)[0].level).toBe(10);
   });
+
+  describe('levelCount guard (fleet-found, 2026-08-05)', () => {
+    it('a non-positive levelCount never collapses a real win/loss into "no session" (0) or inverts sign', () => {
+      const sessions = [day('2026-06-01T12:00:00', 10000), day('2026-06-02T12:00:00', -5000)];
+      const byDay = (levelCount: number) =>
+        Object.fromEntries(heatmapLevels(sessions, levelCount).map(l => [l.dayKey, l.level]));
+      // Previously: levelCount=0 -> both real days silently became level 0 (indistinguishable
+      // from a no-session day); levelCount=-4 -> the WINNING day got level -4 (worst loss) and
+      // the LOSING day got level +2 (a moderate win) — sign fully inverted, not merely clamped.
+      expect(byDay(0)).toEqual({ '2026-06-01': 1, '2026-06-02': -1 });
+      expect(byDay(-4)).toEqual({ '2026-06-01': 1, '2026-06-02': -1 });
+    });
+
+    it('a non-finite levelCount (NaN/Infinity) falls back to the documented default (4)', () => {
+      const sessions = [day('2026-06-01T12:00:00', 5000)];
+      expect(heatmapLevels(sessions, NaN)[0].level).toBe(4);
+      expect(heatmapLevels(sessions, Infinity)[0].level).toBe(4);
+    });
+
+    it('a non-integer levelCount is floored, not left fractional', () => {
+      const sessions = [day('2026-06-01T12:00:00', 5000)];
+      expect(heatmapLevels(sessions, 2.9)[0].level).toBe(2);
+    });
+  });
 });

@@ -92,9 +92,19 @@ function endOfLocalDayIso(dayKey: string): string {
 export function filterSessions(sessions: BankrollSession[], f: BankrollFilter = {}): BankrollSession[] {
   const from = f.from && BARE_DAY_KEY.test(f.from) ? startOfLocalDayIso(f.from) : f.from;
   const to = f.to && BARE_DAY_KEY.test(f.to) ? endOfLocalDayIso(f.to) : f.to;
+  // Compare as NUMERIC instants, not strings: a string compare silently assumes every
+  // startedAt is serialized with the same millisecond-precision .toISOString() shape as the
+  // from/to bounds we just built — a startedAt missing the ".mmm" suffix (legal ISO 8601, just
+  // not what buildSessionInput happens to emit today) would sort wrong against a bound that has
+  // it. getTime() is immune to string-width/format differences (fleet-found, 2026-08-05).
+  const fromMs = from ? new Date(from).getTime() : null;
+  const toMs = to ? new Date(to).getTime() : null;
   return sessions.filter(s => {
-    if (from && s.startedAt < from) return false;
-    if (to && s.startedAt > to) return false;
+    if (fromMs !== null || toMs !== null) {
+      const startedAtMs = new Date(s.startedAt).getTime();
+      if (fromMs !== null && startedAtMs < fromMs) return false;
+      if (toMs !== null && startedAtMs > toMs) return false;
+    }
     if (f.gameType && s.gameType !== f.gameType) return false;
     if (f.source && s.source !== f.source) return false;
     if (f.bankrollId && (s.bankrollId ?? DEFAULT_BANKROLL_ID) !== f.bankrollId) return false;

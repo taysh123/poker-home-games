@@ -21,6 +21,7 @@ import { computeXp } from '../../logic/xp';
 // default is deliberately left alone.
 jest.setTimeout(20_000);
 import type { EngagementSignals } from '../../types';
+import type { BankrollSession } from '../../../bankroll/types';
 
 let mockStorage: Record<string, string> = {};
 jest.mock('@react-native-async-storage/async-storage', () => ({
@@ -51,7 +52,10 @@ const mockProgress = {
   dailyGoal: 10,
 };
 jest.mock('../../../study/state/StudyContext', () => ({ useStudy: () => ({ progress: mockProgress, isLoaded: true }) }));
-jest.mock('../../../bankroll/state/BankrollContext', () => ({ useBankroll: () => ({ sessions: [], isLoaded: true }) }));
+// Mutable so the bankrollPositiveMonth-wiring tests below can override it per-test (mirrors the
+// mockStorage pattern above) — every OTHER test in this file relies on it defaulting to [].
+let mockBankrollSessions: BankrollSession[] = [];
+jest.mock('../../../bankroll/state/BankrollContext', () => ({ useBankroll: () => ({ sessions: mockBankrollSessions, isLoaded: true }) }));
 jest.mock('../../../coach/state/CoachContext', () => ({ useCoach: () => ({ history: [], isLoaded: true }) }));
 jest.mock('../../../../context/LocalGamesContext', () => ({ useLocalGames: () => ({ games: [], isLoaded: true }) }));
 
@@ -69,7 +73,7 @@ function Probe() {
 
 const mount = () => render(<EngagementProvider><Probe /></EngagementProvider>);
 
-beforeEach(() => { mockStorage = {}; mockTrack.mockClear(); });
+beforeEach(() => { mockStorage = {}; mockTrack.mockClear(); mockBankrollSessions = []; });
 
 describe('EngagementContext — monotonic-XP wiring (Q0 pin)', () => {
   it('XP counts SEEN achievements even when their predicates have lapsed (never live eligibility)', async () => {
@@ -113,5 +117,37 @@ describe('EngagementContext — monotonic-XP wiring (Q0 pin)', () => {
     await waitFor(() => expect(getByTestId('probe').props.children).toBe(`xp:${expected}`));
     expect(mockTrack).not.toHaveBeenCalledWith('rank_up', expect.anything());
     await waitFor(() => expect(JSON.parse(mockStorage[STORE_KEY]).lastXp).toBe(expected));
+  });
+});
+
+describe('EngagementContext — bankrollPositiveMonth wiring (B3 fleet-found gap, 2026-08-05)', () => {
+  // Every test above mocks useBankroll with sessions: [] and never observes this signal, so none
+  // of them exercise netCentsForMonth's real summation path (B3) through EngagementContext — only
+  // its empty-array fallback. This probe exposes signals directly rather than going through
+  // xpTotal/achievements, so it stays isolated from the unrelated XP-formula/achievement-catalog
+  // details the tests above are pinning.
+  function SignalProbe() {
+    const { signals, isLoaded } = useEngagement();
+    return <Text testID="signalProbe">{isLoaded ? String(signals.bankrollPositiveMonth) : 'loading'}</Text>;
+  }
+  const mountSignalProbe = () => render(<EngagementProvider><SignalProbe /></EngagementProvider>);
+
+  const session = (over: Partial<BankrollSession> & { cash: NonNullable<BankrollSession['cash']> }): BankrollSession => ({
+    id: 's1', gameType: 'cash', source: 'external', currency: 'ILS',
+    startedAt: new Date().toISOString(), // "now" is trivially within the current local month
+    feesCents: 0, tags: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    ...over,
+  });
+
+  it('is true when this local month\'s real bankroll sessions net positive', async () => {
+    mockBankrollSessions = [session({ cash: { buyInCents: 5000, cashOutCents: 9000 } })]; // +4000
+    const { getByTestId } = mountSignalProbe();
+    await waitFor(() => expect(getByTestId('signalProbe').props.children).toBe('true'));
+  });
+
+  it('is false when this local month\'s real bankroll sessions net negative', async () => {
+    mockBankrollSessions = [session({ cash: { buyInCents: 9000, cashOutCents: 5000 } })]; // -4000
+    const { getByTestId } = mountSignalProbe();
+    await waitFor(() => expect(getByTestId('signalProbe').props.children).toBe('false'));
   });
 });

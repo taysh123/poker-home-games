@@ -78,13 +78,22 @@ export interface DayHeatLevel extends DayBucket {
   level: number;
 }
 
-/** Bucket each active day's net into `levelCount` signed intensity levels for a heatmap. */
+/**
+ * Bucket each active day's net into `levelCount` signed intensity levels for a heatmap.
+ * `levelCount` is clamped to a positive integer (falling back to the default 4 for
+ * non-finite input) — an unguarded 0 collapses every real day to the same level as "no
+ * session", and a negative value INVERTS every day's sign (a winner reads as the biggest
+ * loser), silently defeating the whole point of the heatmap. Fleet-found (2026-08-05):
+ * levelCount is caller-supplied (e.g. from screen width or a density setting in the future
+ * B4-B7 heatmap UI), so it can't be assumed to always be a sane positive integer.
+ */
 export function heatmapLevels(sessions: BankrollSession[], levelCount = 4): DayHeatLevel[] {
+  const safeLevelCount = Number.isFinite(levelCount) ? Math.max(1, Math.floor(levelCount)) : 4;
   const buckets = dayBuckets(sessions);
   const maxAbsNet = buckets.reduce((max, b) => Math.max(max, Math.abs(b.netCents)), 0);
   return buckets.map(b => {
     if (b.netCents === 0 || maxAbsNet === 0) return { ...b, level: 0 };
-    const magnitude = Math.ceil((Math.abs(b.netCents) / maxAbsNet) * levelCount);
+    const magnitude = Math.ceil((Math.abs(b.netCents) / maxAbsNet) * safeLevelCount);
     return { ...b, level: Math.sign(b.netCents) * magnitude };
   });
 }
