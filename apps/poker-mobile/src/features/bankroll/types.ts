@@ -99,11 +99,23 @@ export interface BankrollSettings {
   bankrolls?: BankrollAccount[];
 }
 
-export const BANKROLL_SCHEMA_VERSION = 1 as const;
+export const BANKROLL_SCHEMA_VERSION = 2 as const;
 
-/** On-device file envelope (versioned, mirrors the local-games store pattern). */
-export interface BankrollFile {
-  schemaVersion: typeof BANKROLL_SCHEMA_VERSION;
+/** One account's slice of the file: its own settings and its own sessions. */
+export interface BankrollAccountData {
   settings: BankrollSettings;
   sessions: BankrollSession[];
+}
+
+/**
+ * On-device file envelope (v2 — account-scoped, B1). Follows the `personaStore` /
+ * `coachStore` precedent: ONE AsyncStorage blob holding an account-keyed map
+ * (`byAccount`, keyed by `accountKeyFor`: `'guest'` or `'acct:<userId>'`), rather than
+ * a single device-global blob. Before this, a device-global `tpoker.bankroll.v1` blob
+ * was never cleared on logout and `TrackScreen` rendered it for guests with no auth
+ * gate — so guest-logged sessions merged into whichever account signed in next.
+ */
+export interface BankrollFile {
+  schemaVersion: typeof BANKROLL_SCHEMA_VERSION;
+  byAccount: Record<string, BankrollAccountData>;
 }
