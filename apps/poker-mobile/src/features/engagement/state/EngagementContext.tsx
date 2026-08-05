@@ -4,7 +4,7 @@ import { useStudy } from '../../study/state/StudyContext';
 import { useBankroll } from '../../bankroll/state/BankrollContext';
 import { useCoach } from '../../coach/state/CoachContext';
 import { useLocalGames } from '../../../context/LocalGamesContext';
-import { sessionNetCents } from '../../bankroll/logic/bankrollAnalytics';
+import { netCentsForMonth } from '../../bankroll/logic/calendar';
 import { computeXp, rankForXp, xpAchievementCount, type RankInfo } from '../logic/xp';
 import { LOCAL_ACHIEVEMENTS, evaluate, eligibleKeys, findAchievement, isEarned } from '../logic/achievements';
 import { deriveIsCelebrating } from '../logic/celebration';
@@ -89,15 +89,14 @@ export function EngagementProvider({ children }: { children: React.ReactNode }) 
   const bankrollSessions = sessions.length;
   const coachAnalyses = history.length;
   const localGamesFinished = useMemo(() => games.filter(g => g.status === 'Finished').length, [games]);
-  const bankrollPositiveMonth = useMemo(() => {
-    // LOCAL month on both sides — the previous UTC-ISO month slice bucketed the first hours of
-    // every month into the PREVIOUS month in positive-offset timezones (Q0; dayKeyBan-guarded).
-    const month = localMonthKey();
-    const net = sessions
-      .filter(s => localMonthKey(new Date(s.startedAt)) === month)
-      .reduce((sum, s) => sum + sessionNetCents(s), 0);
-    return net > 0;
-  }, [sessions]);
+  // LOCAL month — the previous UTC-ISO month slice bucketed the first hours of every month into
+  // the PREVIOUS month in positive-offset timezones (Q0; dayKeyBan-guarded). The actual
+  // filter+sum lives in ONE place, features/bankroll/logic/calendar.ts#netCentsForMonth (B3) —
+  // it was duplicated inline here before.
+  const bankrollPositiveMonth = useMemo(
+    () => netCentsForMonth(sessions, localMonthKey()) > 0,
+    [sessions],
+  );
 
   const signals: EngagementSignals = useMemo(() => ({
     spotsAnswered, studyStreak, studyDays, bankrollSessions, bankrollPositiveMonth, coachAnalyses, localGamesFinished,

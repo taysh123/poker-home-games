@@ -146,6 +146,52 @@ describe('filterSessions', () => {
   });
 });
 
+describe('filterSessions — bare day-key `to` bound (B3 fix)', () => {
+  // Local time, no 'Z' suffix — same construction buildSessionInput uses (local wall-clock,
+  // parsed as local time by `new Date(...)`, then converted to the UTC ISO string that's stored).
+  const late = (localDateTime: string) => cash(5000, 9000, { startedAt: new Date(localDateTime).toISOString() });
+
+  it('a bare day-key `to` INCLUDES a session late that same local day (previously silently excluded)', () => {
+    const sessions = [late('2026-08-05T23:00:00')];
+    expect(filterSessions(sessions, { to: '2026-08-05' })).toHaveLength(1);
+  });
+
+  it('a bare day-key `to` still EXCLUDES a session on the following local day', () => {
+    const sessions = [late('2026-08-06T00:30:00')];
+    expect(filterSessions(sessions, { to: '2026-08-05' })).toHaveLength(0);
+  });
+
+  it('from === to === the same bare day key returns exactly that single day (previously always 0)', () => {
+    const sessions = [
+      late('2026-08-04T23:59:00'), // day before -> excluded
+      late('2026-08-05T00:05:00'), // target day, early -> included
+      late('2026-08-05T23:00:00'), // target day, late -> included (the fix)
+      late('2026-08-06T00:05:00'), // day after -> excluded
+    ];
+    expect(filterSessions(sessions, { from: '2026-08-05', to: '2026-08-05' })).toHaveLength(2);
+  });
+
+  it('a session at the EXACT local-midnight instant is included by a `from` bound for that day (fleet-found boundary, 2026-08-05)', () => {
+    // Pins startOfLocalDayIso's exact boundary value (0,0,0,0) — a future off-by-one there
+    // (e.g. constructing 0,0,0,1) would exclude a session logged at precisely local midnight,
+    // and nothing else in this file exercises the boundary at millisecond precision.
+    const sessions = [late('2026-08-05T00:00:00')];
+    expect(filterSessions(sessions, { from: '2026-08-05' })).toHaveLength(1);
+  });
+
+  it('a startedAt WITHOUT milliseconds is still compared correctly (fleet-found, 2026-08-05)', () => {
+    // buildSessionInput always emits .toISOString()'s 3-digit-ms form, so this can't happen via
+    // any shipped code path today — but BankrollSession.startedAt is a bare `string` (JSDoc says
+    // "ISO 8601", no runtime precision guarantee), and a plain STRING compare against a
+    // millisecond-precision bound gets the wrong answer here: '...23:59:59Z' > '...23:59:59.999Z'
+    // lexicographically (the bare 'Z' sorts after '.'), even though the no-ms instant is actually
+    // EARLIER. A numeric (getTime) compare is immune to this; a future revert to string
+    // comparison must fail here.
+    const noMs: BankrollSession = { ...cash(5000, 9000), startedAt: '2026-08-05T20:59:59Z' }; // local 23:59:59.000, Israel UTC+3
+    expect(filterSessions([noMs], { to: '2026-08-05' })).toHaveLength(1);
+  });
+});
+
 describe('bankrollOverTime', () => {
   it('accumulates net chronologically from the starting bankroll', () => {
     const sessions = [
