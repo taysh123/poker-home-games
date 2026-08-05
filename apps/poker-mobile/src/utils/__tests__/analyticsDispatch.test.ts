@@ -119,6 +119,38 @@ describe('analytics dispatch — consent-gated PostHog (real module, mocked SDK)
     expect(mockCapture).toHaveBeenCalledWith('study_lesson_completed', expect.anything());
   });
 
+  it('never sends events buffered while opted out, even when the client starts later', async () => {
+    // THE UNTESTED PRECONDITION (audit 2026-08-03, HIGH #6). The opt-out test above cannot reach
+    // this: it calls grantAnalyticsConsent() first, so a client already EXISTS, and
+    // startClientIfAllowed() then returns at its `if (client) return` guard — the drain loop never
+    // runs and nothing can leak. That asymmetry is the whole defect.
+    //
+    // The real-world case is the app OPENING already opted out (persisted from a prior session):
+    // no client is ever constructed, so dispatch() returns before advancing `drained`, every
+    // event tracked during the opted-out window stays queued at the head of the buffer, and
+    // opting back in constructs the client for the first time — whose drain loop then sends the
+    // whole backlog, including events generated while sharing was explicitly OFF.
+    mockMem.set('tpoker.analytics.consent.v1', '1');
+    mockMem.set('tpoker.analytics.optout.v1', '1');
+
+    await initAnalytics();
+    expect(mockPostHogCtor).not.toHaveBeenCalled();   // gate closed: no client exists yet
+
+    track('study_quiz_completed', { pct: 90 });        // tracked while sharing is OFF
+    track('study_lesson_completed');
+
+    await setAnalyticsOptOut(false);                   // client is constructed HERE
+
+    // Opting back in must not retroactively publish the opted-out window.
+    expect(mockCapture).not.toHaveBeenCalledWith('study_quiz_completed', expect.anything());
+    expect(mockCapture).not.toHaveBeenCalledWith('study_lesson_completed', expect.anything());
+
+    // ...and sharing genuinely resumes from now on, so this is not "fixed" by staying dark.
+    mockCapture.mockClear();
+    track('study_spot_answered', { mode: 'spot', correct: true });
+    expect(mockCapture).toHaveBeenCalledWith('study_spot_answered', expect.anything());
+  });
+
   it('opt-out persists across restarts', async () => {
     await grantAnalyticsConsent();
     await setAnalyticsOptOut(true);

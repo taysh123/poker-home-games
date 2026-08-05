@@ -151,6 +151,16 @@ function startClientIfAllowed(): void {
 }
 
 function dispatch(entry: BufferedEvent): void {
+  // OPTED OUT ⇒ FORFEIT, not merely "don't send now". Without this the entry stays queued at the
+  // head of the buffer, and the first client constructed later drains it — publishing events the
+  // user generated while sharing was explicitly OFF (audit 2026-08-03, HIGH #6). This is the path
+  // that actually leaks: the opt-out state usually arrives from PERSISTED STORAGE at launch, so
+  // setAnalyticsOptOut() is never called in that session and a cursor bump there alone misses it.
+  //
+  // Deliberately BEFORE the gate check, because the two closed-gate reasons differ: pre-consent
+  // events are kept on purpose (consent covers the session's funnel and drains them), whereas an
+  // opted-out window must never be published retroactively.
+  if (optedOut) { drained = buffer.length; return; }
   if (!gateNow()) return;
   startClientIfAllowed();
   if (!client) return;
@@ -218,6 +228,17 @@ export async function setAnalyticsOptOut(nextOptedOut: boolean): Promise<void> {
   if (nextOptedOut) {
     if (wasSendable) track('analytics_opt_out'); // recorded in the buffer; not sent (gate now closed)
     void client?.optOut();
+    // OPTING OUT FORFEITS THE BUFFER (audit 2026-08-03, HIGH #6). dispatch() returns before
+    // advancing `drained` whenever the gate is closed, so anything tracked from here on stays
+    // queued at the head of the buffer. That is harmless while a client already exists —
+    // startClientIfAllowed() bails at its `if (client) return` guard, so the drain loop never runs
+    // again — but if the app OPENED already opted out, no client was ever constructed, and opting
+    // back in constructs the first one, whose drain loop would publish the entire opted-out window.
+    // Advancing the cursor to the current tail marks those events as already handled, so re-opting
+    // in resumes sharing from that moment instead of retroactively.
+    //
+    // AFTER the track above on purpose: the opt_out marker is forfeited with everything else.
+    drained = buffer.length;
   } else {
     void client?.optIn();
     startClientIfAllowed();
