@@ -21,12 +21,16 @@
  */
 import type { AxiosRequestConfig, AxiosResponse } from 'axios';
 import axios, { AxiosError } from 'axios';
-
-jest.mock('../../utils/storage');
-
 import * as storage from '../../utils/storage';
 import { API_BASE_URL } from '../config';
 import apiClient, { registerUnauthenticatedCallback } from '../apiClient';
+
+// Declared AFTER the imports on purpose: babel-plugin-jest-hoist lifts jest.mock above them at
+// transform time, so the automock is still in place before `../apiClient` resolves the storage
+// module (the tests below would fail outright if it were not). Writing it above the imports — the
+// conventional placement, used by monetizationApi.test.ts — trips eslint's `import/first`, and the
+// repo's `--max-warnings 200` budget is a hard CI gate with no headroom.
+jest.mock('../../utils/storage');
 
 const getItem = storage.getItemAsync as jest.Mock;
 const setItem = storage.setItemAsync as jest.Mock;
