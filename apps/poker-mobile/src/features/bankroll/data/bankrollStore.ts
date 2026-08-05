@@ -21,6 +21,10 @@ import {
   type BankrollSource,
 } from '../types';
 
+// Exported so the test files reference the literal via this constant rather than duplicating the
+// string — follows personaStore's convention specifically. coachStore keeps its STORAGE_KEY
+// private and its own tests hardcode the literal instead; the two precedents this module cites
+// are not identical on this one point, so this doesn't "mirror both exactly" here.
 export const STORAGE_KEY = 'tpoker.bankroll.v1';
 const QUARANTINE_PREFIX = 'tpoker.bankroll.quarantine.';
 const DEFAULT_CURRENCY = 'ILS';
