@@ -7,7 +7,13 @@ export type HandRecordDto = {
   winnerName: string;
   potAmount: number;
   note: string | null;
-  createdByUserId: string;
+  /**
+   * Whether the signed-in user logged this hand — the server's answer, not an id to compare.
+   * Replaces `createdByUserId`, which shipped the raw account GUID of whoever logged the hand to
+   * every session participant (audit 2026-08-03, HIGH #4). The server computes this from the same
+   * rule it enforces on delete, so the button can no longer disagree with the endpoint.
+   */
+  isMine: boolean;
   createdAt: string;
 };
 

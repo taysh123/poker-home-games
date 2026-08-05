@@ -831,6 +831,78 @@ public sealed class DeleteAccountFkIntegrityTests : IDisposable
     }
 
     [Fact]
+    public async Task Deleting_an_account_scrubs_the_creator_id_from_their_hand_records()
+    {
+        // HIGH #4. This id had NO modelled FK, so nothing cascaded, the FK ratchet could not see it,
+        // and the handler never touched it — while GetSessionHandHistory served it verbatim to every
+        // session participant. Not a DB residue: the exact original account GUID, on the wire,
+        // forever. The hand ROW survives (it is the table's record of a real hand); only the link
+        // back to the deleted account is severed, exactly as BuyIn/CashOut/SessionPlayer are.
+        var s = SeedFullGraph();
+        var hand = HandRecord.Create(s.Session.Id, "Dan", 120m, null, s.Leaving.Id);
+        var otherHand = HandRecord.Create(s.Session.Id, "Ann", 80m, null, s.Other.Id);
+        _ctx.HandRecords.AddRange(hand, otherHand);
+        _ctx.SaveChanges();
+        _ctx.ChangeTracker.Clear();
+
+        await DeleteAsync(s.Leaving.Id);
+        _ctx.ChangeTracker.Clear();
+
+        var after = await _ctx.HandRecords.FirstAsync(h => h.Id == hand.Id);
+        Assert.NotEqual(s.Leaving.Id, after.CreatedByUserId);
+        Assert.Equal(Guid.Empty, after.CreatedByUserId);
+        Assert.Equal("Dan", after.WinnerName);   // the row itself is other players' record — kept
+
+        // Only the leaver's rows are touched; another member's hand keeps its author.
+        var untouched = await _ctx.HandRecords.FirstAsync(h => h.Id == otherHand.Id);
+        Assert.Equal(s.Other.Id, untouched.CreatedByUserId);
+    }
+
+    [Fact]
+    public void Loose_id_columns_with_no_modelled_FK_match_the_acknowledged_inventory()
+    {
+        // THE SECOND RATCHET, and the one that would have caught HandRecord.CreatedByUserId.
+        // The FK ratchet above can only see edges EF MODELS. A bare `Guid` with no navigation
+        // property and no configured relationship is invisible to it — so a raw account id sat in
+        // HandRecord for the entire life of the product, was served over the API to every session
+        // participant, and survived account deletion forever, while the FK inventory stayed green
+        // (audit 2026-08-03, HIGH #4).
+        //
+        // Deliberately NOT filtered to names ending in "UserId": Session.CreatorId is the same
+        // shape and would have slipped straight through such a filter. Every non-key Guid column is
+        // listed, so a future loose reference cannot hide behind a novel name either. Each entry
+        // carries what account deletion does about it — that is the question this list exists to
+        // force someone to answer.
+        var loose = _ctx.Model.GetEntityTypes()
+            .SelectMany(e => e.GetProperties()
+                .Where(p => (p.ClrType == typeof(Guid) || p.ClrType == typeof(Guid?))
+                            && !p.IsForeignKey()
+                            && !p.IsPrimaryKey())
+                .Select(p => e.ClrType.Name + "." + p.Name))
+            .OrderBy(x => x, StringComparer.Ordinal)
+            .ToArray();
+
+        // Literal, and annotated with what account deletion does about each one. Writing this list
+        // is what surfaced THREE loose account references nobody had catalogued — the audit named
+        // only Session.CreatorId, ActivityLog.ActorUserId and HandRecord.CreatedByUserId.
+        string[] acknowledged =
+        [
+            "ActivityLog.ActorUserId",              // user ref · SURVIVES — the feed is other members' record
+            "ActivityLog.RelatedSessionId",         // not a user ref — points at a Session
+            "GroupInviteLink.CreatedByUserId",      // user ref · SURVIVES — link outlives the member who made it
+            "HandRecord.CreatedByUserId",           // user ref · SCRUBBED on deletion + no longer served (T0.5)
+            "Notification.RelatedEntityId",         // not a user ref — polymorphic entity pointer
+            "Session.CreatorId",                    // user ref · SURVIVES — LOAD-BEARING: standalone-session
+                                                    //   authorization is `session.CreatorId == callerId`,
+                                                    //   so scrubbing it would break access control
+            "SessionInviteToken.CreatedByUserId",   // user ref · SURVIVES — single-use token, expires in 24h
+            "SessionInviteToken.UsedByUserId",      // user ref · SURVIVES — records who redeemed the invite
+        ];
+
+        Assert.Equal(acknowledged, loose);
+    }
+
+    [Fact]
     public async Task Owning_a_group_still_blocks_deletion_with_a_clear_message()
     {
         // The pre-existing guard must survive the fix: it is the one case where refusing is right,

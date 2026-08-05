@@ -33,7 +33,7 @@ public sealed class GetSessionHandHistoryQueryHandler(
             .AsNoTracking()
             .Where(h => h.SessionId == request.SessionId)
             .OrderBy(h => h.CreatedAt)
-            .Select(h => new HandRecordDto(h.Id, h.WinnerName, h.PotAmount, h.Note, h.CreatedByUserId, h.CreatedAt))
+            .Select(h => new HandRecordDto(h.Id, h.WinnerName, h.PotAmount, h.Note, h.CreatedByUserId == userId, h.CreatedAt))
             .ToListAsync(cancellationToken);
     }
 }

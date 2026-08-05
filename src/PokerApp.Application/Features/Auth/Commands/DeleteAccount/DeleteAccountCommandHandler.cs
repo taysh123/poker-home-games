@@ -119,6 +119,17 @@ public sealed class DeleteAccountCommandHandler(
             c.AnonymizeUser();
         }
 
+        // Hand records the leaver logged. CreatedByUserId is a bare Guid with NO modelled FK, so
+        // nothing cascades, the FK-inventory ratchet never saw it, and it was never cleared — while
+        // GetSessionHandHistory served it verbatim to every session participant (audit 2026-08-03,
+        // HIGH #4). The ROW survives like every other shared-game record; only the identity link
+        // goes. Loose ids of this shape are now pinned by
+        // Loose_id_columns_with_no_modelled_FK_match_the_acknowledged_inventory, which found three
+        // more nobody had catalogued.
+        var handRecords = await context.HandRecords
+            .Where(h => h.CreatedByUserId == userId).ToListAsync(cancellationToken);
+        foreach (var h in handRecords) h.AnonymizeCreator();
+
         // Settlements name BOTH parties with required RESTRICT FKs, so they cannot be anonymized
         // without a schema change (nullable columns + a DTO/API change reaching the mobile client).
         // They are removed instead — but read the real cost before extending this pattern.

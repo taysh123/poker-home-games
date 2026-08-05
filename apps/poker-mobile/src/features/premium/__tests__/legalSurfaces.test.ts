@@ -105,6 +105,31 @@ describe('privacy.html — free-first honest + consent-scoped analytics (Wave 0.
     expect(privacy).toMatch(/Local guest game data never leaves\s+your device/i);
   });
 
+  it('does NOT promise that deletion removes everything', () => {
+    // The old text promised deletion removes "your account and all associated personal data
+    // (profile, game records, …) from our servers, immediately". Every part of that was
+    // contradicted by DeleteAccountCommandHandler: game records SURVIVE by design (they are the
+    // other players' record of a shared night), display names survive in the activity feed, hand
+    // records and delivered notifications, and several account identifiers had no modelled FK so
+    // nothing ever cleared them (audit 2026-08-03, HIGH #5).
+    //
+    // Banned as PHRASES, not by asserting the replacement wording, so a future rewrite is free to
+    // reword but cannot re-promise completeness.
+    expect(privacy).not.toMatch(/all associated personal data/i);
+    expect(privacy).not.toMatch(/removes?[^.]{0,40}\ball\b[^.]{0,40}\bdata\b/i);
+  });
+
+  it('states the real deletion scope: what goes, what stays, and why', () => {
+    // What genuinely goes.
+    expect(privacy).toMatch(/profile and login credentials/i);
+    expect(privacy).toMatch(/settlement records that name you/i);
+    // What genuinely stays — the three survivor classes, each true of the shipped handler.
+    // \s+ between words: the source HTML hard-wraps, so a phrase can straddle a line break.
+    expect(privacy).toMatch(/disconnected\s+from\s+your\s+account/i);        // seat + amounts anonymised
+    expect(privacy).toMatch(/display\s+name\s+can\s+still\s+appear/i);       // ActorName / WinnerName / notifications
+    expect(privacy).toMatch(/keep\s+an\s+internal\s+identifier/i);           // Session.CreatorId et al, no modelled FK
+  });
+
   it('has a contact address and cross-links all four pages', () => {
     expect(privacy).toMatch(/truestorylabs@gmail\.com/);
     expectLinksAllFourPages(privacy);
