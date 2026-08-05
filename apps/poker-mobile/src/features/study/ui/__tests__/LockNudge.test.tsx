@@ -8,6 +8,8 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 
+import LockNudge from '../LockNudge';
+
 const mockTrack = jest.fn();
 jest.mock('../../../../utils/analytics', () => ({
   track: (...args: unknown[]) => mockTrack(...args),
@@ -25,8 +27,6 @@ jest.mock('@expo/vector-icons', () => {
   const { View } = require('react-native');
   return { Ionicons: (props: { name?: string }) => <View testID={`icon-${props.name}`} /> };
 });
-
-import LockNudge from '../LockNudge';
 
 describe('LockNudge — impression + honesty gate', () => {
   beforeEach(() => {

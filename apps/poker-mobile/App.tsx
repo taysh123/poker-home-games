@@ -38,8 +38,8 @@ import { CoachProvider } from './src/features/coach/state/CoachContext';
 import { MasteryProvider } from './src/features/mastery/state/MasteryContext';
 import { EngagementProvider } from './src/features/engagement/state/EngagementContext';
 import { ReminderScheduler } from './src/hooks/useReminderScheduler';
-import AppNavigator from './src/navigation/AppNavigator';
-import { RootStackParamList } from './src/navigation/AppNavigator';
+import AppNavigator, { RootStackParamList } from './src/navigation/AppNavigator';
+
 import { isFeatureEnabled } from './src/config/features';
 import BrandSplash from './src/components/brand/BrandSplash';
 import { SplashGateProvider } from './src/components/brand/SplashGate';

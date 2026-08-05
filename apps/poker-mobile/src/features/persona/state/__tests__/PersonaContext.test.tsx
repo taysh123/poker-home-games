@@ -7,6 +7,8 @@
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react-native';
 
+import { PersonaProvider, usePersona } from '../PersonaContext';
+
 const mockMem = new Map<string, string>();
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn(async (k: string) => mockMem.get(k) ?? null),
@@ -18,8 +20,6 @@ let mockUser: { userId: string } | null = null;
 jest.mock('../../../../context/AuthContext', () => ({
   useAuth: () => ({ user: mockUser }),
 }));
-
-import { PersonaProvider, usePersona } from '../PersonaContext';
 
 type Ctx = ReturnType<typeof usePersona>;
 let ctx: Ctx;

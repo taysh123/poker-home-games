@@ -1,5 +1,15 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, fireEvent } from '@testing-library/react-native';
+
+
+import LandingScreen from '../LandingScreen';
+import {
+  PREMIUM_STUDY_BENEFIT,
+  LANDING_TRUST_LINE,
+  LANDING_SECTIONS,
+  LANDING_FAQ,
+} from '../../features/landing/landingContent';
+import { PRICING } from '../../features/premium/config';
 
 // ── Mocks: keep the render hermetic (no real navigation / billing / auth) ──
 
@@ -64,16 +74,6 @@ jest.mock('../../features/landing/landingImages', () => ({
   LANDING_IMAGE_WIDTH: 780,
   LANDING_IMAGE_HEIGHT: 1688,
 }));
-
-import { fireEvent } from '@testing-library/react-native';
-import LandingScreen from '../LandingScreen';
-import {
-  PREMIUM_STUDY_BENEFIT,
-  LANDING_TRUST_LINE,
-  LANDING_SECTIONS,
-  LANDING_FAQ,
-} from '../../features/landing/landingContent';
-import { PRICING } from '../../features/premium/config';
 
 describe('LandingScreen (web)', () => {
   beforeAll(() => {

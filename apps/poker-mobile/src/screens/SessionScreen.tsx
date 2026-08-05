@@ -130,7 +130,7 @@ function computeCashTransfers(
     if (s.receiverUserId) digitalNet[s.receiverUserId] = (digitalNet[s.receiverUserId] ?? 0) + s.amount;
   }
 
-  const positions: Array<{ name: string; bal: number }> = [];
+  const positions: { name: string; bal: number }[] = [];
 
   // Registered players: remaining cash = P&L − what was already handled digitally
   for (const p of players) {

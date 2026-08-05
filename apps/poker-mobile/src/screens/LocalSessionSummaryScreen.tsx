@@ -29,12 +29,12 @@ import CrossPillarCTA from '../components/CrossPillarCTA';
 import ContentContainer from '../components/ContentContainer';
 import { nameWritingDirection } from '../utils/rtl';
 import { isFeatureEnabled } from '../config/features';
-import { formatDate } from '../utils/formatters';
+import { formatDate, formatDuration } from '../utils/formatters';
 import { formatCents, formatCentsSigned } from '../utils/money';
-import { formatDuration } from '../utils/formatters';
+
 import { confirmDialog } from '../utils/confirm';
 import { useAuth } from '../context/AuthContext';
-import { markSignupIntent } from '../utils/analytics';
+import { markSignupIntent, track } from '../utils/analytics';
 import AnimatedNumber from '../components/motion/AnimatedNumber';
 import Celebration from '../components/motion/Celebration';
 import { PressableScale, MotiView, slideUpSequence, staggerIn } from '../components/motion';
@@ -43,7 +43,7 @@ import { useNextGamePlan } from '../context/NextGamePlanContext';
 import { crewSummary, isGameDay, isPlanConsumed, planNudgeLine, planToastText } from '../features/engagement/logic/nextGamePlan';
 import { ensureReminderPermission } from '../utils/reminders';
 import { localDayKey } from '../features/study/logic/localDay';
-import { track } from '../utils/analytics';
+
 import { showToast } from '../utils/toast';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocalSessionSummary'>;

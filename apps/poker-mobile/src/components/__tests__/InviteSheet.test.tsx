@@ -2,6 +2,8 @@ import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
 import { Share } from 'react-native';
 
+import InviteSheet from '../InviteSheet';
+
 // QR lib → surface the encoded value so we can assert the correct link is embedded.
 jest.mock('react-native-qrcode-svg', () => {
   const { View } = require('react-native');
@@ -26,8 +28,6 @@ jest.mock('@expo/vector-icons', () => {
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
-
-import InviteSheet from '../InviteSheet';
 
 const url = 'https://app.tpoker.app/join/group/tok123';
 

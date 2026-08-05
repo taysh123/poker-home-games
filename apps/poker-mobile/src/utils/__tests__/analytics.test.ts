@@ -2,6 +2,8 @@
  * V2.1 — analytics seam: events buffer, and the onboarding signup-intent marker is single-use
  * (so account_created attributes to the funnel exactly once).
  */
+import { track, getBufferedEvents, markSignupIntent, consumeSignupIntent } from '../analytics';
+
 jest.mock('../storage', () => {
   const mem: Record<string, string> = {};
   return {
@@ -10,8 +12,6 @@ jest.mock('../storage', () => {
     deleteItemAsync: jest.fn(async (k: string) => { delete mem[k]; }),
   };
 });
-
-import { track, getBufferedEvents, markSignupIntent, consumeSignupIntent } from '../analytics';
 
 describe('analytics.track', () => {
   it('buffers events with name + props', () => {

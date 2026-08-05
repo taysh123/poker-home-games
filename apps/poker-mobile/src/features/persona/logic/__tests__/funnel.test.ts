@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Quiet Luxury funnel engine (Wave 1, slice 1.1) â€” PURE. Step order, answer application,
  * option catalogs (copy lives here, not in the screen), and goal-driven router ordering.
  * The caller passes `now` â€” no Date.now inside logic.

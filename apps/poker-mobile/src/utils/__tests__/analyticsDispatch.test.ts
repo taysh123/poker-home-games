@@ -11,6 +11,16 @@
  *   4. No EXPO_PUBLIC_POSTHOG_KEY => fail-closed: consent alone never constructs a client.
  *   5. The `analytics` feature flag is a hard kill-switch over everything.
  */
+import {
+  track,
+  initAnalytics,
+  grantAnalyticsConsent,
+  setAnalyticsOptOut,
+  identifyAnalyticsUser,
+  resetAnalyticsIdentity,
+  __resetAnalyticsForTests,
+} from '../analytics';
+
 const mockCapture = jest.fn();
 const mockIdentify = jest.fn();
 const mockReset = jest.fn();
@@ -39,16 +49,6 @@ jest.mock('../storage', () => ({
   setItemAsync: jest.fn(async (k: string, v: string) => { mockMem.set(k, v); }),
   deleteItemAsync: jest.fn(async (k: string) => { mockMem.delete(k); }),
 }));
-
-import {
-  track,
-  initAnalytics,
-  grantAnalyticsConsent,
-  setAnalyticsOptOut,
-  identifyAnalyticsUser,
-  resetAnalyticsIdentity,
-  __resetAnalyticsForTests,
-} from '../analytics';
 
 describe('analytics dispatch — consent-gated PostHog (real module, mocked SDK)', () => {
   beforeEach(() => {

@@ -2,8 +2,6 @@
  * B4 — server-authoritative monetization API contract + error mapping (fail-closed).
  * Pure mapping is tested directly; the HTTP wrappers are tested against a mocked apiClient.
  */
-jest.mock('../apiClient', () => ({ __esModule: true, default: { get: jest.fn(), post: jest.fn() } }));
-
 import apiClient from '../apiClient';
 import {
   getEntitlements,
@@ -13,6 +11,8 @@ import {
   ServerCoachError,
   type AnalyzeRequest,
 } from '../monetizationApi';
+
+jest.mock('../apiClient', () => ({ __esModule: true, default: { get: jest.fn(), post: jest.fn() } }));
 
 const mockGet = apiClient.get as jest.Mock;
 const mockPost = apiClient.post as jest.Mock;

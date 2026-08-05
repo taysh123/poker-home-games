@@ -3,6 +3,8 @@
  * first completed drill — never at onboarding or app start (permission prompts convert best in
  * context, and re-prompting is hostile). The once-marker persists across sessions.
  */
+import { requestReminderPermissionOnce } from '../reminders';
+
 const mockGetPermissionsAsync = jest.fn();
 const mockRequestPermissionsAsync = jest.fn();
 jest.mock('expo-notifications', () => ({
@@ -18,8 +20,6 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   setItem: jest.fn(async (k: string, v: string) => { mockMem.set(k, v); }),
   removeItem: jest.fn(async (k: string) => { mockMem.delete(k); }),
 }));
-
-import { requestReminderPermissionOnce } from '../reminders';
 
 describe('requestReminderPermissionOnce', () => {
   beforeEach(() => {

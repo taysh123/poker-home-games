@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Placement drill screen (slice 1.4). Pins the contract that makes an UNMETERED run honest:
  * no answers/explanations are ever shown during the run (assessment, not practice), the result
  * records ONE placement + measured skill, nothing touches the study meters, and it exits back
@@ -6,6 +6,8 @@
  */
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
+
+import PlacementDrillScreen from '../PlacementDrillScreen';
 
 const mockRecordPlacement = jest.fn().mockResolvedValue(undefined);
 jest.mock('../../state/PersonaContext', () => ({
@@ -74,8 +76,6 @@ const mockGoBack = jest.fn();
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate, goBack: mockGoBack }),
 }));
-
-import PlacementDrillScreen from '../PlacementDrillScreen';
 
 /** Render and flush the content-load promise (findBy* polling can't advance under fake timers). */
 const renderDrill = async () => {

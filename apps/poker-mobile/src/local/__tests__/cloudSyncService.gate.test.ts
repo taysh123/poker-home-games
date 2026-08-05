@@ -4,6 +4,9 @@
  * This file deliberately does NOT mock the feature config.
  */
 
+import apiClient from '../../api/apiClient';
+import { backupNow, restore, cloudSyncEnabled } from '../cloudSyncService';
+
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
@@ -14,9 +17,6 @@ jest.mock('../../utils/storage', () => ({
   setItemAsync: jest.fn(async () => {}),
   deleteItemAsync: jest.fn(async () => {}),
 }));
-
-import apiClient from '../../api/apiClient';
-import { backupNow, restore, cloudSyncEnabled } from '../cloudSyncService';
 
 const mc = apiClient as unknown as { get: jest.Mock; put: jest.Mock };
 

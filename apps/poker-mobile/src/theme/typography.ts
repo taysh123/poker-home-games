@@ -41,8 +41,8 @@ export const typography = {
 
   // Numeric amounts — Inter tabular; explicit lineHeight so the ₪ glyph + bold caps
   // aren't clipped by a tight line box on web.
-  amount:      { fontFamily: Inter['700'], fontSize: 20, fontWeight: '700' as const, lineHeight: 26, fontVariant: ['tabular-nums'] as Array<'tabular-nums'> },
-  amountLarge: { fontFamily: Inter['800'], fontSize: 28, fontWeight: '800' as const, letterSpacing: -0.5, lineHeight: 36, fontVariant: ['tabular-nums'] as Array<'tabular-nums'> },
+  amount:      { fontFamily: Inter['700'], fontSize: 20, fontWeight: '700' as const, lineHeight: 26, fontVariant: ['tabular-nums'] as 'tabular-nums'[] },
+  amountLarge: { fontFamily: Inter['800'], fontSize: 28, fontWeight: '800' as const, letterSpacing: -0.5, lineHeight: 36, fontVariant: ['tabular-nums'] as 'tabular-nums'[] },
 
   // Misc — kept for backward compat
   bodyBold: { fontFamily: Inter['600'], fontSize: 15, fontWeight: '600' as const },
@@ -57,6 +57,6 @@ export const typography = {
     fontFamily: 'DMSerifDisplay_400Regular',
     fontSize: 44,
     letterSpacing: 0.5,
-    fontVariant: ['tabular-nums'] as Array<'tabular-nums'>,
+    fontVariant: ['tabular-nums'] as 'tabular-nums'[],
   },
 } as const;

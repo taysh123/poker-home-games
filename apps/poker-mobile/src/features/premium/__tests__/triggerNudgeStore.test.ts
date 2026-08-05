@@ -1,4 +1,6 @@
 // In-memory AsyncStorage so the persistence seam is testable without a native module.
+import { loadNudgeShownState, saveNudgeShownState } from '../triggerNudgeStore';
+
 let mockStore: Record<string, string> = {};
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
@@ -10,8 +12,6 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
     }),
   },
 }));
-
-import { loadNudgeShownState, saveNudgeShownState } from '../triggerNudgeStore';
 
 beforeEach(() => {
   mockStore = {};

@@ -1,10 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { savePendingCheckout, consumePendingCheckout } from '../pendingCheckout';
+
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
-
-import { savePendingCheckout, consumePendingCheckout } from '../pendingCheckout';
 
 beforeEach(async () => { await AsyncStorage.clear(); jest.useRealTimers(); });
 

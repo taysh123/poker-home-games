@@ -10,6 +10,10 @@ import React from 'react';
 import { Text } from 'react-native';
 import { render, waitFor } from '@testing-library/react-native';
 
+import { EngagementProvider, useEngagement } from '../EngagementContext';
+import { computeXp } from '../../logic/xp';
+import type { EngagementSignals } from '../../types';
+
 let mockStorage: Record<string, string> = {};
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
@@ -42,10 +46,6 @@ jest.mock('../../../study/state/StudyContext', () => ({ useStudy: () => ({ progr
 jest.mock('../../../bankroll/state/BankrollContext', () => ({ useBankroll: () => ({ sessions: [], isLoaded: true }) }));
 jest.mock('../../../coach/state/CoachContext', () => ({ useCoach: () => ({ history: [], isLoaded: true }) }));
 jest.mock('../../../../context/LocalGamesContext', () => ({ useLocalGames: () => ({ games: [], isLoaded: true }) }));
-
-import { EngagementProvider, useEngagement } from '../EngagementContext';
-import { computeXp } from '../../logic/xp';
-import type { EngagementSignals } from '../../types';
 
 const STORE_KEY = 'tpoker.engagement.v1';
 const SIGNALS: EngagementSignals = {

@@ -5,6 +5,9 @@
  * let the latest call win. Run identity is detected via the mockScheduled CONTENT (each run's
  * game_day body carries its own crew line).
  */
+import { rescheduleReminders } from '../reminders';
+import { DEFAULT_REMINDER_PREFS, type ReminderSignals } from '../reminderLogic';
+
 let mockScheduled: { title: string; body: string }[] = [];
 let mockCancelAllCalls = 0;
 
@@ -27,9 +30,6 @@ jest.mock('expo-notifications', () => ({
   getPermissionsAsync: jest.fn(async () => ({ granted: true, canAskAgain: false })),
   requestPermissionsAsync: jest.fn(async () => ({ granted: true })),
 }));
-
-import { rescheduleReminders } from '../reminders';
-import { DEFAULT_REMINDER_PREFS, type ReminderSignals } from '../reminderLogic';
 
 const NOW = new Date(2026, 6, 27, 12, 0, 0, 0).getTime();
 const signals = (crewLine: string): ReminderSignals => ({

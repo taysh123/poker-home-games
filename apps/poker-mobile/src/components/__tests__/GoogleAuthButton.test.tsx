@@ -2,6 +2,8 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 
+import GoogleAuthButton from '../GoogleAuthButton';
+
 // PressableScale is GoogleAuthButton's root — mock it to a plain touchable that
 // forwards all props (including the merged `style` array + accessibilityLabel) so we
 // can inspect exactly what the button hands its root element.
@@ -13,8 +15,6 @@ jest.mock('@expo/vector-icons', () => {
   const { View } = require('react-native');
   return { Ionicons: ({ name }: { name?: string }) => <View testID={`icon-${name}`} /> };
 });
-
-import GoogleAuthButton from '../GoogleAuthButton';
 
 const root = () => screen.getByLabelText('Continue with Google');
 
