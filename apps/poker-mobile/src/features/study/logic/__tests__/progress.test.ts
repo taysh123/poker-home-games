@@ -1,10 +1,9 @@
 import {
   emptyProgress, recordAnswer, computeStreaks, studyStats,
   setDailyGoal, computeStreaksWithFreeze, autoFreezeMissedDay, refreshFreezeTokens, isoWeekKey,
+  recordQuizCompleted, recordLessonCompleted,
 } from '../progress';
 
-// ── Task 3 — Phase 1 additive fields ──
-import { recordQuizCompleted, recordLessonCompleted } from '../progress';
 
 describe('recordAnswer', () => {
   it('increments totals and per-day counts', () => {

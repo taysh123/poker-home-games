@@ -9,6 +9,12 @@ import { render, waitFor, act } from '@testing-library/react-native';
 
 import { PersonaProvider, usePersona } from '../PersonaContext';
 
+// Provider mount + an async store load; on a COLD jest transform cache this exceeds jest's 5s
+// default and fails as a TIMEOUT rather than an assertion. CI is always cold (the workflow caches
+// node_modules, not jest's transform cache), so this went red there while passing on every warm
+// local run. Same treatment as isCelebrating.test.tsx; scoped to this file.
+jest.setTimeout(20_000);
+
 const mockMem = new Map<string, string>();
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn(async (k: string) => mockMem.get(k) ?? null),

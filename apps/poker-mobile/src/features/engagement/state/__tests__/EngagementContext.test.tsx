@@ -12,6 +12,14 @@ import { render, waitFor } from '@testing-library/react-native';
 
 import { EngagementProvider, useEngagement } from '../EngagementContext';
 import { computeXp } from '../../logic/xp';
+
+// Mounting the real provider is heavy, and on a COLD jest transform cache it exceeds jest's 5s
+// default and fails as a TIMEOUT rather than an assertion. CI is always cold — the workflow caches
+// node_modules, never jest's transform cache — so this failed intermittently there while passing
+// on any warm local run, and the red landed on whatever slice happened to be in flight. Same
+// treatment, and same reasoning, as isCelebrating.test.tsx. Scoped to this file; the repo-wide
+// default is deliberately left alone.
+jest.setTimeout(20_000);
 import type { EngagementSignals } from '../../types';
 
 let mockStorage: Record<string, string> = {};

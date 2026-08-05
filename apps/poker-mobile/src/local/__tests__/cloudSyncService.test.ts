@@ -1,14 +1,14 @@
+/**
+ * Cloud Sync service — orchestration over the pure merge core + the S7a backend.
+ * The feature flag is mocked LIVE here so the network paths can be exercised; the
+ * real flag stays comingSoon (see cloudSyncService.gate.test.ts for that path).
+ */
 import type { LocalGame, LocalGamesFile } from '../types';
 
 import apiClient from '../../api/apiClient';
 import * as store from '../localGamesStore';
 import { backupNow, restore } from '../cloudSyncService';
 
-/**
- * Cloud Sync service — orchestration over the pure merge core + the S7a backend.
- * The feature flag is mocked LIVE here so the network paths can be exercised; the
- * real flag stays comingSoon (see cloudSyncService.gate.test.ts for that path).
- */
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),

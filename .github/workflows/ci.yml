@@ -49,8 +49,11 @@ jobs:
     # thing anyone sees when it goes red, so it has to say what actually ran.
     #
     # RENAMING THIS CHANGES THE REQUIRED-CHECK CONTEXT. Branch protection on `main` requires checks
-    # by exact name, so the required entry must be updated to match in the same change — otherwise
-    # the old context never reports and every PR blocks forever, including this one.
+    # by exact name, so the required set must be updated to match. Until it is, the old context
+    # never reports and PRs stay blocked — recoverable, not a lockout, since enforce_admins is off
+    # and the repo admin can still bypass. Swap the whole set in ONE API call (see the PR that
+    # introduced this name) rather than hand-typing it in Settings: the name contains U+00B7 MIDDLE
+    # DOT, and a typo produces a required context that can never report.
     name: Mobile · tsc + lint + jest
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -74,9 +77,15 @@ jobs:
         # to tsc, jest and the web export. Severity is pinned by
         # src/config/__tests__/eslintRules.test.ts so it cannot be silently downgraded.
         #
-        # `main` IS branch-protected now, and this job is a REQUIRED check — a red run genuinely
-        # blocks the merge. (An earlier version of this comment said the opposite; that was true
-        # when it was written and silently stopped being true.)
+        # This job MUST be listed in main's required-status-check set under its EXACT name. That is
+        # owner-side state this file cannot observe, so it is written as a REQUIREMENT with its
+        # verification command rather than as a fact:
+        #   gh api repos/taysh123/poker-home-games/branches/main/protection \
+        #     --jq '.required_status_checks.contexts'
+        # If this job's name is absent from that output, this gate is ADVISORY, not blocking.
+        # (Two earlier versions of this comment each stated the answer outright and each went stale:
+        # one claimed there was no protection at all, the next claimed this job was required while
+        # the same commit renamed it out of the required set.)
         #
         # The ceiling is a TOTAL, so this step can fail because of a file the failure never names.
         # Fix the cause; do not raise the number — the backlog is meant to shrink only. Headroom as
@@ -90,7 +99,11 @@ jobs:
         run: npx jest --ci
 
   landing:
-    name: Landing · vitest + build
+    # Same reasoning as the mobile job above: this runs FOUR gates (typecheck, lint, vitest, static
+    # build) and was advertising two. Renamed in the same change because the required-check set has
+    # to be rewritten once either way — doing it later would mean a second protection edit and a
+    # second window with a phantom required context.
+    name: Landing · tsc + lint + vitest + build
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
