@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -35,9 +35,14 @@ import {
   filterSessions,
   type BankrollFilter,
 } from '../logic/bankrollAnalytics';
+import { localMonthKey } from '../../study/logic/localDay';
+import { monthBuckets, monthHeatLevels } from '../logic/calendar';
+import { SESSION_PAGE_SIZE, historyPage } from '../logic/sessionHistory';
 import type { BankrollGameType, BankrollSource, BankrollSession } from '../types';
 import BankrollLineChart from './BankrollLineChart';
 import BankrollHistogram from './BankrollHistogram';
+import BankrollMonthCalendar from './BankrollMonthCalendar';
+import BankrollMonthStrip from './BankrollMonthStrip';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -58,6 +63,8 @@ export default function BankrollScreen({ embedded = false }: { embedded?: boolea
   const reduced = useReducedMotion();
   const [typeIdx, setTypeIdx] = useState(0);
   const [sourceIdx, setSourceIdx] = useState(0);
+  const [monthKey, setMonthKey] = useState(() => localMonthKey());
+  const [visibleCount, setVisibleCount] = useState(SESSION_PAGE_SIZE);
 
   const filter: BankrollFilter = useMemo(() => {
     const f: BankrollFilter = {};
@@ -78,6 +85,15 @@ export default function BankrollScreen({ embedded = false }: { embedded?: boolea
     () => [...filtered].sort((a, b) => b.startedAt.localeCompare(a.startedAt)),
     [filtered],
   );
+  const months = useMemo(() => monthBuckets(filtered), [filtered]);
+  // Scoping lives inside monthHeatLevels, not here: screens aren't unit-tested in this repo, so
+  // an inline filter would be unpinnable and could quietly regress to the unscoped set.
+  const monthLevels = useMemo(() => monthHeatLevels(filtered, monthKey), [filtered, monthKey]);
+  const page = useMemo(() => historyPage(history, visibleCount), [history, visibleCount]);
+
+  // A filter change rebuilds the list, so a carried-over "show more" count would silently
+  // reveal a different number of rows than the user last chose.
+  useEffect(() => { setVisibleCount(SESSION_PAGE_SIZE); }, [typeIdx, sourceIdx]);
 
   const net = summary.totalNetCents;
   const netColor = net > 0 ? colors.success : net < 0 ? colors.error : colors.textHigh;
@@ -208,13 +224,31 @@ export default function BankrollScreen({ embedded = false }: { embedded?: boolea
               </MotiView>
             )}
 
+            {/* Month calendar — FULL-BLEED so the 7 columns clear the 44px touch minimum. */}
+            <View style={styles.section}>
+              <SectionTitle>CALENDAR</SectionTitle>
+              <View style={styles.bleed}>
+                <BankrollMonthStrip monthKey={monthKey} months={months} onChangeMonth={setMonthKey} />
+                <View style={{ marginTop: spacing.md }}>
+                  <BankrollMonthCalendar monthKey={monthKey} levels={monthLevels} />
+                </View>
+              </View>
+            </View>
+
             {/* History */}
             <View style={styles.section}>
               <SectionTitle>SESSION HISTORY</SectionTitle>
               <View style={{ gap: spacing.sm }}>
-                {history.map(s => (
+                {page.visible.map(s => (
                   <SessionRow key={s.id} session={s} onPress={() => goLog(s.id)} />
                 ))}
+                {page.hasMore && (
+                  <PrimaryButton
+                    label={`Show ${Math.min(page.remaining, SESSION_PAGE_SIZE)} more`}
+                    variant="outline"
+                    onPress={() => setVisibleCount(c => c + SESSION_PAGE_SIZE)}
+                  />
+                )}
               </View>
             </View>
           </>
@@ -292,6 +326,9 @@ const styles = StyleSheet.create({
   heroSub: { ...typography.bodySmall, color: colors.textMuted, marginTop: spacing.xs },
   filters: { gap: spacing.sm },
   section: { gap: spacing.sm },
+  // Cancels the ScrollView's spacing.xl side padding. Inside it, seven columns land at ~40px
+  // on a 375pt screen — under the 44x44 minimum. Verified arithmetic, not a guess.
+  bleed: { marginHorizontal: -spacing.xl, paddingHorizontal: spacing.sm },
   tileRow: { flexDirection: 'row', gap: spacing.sm },
   chartFoot: { ...typography.bodySmall, color: colors.textMuted, marginTop: spacing.sm, textAlign: 'right' },
   legend: { flexDirection: 'row', gap: spacing.lg, marginTop: spacing.sm, justifyContent: 'center' },
