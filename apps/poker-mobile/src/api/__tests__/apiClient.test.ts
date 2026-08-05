@@ -6,8 +6,14 @@
  * none. The whole suite passing said nothing about the single highest-risk consumer of the bump.
  *
  * These drive axios itself (a fake `adapter`, not a mocked axios), so they exercise the real
- * interceptor pipeline, the real error shape axios builds for a non-2xx status, and the real
- * `axios.create` instance — which is exactly what a version bump can break.
+ * interceptor chain, real AxiosHeaders normalisation, real transformResponse, and config identity
+ * across the retry.
+ *
+ * SCOPE LIMIT, stated because the previous version of this comment overclaimed: a fake adapter
+ * REPLACES the layer where axios enforces `settle`/`validateStatus`, `buildFullPath` (baseURL
+ * joining) and `timeout` — all three live in the built-in adapters, not in `dispatchRequest`. So
+ * those behaviours are NOT exercised here; the tests below assert only that the options reach the
+ * adapter intact. Anything relying on adapter-level enforcement needs a different harness.
  *
  * The mutex is the load-bearing part: the backend rotates refresh tokens, so replaying a consumed
  * one returns 400. Before the mutex, concurrent 401s each fired their own refresh and the losers
@@ -19,6 +25,7 @@ import axios, { AxiosError } from 'axios';
 jest.mock('../../utils/storage');
 
 import * as storage from '../../utils/storage';
+import { API_BASE_URL } from '../config';
 import apiClient, { registerUnauthenticatedCallback } from '../apiClient';
 
 const getItem = storage.getItemAsync as jest.Mock;
@@ -73,10 +80,24 @@ it('refreshes on a 401 and retries the original request with the new token', asy
   const res = await apiClient.get('/api/sessions');
 
   expect(res.status).toBe(200);
+  // THE REFRESH REQUEST ITSELF, not just that one happened. Asserting only the call COUNT let two
+  // production-breaking mutations pass: renaming the body key `token` (the backend's
+  // RefreshTokenCommand binds `token`, so every refresh would 400) and changing the path (every
+  // refresh would 404). A refresh that fires but is malformed produces exactly the cascading
+  // forced-logout this interceptor exists to prevent, so the contract is pinned literally.
   expect(post).toHaveBeenCalledTimes(1);
+  expect(post).toHaveBeenCalledWith(
+    `${API_BASE_URL}/api/auth/refresh`,
+    { token: 'refresh-token-1' },
+    { headers: { 'Content-Type': 'application/json' } },
+  );
   // The retry carries the refreshed token, not the stale one.
   const retry = adapter.mock.calls[1][0];
   expect(retry.headers?.['Authorization']).toBe('Bearer new-access');
+  // The instance options survive into the adapter (they are not ENFORCED here — see the scope
+  // limit at the top of this file — but a bump that dropped them would still be caught).
+  expect(retry.baseURL).toBe(API_BASE_URL);
+  expect(retry.timeout).toBe(10000);
   // Both halves of the rotated pair are persisted — dropping the refresh token is what
   // previously produced a logout on the NEXT 401.
   expect(setItem).toHaveBeenCalledWith('accessToken', 'new-access');
@@ -133,11 +154,20 @@ it('stops after exactly ONE retry when the refreshed token is also rejected', as
     if (calls > 5) throw new Error('interceptor looped: the _retry guard is missing');
     return settle(config, 401, {});
   });
+  let loggedOut = 0;
+  registerUnauthenticatedCallback(() => { loggedOut++; });
 
   await expect(apiClient.get('/api/sessions')).rejects.toMatchObject({ response: { status: 401 } });
 
   expect(calls).toBe(2);                    // the original request plus exactly one retry
   expect(post).toHaveBeenCalledTimes(1);    // and exactly one refresh
+  // CURRENT behaviour, pinned in both directions so a change is visible rather than silent: the
+  // user is NOT logged out here. `return apiClient(config)` is not awaited, so the retry's
+  // rejection leaves the try block without reaching the catch that calls onUnauthenticated — the
+  // user keeps a dead access token and the screen surfaces a raw 401. Whether that is RIGHT is an
+  // open question recorded as a follow-up; it is deliberately not changed in a dependency-bump
+  // slice, but it is no longer unobserved.
+  expect(loggedOut).toBe(0);
 });
 
 it('does not attempt a refresh when there is no stored refresh token', async () => {
