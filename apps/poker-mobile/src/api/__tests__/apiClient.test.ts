@@ -118,6 +118,28 @@ it('logs the user out when the refresh itself fails, and does not retry forever'
   expect(adapter).toHaveBeenCalledTimes(1);
 });
 
+it('stops after exactly ONE retry when the refreshed token is also rejected', async () => {
+  // Pins the `_retry` flag, which the "failed refresh" test above does NOT reach: there the refresh
+  // throws, so the interceptor never retries at all. The flag only matters when the RETRY itself
+  // 401s — without it the interceptor re-enters its own retry and loops, refreshing forever.
+  // (Verified by mutation: removing `!config?._retry` left every other test in this file green.)
+  const post = jest.spyOn(axios, 'post').mockResolvedValue({
+    data: { accessToken: 'new-access', refreshToken: 'new-refresh' },
+  } as never);
+  let calls = 0;
+  apiClient.defaults.adapter = jest.fn(async (config: AxiosRequestConfig): Promise<AxiosResponse> => {
+    calls++;
+    // Bounded so a missing guard fails fast instead of hanging the suite forever.
+    if (calls > 5) throw new Error('interceptor looped: the _retry guard is missing');
+    return settle(config, 401, {});
+  });
+
+  await expect(apiClient.get('/api/sessions')).rejects.toMatchObject({ response: { status: 401 } });
+
+  expect(calls).toBe(2);                    // the original request plus exactly one retry
+  expect(post).toHaveBeenCalledTimes(1);    // and exactly one refresh
+});
+
 it('does not attempt a refresh when there is no stored refresh token', async () => {
   getItem.mockResolvedValue(null);
   const post = jest.spyOn(axios, 'post');
