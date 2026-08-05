@@ -93,7 +93,19 @@ describe('privacy.html — free-first honest + consent-scoped analytics (Wave 0.
   it('discloses consent-scoped anonymous analytics: PostHog, EU, opt-out, and the exclusions', () => {
     expect(privacy).toMatch(/PostHog/);
     expect(privacy).toMatch(/European Union/);
-    expect(privacy).toMatch(/after you make your explicit\s+choice on the\s+welcome screen/i);
+    // PIN REWRITTEN 2026-08-05, deliberately — the sentence it guarded was imprecise.
+    //   OLD: /after you make your explicit\s+choice on the\s+welcome screen/i
+    //        — guarded "Collection begins only after you make your explicit choice on the welcome
+    //          screen", which contradicted the code: `welcome_shown` (and the choice event itself)
+    //          are tracked BEFORE consent, buffered, and transmitted once the choice is made.
+    //   NEW: the three clauses that make the replacement TRUE — nothing sent pre-choice, the
+    //        welcome-screen events are held on the device until then, and they are discarded and
+    //        never leave the device if the user never chooses.
+    // Pinning the guarantees rather than one phrase, so a future reword can change the prose but
+    // not quietly drop a clause (the T0.5 lesson: ban/assert the claim, not the wording).
+    expect(privacy).toMatch(/Nothing is sent before you make your choice/i);
+    expect(privacy).toMatch(/held on your device until then/i);
+    expect(privacy).toMatch(/discarded and never leave your device/i);
     expect(privacy).toMatch(/Profile → Privacy/);
     // The never-collected list must stay explicit — game amounts / player names / hands.
     expect(privacy).toMatch(/never include.*game amounts/is);
