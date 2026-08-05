@@ -43,18 +43,17 @@ jobs:
         run: dotnet test PokerApp.sln --nologo
 
   mobile:
-    # NAME LISTS EVERY GATE ON PURPOSE. This job runs three: typecheck, lint and unit tests. While
-    # it was called "tsc + jest", a lint-budget breach failed it and read as an unrelated tsc/jest
-    # failure, costing a full round to diagnose (T0.4, 2026-08-05). A check's name is the first
-    # thing anyone sees when it goes red, so it has to say what actually ran.
+    # ⚠ THE NAME UNDERSTATES THIS JOB: it runs THREE gates — typecheck, LINT, and unit tests.
+    # If it goes red, check the lint step too; a lint-budget breach here reads as an unrelated
+    # tsc/jest failure and cost a full round to diagnose once (T0.4, 2026-08-05).
     #
-    # RENAMING THIS CHANGES THE REQUIRED-CHECK CONTEXT. Branch protection on `main` requires checks
-    # by exact name, so the required set must be updated to match. Until it is, the old context
-    # never reports and PRs stay blocked — recoverable, not a lockout, since enforce_admins is off
-    # and the repo admin can still bypass. Swap the whole set in ONE API call (see the PR that
-    # introduced this name) rather than hand-typing it in Settings: the name contains U+00B7 MIDDLE
-    # DOT, and a typo produces a required context that can never report.
-    name: Mobile · tsc + lint + jest
+    # The name is left ALONE on purpose. Branch protection on `main` requires status checks by
+    # exact name, so renaming this job would retire the required context "Mobile · tsc + jest" and
+    # block every PR until the protection set is rewritten — and that rewrite means retyping names
+    # containing U+00B7 MIDDLE DOT, where one typo yields a required context that can never report.
+    # Owner decision, 2026-08-05: not worth that risk on a protected branch for a label. This
+    # comment carries the legibility instead.
+    name: Mobile · tsc + jest
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -83,13 +82,12 @@ jobs:
         #   gh api repos/taysh123/poker-home-games/branches/main/protection \
         #     --jq '.required_status_checks.contexts'
         # If this job's name is absent from that output, this gate is ADVISORY, not blocking.
-        # (Two earlier versions of this comment each stated the answer outright and each went stale:
-        # one claimed there was no protection at all, the next claimed this job was required while
-        # the same commit renamed it out of the required set.)
+        # (An earlier version of this comment asserted the answer outright — that `main` had no
+        # protection at all — and silently went stale when protection was turned on.)
         #
         # The ceiling is a TOTAL, so this step can fail because of a file the failure never names.
         # Fix the cause; do not raise the number — the backlog is meant to shrink only. Headroom as
-        # of 2026-08-05: 119 used of 200.
+        # of 2026-08-05: 118 used of 200.
         run: npm run lint
       - name: Unit tests
         # Positive-offset TZ (matches the user base): jest's local-day/month pins are UTC-blind on
@@ -99,11 +97,10 @@ jobs:
         run: npx jest --ci
 
   landing:
-    # Same reasoning as the mobile job above: this runs FOUR gates (typecheck, lint, vitest, static
-    # build) and was advertising two. Renamed in the same change because the required-check set has
-    # to be rewritten once either way — doing it later would mean a second protection edit and a
-    # second window with a phantom required context.
-    name: Landing · tsc + lint + vitest + build
+    # ⚠ Same understatement as the mobile job: this runs FOUR gates — typecheck, LINT, vitest and
+    # the static build. Name left alone for the same reason (it is a required check; renaming it
+    # would retire the context and block merges until protection is rewritten).
+    name: Landing · vitest + build
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
