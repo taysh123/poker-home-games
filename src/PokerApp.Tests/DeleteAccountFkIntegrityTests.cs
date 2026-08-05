@@ -892,11 +892,15 @@ public sealed class DeleteAccountFkIntegrityTests : IDisposable
             "GroupInviteLink.CreatedByUserId",      // user ref · SURVIVES — link outlives the member who made it
             "HandRecord.CreatedByUserId",           // user ref · SCRUBBED on deletion + no longer served (T0.5)
             "Notification.RelatedEntityId",         // not a user ref — polymorphic entity pointer
-            "Session.CreatorId",                    // user ref · SURVIVES — LOAD-BEARING: standalone-session
-                                                    //   authorization is `session.CreatorId == callerId`,
-                                                    //   so scrubbing it would break access control
-            "SessionInviteToken.CreatedByUserId",   // user ref · SURVIVES — single-use token, expires in 24h
-            "SessionInviteToken.UsedByUserId",      // user ref · SURVIVES — records who redeemed the invite
+            "Session.CreatorId",                    // user ref · SURVIVES — NOT scrubbed in T0.5, and the
+                                                    //   earlier note calling it load-bearing was wrong:
+                                                    //   standalone auth is `CreatorId == callerId`, and the
+                                                    //   creator's account is gone either way, so no LIVE
+                                                    //   caller matches it. Scrubbable; simply out of scope.
+            "SessionInviteToken.CreatedByUserId",   // user ref · SURVIVES indefinitely — ExpiresAt only gates
+                                                    //   IsActive; nothing deletes the ROW (no cleanup job)
+            "SessionInviteToken.UsedByUserId",      // user ref · SURVIVES — who redeemed someone ELSE's invite,
+                                                    //   so it is not covered by "entries your account created"
         ];
 
         Assert.Equal(acknowledged, loose);

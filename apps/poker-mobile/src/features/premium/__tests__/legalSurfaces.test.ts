@@ -16,6 +16,8 @@ import { resolve } from 'path';
 const read = (rel: string) => readFileSync(resolve(__dirname, '../../../../public', rel), 'utf8');
 /** apps/poker-mobile/src/features/premium/__tests__ -> repo root is six levels up. */
 const readRoot = (rel: string) => readFileSync(resolve(__dirname, '../../../../../..', rel), 'utf8');
+/** In-app copy is a legal surface too — the deletion dialog is where consent actually happens. */
+const readSrc = (rel: string) => readFileSync(resolve(__dirname, '../../..', rel), 'utf8');
 
 const terms = read('terms.html');
 const privacy = read('privacy.html');
@@ -105,6 +107,23 @@ describe('privacy.html — free-first honest + consent-scoped analytics (Wave 0.
     expect(privacy).toMatch(/Local guest game data never leaves\s+your device/i);
   });
 
+  it('the deletion SECTION claims no completeness, in any wording', () => {
+    // The first version of this pin banned two literal phrases and was trivially evaded: a review
+    // rewrote the paragraph to "erases every piece of personal information we hold about you,
+    // leaving nothing behind" — a claim proven false by execution — and all 30 tests stayed green.
+    // A ban on one verb is not a ban on the claim.
+    //
+    // So: scope to the deletion section and ban the SEMANTIC class — any (erase|delete|remove|wipe)
+    // near an everything/nothing-left quantifier. Sentences that enumerate what goes ("removes your
+    // profile and login credentials") do not match, which is the distinction that matters.
+    const section = privacy.slice(privacy.indexOf('id="delete"'));
+    const deletion = section.slice(0, section.indexOf('<h2', 1));
+
+    expect(deletion).not.toMatch(
+      /(eras|delet|remov|wip)\w*[^.]{0,80}(everything|all (your |the |associated )*(personal )?(data|information)|nothing[^.]{0,30}(left|behind|kept|remains))/i,
+    );
+  });
+
   it('does NOT promise that deletion removes everything', () => {
     // The old text promised deletion removes "your account and all associated personal data
     // (profile, game records, …) from our servers, immediately". Every part of that was
@@ -128,6 +147,21 @@ describe('privacy.html — free-first honest + consent-scoped analytics (Wave 0.
     expect(privacy).toMatch(/disconnected\s+from\s+your\s+account/i);        // seat + amounts anonymised
     expect(privacy).toMatch(/display\s+name\s+can\s+still\s+appear/i);       // ActorName / WinnerName / notifications
     expect(privacy).toMatch(/keep\s+an\s+internal\s+identifier/i);           // Session.CreatorId et al, no modelled FK
+  });
+
+  it('the IN-APP deletion copy makes the same promise as this page', () => {
+    // The policy page is the reference; the confirm dialog is the CONSENT. Rewriting only the page
+    // left the app still promising "all associated data" at the exact moment the user taps Delete —
+    // and every gate stayed green, because this file only ever read privacy.html. The in-app strings
+    // are the more load-bearing surface for App Store 5.1.1(v), so they are pinned here too.
+    const profile = readSrc('screens/ProfileScreen.tsx');
+
+    expect(profile).not.toMatch(/all (associated|your) data/i);
+    expect(profile).not.toMatch(
+      /(eras|delet|remov|wip)\w*[^'"]{0,60}(everything|all (your |the |associated )*(personal )?(data|information))/i,
+    );
+    // ...and it states the survivor class rather than staying silent about it.
+    expect(profile).toMatch(/stay for the\s+other players/i);
   });
 
   it('has a contact address and cross-links all four pages', () => {

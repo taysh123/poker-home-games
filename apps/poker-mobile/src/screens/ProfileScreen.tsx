@@ -168,7 +168,14 @@ export default function ProfileScreen({ navigation }: Props) {
   function handleDeleteAccount() {
     confirmDialog(
       'Delete Account',
-      'This will permanently delete your account and all associated data. This cannot be undone.',
+      // Must match privacy.html's deletion scope. This dialog IS the consent moment, so it is the
+      // more load-bearing of the two surfaces — it previously claimed complete erasure, which the
+      // deletion handler contradicts: games you played in are kept for the other players
+      // (audit 2026-08-03, HIGH #5). Pinned by legalSurfaces.test.ts alongside the policy page,
+      // which greps this file verbatim — so keep the old wording out of comments here too.
+      'This deletes your profile, groups, invitations, notifications and achievements right away, '
+        + 'and removes settlements that name you. Games you played in stay for the other players, '
+        + 'with your seat disconnected from your account. This cannot be undone.',
       'Delete',
       confirmDelete,
       { destructive: true },
@@ -661,7 +668,8 @@ export default function ProfileScreen({ navigation }: Props) {
             </View>
           </View>
           <Text style={styles.dangerDesc}>
-            Permanently delete your account and all your data. This action cannot be undone.
+            Delete your account, groups and personal records. Games you played in stay for the
+            other players, with your seat disconnected from your account. This cannot be undone.
           </Text>
           <PressableScale
             style={[styles.btnDanger, deletingAccount && styles.dimmed]}

@@ -28,14 +28,21 @@ export async function getSessionHandHistory(token: string, sessionId: string): P
   return data;
 }
 
+/**
+ * The create endpoint returns its own narrower shape — notably NO `isMine`, which only the
+ * history endpoint computes. Typing it as HandRecordDto claimed a field the server never sends;
+ * callers refetch the history after adding, so nothing depended on the wider type.
+ */
+export type AddedHandRecordDto = Omit<HandRecordDto, 'isMine'> & { sessionId: string };
+
 export async function addHandRecord(
   token: string,
   sessionId: string,
   winnerName: string,
   potAmount: number,
   note?: string,
-): Promise<HandRecordDto> {
-  const { data } = await api.post<HandRecordDto>(
+): Promise<AddedHandRecordDto> {
+  const { data } = await api.post<AddedHandRecordDto>(
     `/api/sessions/${sessionId}/hands`,
     { winnerName, potAmount, note: note || null },
     { headers: authHeader(token) },

@@ -54,6 +54,31 @@ public sealed class SessionConcurrencyMigrationTests
     }
 
     [Fact]
+    public void The_hand_record_creator_backfill_is_data_only_and_idempotent()
+    {
+        // Same reasoning as the tests above: EnsureCreated builds the test schema from the MODEL, so
+        // no migration file is ever executed by a test and gutting one stays green. This one is
+        // data-only, which makes it MORE invisible — it changes no schema, so nothing downstream
+        // would notice its absence except the residue it exists to destroy.
+        var migration = new ScrubOrphanedHandRecordCreators();
+        var builder = new MigrationBuilder(activeProvider: null);
+        typeof(ScrubOrphanedHandRecordCreators)
+            .GetMethod("Up", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .Invoke(migration, [builder]);
+
+        var sql = Assert.Single(builder.Operations.OfType<SqlOperation>()).Sql;
+
+        Assert.Contains("UPDATE \"HandRecords\"", sql, StringComparison.Ordinal);
+        // Only rows whose creator no longer exists — never a live account's hands.
+        Assert.Contains("NOT EXISTS", sql, StringComparison.Ordinal);
+        Assert.Contains("FROM \"Users\"", sql, StringComparison.Ordinal);
+        // Idempotent: already-scrubbed rows are excluded, so a re-run is a no-op.
+        Assert.Contains("<> '00000000-0000-0000-0000-000000000000'", sql, StringComparison.Ordinal);
+        // Data-only: a schema operation here would be a different, riskier migration.
+        Assert.DoesNotContain(builder.Operations, op => op is not SqlOperation);
+    }
+
+    [Fact]
     public void Adds_nothing_else_and_drops_nothing()
     {
         // Additive-only is the safety claim made in the PR: this runs against live production data,
