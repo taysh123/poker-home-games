@@ -227,11 +227,16 @@ export default function BankrollScreen({ embedded = false }: { embedded?: boolea
             {/* Month calendar — FULL-BLEED so the 7 columns clear the 44px touch minimum. */}
             <View style={styles.section}>
               <SectionTitle>CALENDAR</SectionTitle>
-              <View style={styles.bleed}>
-                <BankrollMonthStrip monthKey={monthKey} months={months} onChangeMonth={setMonthKey} />
-                <View style={{ marginTop: spacing.md }}>
-                  <BankrollMonthCalendar monthKey={monthKey} levels={monthLevels} />
-                </View>
+              {/* The strip stays INSIDE the normal padding so its arrows line up with every
+                  other control on the screen; only the grid itself bleeds. */}
+              <BankrollMonthStrip
+                monthKey={monthKey}
+                months={months}
+                onChangeMonth={setMonthKey}
+                filterActive={typeIdx !== 0 || sourceIdx !== 0}
+              />
+              <View style={[styles.bleed, { marginTop: spacing.md }]}>
+                <BankrollMonthCalendar monthKey={monthKey} levels={monthLevels} />
               </View>
             </View>
 
@@ -327,8 +332,10 @@ const styles = StyleSheet.create({
   filters: { gap: spacing.sm },
   section: { gap: spacing.sm },
   // Cancels the ScrollView's spacing.xl side padding. Inside it, seven columns land at ~40px
-  // on a 375pt screen — under the 44x44 minimum. Verified arithmetic, not a guess.
-  bleed: { marginHorizontal: -spacing.xl, paddingHorizontal: spacing.sm },
+  // on a 375pt screen — under the 44x44 minimum. The spacing.xs inset is the most edge
+  // breathing room the touch target can afford: every point here comes off the cell width, and
+  // at spacing.sm the 44px floor would need a 338dp screen instead of 330dp.
+  bleed: { marginHorizontal: -spacing.xl, paddingHorizontal: spacing.xs },
   tileRow: { flexDirection: 'row', gap: spacing.sm },
   chartFoot: { ...typography.bodySmall, color: colors.textMuted, marginTop: spacing.sm, textAlign: 'right' },
   legend: { flexDirection: 'row', gap: spacing.lg, marginTop: spacing.sm, justifyContent: 'center' },

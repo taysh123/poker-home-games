@@ -27,7 +27,7 @@ import type { DayHeatLevel } from '../logic/calendar';
  *
  * TOUCH TARGET. The parent renders this FULL-BLEED: inside the screen's spacing.xl padding the
  * seven columns land at ~40px, under the 44x44 minimum. Even full-bleed the floor only holds
- * down to ~322dp of screen width — see the note on `cell` below. It is stated rather than
+ * down to ~330dp of screen width — see the note on `cell` below. It is stated rather than
  * claimed away, because Android's Display-size setting shrinks effective dp for exactly the
  * low-vision users the rule protects.
  */
@@ -166,10 +166,11 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
   /**
    * 1px of separation, not 2 — every pixel here comes straight off the touch target, which is
-   * `cellInner`, not this wrapper. Effective target = (screenWidth / 7) - 2, so the 44px floor
-   * holds for screens >= ~322dp. Narrower than that (a 320dp device, or Android Display-size
-   * "Largest") it degrades by a couple of points; 7 columns of 44px simply do not fit below
-   * 308dp of usable width, so this is bounded and stated rather than papered over.
+   * `cellInner`, not this wrapper. With the parent's spacing.xs bleed inset the effective target
+   * is ((screenWidth - 8) / 7) - 2, so the 44px floor holds for screens >= ~330dp: 48.3 at
+   * 360dp, 50.4 at 375dp. Below that (a 320dp device, or Android Display-size "Largest") it
+   * degrades to ~42.6 — 7 columns of 44px need 308dp of usable width and simply do not fit, so
+   * the shortfall is bounded and stated rather than papered over with a false guarantee.
    */
   cell: { width: `${100 / 7}%`, padding: 1 },
   cellInner: {

@@ -21,10 +21,13 @@ export default function BankrollMonthStrip({
   monthKey,
   months,
   onChangeMonth,
+  filterActive = false,
 }: {
   monthKey: string;
   months: MonthBucket[];
   onChangeMonth: (monthKey: string) => void;
+  /** Whether a type/source filter is narrowing `months`, so the empty state can stay truthful. */
+  filterActive?: boolean;
 }) {
   const bucket = months.find(m => m.monthKey === monthKey);
   const net = bucket?.netCents ?? 0;
@@ -50,7 +53,9 @@ export default function BankrollMonthStrip({
         <Text style={styles.month}>{monthLabel(monthKey)}</Text>
         <Text style={[styles.net, { color: netColor }]}>
           {sessions === 0
-            ? 'No sessions'
+            // `months` is already filtered, so a bare "No sessions" would be a false claim
+            // whenever a type/source filter is hiding this month's games.
+            ? (filterActive ? 'No sessions match this filter' : 'No sessions')
             : `${formatCentsSigned(net)} · ${sessions} session${sessions === 1 ? '' : 's'}`}
         </Text>
       </View>
