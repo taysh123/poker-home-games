@@ -32,6 +32,31 @@ export function monthLabel(monthKey: string): string {
 }
 
 /**
+ * Which month the calendar should open on: the current month when it has sessions, otherwise
+ * the most recent month that does, otherwise the current month.
+ *
+ * Opening unconditionally on "now" meant a player whose last game was last month landed on a
+ * blank grid with nothing indicating their history was one tap back — a weak first impression
+ * on a free headline pillar. Preferring the current month WHEN POPULATED matters too: jumping
+ * straight to "most recent with data" would yank an active player backwards on the 1st of a new
+ * month, before they had logged anything.
+ *
+ * `monthKeys` are the LOCAL month keys of the player's sessions, in any order.
+ */
+export function initialMonthKey(monthKeys: string[], today: Date = new Date()): string {
+  const current = localMonthKey(today);
+  if (monthKeys.includes(current)) return current;
+  const sorted = [...monthKeys].sort();
+  // Most recent past month, else the earliest future one — a session can be back-dated OR
+  // forward-dated (the log form accepts any date), and landing on a blank grid while data
+  // exists is the whole defect being fixed, whichever side of today that data sits on.
+  const past = sorted.filter(k => k < current);
+  if (past.length > 0) return past[past.length - 1];
+  const future = sorted.filter(k => k > current);
+  return future.length > 0 ? future[0] : current;
+}
+
+/**
  * Day keys for one month laid out in 7-column weeks, Sunday-first. `null` is a padding cell
  * (before the 1st / after the last) so the grid always renders whole rows. A month that both
  * starts on Sunday and divides evenly gets no padding at all (February 2026), and one that

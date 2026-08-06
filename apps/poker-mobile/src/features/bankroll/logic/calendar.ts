@@ -5,7 +5,7 @@
  * here goes through those two helpers, never a raw ISO slice.
  */
 import { localDayKey, localMonthKey } from '../../study/logic/localDay';
-import { sessionNetCents } from './bankrollAnalytics';
+import { sessionNetCents, sessionCostCents } from './bankrollAnalytics';
 import type { BankrollSession } from '../types';
 
 export interface DayBucket {
@@ -70,51 +70,91 @@ export interface DayHeatLevel extends DayBucket {
   /**
    * Discrete shading level for calendar-heatmap rendering. Signed: positive = winning day,
    * negative = losing day, 0 = no session OR an exact break-even day (both render as neutral;
-   * `sessionCount` distinguishes them if a caller needs to). Magnitude (1..levelCount) is
-   * RELATIVE to the largest |netCents| in this dataset, not a fixed cents threshold, so it stays
-   * meaningful whether the player logs $5 or $5,000 sessions. Colour/exact level count is a B4
-   * taste decision — this only supplies the bucketed number.
+   * `sessionCount` distinguishes them if a caller needs to). Magnitude is 1..4, banded against
+   * `heatReferenceCents` — a property of the PLAYER, not of whatever set is on screen.
    */
   level: number;
 }
 
 /**
- * Bucket each active day's net into `levelCount` signed intensity levels for a heatmap.
- * `levelCount` is clamped to a positive integer (falling back to the default 4 for
- * non-finite input) — an unguarded 0 collapses every real day to the same level as "no
- * session", and a negative value INVERTS every day's sign (a winner reads as the biggest
- * loser), silently defeating the whole point of the heatmap. Fleet-found (2026-08-05):
- * levelCount is caller-supplied (e.g. from screen width or a density setting in the future
- * B4-B7 heatmap UI), so it can't be assumed to always be a sane positive integer.
+ * Band edges as multiples of the heat reference: a day is step 1 below 0.5x a typical day's
+ * exposure, step 2 below 1x, step 3 below 2x, and step 4 at or above 2x. Four steps, matching
+ * the four-entry ramp in logic/heatCell.ts.
  */
-export function heatmapLevels(sessions: BankrollSession[], levelCount = 4): DayHeatLevel[] {
-  const safeLevelCount = Number.isFinite(levelCount) ? Math.max(1, Math.floor(levelCount)) : 4;
-  const buckets = dayBuckets(sessions);
-  const maxAbsNet = buckets.reduce((max, b) => Math.max(max, Math.abs(b.netCents)), 0);
-  return buckets.map(b => {
-    if (b.netCents === 0 || maxAbsNet === 0) return { ...b, level: 0 };
-    const magnitude = Math.ceil((Math.abs(b.netCents) / maxAbsNet) * safeLevelCount);
-    return { ...b, level: Math.sign(b.netCents) * magnitude };
+export const HEAT_BANDS = [0.5, 1, 2] as const;
+
+/**
+ * The reference a day's net is measured against: the MEDIAN DAILY COST (buy-ins + fees) across
+ * the player's history. Returns 0 when no usable cost exists.
+ *
+ * Why a property of the PLAYER and not of the visible set — the previous ramp scaled against
+ * `max(|net|)` in whatever set it was handed, which was unstable three ways (all measured):
+ *   - Saturation: a lone $20 night painted step 4, being trivially its own maximum. `$20, $19,
+ *     $18` painted 4, 4, 4.
+ *   - Compression: one $5,000 night alongside 20 normal nights collapsed all 20 to step 1.
+ *   - Cross-view: the SAME $100 day rendered step 4 scoped to a quiet month and step 1 scoped
+ *     to the year. Two views of one day, disagreeing — which is why this had to be settled
+ *     before the year heatmap inherits the ramp.
+ * A reference derived from the player's typical stake fixes all three and self-calibrates: a
+ * $1/$2 player and a $25/$50 player each get a meaningful ramp, with no hardcoded cents.
+ *
+ * DAILY cost, not per-session: the calendar's unit is the day, so a two-session day is measured
+ * against two buy-ins of exposure rather than one. MEDIAN, not mean, so a single huge rebuy
+ * night cannot drag the reference.
+ *
+ * Small n is not a special case here, and that is the point of choosing cost over a percentile
+ * of outcomes: cost is known from the FIRST session and is independent of how that session went,
+ * so one $20 win against a $100 buy-in correctly reads as small. (A percentile of daily nets
+ * degenerates instead — with one day of history, p80 IS that day, so it saturates.) The only
+ * degenerate input is having no usable cost at all; see `heatmapLevels`.
+ */
+export function heatReferenceCents(sessions: BankrollSession[]): number {
+  const costByDay = new Map<string, number>();
+  for (const s of sessions) {
+    const dayKey = localDayKey(new Date(s.startedAt));
+    costByDay.set(dayKey, (costByDay.get(dayKey) ?? 0) + sessionCostCents(s));
+  }
+  const costs = [...costByDay.values()].filter(c => c > 0).sort((a, b) => a - b);
+  if (costs.length === 0) return 0;
+  const mid = costs.length >> 1;
+  return costs.length % 2 === 1 ? costs[mid] : Math.round((costs[mid - 1] + costs[mid]) / 2);
+}
+
+/**
+ * Bucket each active day's net into signed intensity levels, banded against `referenceCents`
+ * (from `heatReferenceCents`). The reference is an explicit parameter with no default, so a
+ * caller cannot silently fall back to set-relative scaling.
+ *
+ * FALLBACK, stated rather than implied: when the reference is unusable (0, negative, NaN — i.e.
+ * a player with no session carrying a positive cost), every non-zero day renders at step 1. It
+ * does not blaze and it does not throw: the day is still marked as played and still carries its
+ * sign, and only the magnitude — which genuinely cannot be known without a reference — is
+ * withheld. Returning 0 instead would be wrong, because 0 already means "broke even".
+ */
+export function heatmapLevels(sessions: BankrollSession[], referenceCents: number): DayHeatLevel[] {
+  const usable = Number.isFinite(referenceCents) && referenceCents > 0;
+  return dayBuckets(sessions).map(b => {
+    if (b.netCents === 0) return { ...b, level: 0 };
+    if (!usable) return { ...b, level: Math.sign(b.netCents) };
+    const ratio = Math.abs(b.netCents) / referenceCents;
+    const step = ratio < HEAT_BANDS[0] ? 1 : ratio < HEAT_BANDS[1] ? 2 : ratio < HEAT_BANDS[2] ? 3 : 4;
+    return { ...b, level: Math.sign(b.netCents) * step };
   });
 }
 
 /**
- * Heat levels for ONE local month, scaled against that month's own biggest day (B5).
+ * Heat levels for the days of ONE local month.
  *
- * The scoping is the point. `heatmapLevels` ramps relative to the largest |netCents| in the set
- * it is given, so handing it the full history would measure every month against the all-time
- * best day — one huge night in March would flatten every other month to step 1. A month view
- * should read "within this month", so the filter belongs here, next to the ramp it affects,
- * where it can be tested. Do NOT inline this in a screen: screens are not unit-tested in this
- * repo, so a future refactor passing the unscoped set would go unnoticed.
+ * Takes the player's FULL history and does both halves itself, deliberately: the reference is
+ * computed from everything (so the ramp is stable and matches the year view), while the days
+ * returned are only that month's. Splitting those two responsibilities across a screen would
+ * put the load-bearing asymmetry somewhere unpinnable — screens are not unit-tested here, so a
+ * refactor that derived the reference from the visible month instead would reinstate exactly
+ * the set-relative bug this replaced, silently.
  */
-export function monthHeatLevels(
-  sessions: BankrollSession[],
-  monthKey: string,
-  levelCount = 4,
-): DayHeatLevel[] {
+export function monthHeatLevels(sessions: BankrollSession[], monthKey: string): DayHeatLevel[] {
   return heatmapLevels(
     sessions.filter(s => localMonthKey(new Date(s.startedAt)) === monthKey),
-    levelCount,
+    heatReferenceCents(sessions),
   );
 }

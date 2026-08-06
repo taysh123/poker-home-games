@@ -1,4 +1,37 @@
-import { WEEKDAY_INITIALS, shiftMonth, monthLabel, monthGridCells } from '../monthGrid';
+import {
+  WEEKDAY_INITIALS, shiftMonth, monthLabel, monthGridCells, initialMonthKey,
+} from '../monthGrid';
+
+describe('initialMonthKey', () => {
+  const AUGUST = new Date(2026, 7, 6); // local 2026-08-06
+
+  it('stays on the current month when it has sessions', () => {
+    // Never yank an active player backwards just because an older month has more data.
+    expect(initialMonthKey(['2026-05', '2026-08'], AUGUST)).toBe('2026-08');
+  });
+
+  it('falls back to the most recent PAST month with sessions', () => {
+    // Opening on a blank grid while history sits one tap back is the defect being fixed.
+    expect(initialMonthKey(['2026-03', '2026-07', '2026-05'], AUGUST)).toBe('2026-07');
+  });
+
+  it('falls back to the earliest FUTURE month when all sessions are ahead of today', () => {
+    // The log form accepts any date, so a session can be forward-dated.
+    expect(initialMonthKey(['2026-11', '2026-09'], AUGUST)).toBe('2026-09');
+  });
+
+  it('prefers a past month over a future one when both exist', () => {
+    expect(initialMonthKey(['2026-06', '2026-12'], AUGUST)).toBe('2026-06');
+  });
+
+  it('returns the current month when there are no sessions at all', () => {
+    expect(initialMonthKey([], AUGUST)).toBe('2026-08');
+  });
+
+  it('crosses a year boundary when the most recent data is last year', () => {
+    expect(initialMonthKey(['2025-12', '2025-06'], new Date(2026, 0, 15))).toBe('2025-12');
+  });
+});
 
 describe('WEEKDAY_INITIALS', () => {
   it('is seven Sunday-first column headers', () => {

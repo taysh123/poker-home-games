@@ -37,6 +37,7 @@ import {
 } from '../logic/bankrollAnalytics';
 import { localMonthKey } from '../../study/logic/localDay';
 import { monthBuckets, monthHeatLevels } from '../logic/calendar';
+import { initialMonthKey } from '../logic/monthGrid';
 import { SESSION_PAGE_SIZE, historyPage } from '../logic/sessionHistory';
 import type { BankrollGameType, BankrollSource, BankrollSession } from '../types';
 import BankrollLineChart from './BankrollLineChart';
@@ -63,7 +64,12 @@ export default function BankrollScreen({ embedded = false }: { embedded?: boolea
   const reduced = useReducedMotion();
   const [typeIdx, setTypeIdx] = useState(0);
   const [sourceIdx, setSourceIdx] = useState(0);
-  const [monthKey, setMonthKey] = useState(() => localMonthKey());
+  // Opens on the current month when it has sessions, else the most recent month that does —
+  // a blank grid was a weak first impression on a headline pillar. Seeded once from the
+  // sessions available at mount; the arrows own it from then on.
+  const [monthKey, setMonthKey] = useState(() =>
+    initialMonthKey(sessions.map(s => localMonthKey(new Date(s.startedAt)))),
+  );
   const [visibleCount, setVisibleCount] = useState(SESSION_PAGE_SIZE);
 
   const filter: BankrollFilter = useMemo(() => {
@@ -86,8 +92,9 @@ export default function BankrollScreen({ embedded = false }: { embedded?: boolea
     [filtered],
   );
   const months = useMemo(() => monthBuckets(filtered), [filtered]);
-  // Scoping lives inside monthHeatLevels, not here: screens aren't unit-tested in this repo, so
-  // an inline filter would be unpinnable and could quietly regress to the unscoped set.
+  // monthHeatLevels takes the FULL filtered history and does both halves itself: the days come
+  // from `monthKey`, the ramp reference from everything. Splitting those apart here would put
+  // the load-bearing asymmetry somewhere unpinnable — screens aren't unit-tested in this repo.
   const monthLevels = useMemo(() => monthHeatLevels(filtered, monthKey), [filtered, monthKey]);
   const page = useMemo(() => historyPage(history, visibleCount), [history, visibleCount]);
 

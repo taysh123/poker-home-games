@@ -49,14 +49,14 @@ const LOSS_WIDTH = [2, 3, 4, 5];
 /** The ramp length. `step` is clamped to this, NOT to a caller-supplied levelCount. */
 export const RAMP_STEPS = WIN_FILL.length;
 
-export function heatCellVisual(bucket: DayHeatLevel | undefined, levelCount = RAMP_STEPS): HeatCellVisual {
+export function heatCellVisual(bucket: DayHeatLevel | undefined): HeatCellVisual {
   if (!bucket) return { kind: 'none', step: 0 };
   if (bucket.level === 0) return { kind: 'even', step: 0 };
-  // Clamp to the RAMP, not just to levelCount: a caller passing levelCount > RAMP_STEPS (which
-  // calendar.ts explicitly anticipates for a future density setting) would otherwise index off
-  // the end of these arrays and hand back `undefined` styles — rendering a loss identically to
-  // a no-session day, the precise collapse this module exists to prevent.
-  const step = Math.min(Math.abs(bucket.level), levelCount, RAMP_STEPS);
+  // `heatmapLevels` bands to 1..RAMP_STEPS by construction, so this clamp is belt-and-braces
+  // against a hand-built bucket rather than a live path — but indexing off the end of the ramp
+  // arrays returns `undefined` styles, which renders a loss identically to a no-session day.
+  // That collapse is the one failure this module exists to prevent, so it stays guarded.
+  const step = Math.min(Math.abs(bucket.level), RAMP_STEPS);
   return { kind: bucket.level > 0 ? 'win' : 'loss', step };
 }
 

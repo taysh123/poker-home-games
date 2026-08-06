@@ -60,24 +60,19 @@ describe('heatCellVisual — the four states', () => {
   });
 
   it('clamps a step above the ramp so a style lookup can never fall off the end', () => {
-    expect(heatCellVisual(bucket(9, 99999), 4)).toEqual({ kind: 'win', step: 4 });
-    expect(heatCellVisual(bucket(-9, -99999), 4)).toEqual({ kind: 'loss', step: 4 });
-  });
-
-  it('clamps to the RAMP even when the caller asks for more levels than exist', () => {
-    // calendar.ts explicitly anticipates a caller-supplied levelCount (a future density
-    // setting). Clamping only to levelCount would index off the 4-entry ramp arrays and hand
-    // back undefined styles — rendering a LOSS identically to a no-session day, which is the
-    // exact sign-collapse this module exists to prevent.
-    for (const levelCount of [5, 6, 10]) {
-      const win = heatCellStyle(heatCellVisual(bucket(levelCount, 99999), levelCount));
-      const loss = heatCellStyle(heatCellVisual(bucket(-levelCount, -99999), levelCount));
+    // `heatmapLevels` bands to 1..4, so an out-of-range level means a hand-built bucket. Even
+    // then it must not index off the ramp: an undefined style renders a LOSS identically to a
+    // no-session day, the exact sign-collapse this module exists to prevent.
+    for (const level of [5, 6, 10]) {
+      const win = heatCellStyle(heatCellVisual(bucket(level, 99999)));
+      const loss = heatCellStyle(heatCellVisual(bucket(-level, -99999)));
       expect(win.backgroundColor).toBeDefined();
       expect(loss.borderColor).toBeDefined();
       expect(loss.borderWidth).toBeGreaterThan(0);
       expect(loss.borderWidth).not.toBeNaN();
     }
-    expect(heatCellVisual(bucket(10, 99999), 10)).toEqual({ kind: 'win', step: RAMP_STEPS });
+    expect(heatCellVisual(bucket(10, 99999))).toEqual({ kind: 'win', step: RAMP_STEPS });
+    expect(heatCellVisual(bucket(-10, -99999))).toEqual({ kind: 'loss', step: RAMP_STEPS });
   });
 });
 
