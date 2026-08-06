@@ -202,26 +202,36 @@ describe('monthHeatLevels — month-scoped DAYS, history-wide REFERENCE', () => 
     expect(monthHeatLevels(sessions, '2026-06').map(l => l.dayKey)).toEqual(['2026-06-10']);
   });
 
-  it('gives the SAME day the same level in a quiet month as in a busy history', () => {
-    // The cross-view contradiction that blocked B6: under set-relative scaling this identical
-    // day was step 4 scoped to its quiet month and step 1 scoped to a busy year.
-    const theDay = day('2026-06-10T12:00:00', 15000);
-    const quiet = [theDay];
-    const busy = [theDay, day('2026-03-02T12:00:00', 1_000_000), day('2026-03-03T12:00:00', 800_000)];
-    const levelIn = (set: BankrollSession[]) =>
-      monthHeatLevels(set, '2026-06').find(l => l.dayKey === '2026-06-10')!.level;
-    expect(levelIn(quiet)).toBe(levelIn(busy));
-  });
+  // These fixtures deliberately vary the BUY-IN across months, not just the net. The reference
+  // reads COST, so a fixture where every month shares one buy-in cannot detect the reference
+  // being scoped wrongly — an earlier version of these tests had exactly that hole and a
+  // mutation scoping the reference to the visible month passed all 27 of them.
+  const highStake = (dayKey: string) =>
+    day(`${dayKey}T12:00:00`, 0, { cash: { buyInCents: 100_000, cashOutCents: 100_000 } });
+  // Three ₪1,000 days in March against one ₪100 day in June: the all-history median daily cost
+  // is 100_000, while June alone would be 10_000 — a tenfold difference in the reference.
+  const MIXED_STAKES = [
+    highStake('2026-03-01'), highStake('2026-03-02'), highStake('2026-03-03'),
+    day('2026-06-10T12:00:00', 15000),
+  ];
 
   it('derives the reference from ALL history, not from the visible month', () => {
-    // Every June day here is small. The reference comes from the buy-ins across both months, so
-    // June reads small rather than being re-normalised against its own biggest day.
-    const sessions = [
-      day('2026-03-02T12:00:00', 1_000_000),
-      day('2026-06-10T12:00:00', 2000),
-      day('2026-06-11T12:00:00', 1000),
-    ];
-    expect(monthHeatLevels(sessions, '2026-06').map(l => l.level)).toEqual([1, 1]);
+    expect(heatReferenceCents(MIXED_STAKES)).toBe(100_000);
+    // 15000 against a 100_000 reference is 0.15x -> step 1. Scoped to June the reference would
+    // be 10_000, making the same day 1.5x -> step 3.
+    expect(monthHeatLevels(MIXED_STAKES, '2026-06')[0].level).toBe(1);
+  });
+
+  it('gives a day the SAME level in the month view as in a whole-history (year) view', () => {
+    // THE property that blocked B6, stated correctly. It is not "a day's level never changes"
+    // — a history-derived reference legitimately re-scales old days when you move up in stakes,
+    // and that is desirable. It is that ONE history must not yield two different answers
+    // depending on which view is asking.
+    const inMonth = monthHeatLevels(MIXED_STAKES, '2026-06')
+      .find(l => l.dayKey === '2026-06-10')!.level;
+    const inYear = heatmapLevels(MIXED_STAKES, heatReferenceCents(MIXED_STAKES))
+      .find(l => l.dayKey === '2026-06-10')!.level;
+    expect(inMonth).toBe(inYear);
   });
 
   it('is empty for a month with no sessions', () => {
