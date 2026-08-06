@@ -5,7 +5,7 @@
  * here goes through those two helpers, never a raw ISO slice.
  */
 import { localDayKey, localMonthKey } from '../../study/logic/localDay';
-import { sessionNetCents, sessionCostCents } from './bankrollAnalytics';
+import { sessionNetCents } from './bankrollAnalytics';
 import type { BankrollSession } from '../types';
 
 export interface DayBucket {
@@ -77,47 +77,57 @@ export interface DayHeatLevel extends DayBucket {
 }
 
 /**
- * Band edges as multiples of the heat reference: a day is step 1 below 0.5x a typical day's
- * exposure, step 2 below 1x, step 3 below 2x, and step 4 at or above 2x. Four steps, matching
- * the four-entry ramp in logic/heatCell.ts.
+ * Band edges as multiples of the heat reference. Deliberately placed OFF 1.0: on a tournament
+ * bust `|net|` equals that day's cost exactly, so a ratio of 1.0 is the MODAL value for a
+ * tournament player — 34 of 40 days in a simulated year. An edge sitting there made the modal
+ * day flip step on a ₪1 difference. Every edge below is a ratio real results do not cluster on.
+ *
+ * `HEAT_BANDS.length + 1` is the number of steps, and must stay equal to RAMP_STEPS in
+ * logic/heatCell.ts — pinned in both test files, because nothing in the types couples them.
  */
-export const HEAT_BANDS = [0.5, 1, 2] as const;
+export const HEAT_BANDS = [0.6, 1.4, 2.5] as const;
 
 /**
- * The reference a day's net is measured against: the MEDIAN DAILY COST (buy-ins + fees) across
- * the player's history. Returns 0 when no usable cost exists.
+ * The reference a day's net is measured against: the LOWER MEDIAN of `|dayNet|` across every
+ * day in the player's history that had a non-zero result. Returns 0 when there is nothing to
+ * measure (no sessions, or every day broke even exactly).
  *
- * Why a property of the PLAYER and not of the visible set — the previous ramp scaled against
- * `max(|net|)` in whatever set it was handed, which was unstable three ways (all measured):
- *   - Saturation: a lone $20 night painted step 4, being trivially its own maximum. `$20, $19,
- *     $18` painted 4, 4, 4.
- *   - Compression: one $5,000 night alongside 20 normal nights collapsed all 20 to step 1.
- *   - Cross-view: the SAME $100 day rendered step 4 scoped to a quiet month and step 1 scoped
- *     to the year. Two views of one day, disagreeing — which is why this had to be settled
- *     before the year heatmap inherits the ramp.
- * A reference derived from the player's typical stake fixes all three and self-calibrates: a
- * $1/$2 player and a $25/$50 player each get a meaningful ramp, with no hardcoded cents.
+ * A property of the PLAYER, not of whatever set is on screen. The original ramp scaled against
+ * `max(|net|)` in the set it was handed, which was unstable three ways: a lone $20 night painted
+ * the top step; one $5,000 night collapsed 20 normal nights to step 1; and the SAME day rendered
+ * differently in the month view than the year view. That last one is why this had to be settled
+ * before the year heatmap could inherit the ramp.
  *
- * DAILY cost, not per-session: the calendar's unit is the day, so a two-session day is measured
- * against two buy-ins of exposure rather than one. MEDIAN, not mean, so a single huge rebuy
- * night cannot drag the reference.
+ * WHY THE OUTCOME SCALE AND NOT COST. An earlier version of this anchored on median daily COST
+ * (buy-ins + fees). That measured EXPOSURE while the calendar displays OUTCOME, and the two
+ * scale asymmetrically: a loss is bounded by exposure, a win is not. Measured consequences —
+ *   - The worst possible cash loss (losing the whole buy-in) is exactly 1.0x cost, so the loss
+ *     side could never reach the top step at all. A quarter of the ramp was unreachable.
+ *   - A tournament bust has `|net|` exactly equal to cost, putting the modal day precisely on a
+ *     band edge.
+ * Anchoring on `|dayNet|` puts the reference on the same scale as the thing being measured, so
+ * both directions use the full ramp.
  *
- * Small n is not a special case here, and that is the point of choosing cost over a percentile
- * of outcomes: cost is known from the FIRST session and is independent of how that session went,
- * so one $20 win against a $100 buy-in correctly reads as small. (A percentile of daily nets
- * degenerates instead — with one day of history, p80 IS that day, so it saturates.) The only
- * degenerate input is having no usable cost at all; see `heatmapLevels`.
+ * WHY THE LOWER MEDIAN, not a plain one. A plain median AVERAGES the two middle values on an even
+ * count, which lets a single enormous night enter the reference: `[₪100, ₪50,000]` averaged to
+ * ₪25,050 — a 250x drag. The lower median is a true order statistic, always an observed value,
+ * so an outlier can never contribute its magnitude at ANY n, even or odd. (The earlier pin
+ * claimed this property while testing only n=3, which is odd and therefore structurally unable
+ * to see the defect.)
+ *
+ * KNOWN AND ACCEPTED: a lone session makes `|net|` its own reference, landing mid-ramp rather
+ * than at either extreme. With one data point that is the honest answer — it is not blazing, and
+ * pretending to know whether it was big or small would be worse.
  */
 export function heatReferenceCents(sessions: BankrollSession[]): number {
-  const costByDay = new Map<string, number>();
-  for (const s of sessions) {
-    const dayKey = localDayKey(new Date(s.startedAt));
-    costByDay.set(dayKey, (costByDay.get(dayKey) ?? 0) + sessionCostCents(s));
-  }
-  const costs = [...costByDay.values()].filter(c => c > 0).sort((a, b) => a - b);
-  if (costs.length === 0) return 0;
-  const mid = costs.length >> 1;
-  return costs.length % 2 === 1 ? costs[mid] : Math.round((costs[mid - 1] + costs[mid]) / 2);
+  const nets = dayBuckets(sessions)
+    .map(b => Math.abs(b.netCents))
+    .filter(n => n > 0)
+    .sort((a, b) => a - b);
+  if (nets.length === 0) return 0;
+  // Lower median: for an even count take the lower of the two middle values rather than their
+  // mean, so no outlier's magnitude can ever enter the result.
+  return nets[Math.ceil(nets.length / 2) - 1];
 }
 
 /**
@@ -134,7 +144,9 @@ export function heatReferenceCents(sessions: BankrollSession[]): number {
 export function heatmapLevels(sessions: BankrollSession[], referenceCents: number): DayHeatLevel[] {
   const usable = Number.isFinite(referenceCents) && referenceCents > 0;
   return dayBuckets(sessions).map(b => {
-    if (b.netCents === 0) return { ...b, level: 0 };
+    // A non-finite net would otherwise produce a NaN ratio, a NaN step, and an undefined style
+    // lookup downstream — rendering a LOSS identically to a no-session day.
+    if (b.netCents === 0 || !Number.isFinite(b.netCents)) return { ...b, level: 0 };
     if (!usable) return { ...b, level: Math.sign(b.netCents) };
     const ratio = Math.abs(b.netCents) / referenceCents;
     const step = ratio < HEAT_BANDS[0] ? 1 : ratio < HEAT_BANDS[1] ? 2 : ratio < HEAT_BANDS[2] ? 3 : 4;
@@ -145,16 +157,23 @@ export function heatmapLevels(sessions: BankrollSession[], referenceCents: numbe
 /**
  * Heat levels for the days of ONE local month.
  *
- * Takes the player's FULL history and does both halves itself, deliberately: the reference is
- * computed from everything (so the ramp is stable and matches the year view), while the days
- * returned are only that month's. Splitting those two responsibilities across a screen would
- * put the load-bearing asymmetry somewhere unpinnable — screens are not unit-tested here, so a
- * refactor that derived the reference from the visible month instead would reinstate exactly
- * the set-relative bug this replaced, silently.
+ * TWO SETS, deliberately separate parameters. `allSessions` is the player's ENTIRE history and
+ * feeds the reference; `visibleSessions` is whatever the screen's filters have left and supplies
+ * the days. Collapsing them into one argument is what went wrong before: the only caller passed
+ * its type/source-FILTERED list, so switching the Cash/Tournament tab silently re-derived the
+ * reference and re-levelled the very same day — measured at level 1 on the All tab and level 2
+ * on the Cash tab. That is the cross-view instability this whole design exists to remove, one
+ * layer down, and the single-argument shape made it impossible to express the right thing.
+ *
+ * A day therefore has ONE intensity, whatever is filtered or which month is open.
  */
-export function monthHeatLevels(sessions: BankrollSession[], monthKey: string): DayHeatLevel[] {
+export function monthHeatLevels(
+  allSessions: BankrollSession[],
+  visibleSessions: BankrollSession[],
+  monthKey: string,
+): DayHeatLevel[] {
   return heatmapLevels(
-    sessions.filter(s => localMonthKey(new Date(s.startedAt)) === monthKey),
-    heatReferenceCents(sessions),
+    visibleSessions.filter(s => localMonthKey(new Date(s.startedAt)) === monthKey),
+    heatReferenceCents(allSessions),
   );
 }

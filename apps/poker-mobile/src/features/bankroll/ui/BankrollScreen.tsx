@@ -60,16 +60,23 @@ const plColor = (v: number | null) =>
 
 export default function BankrollScreen({ embedded = false }: { embedded?: boolean } = {}) {
   const navigation = useNavigation<Nav>();
-  const { sessions, settings } = useBankroll();
+  const { sessions, settings, isLoaded } = useBankroll();
   const reduced = useReducedMotion();
   const [typeIdx, setTypeIdx] = useState(0);
   const [sourceIdx, setSourceIdx] = useState(0);
   // Opens on the current month when it has sessions, else the most recent month that does —
-  // a blank grid was a weak first impression on a headline pillar. Seeded once from the
-  // sessions available at mount; the arrows own it from then on.
-  const [monthKey, setMonthKey] = useState(() =>
-    initialMonthKey(sessions.map(s => localMonthKey(new Date(s.startedAt)))),
-  );
+  // a blank grid was a weak first impression on a headline pillar.
+  const [monthKey, setMonthKey] = useState(() => localMonthKey());
+  // BankrollContext hydrates from AsyncStorage, so `sessions` is [] on the first render. A
+  // lazy useState initialiser would therefore seed from an empty list and stick on the current
+  // month even once real history arrived. Seed once, when the data is actually there; the
+  // arrows own `monthKey` from then on, so this must never re-run and yank the user's month.
+  const seededRef = React.useRef(false);
+  useEffect(() => {
+    if (!isLoaded || seededRef.current) return;
+    seededRef.current = true;
+    setMonthKey(initialMonthKey(sessions.map(s => localMonthKey(new Date(s.startedAt)))));
+  }, [isLoaded, sessions]);
   const [visibleCount, setVisibleCount] = useState(SESSION_PAGE_SIZE);
 
   const filter: BankrollFilter = useMemo(() => {
@@ -92,10 +99,13 @@ export default function BankrollScreen({ embedded = false }: { embedded?: boolea
     [filtered],
   );
   const months = useMemo(() => monthBuckets(filtered), [filtered]);
-  // monthHeatLevels takes the FULL filtered history and does both halves itself: the days come
-  // from `monthKey`, the ramp reference from everything. Splitting those apart here would put
-  // the load-bearing asymmetry somewhere unpinnable — screens aren't unit-tested in this repo.
-  const monthLevels = useMemo(() => monthHeatLevels(filtered, monthKey), [filtered, monthKey]);
+  // UNFILTERED `sessions` feeds the ramp reference; `filtered` only supplies which days show.
+  // Passing `filtered` to both made the Cash/Tournament tab re-level the very same day — the
+  // cross-view instability this design exists to remove, one layer down.
+  const monthLevels = useMemo(
+    () => monthHeatLevels(sessions, filtered, monthKey),
+    [sessions, filtered, monthKey],
+  );
   const page = useMemo(() => historyPage(history, visibleCount), [history, visibleCount]);
 
   // A filter change rebuilds the list, so a carried-over "show more" count would silently

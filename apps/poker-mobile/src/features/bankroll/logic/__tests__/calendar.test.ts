@@ -1,6 +1,8 @@
 import {
   dayBuckets, monthBuckets, netCentsForMonth, heatmapLevels, monthHeatLevels, heatReferenceCents,
+  HEAT_BANDS,
 } from '../calendar';
+import { RAMP_STEPS } from '../heatCell';
 import type { BankrollSession } from '../../types';
 
 let idc = 0;
@@ -74,52 +76,113 @@ describe('netCentsForMonth', () => {
   });
 });
 
-describe('heatReferenceCents — a property of the player, not of the view', () => {
-  it('is the median DAILY cost, so a two-session day counts both buy-ins', () => {
-    // The `day` helper always buys in for 10000. One day with two sessions therefore costs
-    // 20000, and the median across [10000, 20000] is 15000.
+describe('heatReferenceCents — the LOWER MEDIAN of |dayNet|, on the outcome scale', () => {
+  it('is the middle |net| on an ODD number of active days', () => {
     const sessions = [
-      day('2026-06-01T12:00:00', 500),
-      day('2026-06-02T12:00:00', 500),
-      day('2026-06-02T20:00:00', 500),
+      day('2026-06-01T12:00:00', 1000),
+      day('2026-06-02T12:00:00', -5000),
+      day('2026-06-03T12:00:00', 9000),
     ];
-    expect(heatReferenceCents(sessions)).toBe(15000);
+    expect(heatReferenceCents(sessions)).toBe(5000);
   });
 
-  it('is defined from the very FIRST session, and does not depend on how that session went', () => {
-    // This is why cost beats a percentile of outcomes: a percentile over one day IS that day,
-    // so it saturates. A buy-in is known before the result is.
-    expect(heatReferenceCents([day('2026-06-01T12:00:00', 20)])).toBe(10000);
-    expect(heatReferenceCents([day('2026-06-01T12:00:00', -99999)])).toBe(10000);
-  });
-
-  it('uses the median so one huge rebuy night cannot drag the reference', () => {
+  it('takes the LOWER of the two middle values on an EVEN number of active days', () => {
+    // A plain median would average these to 3000. The lower median never averages, so the
+    // result is always a value the player actually produced.
     const sessions = [
-      day('2026-06-01T12:00:00', 0),
-      day('2026-06-02T12:00:00', 0),
-      day('2026-06-03T12:00:00', 0, { cash: { buyInCents: 5_000_000, cashOutCents: 5_000_000 } }),
+      day('2026-06-01T12:00:00', 1000),
+      day('2026-06-02T12:00:00', 2000),
+      day('2026-06-03T12:00:00', 4000),
+      day('2026-06-04T12:00:00', 9000),
     ];
-    expect(heatReferenceCents(sessions)).toBe(10000);
+    expect(heatReferenceCents(sessions)).toBe(2000);
   });
 
-  it('is 0 when there is nothing to measure', () => {
+  it('THE n=2 PIN: one enormous night cannot enter the reference at an even count', () => {
+    // The defect the previous version shipped. A plain median averages the two middle values,
+    // which at n=2 means averaging BOTH values: (1000 + 500000) / 2 = 250500, a 250x drag.
+    // The earlier pin claimed this property while testing only n=3 — odd, and therefore
+    // structurally unable to observe it.
+    const sessions = [
+      day('2026-06-01T12:00:00', 1000),
+      day('2026-06-02T12:00:00', 500_000),
+    ];
+    expect(heatReferenceCents(sessions)).toBe(1000);
+  });
+
+  it('resists an outlier at every count from 1 to 6, even and odd alike', () => {
+    // Sweeping the count is the point: the defect was visible only at even n, so a fixture at
+    // any single count can hide it.
+    for (const n of [1, 2, 3, 4, 5, 6]) {
+      const ordinary = Array.from({ length: n }, (_, i) =>
+        day(`2026-06-0${i + 1}T12:00:00`, 1000));
+      const withOutlier = [...ordinary, day('2026-06-20T12:00:00', 9_000_000)];
+      expect(heatReferenceCents(withOutlier)).toBe(1000);
+    }
+  });
+
+  it('uses |net|, so a losing day contributes its magnitude like a winning one', () => {
+    expect(heatReferenceCents([day('2026-06-01T12:00:00', -7000)])).toBe(7000);
+  });
+
+  it('ignores break-even days, and is 0 when there is nothing to measure', () => {
     expect(heatReferenceCents([])).toBe(0);
+    expect(heatReferenceCents([day('2026-06-01T12:00:00', 0)])).toBe(0);
+    expect(heatReferenceCents([
+      day('2026-06-01T12:00:00', 0),
+      day('2026-06-02T12:00:00', 3000),
+    ])).toBe(3000);
+  });
+
+  it('sorts NUMERICALLY, not lexicographically', () => {
+    // JS's default sort is string-based: [9000, 10000, 200000] would order as
+    // 10000, 200000, 9000 and pick the wrong middle.
+    const sessions = [
+      day('2026-06-01T12:00:00', 9000),
+      day('2026-06-02T12:00:00', 200_000),
+      day('2026-06-03T12:00:00', 10_000),
+    ];
+    expect(heatReferenceCents(sessions)).toBe(10_000);
+  });
+});
+
+describe('HEAT_BANDS', () => {
+  it('is pinned to its literal edges', () => {
+    expect(HEAT_BANDS).toEqual([0.6, 1.4, 2.5]);
+  });
+
+  it('has one fewer edge than the colour ramp has steps', () => {
+    // Nothing in the types couples these. If a band is added without extending WIN_FILL /
+    // LOSS_WIDTH, heatCellStyle indexes off the end and a loss renders as a no-session day.
+    expect(HEAT_BANDS.length + 1).toBe(RAMP_STEPS);
+  });
+
+  it('places no edge on 1.0 — the modal ratio for a tournament player', () => {
+    // On a bust, |net| equals that day's cost exactly, so ratio 1.0 is the most common value
+    // in a tournament history. An edge there flips the modal day on a 1-cent difference.
+    expect(HEAT_BANDS).not.toContain(1);
+    const R = 10_000;
+    expect(heatmapLevels([day('2026-06-01T12:00:00', -R)], R)[0].level).toBe(-2);
+  });
+
+  it('ascends, so the bands cannot overlap or invert', () => {
+    for (let i = 1; i < HEAT_BANDS.length; i++) {
+      expect(HEAT_BANDS[i]).toBeGreaterThan(HEAT_BANDS[i - 1]);
+    }
   });
 });
 
 describe('heatmapLevels — banded against a STABLE reference (supersedes set-relative scaling)', () => {
-  // REWRITTEN DELIBERATELY, not weakened. The previous pins asserted the OLD behaviour — "a
-  // lone active day maxes out at the top level" and "scales magnitude relative to the largest
-  // |net| in the set" — which was the defect, not the contract: it made a lone $20 night blaze
-  // at step 4, collapsed 20 normal nights to step 1 beside one outlier, and rendered the same
-  // day at different intensities in the month and year views. The properties below are strictly
-  // stronger, and everything worth keeping (sign matching, break-even staying 0, the smallest
-  // win never rounding to 0) is still asserted here.
-  //
-  // The old `levelCount` guard tests are gone because the PARAMETER is gone, not because the
-  // guard was relaxed: banding removes that whole bug class, since a step can only ever be one
-  // of four values by construction.
-  const R = 10000; // matches the helper's buy-in, so bands fall at 5000 / 10000 / 20000
+  // REWRITTEN DELIBERATELY, twice, and neither time weakened.
+  //   old  -> "a lone active day maxes out at the top level" and "scales relative to the largest
+  //           |net| in the set". Those WERE the defect: a lone $20 night blazed, one outlier
+  //           collapsed 20 nights to step 1, and a day changed level between month and year.
+  //   then -> banded against median daily COST. That measured exposure while the calendar shows
+  //           outcome, and the two scale asymmetrically (a loss is capped by the buy-in, a win
+  //           is not), so the loss side could never reach the top step.
+  //   now  -> banded against the lower median of |dayNet|, the same scale as the thing shown.
+  // Every property worth keeping is still asserted below.
+  const R = 10_000;
 
   it('is empty for no sessions', () => {
     expect(heatmapLevels([], R)).toEqual([]);
@@ -133,11 +196,11 @@ describe('heatmapLevels — banded against a STABLE reference (supersedes set-re
 
   it('bands each day against the reference, with the sign matching the net', () => {
     const sessions = [
-      day('2026-06-01T12:00:00', 2000),    // 0.2R -> step 1
-      day('2026-06-02T12:00:00', 7000),    // 0.7R -> step 2
-      day('2026-06-03T12:00:00', 15000),   // 1.5R -> step 3
-      day('2026-06-04T12:00:00', 40000),   // 4.0R -> step 4
-      day('2026-06-05T12:00:00', -7000),   // 0.7R losing -> step -2
+      day('2026-06-01T12:00:00', 3000),    // 0.30R -> 1
+      day('2026-06-02T12:00:00', 9000),    // 0.90R -> 2
+      day('2026-06-03T12:00:00', 20_000),  // 2.00R -> 3
+      day('2026-06-04T12:00:00', 40_000),  // 4.00R -> 4
+      day('2026-06-05T12:00:00', -9000),   // 0.90R losing -> -2
     ];
     const byDay = Object.fromEntries(heatmapLevels(sessions, R).map(l => [l.dayKey, l.level]));
     expect(byDay['2026-06-01']).toBe(1);
@@ -147,28 +210,17 @@ describe('heatmapLevels — banded against a STABLE reference (supersedes set-re
     expect(byDay['2026-06-05']).toBe(-2);
   });
 
-  it('a lone small night no longer blazes — it is small against the reference', () => {
-    // The headline saturation bug: this day was trivially its own maximum, so it painted step 4.
-    expect(heatmapLevels([day('2026-06-01T12:00:00', 2000)], R)[0].level).toBe(1);
+  it('the LOSS side can reach the top step — it is not capped by the buy-in', () => {
+    // Under the cost anchor this was structurally impossible: the worst a cash player can lose
+    // is one buy-in, which was exactly 1.0x the reference, so -4 was unreachable.
+    expect(heatmapLevels([day('2026-06-01T12:00:00', -30_000)], R)[0].level).toBe(-4);
   });
 
-  it('near-identical small nights all read small, instead of all reading maximal', () => {
-    const sessions = [
-      day('2026-06-01T12:00:00', 2000),
-      day('2026-06-02T12:00:00', 1900),
-      day('2026-06-03T12:00:00', 1800),
-    ];
-    expect(heatmapLevels(sessions, R).map(l => l.level)).toEqual([1, 1, 1]);
-  });
-
-  it('one outlier no longer compresses every normal night to step 1', () => {
-    const sessions = [
-      day('2026-06-01T12:00:00', 500_000), // the outlier
-      ...Array.from({ length: 6 }, (_, i) => day(`2026-06-${10 + i}T12:00:00`, 8000 + i * 300)),
-    ];
-    const normal = heatmapLevels(sessions, R).filter(l => l.dayKey !== '2026-06-01');
-    expect(normal).toHaveLength(6);
-    expect(normal.every(l => Math.abs(l.level) > 1)).toBe(true);
+  it('a lone session lands MID-ramp, neither blazing nor pretending to be small', () => {
+    // Its own |net| is the reference, so the ratio is exactly 1.0 -> step 2. With one data
+    // point that is the honest answer; the original bug painted step 4.
+    const lone = [day('2026-06-01T12:00:00', 2000)];
+    expect(heatmapLevels(lone, heatReferenceCents(lone))[0].level).toBe(2);
   });
 
   it('the smallest nonzero net still gets +/-1, never rounded down to 0', () => {
@@ -178,6 +230,23 @@ describe('heatmapLevels — banded against a STABLE reference (supersedes set-re
 
   it('clamps at the top of the ramp however large the day is', () => {
     expect(heatmapLevels([day('2026-06-01T12:00:00', 99_000_000)], R)[0].level).toBe(4);
+  });
+
+  it('never emits a step outside 1..4 for any ratio', () => {
+    for (const net of [1, 5999, 6000, 6001, 13_999, 14_000, 24_999, 25_000, 25_001, 10 ** 9]) {
+      for (const sign of [1, -1]) {
+        const level = heatmapLevels([day('2026-06-01T12:00:00', net * sign)], R)[0].level;
+        expect(Math.abs(level)).toBeGreaterThanOrEqual(1);
+        expect(Math.abs(level)).toBeLessThanOrEqual(RAMP_STEPS);
+        expect(Math.sign(level)).toBe(sign);
+      }
+    }
+  });
+
+  it('puts each exact band edge in the HIGHER step (the < side), consistently', () => {
+    expect(heatmapLevels([day('2026-06-01T12:00:00', 6_000)], R)[0].level).toBe(2);   // 0.6R
+    expect(heatmapLevels([day('2026-06-02T12:00:00', 14_000)], R)[0].level).toBe(3);  // 1.4R
+    expect(heatmapLevels([day('2026-06-03T12:00:00', 25_000)], R)[0].level).toBe(4);  // 2.5R
   });
 
   describe('the fallback when no usable reference exists', () => {
@@ -196,45 +265,42 @@ describe('heatmapLevels — banded against a STABLE reference (supersedes set-re
   });
 });
 
-describe('monthHeatLevels — month-scoped DAYS, history-wide REFERENCE', () => {
+describe('monthHeatLevels — visible DAYS, history-wide REFERENCE', () => {
+  const JUNE = day('2026-06-10T12:00:00', 15_000);
+  const MARCH = [day('2026-03-01T12:00:00', 3000), day('2026-03-02T12:00:00', 3000)];
+  const ALL = [...MARCH, JUNE];
+
   it('returns only the requested month, ignoring every other month', () => {
-    const sessions = [day('2026-06-10T12:00:00', 1000), day('2026-07-10T12:00:00', 2000)];
-    expect(monthHeatLevels(sessions, '2026-06').map(l => l.dayKey)).toEqual(['2026-06-10']);
+    expect(monthHeatLevels(ALL, ALL, '2026-06').map(l => l.dayKey)).toEqual(['2026-06-10']);
   });
 
-  // These fixtures deliberately vary the BUY-IN across months, not just the net. The reference
-  // reads COST, so a fixture where every month shares one buy-in cannot detect the reference
-  // being scoped wrongly — an earlier version of these tests had exactly that hole and a
-  // mutation scoping the reference to the visible month passed all 27 of them.
-  const highStake = (dayKey: string) =>
-    day(`${dayKey}T12:00:00`, 0, { cash: { buyInCents: 100_000, cashOutCents: 100_000 } });
-  // Three ₪1,000 days in March against one ₪100 day in June: the all-history median daily cost
-  // is 100_000, while June alone would be 10_000 — a tenfold difference in the reference.
-  const MIXED_STAKES = [
-    highStake('2026-03-01'), highStake('2026-03-02'), highStake('2026-03-03'),
-    day('2026-06-10T12:00:00', 15000),
-  ];
-
   it('derives the reference from ALL history, not from the visible month', () => {
-    expect(heatReferenceCents(MIXED_STAKES)).toBe(100_000);
-    // 15000 against a 100_000 reference is 0.15x -> step 1. Scoped to June the reference would
-    // be 10_000, making the same day 1.5x -> step 3.
-    expect(monthHeatLevels(MIXED_STAKES, '2026-06')[0].level).toBe(1);
+    // All-history reference is 3000 (lower median of 3000/3000/15000), so June's day is 5.0R
+    // -> step 4. Scoped to June the reference would be 15000 and the same day 1.0R -> step 2.
+    expect(heatReferenceCents(ALL)).toBe(3000);
+    expect(monthHeatLevels(ALL, ALL, '2026-06')[0].level).toBe(4);
   });
 
   it('gives a day the SAME level in the month view as in a whole-history (year) view', () => {
-    // THE property that blocked B6, stated correctly. It is not "a day's level never changes"
-    // — a history-derived reference legitimately re-scales old days when you move up in stakes,
-    // and that is desirable. It is that ONE history must not yield two different answers
-    // depending on which view is asking.
-    const inMonth = monthHeatLevels(MIXED_STAKES, '2026-06')
-      .find(l => l.dayKey === '2026-06-10')!.level;
-    const inYear = heatmapLevels(MIXED_STAKES, heatReferenceCents(MIXED_STAKES))
-      .find(l => l.dayKey === '2026-06-10')!.level;
+    // The property that blocked B6, stated precisely: one history must not yield two answers
+    // depending on which view is asking. It is NOT "a level never changes" — a history-derived
+    // reference should re-scale old days as the player moves up in stakes.
+    const inMonth = monthHeatLevels(ALL, ALL, '2026-06').find(l => l.dayKey === '2026-06-10')!.level;
+    const inYear = heatmapLevels(ALL, heatReferenceCents(ALL)).find(l => l.dayKey === '2026-06-10')!.level;
     expect(inMonth).toBe(inYear);
   });
 
+  it('THE FILTER PIN: narrowing the visible set must not re-level the days that remain', () => {
+    // The only caller passed its type/source-FILTERED list for BOTH halves, so switching the
+    // Cash/Tournament tab silently re-derived the reference: the same day measured level 1 on
+    // the All tab and level 2 on the Cash tab. Days come from `visible`, the ramp from `all`.
+    const visibleOnlyJune = [JUNE];
+    const unfiltered = monthHeatLevels(ALL, ALL, '2026-06')[0].level;
+    const filteredDown = monthHeatLevels(ALL, visibleOnlyJune, '2026-06')[0].level;
+    expect(filteredDown).toBe(unfiltered);
+  });
+
   it('is empty for a month with no sessions', () => {
-    expect(monthHeatLevels([day('2026-06-10T12:00:00', 1000)], '2026-07')).toEqual([]);
+    expect(monthHeatLevels(ALL, ALL, '2026-07')).toEqual([]);
   });
 });

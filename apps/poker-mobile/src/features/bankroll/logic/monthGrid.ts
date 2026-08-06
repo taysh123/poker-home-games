@@ -32,8 +32,12 @@ export function monthLabel(monthKey: string): string {
 }
 
 /**
- * Which month the calendar should open on: the current month when it has sessions, otherwise
- * the most recent month that does, otherwise the current month.
+ * Which month the calendar should open on, in order of preference: the current month when it
+ * has sessions; else the most recent PAST month that does; else the earliest FUTURE month that
+ * does; else the current month.
+ *
+ * (The past-before-future ordering is the whole point of the fallback and was previously
+ * omitted from this summary line, which read as if only past months were considered.)
  *
  * Opening unconditionally on "now" meant a player whose last game was last month landed on a
  * blank grid with nothing indicating their history was one tap back — a weak first impression
