@@ -263,6 +263,20 @@ describe('heatmapLevels — banded against a STABLE reference (supersedes set-re
       expect(heatmapLevels([day('2026-06-01T12:00:00', 0)], 0)[0].level).toBe(0);
     });
   });
+
+  it('a non-finite net yields level 0 rather than a NaN step', () => {
+    // Defensive, and pinned because the code claims it. NaN cannot survive a JSON round-trip
+    // so no shipped writer produces one — but an unguarded NaN net gives a NaN ratio, a NaN
+    // step, and an undefined ramp lookup downstream, which renders a LOSS identically to a
+    // no-session day. A guard whose guarantee is only asserted in a comment is not a guard.
+    for (const bad of [NaN, Infinity, -Infinity]) {
+      const broken = day('2026-06-01T12:00:00', 0);
+      broken.cash = { buyInCents: 10_000, cashOutCents: bad };
+      const levels = heatmapLevels([broken], 10_000);
+      expect(levels[0].level).toBe(0);
+      expect(Number.isNaN(levels[0].level)).toBe(false);
+    }
+  });
 });
 
 describe('monthHeatLevels — visible DAYS, history-wide REFERENCE', () => {
