@@ -97,3 +97,24 @@ export function heatmapLevels(sessions: BankrollSession[], levelCount = 4): DayH
     return { ...b, level: Math.sign(b.netCents) * magnitude };
   });
 }
+
+/**
+ * Heat levels for ONE local month, scaled against that month's own biggest day (B5).
+ *
+ * The scoping is the point. `heatmapLevels` ramps relative to the largest |netCents| in the set
+ * it is given, so handing it the full history would measure every month against the all-time
+ * best day — one huge night in March would flatten every other month to step 1. A month view
+ * should read "within this month", so the filter belongs here, next to the ramp it affects,
+ * where it can be tested. Do NOT inline this in a screen: screens are not unit-tested in this
+ * repo, so a future refactor passing the unscoped set would go unnoticed.
+ */
+export function monthHeatLevels(
+  sessions: BankrollSession[],
+  monthKey: string,
+  levelCount = 4,
+): DayHeatLevel[] {
+  return heatmapLevels(
+    sessions.filter(s => localMonthKey(new Date(s.startedAt)) === monthKey),
+    levelCount,
+  );
+}

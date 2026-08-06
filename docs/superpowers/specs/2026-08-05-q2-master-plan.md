@@ -238,20 +238,47 @@ duplicate month-net logic out of `EngagementContext.tsx:92-100` so there is one 
 raw `to` bound, so a bare day key silently excludes that entire day. Materialise range ends as
 end-of-day instants; add the test.
 
-### B4 🎨 — Taste directions (ui-ux-pro-max)
+### B4 🎨 — Taste directions (ui-ux-pro-max) — **DONE, decided 2026-08-05**
 
-2–3 directions for the calendar + heatmap, **before any building.** Brief: this is a *free*
-headline pillar and an acquisition hook — it must feel premium-quality. Copy the house chart
-pattern from `BankrollLineChart` (onLayout width, static SVG, `accessibilityRole="image"`,
-composed label, reduced-motion safe by construction).
+**Decision of record: `2026-08-05-b4-calendar-heatmap-taste-direction.md`.** Read it before
+building B5–B7; it carries the verified constraints and the two owner requirements below.
+
+Direction: **"The Tape"** — match the sign-encoding channel to the cell resolution, so no view is
+ever colour-alone (a HIGH-severity rule, and a calendar has no positional escape the way
+`BankrollHistogram` does):
+- **Month (~44px): shape + hue** — winners solid gold ramp, losers hollow/ringed, break-even a thin
+  outline, no session bare.
+- **Year (~5px): luminance + hue** — shape is illegible that small; luminance survives both the
+  scale and colour-vision deficiency.
+
+Rejected: *"The Ledger"* (numbers in cells — colourblind-safe and cheapest, but silently drops the
+daily year heatmap that IS the acquisition-hook screenshot) and *"Table Light"* standalone (glow
+everywhere — strongest channel, but SVG filters are patchy on Android while react-native-web renders
+them fine: the exact trap B2 just fixed).
 
 ### B5–B7 — The visual core
 
-Watch `a11yRoleRatchet.test.ts:165` — `BankrollScreen` is capped at 2 unroled touchables and a
-`.map()` of day cells counts as one call site: day cells need roles, or the ceiling needs an
-explicit reviewed raise. Also address the **unpaginated** session history before a calendar
-invites year-scale datasets. B7 is genuinely presentational — all six filter fields and
+**Owner requirements folded in (2026-08-05):**
+1. **Pagination moves into B5**, not B6 — a calendar invites year-scale data, so fix the unpaginated
+   session history *before* the year view invites it.
+2. **No SVG filter primitives** (`FeGaussianBlur` etc.) in the year-view luminance ramp — luminance
+   via fill lightness/opacity on plain `<Rect>`s only, so Android/web/iOS render identically. **B6's
+   fleet must confirm on a real Android path, not just web.**
+
+Verified constraints: the month grid must go **full-bleed** to reach 44×44 targets (inside a default
+`Card` it lands at ~40px on 375pt, ~42px even at `padding={0}` on 360dp); **year cells are never
+tappable** (one `<Svg accessibilityRole="image">`, drill-in via a month affordance); day-cell
+`.map()` is one call site in a NEW file, so `a11yRoleRatchet`'s ceiling is `0` — roles right in the
+first commit, no ceiling raise. B7 is genuinely presentational — all six filter fields and
 `filterSessions` already exist and are pinned.
+
+B5's implementation plan: `docs/superpowers/plans/2026-08-05-b5-month-calendar.md`.
+
+**Recorded follow-up, NOT in Q2 (owner, 2026-08-05):** B5's history pagination is **incremental
+reveal, not virtualization** — it caps how many rows mount, it does not recycle them.
+`BankrollScreen` is one `ScrollView` with several sections, so a genuine `FlatList` conversion is a
+restructure and gets its own slice. Revisit only if year-scale data makes the cap insufficient; say
+"incremental reveal" in any copy or PR, never imply the list is virtualized.
 
 ### B9 — Flip the flag
 

@@ -1,4 +1,4 @@
-import { dayBuckets, monthBuckets, netCentsForMonth, heatmapLevels } from '../calendar';
+import { dayBuckets, monthBuckets, netCentsForMonth, heatmapLevels, monthHeatLevels } from '../calendar';
 import type { BankrollSession } from '../../types';
 
 let idc = 0;
@@ -114,6 +114,36 @@ describe('heatmapLevels', () => {
   it('respects a custom levelCount', () => {
     const sessions = [day('2026-06-01T12:00:00', 5000)];
     expect(heatmapLevels(sessions, 10)[0].level).toBe(10);
+  });
+
+  describe('monthHeatLevels — the ramp is scoped to the visible month (B5 pin)', () => {
+    it('returns only the requested month, ignoring every other month', () => {
+      const sessions = [day('2026-06-10T12:00:00', 1000), day('2026-07-10T12:00:00', 2000)];
+      expect(monthHeatLevels(sessions, '2026-06').map(l => l.dayKey)).toEqual(['2026-06-10']);
+    });
+
+    it("scales against THIS month's biggest day, not the all-time biggest", () => {
+      // March holds a huge outlier; June's best day is modest. Scoped, June's best is still
+      // top-of-ramp. Unscoped it would collapse to step 1 — the exact bug this pins.
+      const sessions = [
+        day('2026-03-02T12:00:00', 1_000_000), // all-time outlier, a different month
+        day('2026-06-10T12:00:00', 10_000),    // June's best
+        day('2026-06-11T12:00:00', 5_000),     // half of June's best
+      ];
+      const byDay = Object.fromEntries(
+        monthHeatLevels(sessions, '2026-06').map(l => [l.dayKey, l.level]),
+      );
+      expect(byDay['2026-06-10']).toBe(4);
+      expect(byDay['2026-06-11']).toBe(2);
+
+      // Prove the unscoped call really would have flattened it — otherwise this asserts nothing.
+      const unscoped = Object.fromEntries(heatmapLevels(sessions).map(l => [l.dayKey, l.level]));
+      expect(unscoped['2026-06-10']).toBe(1);
+    });
+
+    it('is empty for a month with no sessions', () => {
+      expect(monthHeatLevels([day('2026-06-10T12:00:00', 1000)], '2026-07')).toEqual([]);
+    });
   });
 
   describe('levelCount guard (fleet-found, 2026-08-05)', () => {
